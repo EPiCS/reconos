@@ -1,0 +1,30 @@
+##############################################################################
+## Filename:          /home/andreas/reconos_v3/step_b/pcores/xps_mem_v1_00_a/data/xps_mem_v2_1_0.pao
+## Description:       Peripheral Analysis Order
+## Date:              Wed Sep 14 16:17:15 2011 (by Create and Import Peripheral Wizard)
+##############################################################################
+
+lib proc_common_v3_00_a proc_common_pkg vhdl
+lib proc_common_v3_00_a ipif_pkg vhdl
+lib proc_common_v3_00_a or_muxcy vhdl
+lib proc_common_v3_00_a or_gate128 vhdl
+lib proc_common_v3_00_a family_support vhdl
+lib proc_common_v3_00_a pselect_f vhdl
+lib proc_common_v3_00_a counter_f vhdl
+lib proc_common_v3_00_a family vhdl
+lib plbv46_master_burst_v1_01_a plb_mstr_addr_gen vhdl
+lib plbv46_master_burst_v1_01_a rd_wr_calc_burst vhdl
+lib plbv46_master_burst_v1_01_a rd_wr_controller vhdl
+lib plbv46_master_burst_v1_01_a llink_rd_backend_no_fifo vhdl
+lib plbv46_master_burst_v1_01_a llink_wr_backend_no_fifo vhdl
+lib plbv46_master_burst_v1_01_a data_width_adapter vhdl
+lib plbv46_master_burst_v1_01_a data_mirror_128 vhdl
+lib plbv46_master_burst_v1_01_a cc_brst_exp_adptr vhdl
+lib plbv46_master_burst_v1_01_a plbv46_master_burst vhdl
+lib proc_common_v3_00_a cntr_incr_decr_addn_f vhdl
+lib proc_common_v3_00_a muxf_struct_f vhdl
+lib proc_common_v3_00_a dynshreg_f vhdl
+lib proc_common_v3_00_a srl_fifo_rbu_f vhdl
+lib proc_common_v3_00_a srl_fifo_f vhdl
+lib xps_mem_v1_00_a user_logic vhdl
+lib xps_mem_v1_00_a xps_mem vhdl

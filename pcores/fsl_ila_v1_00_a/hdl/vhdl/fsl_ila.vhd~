@@ -1,0 +1,76 @@
+library ieee;
+use ieee.std_logic_1164.all;
+use ieee.std_logic_arith.all;
+use ieee.std_logic_unsigned.all;
+
+library reconos_v3_00_a;
+use reconos_v3_00_a.reconos_pkg.all;
+
+entity hwt_semaphore is
+	port (
+		-- OSIF FSL
+		OSFSL_Clk       : in  std_logic;                 -- Synchronous clock
+		OSFSL_Rst       : in  std_logic;                 -- System reset, should always come from FSL bus
+		OSFSL_S_Clk     : out std_logic;                 -- Slave asynchronous clock
+		OSFSL_S_Read    : out std_logic;                 -- Read signal, requiring next available input to be read
+		OSFSL_S_Data    : in  std_logic_vector(0 to 31); -- Input data
+		OSFSL_S_Control : in  std_logic;                 -- Control Bit, indicating the input data are control word
+		OSFSL_S_Exists  : in  std_logic;                 -- Data Exist Bit, indicating data exist in the input FSL bus
+		OSFSL_M_Clk     : out std_logic;                 -- Master asynchronous clock
+		OSFSL_M_Write   : out std_logic;                 -- Write signal, enabling writing to output FSL bus
+		OSFSL_M_Data    : out std_logic_vector(0 to 31); -- Output data
+		OSFSL_M_Control : out std_logic;                 -- Control Bit, indicating the output data are contol word
+		OSFSL_M_Full    : in  std_logic                  -- Full Bit, indicating output FSL bus is full
+	);
+end entity;
+
+architecture implementation of hwt_semaphore is
+	type OSIF_STATE_TYPE is (STATE_INIT, STATE_WAIT, STATE_POST);
+
+	constant SEM_A  : std_logic_vector(C_FSL_WIDTH-1 downto 0) := x"00000000";
+	constant SEM_B  : std_logic_vector(C_FSL_WIDTH-1 downto 0) := x"00000001";
+	
+	signal result   : std_logic_Vector(C_FSL_WIDTH-1 downto 0);
+	signal osif_state  : OSIF_STATE_TYPE;
+	signal osif     : fsl_t;
+begin
+
+	osif_setup(
+		osif,
+		OSFSL_Clk,
+		OSFSL_Rst,
+		OSFSL_S_Data,
+		OSFSL_S_Exists,
+		OSFSL_M_Full,
+		OSFSL_M_Data,
+		OSFSL_S_Read,
+		OSFSL_M_Write,
+		OSFSL_M_Control
+	);
+
+	process (osif.clk) is
+		variable done : boolean;
+	begin
+		if osif.rst = '1' then
+			osif_reset(osif);
+			osif_state <= STATE_INIT;
+			done := False;
+			result <= (others => '0');
+		elsif rising_edge(osif.clk) then
+			case osif_state is
+				when STATE_INIT =>
+					osif_state <= STATE_WAIT;
+					
+				when STATE_WAIT =>
+					osif_sem_wait(osif,SEM_A,result,done);
+					if done then osif_state <= STATE_POST; end if;
+					
+				when STATE_POST =>
+					osif_sem_post(osif,SEM_B,result,done);
+					if done then osif_state <= STATE_WAIT; end if;
+			end case;
+		end if;
+	end process;
+
+end architecture;
+
