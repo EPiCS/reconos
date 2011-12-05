@@ -57,13 +57,13 @@ use proc_common_v3_00_a.proc_common_pkg.all;
 --!          into a save state, where no data is forwarded
 entity rr_arbiter is
   generic(
-    request_width : positive := 6  --! How many request inputs do you want?
+    request_width : positive := 16  --! How many request inputs do you want?
     );
   port (
     clk      : in  std_logic;           --! Clock signal
     reset    : in  std_logic;           --! Reset signal
     requests : in  std_logic_vector (request_width-1 downto 0);  --! Input lines from the requestors.
-    sel      : out std_logic_vector (clog2(request_width+1)-1 downto 0));  --! Who of the requesters will be served?
+    sel      : out std_logic_vector (clog2(request_width)-1 downto 0));  --! Who of the requesters will be served?
 end rr_arbiter;
 
 --! @brief Architecture of an arbiter that uses a round-robin style selection mechanism.
@@ -95,6 +95,9 @@ begin -- of architecture -------------------------------------------------------
   -- Fill rest of the internal requests vector with zeros.
   -- This line can cause a warning messages like:
   -- WARNING:Xst:2096 - "/home/meise/svn/meise/hardware/noc/switch/switch_out_port/rr_arbiter.vhd" line 96: Use of null array slice on signal <int_requests> is not supported.
+  -- Or with ISE 12.3:
+  -- WARNING:HDLCompiler:746 - "/home/meise/ise_projects/fifo32_arbiter/../../git/reconos_v3/pcores/fifo32_arbiter_v1_00_a/hdl/vhdl/rr_arbiter.vhd" Line 99: Range is empty (null range)
+  -- WARNING:HDLCompiler:220 - "/home/meise/ise_projects/fifo32_arbiter/../../git/reconos_v3/pcores/fifo32_arbiter_v1_00_a/hdl/vhdl/rr_arbiter.vhd" Line 99: Assignment ignored
   -- Up to now, no negative consequences of this warning message have been observed.
   int_requests(upper_bound-1 downto request_width) <= (others => '0');
 
@@ -163,7 +166,7 @@ begin -- of architecture -------------------------------------------------------
       -- to prevent, that data gets accidentally forwarded.
       -- For this reason, we set the sel line to the request_width's position,
       -- which will put all (de)multiplexers in a save state.
-      sel <= std_logic_vector(to_unsigned(request_width, sel'length));
+      sel <= (others => '0');
     elsif clk'event and clk='1' then
       sel <= std_logic_vector(to_unsigned(next_served, sel'length));
     end if;
