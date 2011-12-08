@@ -22,9 +22,9 @@ end entity;
 
 architecture implementation of fifo32 is
 	type MEM_T is array (0 to FIFO32_DEPTH-1) of std_logic_vector(31 downto 0);
-	signal mem : MEM_T;
-	signal wrptr : std_logic_vector(15 downto 0);
-	signal rdptr : std_logic_vector(15 downto 0);
+	signal mem : MEM_T := (others => (others => '0'));
+	signal wrptr : std_logic_vector(15 downto 0) := (others => '0');
+	signal rdptr : std_logic_vector(15 downto 0) := (others => '0');
 	signal remainder : std_logic_vector(15 downto 0);
 	signal fill      : std_logic_vector(15 downto 0);
 begin

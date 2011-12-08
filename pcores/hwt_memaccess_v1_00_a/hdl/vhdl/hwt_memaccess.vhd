@@ -85,6 +85,7 @@ begin
 	process (osif.clk) is
 		variable done : boolean;
 	begin
+
 		if rst = '1' then
 			osif_reset(osif);
 			memif_reset(memif);

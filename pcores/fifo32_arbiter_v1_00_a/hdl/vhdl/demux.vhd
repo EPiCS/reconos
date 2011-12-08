@@ -71,7 +71,11 @@ begin
   update_outputs : process (sel, input)
     variable index : natural;
   begin
-    index := to_integer(unsigned(sel));
+    if is_X(sel) then
+        index := 0;
+    else
+        index := to_integer(unsigned(sel));
+    end if;
 
     for i in 0 to element_count-1 loop
       if i = index then

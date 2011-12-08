@@ -20,15 +20,15 @@ entity fifo32_arbiter is
 	);
 	port (
         -- Multiple FIFO32 Inputs
-		IN_FIFO32_S_Clk : in std_logic_vector(FIFO32_PORTS-1 downto 0);
-        IN_FIFO32_S_Data : out std_logic_vector((32*FIFO32_PORTS)-1 downto 0);
-		IN_FIFO32_S_Fill : out std_logic_vector((16*FIFO32_PORTS)-1 downto 0);
-		IN_FIFO32_S_Rd : in std_logic_vector(FIFO32_PORTS-1 downto 0);
+		IN_FIFO32_S_Clk : out std_logic_vector(FIFO32_PORTS-1 downto 0);
+        IN_FIFO32_S_Data : in std_logic_vector((32*FIFO32_PORTS)-1 downto 0);
+		IN_FIFO32_S_Fill : in std_logic_vector((16*FIFO32_PORTS)-1 downto 0);
+		IN_FIFO32_S_Rd : out std_logic_vector(FIFO32_PORTS-1 downto 0);
 
-		IN_FIFO32_M_Clk : in std_logic_vector(FIFO32_PORTS-1 downto 0);		
-		IN_FIFO32_M_Data : in std_logic_vector((32*FIFO32_PORTS)-1 downto 0);
-		IN_FIFO32_M_Rem : out std_logic_vector((16*FIFO32_PORTS)-1 downto 0);
-		IN_FIFO32_M_Wr : in std_logic_vector(FIFO32_PORTS-1 downto 0);
+		IN_FIFO32_M_Clk : out std_logic_vector(FIFO32_PORTS-1 downto 0);		
+		IN_FIFO32_M_Data : out std_logic_vector((32*FIFO32_PORTS)-1 downto 0);
+		IN_FIFO32_M_Rem : in std_logic_vector((16*FIFO32_PORTS)-1 downto 0);
+		IN_FIFO32_M_Wr : out std_logic_vector(FIFO32_PORTS-1 downto 0);
 
         -- Single FIFO32 Output
 		OUT_FIFO32_S_Clk : in std_logic;
@@ -56,23 +56,6 @@ architecture behavioural of fifo32_arbiter is
 --------------------------------------------------------------------------------
 -- Components
 --------------------------------------------------------------------------------
-
-    component fifo32
-	    generic (
-		    FIFO32_DEPTH : integer := 16
-	    );
-	    port (
-		    Rst : in std_logic;
-		    FIFO32_S_Clk : in std_logic;
-		    FIFO32_M_Clk : in std_logic;
-		    FIFO32_S_Data : out std_logic_vector(31 downto 0);
-		    FIFO32_M_Data : in std_logic_vector(31 downto 0);
-		    FIFO32_S_Fill : out std_logic_vector(15 downto 0);
-		    FIFO32_M_Rem : out std_logic_vector(15 downto 0);
-		    FIFO32_S_Rd : in std_logic;
-		    FIFO32_M_Wr : in std_logic
-	    );
-    end component;
 
     component rr_arbiter
       generic(
@@ -123,17 +106,6 @@ architecture behavioural of fifo32_arbiter is
     --! 
     signal requests : std_logic_vector(FIFO32_PORTS-1 downto 0);
 
-    --! FIFOs to multiplexers
-    signal INT_FIFO32_S_Clk  : std_logic_vector(FIFO32_PORTS-1 downto 0);
-    signal INT_FIFO32_S_Data : std_logic_vector((32*FIFO32_PORTS)-1 downto 0);
-    signal INT_FIFO32_S_Fill : std_logic_vector((16*FIFO32_PORTS)-1 downto 0);
-    signal INT_FIFO32_S_Rd   : std_logic_vector(FIFO32_PORTS-1 downto 0);
-
-    signal INT_FIFO32_M_Clk  : std_logic_vector(FIFO32_PORTS-1 downto 0);
-    signal INT_FIFO32_M_Data : std_logic_vector((32*FIFO32_PORTS)-1 downto 0);
-    signal INT_FIFO32_M_Rem  : std_logic_vector((16*FIFO32_PORTS)-1 downto 0);
-    signal INT_FIFO32_M_Wr   : std_logic_vector(FIFO32_PORTS-1 downto 0);
-
     --! Tap slave data output to memory controller
     signal INT_OUT_FIFO32_S_Data : std_logic_vector(31 downto 0);
 
@@ -141,44 +113,6 @@ begin -- of architecture -------------------------------------------------------
     
     OUT_FIFO32_S_Data <= INT_OUT_FIFO32_S_Data;
     
-
-    -- FIFOS
-    fifos: for i in 0 to FIFO32_PORTS-1 generate
-        master_fifo32_i : fifo32
-        	generic map(
-		            FIFO32_DEPTH => 16
-            )
-	        port map (
-		        Rst => Rst,
-		        FIFO32_S_Clk => INT_FIFO32_S_Clk(i),
-		        FIFO32_M_Clk => IN_FIFO32_M_Clk(i),
-		        FIFO32_S_Data => INT_FIFO32_S_Data((32*(i+1))-1 downto 32*i),
-		        FIFO32_M_Data => IN_FIFO32_M_Data((32*(i+1))-1 downto 32*i),
-		        FIFO32_S_Fill => INT_FIFO32_S_Fill((16*(i+1))-1 downto 16*i),
-		        FIFO32_M_Rem => IN_FIFO32_M_Rem((16*(i+1))-1 downto 16*i),
-		        FIFO32_S_Rd => INT_FIFO32_S_Rd(i),
-		        FIFO32_M_Wr => IN_FIFO32_M_Wr(i)
-	        );
-
-        slave_fifo32_i : fifo32
-        	generic map(
-		            FIFO32_DEPTH => 16
-            )
-	        port map (
-		        Rst => Rst,
-		        FIFO32_S_Clk => IN_FIFO32_S_Clk(i),
-		        FIFO32_M_Clk => INT_FIFO32_M_Clk(i),
-		        FIFO32_S_Data => IN_FIFO32_S_Data((32*(i+1))-1 downto 32*i),
-		        FIFO32_M_Data => INT_FIFO32_M_Data((32*(i+1))-1 downto 32*i),
-		        FIFO32_S_Fill => IN_FIFO32_S_Fill((16*(i+1))-1 downto 16*i),
-		        FIFO32_M_Rem => INT_FIFO32_M_Rem((16*(i+1))-1 downto 16*i),
-		        FIFO32_S_Rd => IN_FIFO32_S_Rd(i),
-		        FIFO32_M_Wr => INT_FIFO32_M_Wr(i)
-	        );
-    end generate;
-    
-
-        
     -- Slave part of fifo link
 
     mux_S_DATA: mux
@@ -187,7 +121,7 @@ begin -- of architecture -------------------------------------------------------
        element_count => FIFO32_PORTS
     )
     port map (
-        input   => INT_FIFO32_S_Data,
+        input   => IN_FIFO32_S_Data,
         sel     => sel2mux,
         output  => INT_OUT_FIFO32_S_DATA
     );   
@@ -198,7 +132,7 @@ begin -- of architecture -------------------------------------------------------
        element_count => FIFO32_PORTS
     )
     port map (
-        input   => INT_FIFO32_S_FILL,
+        input   => IN_FIFO32_S_FILL,
         sel     => sel2mux,
         output  => OUT_FIFO32_S_Fill
     );   
@@ -211,7 +145,7 @@ begin -- of architecture -------------------------------------------------------
     port map (
         input(0)   => OUT_FIFO32_S_Rd,
         sel     => sel2mux,
-        output  => INT_FIFO32_S_Rd
+        output  => IN_FIFO32_S_Rd
     );   
 
     demux_S_Clk: demux
@@ -222,7 +156,7 @@ begin -- of architecture -------------------------------------------------------
     port map (
         input(0)   => OUT_FIFO32_S_Clk,
         sel     => sel2mux,
-        output  => INT_FIFO32_S_Clk
+        output  => IN_FIFO32_S_Clk
     );   
 
     -- Master part of fifo link
@@ -235,7 +169,7 @@ begin -- of architecture -------------------------------------------------------
     port map (
         input   => OUT_FIFO32_M_Data,
         sel     => sel2mux,
-        output  => INT_FIFO32_M_Data
+        output  => IN_FIFO32_M_Data
     );   
 
     mux_M_Rem: mux
@@ -244,7 +178,7 @@ begin -- of architecture -------------------------------------------------------
        element_count => FIFO32_PORTS
     )
     port map (
-        input   => INT_FIFO32_M_Rem,
+        input   => IN_FIFO32_M_Rem,
         sel     => sel2mux,
         output  => OUT_FIFO32_M_Rem
     );   
@@ -257,7 +191,7 @@ begin -- of architecture -------------------------------------------------------
     port map (
         input(0)   => OUT_FIFO32_M_Wr,
         sel     => sel2mux,
-        output  => INT_FIFO32_M_Wr
+        output  => IN_FIFO32_M_Wr
     );   
 
     demux_M_Clk: demux
@@ -268,7 +202,7 @@ begin -- of architecture -------------------------------------------------------
     port map (
         input(0)   => OUT_FIFO32_M_Clk,
         sel     => sel2mux,
-        output  => INT_FIFO32_M_Clk
+        output  => IN_FIFO32_M_Clk
     );   
 
 
@@ -284,7 +218,7 @@ begin -- of architecture -------------------------------------------------------
        sel      => sel2fsm
       );
 
-    request_p: process (clk,rst,int_fifo32_s_fill)
+    request_p: process (clk,rst,in_fifo32_s_fill)
     is
 
     begin
@@ -292,7 +226,7 @@ begin -- of architecture -------------------------------------------------------
         --    requests <= (others => '0');
         --else --if clk'event and clk = '1' then
             for i in 0 to FIFO32_PORTS-1 loop
-                if to_integer(unsigned(INT_FIFO32_S_Fill((16*(i+1))-1 downto 16*i))) > 1 then
+                if to_integer(unsigned(IN_FIFO32_S_Fill((16*(i+1))-1 downto 16*i))) > 1 then
                     requests(i) <= '1';
                 else
                     requests(i) <= '0';
@@ -311,7 +245,7 @@ begin -- of architecture -------------------------------------------------------
 
         type TRANSFER_MODE_T is (READ, WRITE);
         variable transfer_mode : TRANSFER_MODE_T;
-        variable transfer_size : natural range 0 to 2**30;
+        variable transfer_size : natural range 0 to 2**24;
 
     begin
         if rst='1' then
@@ -327,7 +261,11 @@ begin -- of architecture -------------------------------------------------------
             transfer_size := transfer_size;
             case state is
                 when IDLE =>
-                    state := MODE_LENGTH;
+                    if OUT_FIFO32_S_Rd = '0' then
+                        state := IDLE;
+                    else
+                        state := MODE_LENGTH;
+                    end if;
                     selection := sel2fsm;
                     sel2mux <= (others => '0');
                     case INT_OUT_FIFO32_S_DATA(31) is
