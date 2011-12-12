@@ -14,7 +14,7 @@ obj-m := fsl.o
 
 else
 
-KERNELDIR ?= ../linux-2.6-xlnx
+KERNELDIR ?= ~/linux-2.6-xlnx
 
 PWD       := $(shell pwd)
 
@@ -25,7 +25,7 @@ modules:
 endif
 
 clean:
-	rm -rf *.o *~ core .depend .*.cmd *.ko *.mod.c .tmp_versions Module.symvers
+	rm -rf *.o *~ core .depend .*.cmd *.ko *.mod.c .tmp_versions Module.symvers modules.order
 	
 depend .depend dep:
 	$(CC) $(CFLAGS) -M *.c > .depend
