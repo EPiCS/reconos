@@ -238,7 +238,7 @@ begin -- of architecture -------------------------------------------------------
 
     fsm_p : process (clk,rst, sel2fsm)
     is  
-        type FSM_STATE_T is (IDLE, MODE_LENGTH, ADDRESS, DATA_READ, DATA_WRITE);
+        type FSM_STATE_T is (MODE_LENGTH, ADDRESS, DATA_READ, DATA_WRITE);
         variable state : FSM_STATE_T;
 
         variable selection : std_logic_vector(clog2(FIFO32_PORTS)-1 downto 0);
@@ -249,7 +249,7 @@ begin -- of architecture -------------------------------------------------------
 
     begin
         if rst='1' then
-            state := IDLE;
+            state := MODE_LENGTH;
             selection := (others => '0');
             transfer_mode := READ;
         elsif clk'event and clk = '1' then
@@ -260,48 +260,41 @@ begin -- of architecture -------------------------------------------------------
             transfer_mode := transfer_mode;
             transfer_size := transfer_size;
             case state is
-                when IDLE =>
-                    if OUT_FIFO32_S_Rd = '0' then
-                        state := IDLE;
-                    else
-                        state := MODE_LENGTH;
+                when MODE_LENGTH =>
+                    if OUT_FIFO32_S_Rd = '1' then
+                        state := ADDRESS;
                     end if;
                     selection := sel2fsm;
-                    sel2mux <= (others => '0');
+                    sel2mux <= selection;
                     case INT_OUT_FIFO32_S_DATA(31) is
                         when '0' => transfer_mode := READ;
                         when others => transfer_mode := WRITE;
                         
                     end case;
-                    transfer_size := to_integer(unsigned(INT_OUT_FIFO32_S_DATA(31 downto 0)));
-                when MODE_LENGTH =>
-                    state := ADDRESS;
-                    sel2mux <= selection;
+                    -- lower 24 bits of first word are defined to be the length
+                    -- of the transfer.
+                    transfer_size := to_integer(unsigned(INT_OUT_FIFO32_S_DATA(23 downto 0)));
                 when ADDRESS =>
                     case transfer_mode is
                         when READ => state := DATA_READ;
                         when WRITE => state := DATA_WRITE;
                     end case;
-                    sel2mux <= selection;
                 when DATA_READ =>
-                    if transfer_size = 0 then
-                        state := IDLE;
-                    end if;
                     if OUT_FIFO32_M_Wr = '1' then
-                        transfer_size := transfer_size-1;
+                        transfer_size := transfer_size-4;
                     end if;
-
-                    sel2mux <= selection;
-                when DATA_WRITE =>
                     if transfer_size = 0 then
-                        state := IDLE;
+                        state := MODE_LENGTH;
                     end if;
+                when DATA_WRITE =>
                     if OUT_FIFO32_S_Rd = '1' then
-                        transfer_size := transfer_size-1;
+                        transfer_size := transfer_size-4;
                     end if;
-                    sel2mux <= selection;
+                    if transfer_size = 0 then
+                        state := MODE_LENGTH;
+                    end if;
                 when others =>
-                    state := IDLE;
+                    state := MODE_LENGTH;
                     selection := selection;
                     sel2mux <= sel2mux;
             end case;
