@@ -308,6 +308,7 @@ begin
 			
 			if Bus2IP_Mst_CmdAck = '1' then
 				IP2Bus_MstWr_Req_cs <= '0';
+				IP2Bus_MstRd_Req_cs <= '0';
 			end if;
 			
 			case state is
