@@ -18,7 +18,7 @@ static struct cdev getpgd_cdev;
 static ssize_t getpgd_read(struct file *filp, char __user *buf, size_t len, loff_t *ignore)
 {
 	unsigned long res;
-	unsigned long data = (unsigned long)current->mm->pgd;
+	unsigned long data = (unsigned long)current->mm->pgd - 0xC0000000;
 	
 	//printk(KERN_WARNING "should be something else\n");
 	//printk(KERN_WARNING "getpgd: context.id = %lu current->pid = %d\n mm->owner->pid", current->mm->context.id, current->pid, current->mm->owner->pid);
@@ -97,7 +97,7 @@ static void getpgd_exit(void)
 	if(getpgd_dev){
 		unregister_chrdev_region(getpgd_dev, 1);
 	}
-	printk(KERN_ALERT "getpgd unloaded\n");
+	/* printk(KERN_ALERT "getpgd unloaded\n"); */
 }
 
 static int getpgd_init(void)
@@ -122,18 +122,17 @@ static int getpgd_init(void)
 		return res;
 	}
 	
+	/*	
 	printk(KERN_ALERT "getpgd loaded\n");
 
 	printk(KERN_ALERT "PAGE_SHIFT = %d\n", PAGE_SHIFT);
 	printk(KERN_ALERT "PMD_SHIFT = %d\n", PMD_SHIFT);
-	/*printk(KERN_ALERT "PUD_SHIFT = %d\n", PUD_SHIFT);*/
 	printk(KERN_ALERT "PGDIR_SHIFT = %d\n", PGDIR_SHIFT);
 	
 	printk(KERN_ALERT "PAGE_MASK = 0x%08lX\n", PAGE_MASK);
 	printk(KERN_ALERT "PMD_MASK = 0x%08lX\n", PMD_MASK);
-	/*printk(KERN_ALERT "PUD_MASK = 0x%08lX\n", PUD_MASK);*/
 	printk(KERN_ALERT "PGDIR_MASK = 0x%08lX\n", PGDIR_MASK);
-
+	*/
 
 	return 0;
 }
