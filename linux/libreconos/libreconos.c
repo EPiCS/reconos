@@ -12,6 +12,14 @@
 #include <unistd.h>
 
 
+#if 1
+#define RECONOS_DEBUG(...) fprintf(stderr,__VA_ARGS__);
+#else
+#define RECONOS_DEBUG(...)
+#endif
+
+#define RECONOS_ERROR(...) fprintf(stderr,"ERROR:" __VA_ARGS__);
+
 #define FSL_PATH_LEN 256
 
 struct reconos_process reconos_proc;
@@ -40,13 +48,45 @@ static void slot_reset(int num, int reset){
 	fsl_write(reconos_proc.proc_control_fsl,cmd);
 }
 
+uint32 getpgd()
+{
+	int res,fd;
+	uint32 pgd;
+
+	fd = open("/dev/getpgd",O_RDONLY);
+	if(fd == -1){
+		perror("open /dev/getpgd");
+		exit(1);
+	}
+
+	res = read(fd,&pgd,4);
+	if(res != 4){
+		perror("read from /dev/getpgd");
+		exit(1);
+	}
+	
+	RECONOS_DEBUG("PGD = 0x%08X\n",pgd);
+
+	close(fd);
+	
+	return pgd;
+}
+
 int reconos_init(int proc_control_fsl)
 {
 	int i;
+	uint32 pgd;
+	
 	reconos_proc.proc_control_fsl = proc_control_fsl;
 	for(i = 0; i < MAX_SLOTS; i++){
 		reconos_proc.slot_flags[i] |= SLOT_FLAG_RESET;
 	}
+	
+	pgd = getpgd();
+	
+	fsl_write(proc_control_fsl,0x02000000);
+	fsl_write(proc_control_fsl,pgd);
+	
 	return 0;
 }
 
@@ -68,13 +108,6 @@ void reconos_hwt_setresources(struct reconos_hwt * hwt, struct reconos_resource 
 	hwt->num_resources = num_resources;
 }
 
-#if 1
-#define RECONOS_DEBUG(...) fprintf(stderr,__VA_ARGS__);
-#else
-#define RECONOS_DEBUG(...)
-#endif
-
-#define RECONOS_ERROR(...) fprintf(stderr,"ERROR:" __VA_ARGS__);
 
 
 void * delegate_thread_entry(void * arg)
