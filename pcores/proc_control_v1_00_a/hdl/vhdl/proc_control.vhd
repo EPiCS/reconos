@@ -38,14 +38,18 @@ entity proc_control is
 		resetC         : out std_logic;
 		resetD         : out std_logic;
 		resetE         : out std_logic;
-		resetF         : out std_logic
+		resetF         : out std_logic;
+		
+		-- Process Global Directory address
+		pgd            : out std_logic_vector(31 downto 0)
 	);
 end entity;
 
 architecture implementation of proc_control is
 	constant C_RESET   : std_logic_vector(7 downto 0) := x"01";
+	constant C_PGD     : std_logic_vector(7 downto 0) := x"02";
 
-	type STATE_TYPE is (STATE_READ, STATE_ACT);
+	type STATE_TYPE is (STATE_WAIT, STATE_BRANCH, STATE_RESET, STATE_PGD);
 
 	signal data   : std_logic_Vector(C_FSL_WIDTH-1 downto 0);
 	signal state  :STATE_TYPE;
@@ -73,7 +77,7 @@ begin
 	begin
 		if fsl.rst = '1' then
 			fsl_reset(fsl);
-			state <= STATE_READ;
+			state <= STATE_WAIT;
 			data <= (others => '0');
 			done := False;
 			reset0 <= '1';
@@ -92,31 +96,46 @@ begin
 			resetD <= '1';
 			resetE <= '1';
 			resetF <= '1';
+			pgd <= (others => '0');
 		elsif rising_edge(fsl.clk) then
 			case state is
-				when STATE_READ =>
+				when STATE_WAIT =>
 					fsl_read_word(fsl,data,done);
-					if done then state <= STATE_ACT; end if;
-				when STATE_ACT =>
-					if data(31 downto 24) = C_RESET then
-						reset0 <= data(0);
-						reset1 <= data(1);
-						reset2 <= data(2);
-						reset3 <= data(3);
-						reset4 <= data(4);
-						reset5 <= data(5);
-						reset6 <= data(6);
-						reset7 <= data(7);
-						reset8 <= data(8);
-						reset9 <= data(9);
-						resetA <= data(10);
-						resetB <= data(11);
-						resetC <= data(12);
-						resetD <= data(13);
-						resetE <= data(14);
-						resetF <= data(15);
-					end if;
-					state <= STATE_READ;
+					if done then state <= STATE_BRANCH; end if;
+					
+				when STATE_BRANCH =>
+					case data(31 downto 24) is
+						when C_RESET =>
+							state <= STATE_RESET;
+						when C_PGD =>
+							state <= STATE_PGD;
+						when others =>
+							state <= STATE_WAIT; -- ignore everything else
+					end case;
+					
+				when STATE_RESET =>
+					reset0 <= data(0);
+					reset1 <= data(1);
+					reset2 <= data(2);
+					reset3 <= data(3);
+					reset4 <= data(4);
+					reset5 <= data(5);
+					reset6 <= data(6);
+					reset7 <= data(7);
+					reset8 <= data(8);
+					reset9 <= data(9);
+					resetA <= data(10);
+					resetB <= data(11);
+					resetC <= data(12);
+					resetD <= data(13);
+					resetE <= data(14);
+					resetF <= data(15);
+					state <= STATE_WAIT;
+				
+				when STATE_PGD =>
+					fsl_read_word(fsl,pgd,done);
+					if done then state <= STATE_WAIT; end if;
+					
 			end case;
 		end if;
 	end process;

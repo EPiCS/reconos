@@ -40,4 +40,6 @@ PORT resetD="", DIR=O
 PORT resetE="", DIR=O
 PORT resetF="", DIR=O
 
+PORT pgd="", DIR=O, VEC=[0:31]
+
 END
