@@ -82,7 +82,7 @@ BEGIN microblaze
  PARAMETER C_DCACHE_ALWAYS_USED = 1
  PARAMETER HW_VER = 8.00.a
  PARAMETER C_USE_ICACHE = 1
- PARAMETER C_USE_DCACHE = 1
+ PARAMETER C_USE_DCACHE = 0
  PARAMETER C_PVR = 2
  PARAMETER C_USE_MMU = 3
  PARAMETER C_MMU_ZONES = 2
@@ -106,8 +106,8 @@ BEGIN microblaze
  BUS_INTERFACE DEBUG = microblaze_0_mdm_bus
  BUS_INTERFACE SFSL0 = fsl_v20_0
  BUS_INTERFACE SFSL1 = fsl_v20_2
- BUS_INTERFACE MFSL1 = fsl_v20_3
  BUS_INTERFACE MFSL0 = fsl_v20_1
+ BUS_INTERFACE MFSL1 = fsl_v20_3
  PORT MB_RESET = mb_reset
  PORT INTERRUPT = microblaze_0_Interrupt
 END
@@ -424,7 +424,7 @@ BEGIN fsl_v20
  PARAMETER HW_VER = 2.11.c
  PARAMETER C_USE_CONTROL = 0
  PORT FSL_Clk = clk_100_0000MHzMMCM0
- PORT SYS_Rst = sys_bus_reset
+ PORT SYS_Rst = proc_control_0_reconos_reset
  PORT FSL_Has_Data = fsl_v20_2_FSL_Has_Data
 END
 
@@ -433,7 +433,7 @@ BEGIN fsl_v20
  PARAMETER HW_VER = 2.11.c
  PARAMETER C_USE_CONTROL = 0
  PORT FSL_Clk = clk_100_0000MHzMMCM0
- PORT SYS_Rst = sys_bus_reset
+ PORT SYS_Rst = proc_control_0_reconos_reset
 END
 
 BEGIN proc_control
@@ -443,6 +443,10 @@ BEGIN proc_control
  BUS_INTERFACE MFSL = fsl_v20_2
  PORT reset0 = proc_control_0_reset0
  PORT pgd = proc_control_0_pgd
+ PORT page_fault = mmu_0_PAGE_FAULT
+ PORT fault_addr = mmu_0_FAULT_ADDR
+ PORT retry = proc_control_0_retry
+ PORT reconos_reset = proc_control_0_reconos_reset
 END
 
 BEGIN xps_mem
@@ -458,6 +462,7 @@ BEGIN fifo32
  PARAMETER HW_VER = 1.00.a
  BUS_INTERFACE MFIFO32 = fifo32_0_MFIFO32
  BUS_INTERFACE SFIFO32 = fifo32_0_SFIFO32
+ PORT Rst = proc_control_0_reconos_reset
 END
 
 BEGIN fifo32
@@ -465,6 +470,7 @@ BEGIN fifo32
  PARAMETER HW_VER = 1.00.a
  BUS_INTERFACE SFIFO32 = fifo32_1_SFIFO32
  BUS_INTERFACE MFIFO32 = fifo32_1_MFIFO32
+ PORT Rst = proc_control_0_reconos_reset
 END
 
 BEGIN hwt_memaccess
@@ -485,7 +491,10 @@ BEGIN mmu
  BUS_INTERFACE HWT_SFIFO32 = fifo32_0_SFIFO32
  BUS_INTERFACE HWT_MFIFO32 = fifo32_1_MFIFO32
  PORT Clk = clk_100_0000MHzMMCM0
- PORT Rst = sys_bus_reset
+ PORT Rst = proc_control_0_reconos_reset
  PORT PGD = proc_control_0_pgd
+ PORT PAGE_FAULT = mmu_0_PAGE_FAULT
+ PORT FAULT_ADDR = mmu_0_FAULT_ADDR
+ PORT RETRY = proc_control_0_retry
 END
 
