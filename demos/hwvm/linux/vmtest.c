@@ -61,6 +61,43 @@ void hwt_write(uint32 * src, int n, uint32 * dst)
 	}
 }
 
+#define MAX_BURST_SIZE 128
+
+void read_tests()
+{
+	int i,j,n;
+	uint32 *mem;
+	uint32 *data;
+
+	// allocate 1 page
+	mem = alloc_pages(1);
+
+	// allocate buffer
+	data = malloc(PAGE_SIZE);
+
+	// all burst sized from 1 to MAX_BURST_SIZE
+	for(n = 1; n < MAX_BURST_SIZE; n++){
+		printf("Burst read %d\n",n);
+
+		// software write to the first page
+		for(i = 0; i < PAGE_WORDS; i++){
+			mem[i] = (n << 16) | i;
+			data[i] = 0;
+		}
+	
+		// sequential n word burst reads
+		for(i = 0; i < PAGE_WORDS - n; i++){
+			hwt_read(mem + i, n, data + i);
+			for(j = 0; j < n; j++){
+				if(mem[i+j] != data[i+j]){
+					fprintf(stderr,"HWT %d-burst read from 0x%08X: 0x%08X (should be 0x%08X)\n",n,(uint32)mem,data[i],mem[i]);
+					exit(1);
+				}
+			}  
+		}
+	}
+}
+
 void run_tests()
 {
 	int i;
@@ -115,7 +152,8 @@ int main(int argc, char ** argv)
 	reconos_hwt_setresources(&hwt,res,2);
 	reconos_hwt_create(&hwt,0,NULL);
 	
-	run_tests();
+	//run_tests();
+	read_tests();
 
 	pthread_join(hwt.delegate,NULL);
 	
