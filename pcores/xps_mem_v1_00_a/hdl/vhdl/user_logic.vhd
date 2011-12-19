@@ -94,6 +94,11 @@ end entity user_logic;
 
 architecture IMP of user_logic is
 
+        attribute keep_hierarchy : string;
+        attribute keep_hierarchy of IMP: architecture is "true";
+
+
+
 	type state_t is (STATE_WAIT_HEADER,STATE_READ_CMD,STATE_READ_ADDR,STATE_WAIT_FIFO_REM,
 	                 STATE_WAIT_FIFO_FILL,STATE_READ_REQ,STATE_READ,STATE_WRITE_REQ,
 						  STATE_WRITE,STATE_WAIT_COMPLETE);	
@@ -155,18 +160,18 @@ begin
 
 -- begin chipscope
 
-	icon_i : chipscope_icon
-	port map (
-		CONTROL0 => CONTROL
-	);
+	--icon_i : chipscope_icon
+	--port map (
+	--	CONTROL0 => CONTROL
+	--);
 	
-	ila_i : chipscope_ila
-	port map (
-		CONTROL => CONTROL,
-		CLK => Bus2IP_Clk,
-		DATA => DATA,
-		TRIG0 => TRIG
-	);
+	--ila_i : chipscope_ila
+	--port map (
+	--	CONTROL => CONTROL,
+	--	CLK => Bus2IP_Clk,
+	--	DATA => DATA,
+	--	TRIG0 => TRIG
+	--);
 
 	--TRIG(0) <= Bus2IP_Reset;
 	TRIG <= FIFO32_S_Fill(7 downto 0);
