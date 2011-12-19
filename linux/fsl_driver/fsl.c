@@ -149,7 +149,7 @@ int fsl_open(struct inode *inode, struct file *filp)
 	
 	// report any unhandled IRQs in the meantime
 	if (dev->irq_count > 0) {
-		printk(KERN_WARNING "osif: there have been %d IRQs\n", dev->irq_count);
+		printk(KERN_WARNING "osif: there have been %d unhandled IRQs\n", dev->irq_count);
 	}
 	
 	// TODO: Reset OSIF and hardware thread?

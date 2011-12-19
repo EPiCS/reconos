@@ -10,28 +10,14 @@
 #ifndef __FSL_MODULE_H__
 #define __FSL_MODULE_H__
 
-#define FSL_DEBUG 1
-
 // CONSTANTS ==============================================
 
 
 // MACROS =================================================
 
 #undef PDEBUG             /* undef it, just in case */
-#ifdef FSL_DEBUG
-#  ifdef __KERNEL__
-     // This one if debugging is on, and kernel space
-#    define PDEBUG(fmt, args...) printk( KERN_WARNING "fsl.ko: " fmt, ## args)
-#  else
-     // This one for user space 
-#    define PDEBUG(fmt, args...) fprintf(stderr, fmt, ## args)
-#  endif
-#else
-#  define PDEBUG(fmt, args...) 0      // not debugging: nothing
-#endif
-
-#undef PDEBUG
-#define PDEBUG(fmt, args...) printk( KERN_WARNING "fsl: " fmt, ## args)
+//#define PDEBUG(fmt, args...) printk( KERN_WARNING "fsl: " fmt, ## args)
+#define PDEBUG(fmt, args...) 
 
 #ifndef MIN
 #define MIN(a,b) ((a) < (b) ? (a) : (b))

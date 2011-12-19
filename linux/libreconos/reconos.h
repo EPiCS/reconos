@@ -28,6 +28,7 @@ struct reconos_hwt {
 struct reconos_process
 {
 	int proc_control_fsl;
+	pthread_t proc_control_thread;
 	int slot_flags[MAX_SLOTS];
 };
 

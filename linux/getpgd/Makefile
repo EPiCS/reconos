@@ -9,8 +9,7 @@ ifneq ($(KERNELRELEASE),)
 #EXTRA_CFLAGS += -I$(HW_DESIGN)/ppc405_0/include
 
   
-obj-m := fsl.o
-#fsl-objs := fsl.o
+obj-m := getpgd.o
 
 else
 

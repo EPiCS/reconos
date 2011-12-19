@@ -94,6 +94,11 @@ end entity user_logic;
 
 architecture IMP of user_logic is
 
+        attribute keep_hierarchy : string;
+        attribute keep_hierarchy of IMP: architecture is "true";
+
+
+
 	type state_t is (STATE_WAIT_HEADER,STATE_READ_CMD,STATE_READ_ADDR,STATE_WAIT_FIFO_REM,
 	                 STATE_WAIT_FIFO_FILL,STATE_READ_REQ,STATE_READ,STATE_WRITE_REQ,
 						  STATE_WRITE,STATE_WAIT_COMPLETE);	
@@ -308,6 +313,7 @@ begin
 			
 			if Bus2IP_Mst_CmdAck = '1' then
 				IP2Bus_MstWr_Req_cs <= '0';
+				IP2Bus_MstRd_Req_cs <= '0';
 			end if;
 			
 			case state is
