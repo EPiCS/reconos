@@ -33,7 +33,7 @@ lappend debug_level [list "clock"]
 # Uncomment the line below to get verbose IP information.
 lappend debug_level [list "ip"]
 # Uncomment the line below to get debugging information about EDK handles.
-#lappend debug_level [list "handles"]
+# lappend debug_level [list "handles"]
 
 
 # Globals variable
@@ -171,21 +171,6 @@ proc generate_device_tree {filepath bootargs {consoleip ""}} {
 				set tree [tree_append $tree [list ranges empty empty]]
 				lappend ip_tree $tree
 			}
-			set bus_name [xget_hw_busif_value $hwproc_handle "SFSL0"]
-			if { [string compare -nocase $bus_name ""] != 0 } {
-				# Microblaze v7 has FSL
-				set tree [bus_bridge $hwproc_handle $intc 0 "SFSL0"]
-				set tree [tree_append $tree [list ranges empty empty]]
-				lappend ip_tree $tree
-			}
-			set bus_name [xget_hw_busif_value $hwproc_handle "MFSL0"]
-			if { [string compare -nocase $bus_name ""] != 0 } {
-				# Microblaze v7 has FSL
-				set tree [bus_bridge $hwproc_handle $intc 0 "MFSL0"]
-				set tree [tree_append $tree [list ranges empty empty]]
-				lappend ip_tree $tree
-			}
-	
 			set bus_name [xget_hw_busif_value $hwproc_handle "DOPB"]
 			if { [string compare -nocase $bus_name ""] != 0 } {
 				# Older microblazes have OPB.
@@ -1466,6 +1451,7 @@ proc bus_is_connected {slave face} {
 
 	set mhs_handle [xget_hw_parent_handle $slave]
 	set bus_handle [xget_hw_ipinst_handle $mhs_handle $bus_name]
+
 	return [llength $bus_handle]
 }
 
@@ -1494,7 +1480,6 @@ proc bus_bridge {slave intc_handle baseaddr face} {
 	set mhs_handle [xget_hw_parent_handle $slave]
 	set bus_handle [xget_hw_ipinst_handle $mhs_handle $bus_name]
 
-	debug info "*** SLAVE: $slave    FACE: $face    HANDLE: $bus_handle ***"
 #FIXME remove compatible_list property and add simple-bus in  gen_compatible_property function
 	set compatible_list {}
 	if {[llength $bus_handle] == 0} {
