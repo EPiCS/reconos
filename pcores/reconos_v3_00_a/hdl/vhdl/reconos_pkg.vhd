@@ -81,8 +81,8 @@ package reconos_pkg is
 	-- generic FSL interface procedures and functions
 	
 	type fsl_t is record
-		clk             : std_logic;
-		rst             : std_logic;
+		clk            : std_logic;
+		rst            : std_logic;
 		fsl2hwt_data    : std_logic_vector(C_FSL_WIDTH-1 downto 0);
 		fsl2hwt_exists  : std_logic;
 		fsl2hwt_full    : std_logic;
@@ -90,35 +90,27 @@ package reconos_pkg is
 		hwt2fsl_reading : std_logic;
 		hwt2fsl_writing : std_logic;
 		hwt2fsl_ctrl    : std_logic;
-		step            : integer range 0 to 15; 
+		step           : integer range 0 to 15;
 	end record;
 	
-	type sfifo_t is record
-		data : std_logic_vector(31 downto 0);
-		fill : std_logic_vector(15 downto 0);
-		rd : std_logic;
-	end record;
+        -- Out means: these are write only signals.
+        type memif_out_t is record
+                             m_data : std_logic_vector(31 downto 0);
+                             m_wr   : std_logic;
+                             m_clk  : std_logic;
+                             s_rd   : std_logic;
+                             s_clk  : std_logic;
+                             step   : integer range 0 to 15;
+        end record;
 
-	type mfifo_t is record
-		data : std_logic_vector(31 downto 0);
-		remainder : std_logic_vector(15 downto 0);
-		wr : std_logic;
-	end record;
-
-
-	type unresolved_memif_t is record
-		clk : std_logic;
-		master : mfifo_t;
-		slave : sfifo_t;
-		step : integer range 0 to 15;
-	end record;
-
-    type unresolved_memif_array_t is array(natural range <>) of unresolved_memif_t;
-
-    function memif_resolution( memif_array : unresolved_memif_array_t) return unresolved_memif_t;
-
-	subtype memif_t is memif_resolution unresolved_memif_t;
-
+        -- In means: these are read only signals
+        type memif_in_t is record
+                              m_rem  : std_logic_vector(15 downto 0);
+                              s_data : std_logic_vector(31 downto 0);
+                              s_fill : std_logic_vector(15 downto 0);
+                              step   : integer range 0 to 15;
+        end record;
+        
 	-- set up FSL interface. must be called in architecture body.
 	procedure fsl_setup (
 		signal fsl           : inout fsl_t;
@@ -244,7 +236,8 @@ package reconos_pkg is
 	-- see fsl_setup()
 
 	procedure memif_setup (
-		signal memif : inout memif_t;
+		signal memif_out : in  memif_out_t;
+                signal memif_in  : out memif_in_t;
 		signal clk   : in std_logic;
 		signal s_clk : out std_logic;
 		signal s_data : in std_logic_vector(31 downto 0);
@@ -256,19 +249,24 @@ package reconos_pkg is
 		signal m_wr : out std_logic
 	);
 	
-	procedure memif_reset(signal memif : inout memif_t);
+	procedure memif_reset(
+                signal memif_out : out memif_out_t;
+                signal memif_in  : in  memif_in_t
+        );
 	
 	procedure memif_write (
-		signal   memif : inout memif_t;
-		addr  : in std_logic_vector(31 downto 0);
-		data  : in std_logic_vector(31 downto 0);
+		signal memif_out : out memif_out_t;
+                signal memif_in  : in  memif_in_t;
+		constant addr  : in std_logic_vector(31 downto 0);
+		constant data  : in std_logic_vector(31 downto 0);
 		variable done  : out boolean
 	);
 	
 	procedure memif_read (
-		signal   memif : inout memif_t;
-		addr  : in  std_logic_vector(31 downto 0);
-		signal data  : out std_logic_vector(31 downto 0);
+		signal memif_out : out memif_out_t;
+                signal memif_in  : in  memif_in_t;
+		constant addr  : in  std_logic_vector(31 downto 0);
+		signal   data  : out std_logic_vector(31 downto 0);
 		variable done  : out boolean
 	);
 	
@@ -337,7 +335,7 @@ package body reconos_pkg is
 		hwt2fsl_writing <= fsl.hwt2fsl_writing and not fsl2hwt_full; -- this is important: writing must change asynchronously!
 		hwt2fsl_ctrl <= fsl.hwt2fsl_ctrl;
 		fsl.hwt2fsl_ctrl <= '0';
-	end;
+             end procedure;
 	
 	procedure fsl_push (
 		signal fsl   : inout fsl_t;
@@ -352,7 +350,7 @@ package body reconos_pkg is
 		else
 			fsl.step <= prev_step;
 		end if;
-	end;
+             end procedure;
 	
 	procedure fsl_push_finish (
 		signal fsl   : inout fsl_t;
@@ -363,7 +361,7 @@ package body reconos_pkg is
 		else
 			fsl.step <= next_step;
 		end if;
-	end;
+        end procedure;
 	
 	procedure fsl_pull (
 		signal fsl   : inout fsl_t;
@@ -381,7 +379,7 @@ package body reconos_pkg is
 				fsl.hwt2fsl_reading <= '0';
 			end if;
 		end if;
-	end;
+        end procedure;
 	
 	procedure fsl_reset(signal fsl : out fsl_t) is
 	begin
@@ -389,13 +387,13 @@ package body reconos_pkg is
 		fsl.hwt2fsl_reading <= '0';
 		fsl.hwt2fsl_writing <= '0';
 		fsl.hwt2fsl_data <= (others => '0');
-	end;
+	end procedure;
 	
 	procedure fsl_default (signal fsl : out fsl_t) is
 	begin
 		fsl.hwt2fsl_reading <= '0';
 		fsl.hwt2fsl_writing <= '0';
-	end;
+	end procedure;
 
 	procedure fsl_read_word (
 		signal fsl    : inout fsl_t;
@@ -411,7 +409,7 @@ package body reconos_pkg is
 				done := True;
 				fsl.step <= 0;
 		end case;
-	end;
+        end procedure;
 	
 	procedure osif_setup (
 		signal osif : inout fsl_t;
@@ -431,7 +429,7 @@ package body reconos_pkg is
 	procedure osif_reset(signal osif : out fsl_t) is
 	begin
 		fsl_reset(osif);
-	end;
+	end procedure;
 	
 	
 	procedure osif_call_1 (
@@ -456,7 +454,7 @@ package body reconos_pkg is
 				done := True;
 				osif.step <= 0;
 		end case;
-	end;
+        end procedure;
 
 	procedure osif_call_2 (
 		signal osif   : inout fsl_t;
@@ -483,7 +481,7 @@ package body reconos_pkg is
 				done := True;
 				osif.step <= 0;
 		end case;
-	end;
+        end procedure;
 
 	procedure osif_sem_post (
 		signal osif   : inout fsl_t;
@@ -492,7 +490,7 @@ package body reconos_pkg is
 		variable done : out boolean
 	) is begin
 		osif_call_1(osif,OSIF_CMD_SEM_POST,handle,result,done);
-	end;
+        end procedure;
 
 	procedure osif_sem_wait (
 		signal osif   : inout fsl_t;
@@ -501,7 +499,7 @@ package body reconos_pkg is
 		variable done : out boolean
 	) is begin
 		osif_call_1(osif,OSIF_CMD_SEM_WAIT,handle,result,done);
-	end;
+        end procedure;
 	
 	procedure osif_mbox_put (
 		signal osif   : inout fsl_t;
@@ -512,7 +510,7 @@ package body reconos_pkg is
 	) is begin
 		osif_call_2(osif,OSIF_CMD_MBOX_PUT,handle,word,result,done);
 
-	end;
+        end procedure;
 	
 	procedure osif_mbox_get (
 		signal osif   : inout fsl_t;
@@ -521,55 +519,13 @@ package body reconos_pkg is
 		variable done : out boolean
 	) is begin
 		osif_call_1(osif,OSIF_CMD_MBOX_GET,handle,result,done);
-	end;
+	end procedure;
 
-    -- We resolve multiple drivers of a memif_t signal by resolving every element 
-    -- via the default ieee1164 std_logic resolver.
-    function memif_resolution( memif_array : unresolved_memif_array_t) 
-    return unresolved_memif_t
-    is
-        constant Z_Data : std_logic_vector(memif_array(memif_array'left).master.data'range) := (others => 'Z');
-        constant Z_Length : std_logic_vector(memif_array(memif_array'left).master.remainder'range) := (others => 'Z');
-        variable memif : unresolved_memif_t;
-    begin
-        -- init result record
-   		memif.clk := 'Z';
-	    memif.master.data := (others => 'Z');
-        memif.master.remainder := (others => 'Z');
-        memif.master.wr := 'Z';
-	    memif.slave.data := (others => 'Z');
-        memif.slave.fill := (others => 'Z');
-        memif.slave.rd := 'Z';
-	    memif.step := 0 ;
-
-        -- now compare with inputs
-        for i in memif_array'range loop
-            memif.clk := resolved((memif.clk,memif_array(i).clk));
-
-            for j in memif.master.data'range loop
-                memif.master.data(j) := resolved((memif.master.data(j),memif_array(i).master.data(j)));
-                memif.slave.data(j) := resolved((memif.slave.data(j),memif_array(i).slave.data(j)));
-            end loop;
-
-            for j in memif.master.remainder'range loop
-                memif.master.remainder(j) := resolved((memif.master.remainder(j),memif_array(i).master.remainder(j)));
-                memif.slave.fill(j) := resolved((memif.slave.fill(j),memif_array(i).slave.fill(j)));
-            end loop;
-
-            memif.master.wr := resolved((memif.master.wr,memif_array(i).master.wr));
-            memif.slave.rd := resolved((memif.slave.rd,memif_array(i).slave.rd));
-
-            if memif_array(i).step > memif.step then 
-                memif.step := memif_array(i).step;
-            else
-                memif.step := memif.step;
-            end if;
-        end loop;
-        return memif;
-    end;
-	
+        -- memif_setup reverses the in/out semantics of memif_*_t to be able to connect
+        -- them to the separate signals.
 	procedure memif_setup (
-		signal memif : inout memif_t;
+		signal memif_out : in memif_out_t;
+                signal memif_in  : out  memif_in_t;
 		signal clk   : in std_logic;
 		signal s_clk : out std_logic;
 		signal s_data : in std_logic_vector(31 downto 0);
@@ -580,128 +536,106 @@ package body reconos_pkg is
 		signal m_remainder : in std_logic_vector(15 downto 0);
 		signal m_wr : out std_logic
 	) is begin
-
-        -- first set all signals to 'Z'
-		memif.clk <= 'Z';
-		memif.master.data <= (others => '0');
-        memif.master.remainder <= (others => 'Z');
-        memif.master.wr <= 'Z';
-		memif.slave.data <= (others => 'Z');
-        memif.slave.fill <= (others => 'Z');
-        memif.slave.rd <= 'Z';
-		memif.step <= memif.step ;
-
-        -- then assign actual signals
-		memif.clk <= clk;
-		
+		--memif_out.m_clk <= clk;
+		--memif_out.s_clk <= clk;                
 		s_clk <= clk;
-		memif.slave.data <= s_data;
-		memif.slave.fill <= s_fill;
-		s_rd <= memif.slave.rd;
-		
-		m_clk <= clk;
-		m_data <= memif.master.data;
-		memif.master.remainder <= m_remainder;
-		m_wr <= memif.master.wr;
-	end;
-	
-	procedure memif_reset( signal memif : inout memif_t) is
-	begin
-		--memif.step <= 0;
-		--memif.slave.rd <= '0';
-		--memif.master.wr <= '0';
+                m_clk <= clk;
 
-		memif.clk <= 'Z';
-		memif.master.data <= (others => '0');
-        memif.master.remainder <= (others => 'Z');
-        memif.master.wr <= '0';
-		memif.slave.data <= (others => 'Z');
-        memif.slave.fill <= (others => 'Z');
-        memif.slave.rd <= '0';
-		memif.step <= 0 ;
-	end;
+                
+		memif_in.s_data <= s_data;
+		memif_in.s_fill <= s_fill;
+		s_rd <= memif_out.s_rd;
+		
+		
+		m_data <= memif_out.m_data;
+		memif_in.m_rem <= m_remainder;
+		m_wr <= memif_out.m_wr;
+
+                -- implement step as a register
+                --if rising_edge(clk) then
+                  memif_in.step <= memif_out.step;
+                --end if;
+	end procedure;
+	
+	procedure memif_reset(
+                signal memif_out : out memif_out_t;
+                signal memif_in  : in  memif_in_t
+        ) is begin
+		memif_out.step <= 0;
+		memif_out.s_rd <= '0';
+		memif_out.m_wr <= '0';
+                memif_out.m_data <= X"00000000";
+	end procedure;
 	
 	procedure memif_write (
-		signal   memif : inout memif_t;
-		addr  : in  std_logic_vector(31 downto 0);
-		data  : in std_logic_vector(31 downto 0);
+		signal   memif_out : out memif_out_t;
+                signal   memif_in  : in  memif_in_t;
+		constant addr      : in  std_logic_vector(31 downto 0);
+		constant data  : in std_logic_vector(31 downto 0);
 		variable done  : out boolean
 	) is begin
-
-   		memif.clk <= 'Z';
-	    memif.master.data <= (others => '0');
-        memif.master.remainder <= (others => 'Z');
-	    memif.slave.data <= (others => 'Z');
-        memif.slave.fill <= (others => 'Z');
-
-		memif.master.wr <= '0';
-		memif.slave.rd <= '0';
+		memif_out.m_wr <= '0';
+		memif_out.s_rd <= '0';
 		done := False;
-		case memif.step is
+		case memif_in.step is
 			when 0 =>
-				if memif.master.remainder > 2 then
-					memif.step <= 1;
+				if memif_in.m_rem > 2 then
+					memif_out.step <= 1;
 				end if;
 			when 1 =>
-				memif.master.wr <= '1';
-				memif.master.data <= MEMIF_CMD_WRITE or x"00000004";
-				memif.step <= 2;
+				memif_out.m_wr <= '1';
+				memif_out.m_data <= MEMIF_CMD_WRITE or x"00000004";
+				memif_out.step <= 2;
 			when 2 =>
-				memif.master.wr <= '1';
-				memif.master.data <= addr;
-				memif.step <= 3;
+				memif_out.m_wr <= '1';
+				memif_out.m_data <= addr;
+				memif_out.step <= 3;
 			when 3 =>
-				memif.master.wr <= '1';
-				memif.master.data <= data;
-				memif.step <= 4;
+				memif_out.m_wr <= '1';
+				memif_out.m_data <= data;
+				memif_out.step <= 4;
 			when others =>
-				memif.step <= 0;
+				memif_out.step <= 0;
 				done := True;
 		end case;
-	end;
+	end procedure;
 	
 	procedure memif_read (
-		signal   memif : inout memif_t;
-		addr  : in  std_logic_vector(31 downto 0);
+		signal memif_out : out memif_out_t;
+                signal memif_in  : in  memif_in_t;
+		constant addr  : in  std_logic_vector(31 downto 0);
 		signal data  : out std_logic_vector(31 downto 0);
 		variable done  : out boolean
 	) is begin
-
-   		memif.clk <= 'Z';
-	    memif.master.data <= (others => '0');
-        memif.master.remainder <= (others => 'Z');
-	    memif.slave.data <= (others => 'Z');
-        memif.slave.fill <= (others => 'Z');
-
-		memif.master.wr <= '0';
-		memif.slave.rd <= '0';
+		memif_out.m_wr <= '0';
+		memif_out.s_rd <= '0';
 		done := False;
-		case memif.step is
+		case memif_in.step is
 			when 0 =>
-				if memif.master.remainder > 1 then
-					memif.step <= 1;
+				if memif_in.m_rem > 1 then
+					memif_out.step <= 1;
 				end if;
 			when 1 =>
-				memif.master.wr <= '1';
-				memif.master.data <= MEMIF_CMD_READ or x"00000004";
-				memif.step <= 2;
+				memif_out.m_wr <= '1';
+				memif_out.m_data <= MEMIF_CMD_READ or x"00000004";
+				memif_out.step <= 2;
 			when 2 =>
-				memif.master.wr <= '1';
-				memif.master.data <= addr;
-				memif.step <= 3;
+				memif_out.m_wr <= '1';
+				memif_out.m_data <= addr;
+				memif_out.step <= 3;
 			when 3 =>
-				if memif.slave.fill > 0 then
-					memif.step <= 4;
+				if memif_in.s_fill > 0 then
+					memif_out.step <= 4;
 				end if;
 			when 4 =>
-				memif.slave.rd <= '1';
-				data <= memif.slave.data;
-				memif.step <= 5;
+				memif_out.s_rd <= '1';
+				data <= memif_in.s_data;
+				memif_out.step <= 5;
 			when others =>
-				memif.step <= 0;
+				memif_out.step <= 0;
 				done := True;
 		end case;
-	end;
+	end procedure;
 	
 --	procedure memif_setup (
 --		signal memif : inout fsl_t;

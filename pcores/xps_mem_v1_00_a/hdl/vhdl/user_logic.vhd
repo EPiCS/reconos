@@ -155,18 +155,18 @@ begin
 
 -- begin chipscope
 
-	icon_i : chipscope_icon
-	port map (
-		CONTROL0 => CONTROL
-	);
+	--icon_i : chipscope_icon
+	--port map (
+	--	CONTROL0 => CONTROL
+	--);
 	
-	ila_i : chipscope_ila
-	port map (
-		CONTROL => CONTROL,
-		CLK => Bus2IP_Clk,
-		DATA => DATA,
-		TRIG0 => TRIG
-	);
+	--ila_i : chipscope_ila
+	--port map (
+	--	CONTROL => CONTROL,
+	--	CLK => Bus2IP_Clk,
+	--	DATA => DATA,
+	--	TRIG0 => TRIG
+	--);
 
 	--TRIG(0) <= Bus2IP_Reset;
 	TRIG <= FIFO32_S_Fill(7 downto 0);

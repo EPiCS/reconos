@@ -20,7 +20,7 @@ WarnForEAArch: 1
 HdlLang: VHDL
 SimModel: BEHAVIORAL
 UcfFile: data/system.ucf
-EnableParTimingError: 1
+EnableParTimingError: 0
 ShowLicenseDialog: 1
 ICacheAddr: DDR3_SDRAM,
 DCacheAddr: DDR3_SDRAM,

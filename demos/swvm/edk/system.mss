@@ -5,8 +5,9 @@
 BEGIN OS
  PARAMETER OS_NAME = device-tree
  PARAMETER PROC_INSTANCE = microblaze_0
- PARAMETER bootargs = console=ttyUL0 root=/dev/nfs rw nfsroot=192.168.30.1:/exports/rootfs_mb,tcp ip=192.168.30.2::192.168.30.1:255.255.255.0:reconos:eth0:off
+ PARAMETER bootargs = console=ttyUL0 root=/dev/nfs rw nfsroot=192.168.31.1:/exports/rootfs_mb,tcp ip=192.168.31.2::192.168.31.1:255.255.255.0:reconos:eth0:off
  PARAMETER console device = RS232_Uart_1
+ PARAMETER OS_VER = 0.00.x
 END
 
 
@@ -137,6 +138,12 @@ BEGIN DRIVER
  PARAMETER DRIVER_NAME = generic
  PARAMETER DRIVER_VER = 1.00.a
  PARAMETER HW_INSTANCE = hwt_memaccess_0
+END
+
+BEGIN DRIVER
+ PARAMETER DRIVER_NAME = generic
+ PARAMETER DRIVER_VER = 1.00.a
+ PARAMETER HW_INSTANCE = hwt_memaccess_1
 END
 
 
