@@ -11,7 +11,8 @@
 #define MAX_FSL_DEVICES 16
 #define FSL_PATH_LEN 256
 
-#define FSL_DEBUG(...) fprintf(stderr,__VA_ARGS__);
+//#define FSL_DEBUG(...) fprintf(stderr,__VA_ARGS__);
+#define FSL_DEBUG(...)
 
 static int fsl_fd[MAX_FSL_DEVICES] = {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1};
 

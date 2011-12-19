@@ -72,20 +72,49 @@ uint32 getpgd()
 	return pgd;
 }
 
+void * control_thread_entry(void * arg)
+{
+	RECONOS_DEBUG("control thread listening on fsl %d\n",reconos_proc.proc_control_fsl);
+	while(1){
+		uint32 cmd;
+		uint32 ret;
+		uint32 *addr;
+
+		cmd = fsl_read(reconos_proc.proc_control_fsl);
+		RECONOS_DEBUG("control thread received 0x%08X\n", cmd);
+		
+		/* for now, all we receive here is page fault addresses */
+		addr = (uint32*)cmd;
+		
+		ret = *addr; /* access memory */
+		
+		ret = ret & 0x00FFFFFF; /* clear upper 8 bits */
+		ret = ret | 0x03000000; /* set page ready command */
+
+		fsl_write(reconos_proc.proc_control_fsl,ret); /* Note: the lower 24 bits of ret are ignored by the HW. */
+	}
+}
+
 int reconos_init(int proc_control_fsl)
 {
 	int i;
 	uint32 pgd;
-	
+	pthread_attr_t attr;
+
 	reconos_proc.proc_control_fsl = proc_control_fsl;
 	for(i = 0; i < MAX_SLOTS; i++){
 		reconos_proc.slot_flags[i] |= SLOT_FLAG_RESET;
 	}
 	
+	fsl_write(proc_control_fsl,0x04000000);
+
 	pgd = getpgd();
-	
+
 	fsl_write(proc_control_fsl,0x02000000);
 	fsl_write(proc_control_fsl,pgd);
+
+	pthread_attr_init(&attr);	
+	pthread_create(&reconos_proc.proc_control_thread, NULL, control_thread_entry,NULL);
 	
 	return 0;
 }
