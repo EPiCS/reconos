@@ -75,8 +75,8 @@ package reconos_pkg is
 	constant OSIF_CMD_SEM_WAIT : std_logic_vector(0 to C_FSL_WIDTH-1) := X"000000AB";
 	constant OSIF_CMD_MBOX_PUT : std_logic_vector(0 to C_FSL_WIDTH-1) := X"000000F1";
 	constant OSIF_CMD_MBOX_GET : std_logic_vector(0 to C_FSL_WIDTH-1) := X"000000F0";
-	constant MEMIF_CMD_READ    : std_logic_vector(0 to C_FSL_WIDTH-1) := X"00000000";
-	constant MEMIF_CMD_WRITE   : std_logic_vector(0 to C_FSL_WIDTH-1) := X"80000000";
+	constant MEMIF_CMD_READ    : std_logic_vector(7 downto 0) := X"00";
+	constant MEMIF_CMD_WRITE   : std_logic_vector(7 downto 0) := X"80";
 	
 	-- generic FSL interface procedures and functions
 	
@@ -155,6 +155,12 @@ package reconos_pkg is
 		variable done : out boolean
 	);
 	
+	procedure fsl_write_word (
+		signal fsl    : inout fsl_t;
+		signal data   : in  std_logic_vector(C_FSL_WIDTH-1 downto 0);
+		variable done : out boolean
+	);
+
 	-- reset FLS interface
 	procedure fsl_reset(signal fsl : out fsl_t);
 		
@@ -265,44 +271,40 @@ package reconos_pkg is
 		variable done  : out boolean
 	);
 	
-	-- read single word from memory
---	procedure memif_read (
---		signal memif  : inout fsl_t;
---		addr          : in  std_logic_vector(C_FSL_WIDTH-1 downto 0);
---		signal data   : out std_logic_vector(C_FSL_WIDTH-1 downto 0);
---		variable done : out boolean
---	);
+	procedure memif_read_debug (
+		signal   memif : inout memif_t;
+		addr  : in  std_logic_vector(31 downto 0);
+		signal data  : out std_logic_vector(31 downto 0);
+		variable done  : out boolean
+	);
 	
-	-- write single word to memory
---	procedure memif_write (
---		signal memif  : inout fsl_t;
---		addr          : in  std_logic_vector(C_FSL_WIDTH-1 downto 0);
---		signal data   : in  std_logic_vector(C_FSL_WIDTH-1 downto 0);
---		variable done : out boolean
---	);
-	
---	-- read 4 words from memory
---	procedure memif_read4 (
---		signal memif   : inout fsl_t;
---		addr           : in  std_logic_vector(C_FSL_WIDTH-1 downto 0);
---		signal data0   : out  std_logic_vector(C_FSL_WIDTH-1 downto 0);
---		signal data1   : out  std_logic_vector(C_FSL_WIDTH-1 downto 0);
---		signal data2   : out  std_logic_vector(C_FSL_WIDTH-1 downto 0);
---		signal data3   : out  std_logic_vector(C_FSL_WIDTH-1 downto 0);
---		variable done  : out boolean
---	);
+	procedure memif_read_request (
+		signal   memif : inout memif_t;
+		addr  : in  std_logic_vector(31 downto 0);
+		len   : in std_logic_vector(23 downto 0);
+		variable done  : out boolean
+	);
 
-	-- write 4 words to memory
---	procedure memif_write4 (
---		signal memif   : inout fsl_t;
---		addr           : in  std_logic_vector(C_FSL_WIDTH-1 downto 0);
---		signal data0   : in  std_logic_vector(C_FSL_WIDTH-1 downto 0);
---		signal data1   : in  std_logic_vector(C_FSL_WIDTH-1 downto 0);
---		signal data2   : in  std_logic_vector(C_FSL_WIDTH-1 downto 0);
---		signal data3   : in  std_logic_vector(C_FSL_WIDTH-1 downto 0);
---		variable done  : out boolean
---	);
-		
+	procedure memif_write_request (
+		signal   memif : inout memif_t;
+		addr  : in  std_logic_vector(31 downto 0);
+		len   : in std_logic_vector(23 downto 0);
+		variable done  : out boolean
+	);
+
+	procedure memif_fifo_pull (
+		signal memif : inout memif_t;
+		signal data : out std_logic_vector(31 downto 0);
+		variable done : out boolean
+	);
+
+	procedure memif_fifo_push (
+		signal memif : inout memif_t;
+		signal data : in std_logic_vector(31 downto 0);
+		variable done : out boolean
+	);
+
+
 end reconos_pkg;
 
 package body reconos_pkg is
@@ -406,6 +408,26 @@ package body reconos_pkg is
 		end case;
 	end;
 	
+	procedure fsl_write_word (
+		signal fsl    : inout fsl_t;
+		signal data   : in std_logic_vector(C_FSL_WIDTH-1 downto 0);
+		variable done : out boolean
+	) is begin
+		done := False;
+		fsl_default(fsl);
+		case fsl.step is
+			when 0 =>
+				fsl_push(fsl,data,0,1);
+			when 1 =>
+				fsl_push_finish(fsl,2);
+			when others =>
+				done := True;
+				fsl.step <= 0;
+		end case;
+	end;
+
+
+
 	procedure osif_setup (
 		signal osif : inout fsl_t;
 		signal clk  : in std_logic;
@@ -564,7 +586,7 @@ package body reconos_pkg is
 				end if;
 			when 1 =>
 				memif.master.wr <= '1';
-				memif.master.data <= MEMIF_CMD_WRITE or x"00000004";
+				memif.master.data <= MEMIF_CMD_WRITE & x"000004";
 				memif.step <= 2;
 			when 2 =>
 				memif.master.wr <= '1';
@@ -596,7 +618,7 @@ package body reconos_pkg is
 				end if;
 			when 1 =>
 				memif.master.wr <= '1';
-				memif.master.data <= MEMIF_CMD_READ or x"00000004";
+				memif.master.data <= MEMIF_CMD_READ & x"000004";
 				memif.step <= 2;
 			when 2 =>
 				memif.master.wr <= '1';
@@ -616,170 +638,155 @@ package body reconos_pkg is
 		end case;
 	end;
 	
---	procedure memif_setup (
---		signal memif : inout fsl_t;
---		signal clk  : in std_logic;
---		signal rst  : in std_logic;
---		signal mem2hwt_data     : in std_logic_vector(C_FSL_WIDTH-1 downto 0);
---		signal mem2hwt_exists   : in std_logic;
---		signal mem2hwt_full     : in std_logic;
---		signal hwt2mem_data    : out std_logic_vector(C_FSL_WIDTH-1 downto 0);
---		signal hwt2mem_reading : out std_logic;
---		signal hwt2mem_writing : out std_logic;
---		signal hwt2mem_ctrl    : out std_logic
---	) is begin
---		fsl_setup(memif,clk,rst,mem2hwt_data,mem2hwt_exists,mem2hwt_full,hwt2mem_data,hwt2mem_reading,hwt2mem_writing,hwt2mem_ctrl);
---	end;
+	procedure memif_read_debug (
+		signal   memif : inout memif_t;
+		addr  : in  std_logic_vector(31 downto 0);
+		signal data  : out std_logic_vector(31 downto 0);
+		variable done  : out boolean
+	) is begin
+		memif.master.wr <= '0';
+		memif.slave.rd <= '0';
+		done := False;
+		case memif.step is
+			when 0 =>
+				if memif.master.remainder > 1 then
+					memif.step <= 1;
+				end if;
+			when 1 =>
+				memif.master.wr <= '1';
+				memif.master.data <= MEMIF_CMD_READ & x"000010";
+				memif.step <= 2;
+			when 2 =>
+				memif.master.wr <= '1';
+				memif.master.data <= addr;
+				memif.step <= 3;
+			when 3 =>
+				if memif.slave.fill > 0 then
+					memif.step <= 4;
+				end if;
+			when 4 =>
+				memif.slave.rd <= '1';
+				data <= memif.slave.data;
+				memif.step <= 5;
+			when 5 =>
+				memif.slave.rd <= '1';
+				memif.step <= 6;
+			when 6 =>
+				memif.slave.rd <= '1';
+				memif.step <= 7;
+			when 7 =>
+				memif.slave.rd <= '1';
+				memif.step <= 8;
+				
+			when others =>
+				memif.step <= 0;
+				done := True;
+		end case;
+	end;
 	
---	procedure memif_reset(signal memif : out fsl_t) is
---	begin
---		fsl_reset(memif);
---	end;
-	
---	procedure memif_read (
---		signal memif  : inout fsl_t;
---		addr          : in  std_logic_vector(C_FSL_WIDTH-1 downto 0);
---		signal data   : out  std_logic_vector(C_FSL_WIDTH-1 downto 0);
---		variable done : out boolean
---	) is begin
---		done := False;
---		fsl_default(memif);
---		case memif.step is
---			when 0 =>
---				fsl_push(memif,MEMIF_CMD_READ or x"00000004",0,1);
---			when 1 =>
---				fsl_push(memif,addr,0,2);
---			when 2 =>
---				fsl_push_finish(memif,3);
---			when 3 =>
---				fsl_pull(memif,data,4,False);
---
---			when others =>
---				done := True;
---				memif.step <= 0;
---		end case;
---	end;
-	
---	procedure memif_write (
---		signal memif  : inout fsl_t;
---		addr          : in  std_logic_vector(C_FSL_WIDTH-1 downto 0);
---		data   : in  std_logic_vector(C_FSL_WIDTH-1 downto 0);
---		variable done : out boolean
---	) is begin
---		done := False;
---		fsl_default(memif);
---		case memif.step is
-			--when 0 =>
-			--	fsl_push(memif,MEMIF_CMD_WRITE or x"00000004",0,1);
-			--when 1 =>
-			--	fsl_push(memif,addr,0,2);
-			--when 2 =>
-			--	fsl_push(memif,data,1,3);
-			--when 3 =>
-			--	fsl_push_finish(memif,4);
---			when 0 =>
---				memif.hwt2fsl_data <= MEMIF_CMD_WRITE or x"000F0004";
---				memif.hwt2fsl_writing <= '1';
---				if memif.fsl2hwt_full = '0' then
---					memif.step <= 1;
---				end if;
---				
---			when 1 =>
---				memif.hwt2fsl_writing <= '1';
---				if memif.fsl2hwt_full = '1' then
---					memif.hwt2fsl_data <= MEMIF_CMD_WRITE or x"00F00004";
---				else
---					memif.hwt2fsl_data <= addr;
---					memif.step <= 2;
---				end if;
---				
---			when 2 =>
---				memif.hwt2fsl_writing <= '1';
---				if memif.fsl2hwt_full = '1' then
---					memif.hwt2fsl_data <= addr;
---				else
---					memif.hwt2fsl_data <= data;
---					memif.step <= 3;
---				end if;
---				
---			when 3 =>
---				memif.hwt2fsl_writing <= '1';
---				if memif.fsl2hwt_full = '0' then
---					memif.hwt2fsl_writing <= '0';
---					memif.step <= 4;
---				end if;
---			
---			when others =>
---				done := True;
---				memif.step <= 0;
---		end case;
---	end;
+	procedure memif_read_request (
+		signal   memif : inout memif_t;
+		addr  : in  std_logic_vector(31 downto 0);
+		len   : in std_logic_vector(23 downto 0);
+		variable done  : out boolean
+	) is begin
+		memif.master.wr <= '0';
+		memif.slave.rd <= '0';
+		done := False;
+		case memif.step is
+			when 0 =>
+				if memif.master.remainder > 1 then
+					memif.step <= 1;
+				end if;
+			when 1 =>
+				memif.master.wr <= '1';
+				memif.master.data <= MEMIF_CMD_READ & len;
+				memif.step <= 2;
+			when 2 =>
+				memif.master.wr <= '1';
+				memif.master.data <= addr;
+				memif.step <= 3;
+			when others =>
+				memif.step <= 0;
+				done := True;
+		end case;
+	end;
 
---	
---	procedure memif_read4 (
---		signal memif   : inout fsl_t;
---		addr           : in  std_logic_vector(C_FSL_WIDTH-1 downto 0);
---		signal data0   : out  std_logic_vector(C_FSL_WIDTH-1 downto 0);
---		signal data1   : out  std_logic_vector(C_FSL_WIDTH-1 downto 0);
---		signal data2   : out  std_logic_vector(C_FSL_WIDTH-1 downto 0);
---		signal data3   : out  std_logic_vector(C_FSL_WIDTH-1 downto 0);
---		variable done  : out boolean
---	) is begin
---		done := False;
---		fsl_default(memif);
---		case memif.step is
---			when 0 =>
---				fsl_push(memif,MEMIF_CMD_READ or x"00000010",0,1);
---			when 1 =>
---				fsl_push(memif,addr,0,2);
---			when 2 =>
---				fsl_push_finish(memif,3);
---			when 3 =>
---				fsl_pull(memif,data0,4,True);
---			when 4 =>
---				fsl_pull(memif,data1,5,True);
---			when 5 =>
---				fsl_pull(memif,data2,6,True);
---			when 6 =>
---				fsl_pull(memif,data3,7,False);
---			when others =>
---				done := True;
---				memif.step <= 0;
---		end case;
---	end;
-	
---	procedure memif_write4 (
---		signal memif   : inout fsl_t;
---		addr           : in  std_logic_vector(C_FSL_WIDTH-1 downto 0);
---		signal data0   : in  std_logic_vector(C_FSL_WIDTH-1 downto 0);
---		signal data1   : in  std_logic_vector(C_FSL_WIDTH-1 downto 0);
---		signal data2   : in  std_logic_vector(C_FSL_WIDTH-1 downto 0);
---		signal data3   : in  std_logic_vector(C_FSL_WIDTH-1 downto 0);
---		variable done  : out boolean
---	) is begin
---		done := False;
---		fsl_default(memif);
---		case memif.step is
---			when 0 =>
---				fsl_push(memif,MEMIF_CMD_WRITE or x"00000010",0,1);
---			when 1 =>
---				fsl_push(memif,addr,0,2);
---			when 2 =>
---				fsl_push(memif,data0,1,3);
---			when 3 =>
---				fsl_push(memif,data1,2,4);
---			when 4 =>
---				fsl_push(memif,data2,3,5);
---			when 5 =>
---				fsl_push(memif,data3,4,6);
---			when 6 =>
---				fsl_push_finish(memif,7);
---			when others =>
---				done := True;
---				memif.step <= 0;
---		end case;
---	end;
-	
+	procedure memif_write_request (
+		signal   memif : inout memif_t;
+		addr  : in  std_logic_vector(31 downto 0);
+		len   : in std_logic_vector(23 downto 0);
+		variable done  : out boolean
+	) is begin
+		memif.master.wr <= '0';
+		memif.slave.rd <= '0';
+		done := False;
+		case memif.step is
+			when 0 =>
+				if memif.master.remainder > 1 then
+					memif.step <= 1;
+				end if;
+			when 1 =>
+				memif.master.wr <= '1';
+				memif.master.data <= MEMIF_CMD_WRITE & len;
+				memif.step <= 2;
+			when 2 =>
+				memif.master.wr <= '1';
+				memif.master.data <= addr;
+				memif.step <= 3;
+			when others =>
+				memif.step <= 0;
+				done := True;
+		end case;
+	end;
+
+
+	procedure memif_fifo_pull (
+		signal memif : inout memif_t;
+		signal data : out std_logic_vector(31 downto 0);
+		variable done : out boolean
+	) is begin
+		memif.master.wr <= '0';
+		memif.slave.rd <= '0';
+		done := False;
+		case memif.step is
+			when 0 =>
+				if memif.slave.fill > 0 then
+					memif.step <= 1;
+				end if;
+			when 1 =>
+				memif.slave.rd <= '1';
+				data <= memif.slave.data;
+				memif.step <= 2;
+			when others =>
+				memif.step <= 0;
+				done := True;
+		end case;
+	end;
+
+
+	procedure memif_fifo_push (
+		signal memif : inout memif_t;
+		signal data : in std_logic_vector(31 downto 0);
+		variable done : out boolean
+	) is begin
+		memif.master.wr <= '0';
+		memif.slave.rd <= '0';
+		done := False;
+		case memif.step is
+			when 0 =>
+				if memif.master.remainder > 0 then
+					memif.step <= 1;
+				end if;
+			when 1 =>
+				memif.master.wr <= '1';
+				memif.master.data <= data;
+				memif.step <= 2;
+			when others =>
+				memif.step <= 0;
+				done := True;
+		end case;
+	end;
 	
 end reconos_pkg;
 
