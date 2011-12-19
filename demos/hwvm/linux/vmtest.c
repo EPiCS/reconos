@@ -18,91 +18,89 @@ struct reconos_hwt hwt;
 
 struct mbox hw2sw,sw2hw;
 
-unsigned long pgd;
+#define PAGE_SIZE 4096
+#define PAGE_WORDS 1024
+#define PAGE_MASK 0xFFFFF000
 
-void pmem_init()
+uint32 * alloc_pages(int n)
 {
-	int res,fd;
-
-	fd = open("/dev/getpgd",O_RDONLY);
-	if(fd == -1){
-		perror("open /dev/getpgd");
-		exit(1);
-	}
-
-	res = read(fd,&pgd,4);
-	if(res != 4){
-		perror("read from /dev/getpgd");
-		exit(1);
-	}
-	
-	fprintf(stderr,"PGD = 0x%08lX\n",pgd);
-
-	close(fd);
+	uint8 *mem;
+	mem = malloc((n+1)*PAGE_SIZE);
+	mem = (uint8*)((uint32)(mem + PAGE_SIZE) & PAGE_MASK);
+	return (uint32*)mem;
 }
 
-unsigned int pmem(unsigned int paddr)
+
+void hwt_read(uint32 * src, int n, uint32 * dst)
 {
-	/*mbox_put(&sw2hw,paddr);
-	mbox_get(&hw2sw);*/
-	mbox_put(&sw2hw,paddr);
-	return mbox_get(&hw2sw);
-}
-
-unsigned long physical_address(void * ptr)
-{
-	unsigned int paddr, vaddr;
-
-	unsigned int pgdidx, ptidx, offset, pgde, pte;
-
-	vaddr = (unsigned int)ptr;
-
-	fprintf(stderr,"virtual address = 0x%08X\n",vaddr);
-
-	pgdidx = 0x03FF & (vaddr >> 22);
-	ptidx  = 0x03FF & (vaddr >> 12);
-	offset = 0x0FFF & vaddr;
-
-	fprintf(stderr,"pgdidx = 0x%08X, ptidx = 0x%08X, offset = 0x%08X\n", pgdidx,ptidx,offset);
-
-	pgde = pmem(pgd + 4*pgdidx);
-
-	fprintf(stderr,"pgd entry = 0x%08X\n",pgde);
-
-	pte  = pmem((0xFFFFF000 & pgde) - 0xC0000000 + 4*ptidx);
-
-	fprintf(stderr,"page table entry = 0x%08X\n",pte);
-
-	paddr = ((pte & 0xFFFFF000)) + offset;
-
-	fprintf(stderr,"physical address = 0x%08X\n",paddr);
-	
-	return paddr;
-}
-
-unsigned int vmread(void * ptr)
-{
+	int i;
 	unsigned int vaddr;
 
-	vaddr = (unsigned int)ptr;
+	vaddr = (unsigned int)src;
 
+	mbox_put(&sw2hw,0x00000000 | (n << 2));
         mbox_put(&sw2hw,vaddr);
-        return mbox_get(&hw2sw);
+        
+	for(i = 0; i < n; i++){
+		dst[i] = mbox_get(&hw2sw);
+	}
 }
 
-volatile uint32 data = 0xF00BA211;
+void hwt_write(uint32 * src, int n, uint32 * dst)
+{
+	int i;
+	unsigned int vaddr;
+
+	vaddr = (unsigned int)dst;
+
+	mbox_put(&sw2hw,0x80000000 | (n << 2));
+        mbox_put(&sw2hw,vaddr);
+        
+	for(i = 0; i < n; i++){
+		mbox_put(&sw2hw,src[i]);
+	}
+}
+
+void run_tests()
+{
+	int i;
+	uint32 tmp;
+	uint32 *data;
+	uint32 *mem;
+	
+	// allocate 3 pages
+	mem = alloc_pages(3);
+
+	// allocate buffer
+	data = malloc(PAGE_SIZE);
+
+	// software write to the first page
+	for(i = 0; i < PAGE_WORDS; i++) mem[i] = 0xAFFE0000 | i;
+
+	// read a single word
+	hwt_read(mem,1,data);
+	fprintf(stderr,"HWT read from 0x%08X: 0x%08X (should be 0x%08X)\n",(uint32)mem,data[0],mem[0]);
+
+	// read a single word from fresh page
+	hwt_read(mem + PAGE_WORDS,1,data);
+	fprintf(stderr,"HWT read from 0x%08X: 0x%08X (should be 0x%08X)\n",(uint32)mem,data[0],mem[PAGE_WORDS]);
+
+
+	// write a single word to the first page
+	data[0] = 0x3456789A;
+	hwt_write(data,1,mem);
+	hwt_read(&tmp,1,&tmp); /* synchronize */
+	fprintf(stderr,"HWT write to 0x%08X: 0x%08X (should be 0x%08X)\n",(uint32)mem,mem[0],data[0]);
+
+	
+
+}
 
 
 int main(int argc, char ** argv)
 {
-	unsigned int fooba211;
+	assert(argc == 1);
 
-	assert(argc == 2);
-
-	fprintf(stderr,"data = 0x%08X\n",data);
-	
-	data = atoi(argv[1]);
-	
 	res[0].type = RECONOS_TYPE_MBOX;
 	res[0].ptr  = &sw2hw;
 	
@@ -117,9 +115,7 @@ int main(int argc, char ** argv)
 	reconos_hwt_setresources(&hwt,res,2);
 	reconos_hwt_create(&hwt,0,NULL);
 	
-	fooba211 = vmread((void*)&data);
-
-	fprintf(stderr,"data = 0x%08X\n",fooba211);
+	run_tests();
 
 	pthread_join(hwt.delegate,NULL);
 	
