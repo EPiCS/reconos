@@ -14,7 +14,7 @@ obj-m := fsl.o
 
 else
 
-KERNELDIR ?= ../linux-2.6-xlnx
+KERNELDIR ?= ~/linux-2.6-xlnx
 
 PWD       := $(shell pwd)
 
