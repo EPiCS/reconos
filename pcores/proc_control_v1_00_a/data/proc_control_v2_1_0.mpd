@@ -40,6 +40,10 @@ PORT resetD="", DIR=O
 PORT resetE="", DIR=O
 PORT resetF="", DIR=O
 
+PORT page_fault="", DIR=I
+PORT fault_addr="", DIR=I, VEC=[0:31]
+PORT retry="", DIR=O
 PORT pgd="", DIR=O, VEC=[0:31]
+PORT reconos_reset="", DIR=O
 
 END

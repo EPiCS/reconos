@@ -40,17 +40,27 @@ entity proc_control is
 		resetE         : out std_logic;
 		resetF         : out std_logic;
 		
-		-- Process Global Directory address
-		pgd            : out std_logic_vector(31 downto 0)
+		-- MMU related ports
+		page_fault     : in std_logic;
+		fault_addr     : in std_logic_vector(31 downto 0);
+		retry          : out std_logic;
+		pgd            : out std_logic_vector(31 downto 0);
+
+		-- ReconOS reset
+		reconos_reset  : out std_logic
 	);
 end entity;
 
 architecture implementation of proc_control is
-	constant C_RESET   : std_logic_vector(7 downto 0) := x"01";
-	constant C_PGD     : std_logic_vector(7 downto 0) := x"02";
+	constant C_RESET          : std_logic_vector(7 downto 0) := x"01";
+	constant C_PGD            : std_logic_vector(7 downto 0) := x"02";
+	constant C_PAGE_READY     : std_logic_vector(7 downto 0) := x"03";
+	constant C_RECONOS_RESET  : std_logic_vector(7 downto 0) := x"04";
 
-	type STATE_TYPE is (STATE_WAIT, STATE_BRANCH, STATE_RESET, STATE_PGD);
+	type STATE_TYPE is (STATE_WAIT, STATE_BRANCH, STATE_RESET, STATE_PGD, STATE_PAGE_FAULT, STATE_PAGE_READY, STATE_RECONOS_RESET);
 
+	signal reset_counter : std_logic_vector(11 downto 0);
+	signal page_fault_handled : std_logic;
 	signal data   : std_logic_Vector(C_FSL_WIDTH-1 downto 0);
 	signal state  :STATE_TYPE;
 	signal fsl    : fsl_t;
@@ -97,9 +107,17 @@ begin
 			resetE <= '1';
 			resetF <= '1';
 			pgd <= (others => '0');
+			retry <= '0';
+			page_fault_handled <= '0';
+			reset_counter <= (others => '0');
+			reconos_reset <= '1';
 		elsif rising_edge(fsl.clk) then
+			reconos_reset <= '0';
 			case state is
 				when STATE_WAIT =>
+					if FSL_S_Exists = '0' and page_fault = '1' and page_fault_handled = '0' then
+						state <= STATE_PAGE_FAULT;
+					end if;
 					fsl_read_word(fsl,data,done);
 					if done then state <= STATE_BRANCH; end if;
 					
@@ -109,6 +127,10 @@ begin
 							state <= STATE_RESET;
 						when C_PGD =>
 							state <= STATE_PGD;
+						when c_PAGE_READY =>
+							state <= STATE_PAGE_READY;
+						when C_RECONOS_RESET =>
+							state <= STATE_RECONOS_RESET;
 						when others =>
 							state <= STATE_WAIT; -- ignore everything else
 					end case;
@@ -135,7 +157,50 @@ begin
 				when STATE_PGD =>
 					fsl_read_word(fsl,pgd,done);
 					if done then state <= STATE_WAIT; end if;
-					
+
+				when STATE_PAGE_READY =>
+					retry <= '1';
+					if page_fault = '0' then
+						page_fault_handled <= '0';
+						retry <= '0';
+						state <= STATE_WAIT;
+					end if;
+
+				when STATE_PAGE_FAULT =>
+					page_fault_handled <= '1';
+					fsl_write_word(fsl,fault_addr,done);
+					if done then state <= STATE_WAIT; end if;
+
+				when STATE_RECONOS_RESET =>
+					data <= (others => '0');
+					done := False;
+					reset0 <= '1';
+					reset1 <= '1';
+					reset2 <= '1';
+					reset3 <= '1';
+					reset4 <= '1';
+					reset5 <= '1';
+					reset6 <= '1';
+					reset7 <= '1';
+					reset8 <= '1';
+					reset9 <= '1';
+					resetA <= '1';
+					resetB <= '1';
+					resetC <= '1';
+					resetD <= '1';
+					resetE <= '1';
+					resetF <= '1';
+					pgd <= (others => '0');
+					retry <= '0';
+					page_fault_handled <= '0';
+					reconos_reset <= '1';
+					if reset_counter = x"FFF" then
+						reset_counter <= (others => '0');
+						reconos_reset <= '0';
+						state <= STATE_WAIT;
+					else
+						reset_counter <= reset_counter + 1;
+					end if;
 			end case;
 		end if;
 	end process;
