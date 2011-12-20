@@ -42,8 +42,6 @@ PORT FIFO32_M_Data = FIFO32_M_Data, DIR=O, VEC=[0:31], BUS=MFIFO32
 PORT FIFO32_M_Wr   = FIFO32_M_Wr,   DIR=O,             BUS=MFIFO32
 PORT FIFO32_M_Rem  = FIFO32_M_Rem,  DIR=I, VEC=[0:15], BUS=MFIFO32
 
-## Debug port for ila
-PORT ILA_SIGNALS = "", DIR=O, VEC=[17:0]
 
 PORT Rst="", DIR=I, SIGIS=Rst
 
