@@ -39,7 +39,8 @@ entity hwt_memaccess is
 end hwt_memaccess;
 
 architecture implementation of hwt_memaccess is
-	type STATE_TYPE is (STATE_GET_REQUEST,STATE_GET_ADDR,STATE_READ_REQ,STATE_WRITE_REQ,STATE_READ,STATE_MBOX_GET,STATE_MBOX_PUT,STATE_WRITE);
+	type STATE_TYPE is (STATE_GET_REQUEST,STATE_GET_ADDR,STATE_READ_REQ,STATE_WRITE_REQ,STATE_READ,STATE_MBOX_GET,
+                            STATE_ACK, STATE_MBOX_PUT,STATE_WRITE);
 
 	type LOCAL_MEMORY_T is array (0 to 1023) of std_logic_vector(31 downto 0);
 	
@@ -154,11 +155,16 @@ begin
 					memif_fifo_push(memif, data, done);
 					if done then
 						if len = 0 then
-							state <= STATE_GET_REQUEST;
+							state <= STATE_ACK;
 						else
 							state <= STATE_MBOX_GET;
 						end if;
 					end if;
+				
+				when STATE_ACK => -- this informs the sw that we are done writing
+					osif_mbox_put(osif, MBOX_SEND, addr, ignore, done);
+					if done then state <= STATE_GET_REQUEST; end if;
+			
 			end case;
 		end if;
 	end process;
