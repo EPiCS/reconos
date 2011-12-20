@@ -332,7 +332,7 @@ package body reconos_pkg is
 		hwt2fsl_writing <= fsl.hwt2fsl_writing and not fsl2hwt_full; -- this is important: writing must change asynchronously!
 		hwt2fsl_ctrl <= fsl.hwt2fsl_ctrl;
 		fsl.hwt2fsl_ctrl <= '0';
-	end;
+             end procedure;
 	
 	procedure fsl_push (
 		signal fsl   : inout fsl_t;
@@ -347,7 +347,7 @@ package body reconos_pkg is
 		else
 			fsl.step <= prev_step;
 		end if;
-	end;
+             end procedure;
 	
 	procedure fsl_push_finish (
 		signal fsl   : inout fsl_t;
@@ -358,7 +358,7 @@ package body reconos_pkg is
 		else
 			fsl.step <= next_step;
 		end if;
-	end;
+        end procedure;
 	
 	procedure fsl_pull (
 		signal fsl   : inout fsl_t;
@@ -376,7 +376,7 @@ package body reconos_pkg is
 				fsl.hwt2fsl_reading <= '0';
 			end if;
 		end if;
-	end;
+        end procedure;
 	
 	procedure fsl_reset(signal fsl : out fsl_t) is
 	begin
@@ -384,13 +384,13 @@ package body reconos_pkg is
 		fsl.hwt2fsl_reading <= '0';
 		fsl.hwt2fsl_writing <= '0';
 		fsl.hwt2fsl_data <= (others => '0');
-	end;
+	end procedure;
 	
 	procedure fsl_default (signal fsl : out fsl_t) is
 	begin
 		fsl.hwt2fsl_reading <= '0';
 		fsl.hwt2fsl_writing <= '0';
-	end;
+	end procedure;
 
 	procedure fsl_read_word (
 		signal fsl    : inout fsl_t;
@@ -406,7 +406,7 @@ package body reconos_pkg is
 				done := True;
 				fsl.step <= 0;
 		end case;
-	end;
+        end procedure;
 	
 	procedure fsl_write_word (
 		signal fsl    : inout fsl_t;
@@ -446,7 +446,7 @@ package body reconos_pkg is
 	procedure osif_reset(signal osif : out fsl_t) is
 	begin
 		fsl_reset(osif);
-	end;
+	end procedure;
 	
 	
 	procedure osif_call_1 (
@@ -471,7 +471,7 @@ package body reconos_pkg is
 				done := True;
 				osif.step <= 0;
 		end case;
-	end;
+        end procedure;
 
 	procedure osif_call_2 (
 		signal osif   : inout fsl_t;
@@ -498,7 +498,7 @@ package body reconos_pkg is
 				done := True;
 				osif.step <= 0;
 		end case;
-	end;
+        end procedure;
 
 	procedure osif_sem_post (
 		signal osif   : inout fsl_t;
@@ -507,7 +507,7 @@ package body reconos_pkg is
 		variable done : out boolean
 	) is begin
 		osif_call_1(osif,OSIF_CMD_SEM_POST,handle,result,done);
-	end;
+        end procedure;
 
 	procedure osif_sem_wait (
 		signal osif   : inout fsl_t;
@@ -516,7 +516,7 @@ package body reconos_pkg is
 		variable done : out boolean
 	) is begin
 		osif_call_1(osif,OSIF_CMD_SEM_WAIT,handle,result,done);
-	end;
+        end procedure;
 	
 	procedure osif_mbox_put (
 		signal osif   : inout fsl_t;
@@ -527,7 +527,7 @@ package body reconos_pkg is
 	) is begin
 		osif_call_2(osif,OSIF_CMD_MBOX_PUT,handle,word,result,done);
 
-	end;
+        end procedure;
 	
 	procedure osif_mbox_get (
 		signal osif   : inout fsl_t;

@@ -1,0 +1,17 @@
+    ____  ____
+   /   /\/   /
+  /___/  \  /    VENDOR      : Xilinx Inc.
+  \   \   \/     VERSION     : 12.3 (M.70d)
+   \   \         APPLICATION : /opt/Xilinx/12.3/ISE_DS/ISE/bin/lin64/unwrapped/compxlib
+   /   /         CONTENTS    : Compilation Log
+  /___/   /\     FILENAME    : compxlib.log
+  \   \  /  \    
+   \___\/\___\
+
+Release 12.3 - /opt/Xilinx/12.3/ISE_DS/ISE/bin/lin64/unwrapped/compxlib 12.3 (lin64)
+Copyright (c) 1995-2010 Xilinx, Inc.  All rights reserved.
+
+ERROR:Portability:90 - Command line error: Switch "--help" is not allowed.
+
+Usage: compxlib {-arch <arch_name>} [-cfg [<cfg_file>]] [-dir <output_dir>] [-e <dir_parh>] [-exclude_deprecated] [-exclude_sublib] [-exclude_superseded] [-info <dir_path>] [-intstyle ise|xflow|silent] [-l <language>] {-lib <lib_name>} [-log <log_file>]
+[-p <dir_path>] {-s <simulator>} [-source_lib <dir_path>] [-verbose] [-w] [-64bit] {-cfgopt <opt_string>} 

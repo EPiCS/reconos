@@ -1,0 +1,5 @@
+lib proc_common_v3_00_a  proc_common_pkg vhdl
+lib fifo32_arbiter_v1_00_a mux vhdl
+lib fifo32_arbiter_v1_00_a demux vhdl
+lib fifo32_arbiter_v1_00_a rr_arbiter vhdl
+lib fifo32_arbiter_v1_00_a fifo32_arbiter vhdl
