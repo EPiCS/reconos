@@ -31,6 +31,7 @@ use proc_common_v3_00_a.srl_fifo_f;
 entity user_logic is
 	generic
 	(
+		C_ENABLE_ILA                   : integer              := 0;
 		C_MST_AWIDTH                   : integer              := 32;-- Master interface address bus width
 		C_MST_DWIDTH                   : integer              := 32;-- Master interface data bus width
 		C_NUM_REG                      : integer              := 4-- Number of software accessible registers
@@ -129,7 +130,10 @@ architecture IMP of user_logic is
 	signal CONTROL : STD_LOGIC_VECTOR(35 DOWNTO 0);
 	signal DATA    : STD_LOGIC_VECTOR(299 DOWNTO 0);
 	signal TRIG    : STD_LOGIC_VECTOR(7 DOWNTO 0);
-		
+	
+	signal fifo_burst : std_logic;
+	signal FIFO32_S_Rd_alt : std_logic;
+
 	-- braindead signal duplications
 	
 	signal IP2Bus_MstRd_Req_cs : std_logic;
@@ -160,18 +164,22 @@ begin
 
 -- begin chipscope
 
-	--icon_i : chipscope_icon
-	--port map (
-	--	CONTROL0 => CONTROL
-	--);
+	GENERATE_ILA : if C_ENABLE_ILA = 1 generate
+
+	icon_i : chipscope_icon
+	port map (
+		CONTROL0 => CONTROL
+	);
 	
-	--ila_i : chipscope_ila
-	--port map (
-	--	CONTROL => CONTROL,
-	--	CLK => Bus2IP_Clk,
-	--	DATA => DATA,
-	--	TRIG0 => TRIG
-	--);
+	ila_i : chipscope_ila
+	port map (
+		CONTROL => CONTROL,
+		CLK => Bus2IP_Clk,
+		DATA => DATA,
+		TRIG0 => TRIG
+	);
+
+	end generate;
 
 	--TRIG(0) <= Bus2IP_Reset;
 	TRIG <= FIFO32_S_Fill(7 downto 0);
@@ -225,6 +233,8 @@ begin
 	DATA(247 downto 216) <= FIFO32_M_Data_cs;
 	DATA(263 downto 248) <= FIFO32_M_Rem;
 	DATA(271 downto 264)  <= TRIG;
+	DATA(272) <= fifo_burst;
+	DATA(273) <= FIFO32_S_Rd_alt;
 
 	IP2Bus_MstRd_Req <= IP2Bus_MstRd_Req_cs;
 	IP2Bus_MstWr_Req <= IP2Bus_MstWr_Req_cs;
@@ -286,6 +296,15 @@ begin
 	--IP2Bus_MstRd_dst_rdy_n_cs <= FSL_M_Full;
 	IP2Bus_MstWr_d_cs <= FIFO32_S_Data;
 	
+	WR_BURST_PROC : process
+	begin
+		if fifo_burst = '0' then
+			FIFO32_S_Rd_cs <= FIFO32_S_Rd_alt;
+		else
+			FIFO32_S_Rd_cs <= not Bus2IP_MstWr_dst_rdy_n;
+		end if;
+	end process;
+
 	cmd_proc : process (Bus2IP_Clk, Bus2IP_Reset)
 		variable delay : std_logic_vector(31 downto 0);
 	begin
@@ -294,22 +313,14 @@ begin
 			IP2Bus_MstRd_Req_cs <= '0';
 			IP2Bus_MstWr_Req_cs <= '0';
 			IP2Bus_Mst_Addr_cs <= x"00000000";
-		--	TRIG(1) <= '0';
-		--	TRIG(2) <= '0';
-		--	TRIG(3) <= '0';
-		--	TRIG(4) <= '0';
 			delay := (others => '0');
-			--header_read <= '0';
+			fifo_burst <= '0';
 		elsif rising_edge(Bus2IP_Clk) then
-		--	TRIG(7 downto 1) <= (others => '0');
 			DATA(299 downto 280) <= (others => '0');
-			FIFO32_S_Rd_cs <= '0';
+			FIFO32_S_Rd_alt <= '0';
 			FIFO32_M_Wr_cs <= '0';
 			IP2Bus_MstWr_src_rdy_n_cs <= '1';
 			IP2Bus_MstRd_dst_rdy_n_cs <= '1';
-			--header_read <= '0';
-			--IP2Bus_MstRd_dst_rdy_n_cs <= '1';
-			
 			
 			if Bus2IP_Mst_CmdAck = '1' then
 				IP2Bus_MstWr_Req_cs <= '0';
@@ -318,24 +329,21 @@ begin
 			
 			case state is
 				when STATE_WAIT_HEADER =>
-					--TRIG(1) <= '1';
 					DATA(280) <= '1';
 					if FIFO32_S_Fill >= 2 then
 						state <= STATE_READ_CMD;
-						FIFO32_S_Rd_cs <= '1';
+						FIFO32_S_Rd_alt <= '1';
 					end if;
 				
 				when STATE_READ_CMD =>
-					--TRIG(2) <= '1';
 					DATA(281) <= '1';
-					FIFO32_S_Rd_cs <= '1';
+					FIFO32_S_Rd_alt <= '1';
 					cmd <= FIFO32_S_Data;
 					state <= STATE_READ_ADDR;
 					
 				when STATE_READ_ADDR =>
 					DATA(282) <= '1';
-					--TRIG(3) <= '1';
-					FIFO32_S_Rd_cs <= '0';
+					FIFO32_S_Rd_alt <= '0';
 					IP2Bus_Mst_Addr_cs <= FIFO32_S_Data;
 					if cmd(31) = '0' then -- burst read
 						state <= STATE_WAIT_FIFO_REM;
@@ -345,21 +353,18 @@ begin
 
 				when STATE_WAIT_FIFO_REM =>
 					DATA(283) <= '1';
-					--TRIG(4) <= '1';
 					if FIFO32_M_Rem >= cmd(11 downto 2) then
 						state <= STATE_READ_REQ;
 					end if;
 					
 				when STATE_WAIT_FIFO_FILL =>
 					DATA(284) <= '1';
-					--TRIG(5) <= '1';
 					if FIFO32_S_Fill >= cmd(11 downto 2) then
 						state <= STATE_WRITE_REQ;
 					end if;
 					
 				when STATE_READ_REQ =>
 					DATA(285) <= '1';
-					--TRIG(6) <= '1';
 					IP2Bus_MstRd_Req_cs <= '1';
 					in_counter <= (others => '0');
 					IP2Bus_MstRd_dst_rdy_n_cs <= '0';
@@ -367,7 +372,6 @@ begin
 
 				when STATE_READ =>
 					DATA(286) <= '1';
-					--TRIG(7) <= '1';
 					FIFO32_M_Data_cs <= Bus2IP_MstRd_d;
 					IP2Bus_MstRd_dst_rdy_n_cs <= '0';
 					if Bus2IP_MstRd_src_rdy_n = '0' then
@@ -393,17 +397,15 @@ begin
 
 				when STATE_WRITE =>
 					DATA(288) <= '1';
+					fifo_burst <= '1';
 					IP2Bus_MstWr_src_rdy_n_cs <= '0';
 					if Bus2IP_MstWr_dst_rdy_n = '0' then
-						FIFO32_S_Rd_cs <= '1';
+						--FIFO32_S_Rd_cs <= '1';
 						if out_counter = IP2Bus_Mst_Length_cs(11 downto 2) - 1 then
 							out_counter <= (others => '0');
 							IP2Bus_MstWr_src_rdy_n_cs <= '1';
-							--IP2Bus_MstWr_Req_cs <= '0';
-							--FSL_S_Read_cs <= '0';
 							state <= STATE_WAIT_COMPLETE;
 						else
-							--IP2Bus_MstWr_d_cs <= FSL_S_Data;
 							out_counter <= out_counter + 1;
 						end if;
 					end if;
@@ -412,6 +414,7 @@ begin
 					DATA(289) <= '1';
 					if Bus2IP_Mst_Cmplt = '1' then
 						state <= STATE_WAIT_HEADER;
+						fifo_burst <= '0';
 					end if;
 			
 			end case;
