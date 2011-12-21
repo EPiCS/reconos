@@ -1,2 +1,0 @@
-VHDL util_vector_logic_v1_00_a /opt/Xilinx/12.3/ISE_DS/EDK/hw/XilinxProcessorIPLib/pcores/util_vector_logic_v1_00_a/hdl/vhdl/util_vector_logic.vhd
-vhdl work ../hdl/flash_ce_inverter_wrapper.vhd

@@ -1,7 +1,0 @@
-INFILE=/data/work/reconos_v3/demos/semaphore/edk/implementation/system.ncd
-OUTFILE=/data/work/reconos_v3/demos/semaphore/edk/implementation/system.bit
-FAMILY=Virtex6
-PART=xc6vlx240t-1ff1156
-WORKINGDIR=/data/work/reconos_v3/demos/semaphore/edk/implementation
-LICENSE=ISE
-USER_INFO=179889134_203906_268

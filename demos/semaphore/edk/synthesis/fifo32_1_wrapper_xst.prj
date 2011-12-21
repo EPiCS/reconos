@@ -1,2 +1,0 @@
-vhdl fifo32_v1_00_a /data/work/reconos_v3/demos/semaphore/edk/pcores/fifo32_v1_00_a/hdl/vhdl/fifo32.vhd
-vhdl work ../hdl/fifo32_1_wrapper.vhd

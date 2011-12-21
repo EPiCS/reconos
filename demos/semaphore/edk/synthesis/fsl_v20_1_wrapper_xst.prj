@@ -1,8 +1,0 @@
-vhdl fsl_v20_v2_11_c /opt/Xilinx/12.3/ISE_DS/EDK/hw/XilinxProcessorIPLib/pcores/fsl_v20_v2_11_c/hdl/vhdl/gen_srlfifo.vhd
-vhdl fsl_v20_v2_11_c /opt/Xilinx/12.3/ISE_DS/EDK/hw/XilinxProcessorIPLib/pcores/fsl_v20_v2_11_c/hdl/vhdl/gen_sync_bram.vhd
-vhdl fsl_v20_v2_11_c /opt/Xilinx/12.3/ISE_DS/EDK/hw/XilinxProcessorIPLib/pcores/fsl_v20_v2_11_c/hdl/vhdl/gen_sync_dpram.vhd
-vhdl fsl_v20_v2_11_c /opt/Xilinx/12.3/ISE_DS/EDK/hw/XilinxProcessorIPLib/pcores/fsl_v20_v2_11_c/hdl/vhdl/sync_fifo.vhd
-vhdl fsl_v20_v2_11_c /opt/Xilinx/12.3/ISE_DS/EDK/hw/XilinxProcessorIPLib/pcores/fsl_v20_v2_11_c/hdl/vhdl/async_fifo.vhd
-vhdl fsl_v20_v2_11_c /opt/Xilinx/12.3/ISE_DS/EDK/hw/XilinxProcessorIPLib/pcores/fsl_v20_v2_11_c/hdl/vhdl/async_fifo_bram.vhd
-vhdl fsl_v20_v2_11_c /opt/Xilinx/12.3/ISE_DS/EDK/hw/XilinxProcessorIPLib/pcores/fsl_v20_v2_11_c/hdl/vhdl/fsl_v20.vhd
-vhdl work ../hdl/fsl_v20_1_wrapper.vhd

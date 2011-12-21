@@ -1,2 +1,0 @@
-vhdl util_ds_buf_v1_01_a /opt/Xilinx/12.3/ISE_DS/EDK/hw/XilinxProcessorIPLib/pcores/util_ds_buf_v1_01_a/hdl/vhdl/util_ds_buf.vhd
-vhdl work ../hdl/pcie_diff_clk_wrapper.vhd
