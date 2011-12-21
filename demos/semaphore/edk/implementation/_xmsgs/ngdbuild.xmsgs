@@ -1,0 +1,358 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- IMPORTANT: This is an internal file that has been generated
+     by the Xilinx ISE software.  Any direct editing or
+     changes made to this file may result in unpredictable
+     behavior or data corruption.  It is strongly advised that
+     users do not edit the contents of this file. -->
+<messages>
+<msg type="info" file="ConstraintSystem" num="178" delta="new" ><arg fmt="%s" index="1">TNM</arg> &apos;<arg fmt="%s" index="2">sys_clk_pin</arg>&apos;, used in period specification &apos;<arg fmt="%s" index="3">TS_sys_clk_pin</arg>&apos;, was traced into <arg fmt="%s" index="4">MMCM_ADV</arg> instance <arg fmt="%s" index="5">clock_generator_0/MMCM0_INST/MMCM_ADV_inst</arg>. The following new TNM groups and period specifications were generated at the <arg fmt="%s" index="6">MMCM_ADV</arg> output(s): 
+<arg fmt="%s" index="7">CLKOUT3</arg>: <arg fmt="%s" index="8">&lt;TIMESPEC TS_clk_400_0000MHzMMCM0_nobuf_varphase = PERIOD &quot;clk_400_0000MHzMMCM0_nobuf_varphase&quot; TS_sys_clk_pin * 2 HIGH 50%&gt;</arg>
+</msg>
+
+<msg type="info" file="ConstraintSystem" num="178" delta="new" ><arg fmt="%s" index="1">TNM</arg> &apos;<arg fmt="%s" index="2">sys_clk_pin</arg>&apos;, used in period specification &apos;<arg fmt="%s" index="3">TS_sys_clk_pin</arg>&apos;, was traced into <arg fmt="%s" index="4">MMCM_ADV</arg> instance <arg fmt="%s" index="5">clock_generator_0/MMCM0_INST/MMCM_ADV_inst</arg>. The following new TNM groups and period specifications were generated at the <arg fmt="%s" index="6">MMCM_ADV</arg> output(s): 
+<arg fmt="%s" index="7">CLKOUT1</arg>: <arg fmt="%s" index="8">&lt;TIMESPEC TS_clock_generator_0_clock_generator_0_SIG_MMCM0_CLKOUT1 = PERIOD &quot;clock_generator_0_clock_generator_0_SIG_MMCM0_CLKOUT1&quot; TS_sys_clk_pin HIGH 50%&gt;</arg>
+</msg>
+
+<msg type="info" file="ConstraintSystem" num="178" delta="new" ><arg fmt="%s" index="1">TNM</arg> &apos;<arg fmt="%s" index="2">sys_clk_pin</arg>&apos;, used in period specification &apos;<arg fmt="%s" index="3">TS_sys_clk_pin</arg>&apos;, was traced into <arg fmt="%s" index="4">MMCM_ADV</arg> instance <arg fmt="%s" index="5">clock_generator_0/MMCM0_INST/MMCM_ADV_inst</arg>. The following new TNM groups and period specifications were generated at the <arg fmt="%s" index="6">MMCM_ADV</arg> output(s): 
+<arg fmt="%s" index="7">CLKOUT0</arg>: <arg fmt="%s" index="8">&lt;TIMESPEC TS_clock_generator_0_clock_generator_0_SIG_MMCM0_CLKOUT0 = PERIOD &quot;clock_generator_0_clock_generator_0_SIG_MMCM0_CLKOUT0&quot; TS_sys_clk_pin * 0.5 HIGH 50%&gt;</arg>
+</msg>
+
+<msg type="info" file="ConstraintSystem" num="178" delta="new" ><arg fmt="%s" index="1">TNM</arg> &apos;<arg fmt="%s" index="2">sys_clk_pin</arg>&apos;, used in period specification &apos;<arg fmt="%s" index="3">TS_sys_clk_pin</arg>&apos;, was traced into <arg fmt="%s" index="4">MMCM_ADV</arg> instance <arg fmt="%s" index="5">clock_generator_0/MMCM0_INST/MMCM_ADV_inst</arg>. The following new TNM groups and period specifications were generated at the <arg fmt="%s" index="6">MMCM_ADV</arg> output(s): 
+<arg fmt="%s" index="7">CLKOUT2</arg>: <arg fmt="%s" index="8">&lt;TIMESPEC TS_clock_generator_0_clock_generator_0_SIG_MMCM0_CLKOUT2 = PERIOD &quot;clock_generator_0_clock_generator_0_SIG_MMCM0_CLKOUT2&quot; TS_sys_clk_pin * 2 HIGH 50%&gt;</arg>
+</msg>
+
+<msg type="warning" file="NgdBuild" num="443" delta="new" >SFF primitive &apos;<arg fmt="%s" index="1">Ethernet_MAC/Ethernet_MAC/XEMAC_I/XPS_IPIF_I/PLBV46_BURST_I/I_SLAVE_ATTACHMENT/I_DECODER/MEM_DECODE_GEN[0].GEN_PLB_SHARED.I_BKEND_CS_REG</arg>&apos; has unconnected output pin
+</msg>
+
+<msg type="warning" file="NgdBuild" num="443" delta="new" >SFF primitive &apos;<arg fmt="%s" index="1">Ethernet_MAC/Ethernet_MAC/XEMAC_I/XPS_IPIF_I/PLBV46_BURST_I/I_SLAVE_ATTACHMENT/I_BUS_ADDRESS_COUNTER/GEN_FOR_SHARED.GEN_S_H_SIZE_REG[0].I_SIZE_S_H_REG</arg>&apos; has unconnected output pin
+</msg>
+
+<msg type="warning" file="NgdBuild" num="443" delta="new" >SFF primitive &apos;<arg fmt="%s" index="1">Ethernet_MAC/Ethernet_MAC/XEMAC_I/XPS_IPIF_I/PLBV46_BURST_I/I_SLAVE_ATTACHMENT/I_STEER_ADDRESS_COUNTER/GEN_FOR_SHARED.GEN_S_H_SIZE_REG[0].I_SIZE_S_H_REG</arg>&apos; has unconnected output pin
+</msg>
+
+<msg type="warning" file="NgdBuild" num="443" delta="new" >SFF primitive &apos;<arg fmt="%s" index="1">Ethernet_MAC/Ethernet_MAC/XEMAC_I/XPS_IPIF_I/PLBV46_BURST_I/I_SLAVE_ATTACHMENT/I_BURST_SUPPORT/RESPONSE_DBEAT_CNTR_I/STRUCTURAL_A_GEN.I_ADDSUB_GEN[6].FDRE_I</arg>&apos; has unconnected output pin
+</msg>
+
+<msg type="warning" file="NgdBuild" num="443" delta="new" >SFF primitive &apos;<arg fmt="%s" index="1">Ethernet_MAC/Ethernet_MAC/XEMAC_I/XPS_IPIF_I/PLBV46_BURST_I/I_SLAVE_ATTACHMENT/I_BURST_SUPPORT/CONTROL_DBEAT_CNTR_I/STRUCTURAL_A_GEN.I_ADDSUB_GEN[6].FDRE_I</arg>&apos; has unconnected output pin
+</msg>
+
+<msg type="warning" file="NgdBuild" num="443" delta="new" >SFF primitive &apos;<arg fmt="%s" index="1">Ethernet_MAC/Ethernet_MAC/XEMAC_I/EMAC_I/COLLISION_SYNC</arg>&apos; has unconnected output pin
+</msg>
+
+<msg type="warning" file="NgdBuild" num="486" delta="new" >Attribute &quot;<arg fmt="%s" index="1">INIT_FILE</arg>&quot; is not allowed on symbol &quot;<arg fmt="%s" index="2">DDR3_SDRAM/mpmc_core_0/gen_paths.mpmc_data_path_0/gen_read_fifos[0].gen_fifos.mpmc_read_fifo_0/gen_fifos_bram.mpmc_bram_fifo_0/gen_brams_normal.gen_v4.gen_brams[3].bram</arg>&quot; of type &quot;<arg fmt="%s" index="3">RAMB16</arg>&quot;.  This attribute will be ignored.
+</msg>
+
+<msg type="warning" file="NgdBuild" num="486" delta="new" >Attribute &quot;<arg fmt="%s" index="1">INIT_FILE</arg>&quot; is not allowed on symbol &quot;<arg fmt="%s" index="2">DDR3_SDRAM/mpmc_core_0/gen_paths.mpmc_data_path_0/gen_read_fifos[0].gen_fifos.mpmc_read_fifo_0/gen_fifos_bram.mpmc_bram_fifo_0/gen_brams_normal.gen_v4.gen_brams[2].bram</arg>&quot; of type &quot;<arg fmt="%s" index="3">RAMB16</arg>&quot;.  This attribute will be ignored.
+</msg>
+
+<msg type="warning" file="NgdBuild" num="486" delta="new" >Attribute &quot;<arg fmt="%s" index="1">INIT_FILE</arg>&quot; is not allowed on symbol &quot;<arg fmt="%s" index="2">DDR3_SDRAM/mpmc_core_0/gen_paths.mpmc_data_path_0/gen_read_fifos[0].gen_fifos.mpmc_read_fifo_0/gen_fifos_bram.mpmc_bram_fifo_0/gen_brams_normal.gen_v4.gen_brams[1].bram</arg>&quot; of type &quot;<arg fmt="%s" index="3">RAMB16</arg>&quot;.  This attribute will be ignored.
+</msg>
+
+<msg type="warning" file="NgdBuild" num="486" delta="new" >Attribute &quot;<arg fmt="%s" index="1">INIT_FILE</arg>&quot; is not allowed on symbol &quot;<arg fmt="%s" index="2">DDR3_SDRAM/mpmc_core_0/gen_paths.mpmc_data_path_0/gen_read_fifos[0].gen_fifos.mpmc_read_fifo_0/gen_fifos_bram.mpmc_bram_fifo_0/gen_brams_normal.gen_v4.gen_brams[0].bram</arg>&quot; of type &quot;<arg fmt="%s" index="3">RAMB16</arg>&quot;.  This attribute will be ignored.
+</msg>
+
+<msg type="warning" file="NgdBuild" num="486" delta="new" >Attribute &quot;<arg fmt="%s" index="1">INIT_FILE</arg>&quot; is not allowed on symbol &quot;<arg fmt="%s" index="2">DDR3_SDRAM/mpmc_core_0/gen_paths.mpmc_data_path_0/gen_read_fifos[1].gen_fifos.mpmc_read_fifo_0/gen_fifos_bram.mpmc_bram_fifo_0/gen_brams_normal.gen_v4.gen_brams[3].bram</arg>&quot; of type &quot;<arg fmt="%s" index="3">RAMB16</arg>&quot;.  This attribute will be ignored.
+</msg>
+
+<msg type="warning" file="NgdBuild" num="486" delta="new" >Attribute &quot;<arg fmt="%s" index="1">INIT_FILE</arg>&quot; is not allowed on symbol &quot;<arg fmt="%s" index="2">DDR3_SDRAM/mpmc_core_0/gen_paths.mpmc_data_path_0/gen_read_fifos[1].gen_fifos.mpmc_read_fifo_0/gen_fifos_bram.mpmc_bram_fifo_0/gen_brams_normal.gen_v4.gen_brams[2].bram</arg>&quot; of type &quot;<arg fmt="%s" index="3">RAMB16</arg>&quot;.  This attribute will be ignored.
+</msg>
+
+<msg type="warning" file="NgdBuild" num="486" delta="new" >Attribute &quot;<arg fmt="%s" index="1">INIT_FILE</arg>&quot; is not allowed on symbol &quot;<arg fmt="%s" index="2">DDR3_SDRAM/mpmc_core_0/gen_paths.mpmc_data_path_0/gen_read_fifos[1].gen_fifos.mpmc_read_fifo_0/gen_fifos_bram.mpmc_bram_fifo_0/gen_brams_normal.gen_v4.gen_brams[1].bram</arg>&quot; of type &quot;<arg fmt="%s" index="3">RAMB16</arg>&quot;.  This attribute will be ignored.
+</msg>
+
+<msg type="warning" file="NgdBuild" num="486" delta="new" >Attribute &quot;<arg fmt="%s" index="1">INIT_FILE</arg>&quot; is not allowed on symbol &quot;<arg fmt="%s" index="2">DDR3_SDRAM/mpmc_core_0/gen_paths.mpmc_data_path_0/gen_read_fifos[1].gen_fifos.mpmc_read_fifo_0/gen_fifos_bram.mpmc_bram_fifo_0/gen_brams_normal.gen_v4.gen_brams[0].bram</arg>&quot; of type &quot;<arg fmt="%s" index="3">RAMB16</arg>&quot;.  This attribute will be ignored.
+</msg>
+
+<msg type="warning" file="NgdBuild" num="486" delta="new" >Attribute &quot;<arg fmt="%s" index="1">INIT_FILE</arg>&quot; is not allowed on symbol &quot;<arg fmt="%s" index="2">DDR3_SDRAM/mpmc_core_0/gen_paths.mpmc_data_path_0/gen_read_fifos[2].gen_fifos.mpmc_read_fifo_0/gen_fifos_bram.mpmc_bram_fifo_0/gen_brams_normal.gen_v4.gen_brams[3].bram</arg>&quot; of type &quot;<arg fmt="%s" index="3">RAMB16</arg>&quot;.  This attribute will be ignored.
+</msg>
+
+<msg type="warning" file="NgdBuild" num="486" delta="new" >Attribute &quot;<arg fmt="%s" index="1">INIT_FILE</arg>&quot; is not allowed on symbol &quot;<arg fmt="%s" index="2">DDR3_SDRAM/mpmc_core_0/gen_paths.mpmc_data_path_0/gen_read_fifos[2].gen_fifos.mpmc_read_fifo_0/gen_fifos_bram.mpmc_bram_fifo_0/gen_brams_normal.gen_v4.gen_brams[2].bram</arg>&quot; of type &quot;<arg fmt="%s" index="3">RAMB16</arg>&quot;.  This attribute will be ignored.
+</msg>
+
+<msg type="warning" file="NgdBuild" num="486" delta="new" >Attribute &quot;<arg fmt="%s" index="1">INIT_FILE</arg>&quot; is not allowed on symbol &quot;<arg fmt="%s" index="2">DDR3_SDRAM/mpmc_core_0/gen_paths.mpmc_data_path_0/gen_read_fifos[2].gen_fifos.mpmc_read_fifo_0/gen_fifos_bram.mpmc_bram_fifo_0/gen_brams_normal.gen_v4.gen_brams[1].bram</arg>&quot; of type &quot;<arg fmt="%s" index="3">RAMB16</arg>&quot;.  This attribute will be ignored.
+</msg>
+
+<msg type="warning" file="NgdBuild" num="486" delta="new" >Attribute &quot;<arg fmt="%s" index="1">INIT_FILE</arg>&quot; is not allowed on symbol &quot;<arg fmt="%s" index="2">DDR3_SDRAM/mpmc_core_0/gen_paths.mpmc_data_path_0/gen_read_fifos[2].gen_fifos.mpmc_read_fifo_0/gen_fifos_bram.mpmc_bram_fifo_0/gen_brams_normal.gen_v4.gen_brams[0].bram</arg>&quot; of type &quot;<arg fmt="%s" index="3">RAMB16</arg>&quot;.  This attribute will be ignored.
+</msg>
+
+<msg type="warning" file="NgdBuild" num="486" delta="new" >Attribute &quot;<arg fmt="%s" index="1">INIT_FILE</arg>&quot; is not allowed on symbol &quot;<arg fmt="%s" index="2">DDR3_SDRAM/mpmc_core_0/gen_paths.mpmc_data_path_0/gen_write_fifos[0].gen_fifos.mpmc_write_fifo_0/gen_fifo_bram.mpmc_bram_fifo_0/gen_brams_normal.gen_v4.gen_brams[3].bram</arg>&quot; of type &quot;<arg fmt="%s" index="3">RAMB16</arg>&quot;.  This attribute will be ignored.
+</msg>
+
+<msg type="warning" file="NgdBuild" num="486" delta="new" >Attribute &quot;<arg fmt="%s" index="1">INIT_FILE</arg>&quot; is not allowed on symbol &quot;<arg fmt="%s" index="2">DDR3_SDRAM/mpmc_core_0/gen_paths.mpmc_data_path_0/gen_write_fifos[0].gen_fifos.mpmc_write_fifo_0/gen_fifo_bram.mpmc_bram_fifo_0/gen_brams_normal.gen_v4.gen_brams[2].bram</arg>&quot; of type &quot;<arg fmt="%s" index="3">RAMB16</arg>&quot;.  This attribute will be ignored.
+</msg>
+
+<msg type="warning" file="NgdBuild" num="486" delta="new" >Attribute &quot;<arg fmt="%s" index="1">INIT_FILE</arg>&quot; is not allowed on symbol &quot;<arg fmt="%s" index="2">DDR3_SDRAM/mpmc_core_0/gen_paths.mpmc_data_path_0/gen_write_fifos[0].gen_fifos.mpmc_write_fifo_0/gen_fifo_bram.mpmc_bram_fifo_0/gen_brams_normal.gen_v4.gen_brams[1].bram</arg>&quot; of type &quot;<arg fmt="%s" index="3">RAMB16</arg>&quot;.  This attribute will be ignored.
+</msg>
+
+<msg type="warning" file="NgdBuild" num="486" delta="new" >Attribute &quot;<arg fmt="%s" index="1">INIT_FILE</arg>&quot; is not allowed on symbol &quot;<arg fmt="%s" index="2">DDR3_SDRAM/mpmc_core_0/gen_paths.mpmc_data_path_0/gen_write_fifos[0].gen_fifos.mpmc_write_fifo_0/gen_fifo_bram.mpmc_bram_fifo_0/gen_brams_normal.gen_v4.gen_brams[0].bram</arg>&quot; of type &quot;<arg fmt="%s" index="3">RAMB16</arg>&quot;.  This attribute will be ignored.
+</msg>
+
+<msg type="warning" file="NgdBuild" num="486" delta="new" >Attribute &quot;<arg fmt="%s" index="1">INIT_FILE</arg>&quot; is not allowed on symbol &quot;<arg fmt="%s" index="2">DDR3_SDRAM/mpmc_core_0/gen_paths.mpmc_data_path_0/gen_write_fifos[2].gen_fifos.mpmc_write_fifo_0/gen_fifo_bram.mpmc_bram_fifo_0/gen_brams_normal.gen_v4.gen_brams[3].bram</arg>&quot; of type &quot;<arg fmt="%s" index="3">RAMB16</arg>&quot;.  This attribute will be ignored.
+</msg>
+
+<msg type="warning" file="NgdBuild" num="486" delta="new" >Attribute &quot;<arg fmt="%s" index="1">INIT_FILE</arg>&quot; is not allowed on symbol &quot;<arg fmt="%s" index="2">DDR3_SDRAM/mpmc_core_0/gen_paths.mpmc_data_path_0/gen_write_fifos[2].gen_fifos.mpmc_write_fifo_0/gen_fifo_bram.mpmc_bram_fifo_0/gen_brams_normal.gen_v4.gen_brams[2].bram</arg>&quot; of type &quot;<arg fmt="%s" index="3">RAMB16</arg>&quot;.  This attribute will be ignored.
+</msg>
+
+<msg type="warning" file="NgdBuild" num="486" delta="new" >Attribute &quot;<arg fmt="%s" index="1">INIT_FILE</arg>&quot; is not allowed on symbol &quot;<arg fmt="%s" index="2">DDR3_SDRAM/mpmc_core_0/gen_paths.mpmc_data_path_0/gen_write_fifos[2].gen_fifos.mpmc_write_fifo_0/gen_fifo_bram.mpmc_bram_fifo_0/gen_brams_normal.gen_v4.gen_brams[1].bram</arg>&quot; of type &quot;<arg fmt="%s" index="3">RAMB16</arg>&quot;.  This attribute will be ignored.
+</msg>
+
+<msg type="warning" file="NgdBuild" num="486" delta="new" >Attribute &quot;<arg fmt="%s" index="1">INIT_FILE</arg>&quot; is not allowed on symbol &quot;<arg fmt="%s" index="2">DDR3_SDRAM/mpmc_core_0/gen_paths.mpmc_data_path_0/gen_write_fifos[2].gen_fifos.mpmc_write_fifo_0/gen_fifo_bram.mpmc_bram_fifo_0/gen_brams_normal.gen_v4.gen_brams[0].bram</arg>&quot; of type &quot;<arg fmt="%s" index="3">RAMB16</arg>&quot;.  This attribute will be ignored.
+</msg>
+
+<msg type="warning" file="NgdBuild" num="443" delta="new" >SFF primitive &apos;<arg fmt="%s" index="1">xps_timer_0/xps_timer_0/TC_CORE_I/TIMER_CONTROL_I/TCSR1_GENERATE[20].TCSR1_FF_I</arg>&apos; has unconnected output pin
+</msg>
+
+<msg type="warning" file="NgdBuild" num="443" delta="new" >SFF primitive &apos;<arg fmt="%s" index="1">xps_timer_0/xps_timer_0/TC_CORE_I/TIMER_CONTROL_I/TCSR1_GENERATE[19].TCSR1_FF_I</arg>&apos; has unconnected output pin
+</msg>
+
+<msg type="warning" file="NgdBuild" num="443" delta="new" >SFF primitive &apos;<arg fmt="%s" index="1">xps_timer_0/xps_timer_0/TC_CORE_I/TIMER_CONTROL_I/TCSR1_GENERATE[18].TCSR1_FF_I</arg>&apos; has unconnected output pin
+</msg>
+
+<msg type="warning" file="NgdBuild" num="443" delta="new" >SFF primitive &apos;<arg fmt="%s" index="1">xps_timer_0/xps_timer_0/TC_CORE_I/TIMER_CONTROL_I/TCSR1_GENERATE[17].TCSR1_FF_I</arg>&apos; has unconnected output pin
+</msg>
+
+<msg type="warning" file="NgdBuild" num="443" delta="new" >SFF primitive &apos;<arg fmt="%s" index="1">xps_timer_0/xps_timer_0/TC_CORE_I/TIMER_CONTROL_I/TCSR1_GENERATE[16].TCSR1_FF_I</arg>&apos; has unconnected output pin
+</msg>
+
+<msg type="warning" file="NgdBuild" num="443" delta="new" >SFF primitive &apos;<arg fmt="%s" index="1">xps_timer_0/xps_timer_0/TC_CORE_I/TIMER_CONTROL_I/TCSR1_GENERATE[15].TCSR1_FF_I</arg>&apos; has unconnected output pin
+</msg>
+
+<msg type="warning" file="NgdBuild" num="443" delta="new" >SFF primitive &apos;<arg fmt="%s" index="1">xps_timer_0/xps_timer_0/TC_CORE_I/TIMER_CONTROL_I/TCSR1_GENERATE[14].TCSR1_FF_I</arg>&apos; has unconnected output pin
+</msg>
+
+<msg type="warning" file="NgdBuild" num="443" delta="new" >SFF primitive &apos;<arg fmt="%s" index="1">xps_timer_0/xps_timer_0/TC_CORE_I/TIMER_CONTROL_I/TCSR1_GENERATE[13].TCSR1_FF_I</arg>&apos; has unconnected output pin
+</msg>
+
+<msg type="warning" file="NgdBuild" num="443" delta="new" >SFF primitive &apos;<arg fmt="%s" index="1">xps_timer_0/xps_timer_0/TC_CORE_I/TIMER_CONTROL_I/TCSR1_GENERATE[12].TCSR1_FF_I</arg>&apos; has unconnected output pin
+</msg>
+
+<msg type="warning" file="NgdBuild" num="443" delta="new" >SFF primitive &apos;<arg fmt="%s" index="1">xps_timer_0/xps_timer_0/TC_CORE_I/TIMER_CONTROL_I/TCSR1_GENERATE[11].TCSR1_FF_I</arg>&apos; has unconnected output pin
+</msg>
+
+<msg type="warning" file="NgdBuild" num="443" delta="new" >SFF primitive &apos;<arg fmt="%s" index="1">xps_timer_0/xps_timer_0/TC_CORE_I/TIMER_CONTROL_I/TCSR1_GENERATE[10].TCSR1_FF_I</arg>&apos; has unconnected output pin
+</msg>
+
+<msg type="warning" file="NgdBuild" num="443" delta="new" >SFF primitive &apos;<arg fmt="%s" index="1">xps_timer_0/xps_timer_0/TC_CORE_I/TIMER_CONTROL_I/TCSR1_GENERATE[9].TCSR1_FF_I</arg>&apos; has unconnected output pin
+</msg>
+
+<msg type="warning" file="NgdBuild" num="443" delta="new" >SFF primitive &apos;<arg fmt="%s" index="1">xps_timer_0/xps_timer_0/TC_CORE_I/TIMER_CONTROL_I/TCSR1_GENERATE[8].TCSR1_FF_I</arg>&apos; has unconnected output pin
+</msg>
+
+<msg type="warning" file="NgdBuild" num="443" delta="new" >SFF primitive &apos;<arg fmt="%s" index="1">xps_timer_0/xps_timer_0/TC_CORE_I/TIMER_CONTROL_I/TCSR1_GENERATE[7].TCSR1_FF_I</arg>&apos; has unconnected output pin
+</msg>
+
+<msg type="warning" file="NgdBuild" num="443" delta="new" >SFF primitive &apos;<arg fmt="%s" index="1">xps_timer_0/xps_timer_0/TC_CORE_I/TIMER_CONTROL_I/TCSR1_GENERATE[6].TCSR1_FF_I</arg>&apos; has unconnected output pin
+</msg>
+
+<msg type="warning" file="NgdBuild" num="443" delta="new" >SFF primitive &apos;<arg fmt="%s" index="1">xps_timer_0/xps_timer_0/TC_CORE_I/TIMER_CONTROL_I/TCSR1_GENERATE[5].TCSR1_FF_I</arg>&apos; has unconnected output pin
+</msg>
+
+<msg type="warning" file="NgdBuild" num="443" delta="new" >SFF primitive &apos;<arg fmt="%s" index="1">xps_timer_0/xps_timer_0/TC_CORE_I/TIMER_CONTROL_I/TCSR1_GENERATE[4].TCSR1_FF_I</arg>&apos; has unconnected output pin
+</msg>
+
+<msg type="warning" file="NgdBuild" num="443" delta="new" >SFF primitive &apos;<arg fmt="%s" index="1">xps_timer_0/xps_timer_0/TC_CORE_I/TIMER_CONTROL_I/TCSR1_GENERATE[3].TCSR1_FF_I</arg>&apos; has unconnected output pin
+</msg>
+
+<msg type="warning" file="NgdBuild" num="443" delta="new" >SFF primitive &apos;<arg fmt="%s" index="1">xps_timer_0/xps_timer_0/TC_CORE_I/TIMER_CONTROL_I/TCSR1_GENERATE[2].TCSR1_FF_I</arg>&apos; has unconnected output pin
+</msg>
+
+<msg type="warning" file="NgdBuild" num="443" delta="new" >SFF primitive &apos;<arg fmt="%s" index="1">xps_timer_0/xps_timer_0/TC_CORE_I/TIMER_CONTROL_I/TCSR1_GENERATE[1].TCSR1_FF_I</arg>&apos; has unconnected output pin
+</msg>
+
+<msg type="warning" file="NgdBuild" num="443" delta="new" >SFF primitive &apos;<arg fmt="%s" index="1">xps_timer_0/xps_timer_0/TC_CORE_I/TIMER_CONTROL_I/TCSR1_GENERATE[0].TCSR1_FF_I</arg>&apos; has unconnected output pin
+</msg>
+
+<msg type="warning" file="NgdBuild" num="443" delta="new" >SFF primitive &apos;<arg fmt="%s" index="1">xps_timer_0/xps_timer_0/TC_CORE_I/TIMER_CONTROL_I/TCSR0_GENERATE[20].TCSR0_FF_I</arg>&apos; has unconnected output pin
+</msg>
+
+<msg type="warning" file="NgdBuild" num="443" delta="new" >SFF primitive &apos;<arg fmt="%s" index="1">xps_timer_0/xps_timer_0/TC_CORE_I/TIMER_CONTROL_I/TCSR0_GENERATE[19].TCSR0_FF_I</arg>&apos; has unconnected output pin
+</msg>
+
+<msg type="warning" file="NgdBuild" num="443" delta="new" >SFF primitive &apos;<arg fmt="%s" index="1">xps_timer_0/xps_timer_0/TC_CORE_I/TIMER_CONTROL_I/TCSR0_GENERATE[18].TCSR0_FF_I</arg>&apos; has unconnected output pin
+</msg>
+
+<msg type="warning" file="NgdBuild" num="443" delta="new" >SFF primitive &apos;<arg fmt="%s" index="1">xps_timer_0/xps_timer_0/TC_CORE_I/TIMER_CONTROL_I/TCSR0_GENERATE[17].TCSR0_FF_I</arg>&apos; has unconnected output pin
+</msg>
+
+<msg type="warning" file="NgdBuild" num="443" delta="new" >SFF primitive &apos;<arg fmt="%s" index="1">xps_timer_0/xps_timer_0/TC_CORE_I/TIMER_CONTROL_I/TCSR0_GENERATE[16].TCSR0_FF_I</arg>&apos; has unconnected output pin
+</msg>
+
+<msg type="warning" file="NgdBuild" num="443" delta="new" >SFF primitive &apos;<arg fmt="%s" index="1">xps_timer_0/xps_timer_0/TC_CORE_I/TIMER_CONTROL_I/TCSR0_GENERATE[15].TCSR0_FF_I</arg>&apos; has unconnected output pin
+</msg>
+
+<msg type="warning" file="NgdBuild" num="443" delta="new" >SFF primitive &apos;<arg fmt="%s" index="1">xps_timer_0/xps_timer_0/TC_CORE_I/TIMER_CONTROL_I/TCSR0_GENERATE[14].TCSR0_FF_I</arg>&apos; has unconnected output pin
+</msg>
+
+<msg type="warning" file="NgdBuild" num="443" delta="new" >SFF primitive &apos;<arg fmt="%s" index="1">xps_timer_0/xps_timer_0/TC_CORE_I/TIMER_CONTROL_I/TCSR0_GENERATE[13].TCSR0_FF_I</arg>&apos; has unconnected output pin
+</msg>
+
+<msg type="warning" file="NgdBuild" num="443" delta="new" >SFF primitive &apos;<arg fmt="%s" index="1">xps_timer_0/xps_timer_0/TC_CORE_I/TIMER_CONTROL_I/TCSR0_GENERATE[12].TCSR0_FF_I</arg>&apos; has unconnected output pin
+</msg>
+
+<msg type="warning" file="NgdBuild" num="443" delta="new" >SFF primitive &apos;<arg fmt="%s" index="1">xps_timer_0/xps_timer_0/TC_CORE_I/TIMER_CONTROL_I/TCSR0_GENERATE[11].TCSR0_FF_I</arg>&apos; has unconnected output pin
+</msg>
+
+<msg type="warning" file="NgdBuild" num="443" delta="new" >SFF primitive &apos;<arg fmt="%s" index="1">xps_timer_0/xps_timer_0/TC_CORE_I/TIMER_CONTROL_I/TCSR0_GENERATE[10].TCSR0_FF_I</arg>&apos; has unconnected output pin
+</msg>
+
+<msg type="warning" file="NgdBuild" num="443" delta="new" >SFF primitive &apos;<arg fmt="%s" index="1">xps_timer_0/xps_timer_0/TC_CORE_I/TIMER_CONTROL_I/TCSR0_GENERATE[9].TCSR0_FF_I</arg>&apos; has unconnected output pin
+</msg>
+
+<msg type="warning" file="NgdBuild" num="443" delta="new" >SFF primitive &apos;<arg fmt="%s" index="1">xps_timer_0/xps_timer_0/TC_CORE_I/TIMER_CONTROL_I/TCSR0_GENERATE[8].TCSR0_FF_I</arg>&apos; has unconnected output pin
+</msg>
+
+<msg type="warning" file="NgdBuild" num="443" delta="new" >SFF primitive &apos;<arg fmt="%s" index="1">xps_timer_0/xps_timer_0/TC_CORE_I/TIMER_CONTROL_I/TCSR0_GENERATE[7].TCSR0_FF_I</arg>&apos; has unconnected output pin
+</msg>
+
+<msg type="warning" file="NgdBuild" num="443" delta="new" >SFF primitive &apos;<arg fmt="%s" index="1">xps_timer_0/xps_timer_0/TC_CORE_I/TIMER_CONTROL_I/TCSR0_GENERATE[6].TCSR0_FF_I</arg>&apos; has unconnected output pin
+</msg>
+
+<msg type="warning" file="NgdBuild" num="443" delta="new" >SFF primitive &apos;<arg fmt="%s" index="1">xps_timer_0/xps_timer_0/TC_CORE_I/TIMER_CONTROL_I/TCSR0_GENERATE[5].TCSR0_FF_I</arg>&apos; has unconnected output pin
+</msg>
+
+<msg type="warning" file="NgdBuild" num="443" delta="new" >SFF primitive &apos;<arg fmt="%s" index="1">xps_timer_0/xps_timer_0/TC_CORE_I/TIMER_CONTROL_I/TCSR0_GENERATE[4].TCSR0_FF_I</arg>&apos; has unconnected output pin
+</msg>
+
+<msg type="warning" file="NgdBuild" num="443" delta="new" >SFF primitive &apos;<arg fmt="%s" index="1">xps_timer_0/xps_timer_0/TC_CORE_I/TIMER_CONTROL_I/TCSR0_GENERATE[3].TCSR0_FF_I</arg>&apos; has unconnected output pin
+</msg>
+
+<msg type="warning" file="NgdBuild" num="443" delta="new" >SFF primitive &apos;<arg fmt="%s" index="1">xps_timer_0/xps_timer_0/TC_CORE_I/TIMER_CONTROL_I/TCSR0_GENERATE[2].TCSR0_FF_I</arg>&apos; has unconnected output pin
+</msg>
+
+<msg type="warning" file="NgdBuild" num="443" delta="new" >SFF primitive &apos;<arg fmt="%s" index="1">xps_timer_0/xps_timer_0/TC_CORE_I/TIMER_CONTROL_I/TCSR0_GENERATE[1].TCSR0_FF_I</arg>&apos; has unconnected output pin
+</msg>
+
+<msg type="warning" file="NgdBuild" num="443" delta="new" >SFF primitive &apos;<arg fmt="%s" index="1">xps_timer_0/xps_timer_0/TC_CORE_I/TIMER_CONTROL_I/TCSR0_GENERATE[0].TCSR0_FF_I</arg>&apos; has unconnected output pin
+</msg>
+
+<msg type="warning" file="NgdBuild" num="443" delta="new" >SFF primitive &apos;<arg fmt="%s" index="1">xps_mem_0/xps_mem_0/PLBV46_MASTER_BURST_I/I_RD_WR_CONTROL/I_RDSOP_REG</arg>&apos; has unconnected output pin
+</msg>
+
+<msg type="warning" file="NgdBuild" num="443" delta="new" >SFF primitive &apos;<arg fmt="%s" index="1">xps_mem_0/xps_mem_0/PLBV46_MASTER_BURST_I/I_RD_WR_CONTROL/I_WRERR_REG</arg>&apos; has unconnected output pin
+</msg>
+
+<msg type="warning" file="NgdBuild" num="443" delta="new" >SFF primitive &apos;<arg fmt="%s" index="1">xps_mem_0/xps_mem_0/PLBV46_MASTER_BURST_I/I_RD_WR_CONTROL/I_RDERR_REG</arg>&apos; has unconnected output pin
+</msg>
+
+<msg type="warning" file="NgdBuild" num="452" delta="new" ><arg fmt="%s" index="1">logical</arg> net &apos;<arg fmt="%s" index="2">N103</arg>&apos; has no driver
+</msg>
+
+<msg type="warning" file="NgdBuild" num="452" delta="new" ><arg fmt="%s" index="1">logical</arg> net &apos;<arg fmt="%s" index="2">N104</arg>&apos; has no driver
+</msg>
+
+<msg type="warning" file="NgdBuild" num="452" delta="new" ><arg fmt="%s" index="1">logical</arg> net &apos;<arg fmt="%s" index="2">N105</arg>&apos; has no driver
+</msg>
+
+<msg type="warning" file="NgdBuild" num="452" delta="new" ><arg fmt="%s" index="1">logical</arg> net &apos;<arg fmt="%s" index="2">N106</arg>&apos; has no driver
+</msg>
+
+<msg type="warning" file="NgdBuild" num="452" delta="new" ><arg fmt="%s" index="1">logical</arg> net &apos;<arg fmt="%s" index="2">N107</arg>&apos; has no driver
+</msg>
+
+<msg type="warning" file="NgdBuild" num="452" delta="new" ><arg fmt="%s" index="1">logical</arg> net &apos;<arg fmt="%s" index="2">N108</arg>&apos; has no driver
+</msg>
+
+<msg type="warning" file="NgdBuild" num="452" delta="new" ><arg fmt="%s" index="1">logical</arg> net &apos;<arg fmt="%s" index="2">N109</arg>&apos; has no driver
+</msg>
+
+<msg type="warning" file="NgdBuild" num="452" delta="new" ><arg fmt="%s" index="1">logical</arg> net &apos;<arg fmt="%s" index="2">N110</arg>&apos; has no driver
+</msg>
+
+<msg type="warning" file="NgdBuild" num="452" delta="new" ><arg fmt="%s" index="1">logical</arg> net &apos;<arg fmt="%s" index="2">N111</arg>&apos; has no driver
+</msg>
+
+<msg type="warning" file="NgdBuild" num="452" delta="new" ><arg fmt="%s" index="1">logical</arg> net &apos;<arg fmt="%s" index="2">N112</arg>&apos; has no driver
+</msg>
+
+<msg type="warning" file="NgdBuild" num="452" delta="new" ><arg fmt="%s" index="1">logical</arg> net &apos;<arg fmt="%s" index="2">N113</arg>&apos; has no driver
+</msg>
+
+<msg type="warning" file="NgdBuild" num="452" delta="new" ><arg fmt="%s" index="1">logical</arg> net &apos;<arg fmt="%s" index="2">N114</arg>&apos; has no driver
+</msg>
+
+<msg type="warning" file="NgdBuild" num="452" delta="new" ><arg fmt="%s" index="1">logical</arg> net &apos;<arg fmt="%s" index="2">N115</arg>&apos; has no driver
+</msg>
+
+<msg type="warning" file="NgdBuild" num="452" delta="new" ><arg fmt="%s" index="1">logical</arg> net &apos;<arg fmt="%s" index="2">N116</arg>&apos; has no driver
+</msg>
+
+<msg type="warning" file="NgdBuild" num="452" delta="new" ><arg fmt="%s" index="1">logical</arg> net &apos;<arg fmt="%s" index="2">N117</arg>&apos; has no driver
+</msg>
+
+<msg type="warning" file="NgdBuild" num="452" delta="new" ><arg fmt="%s" index="1">logical</arg> net &apos;<arg fmt="%s" index="2">N118</arg>&apos; has no driver
+</msg>
+
+<msg type="warning" file="NgdBuild" num="452" delta="new" ><arg fmt="%s" index="1">logical</arg> net &apos;<arg fmt="%s" index="2">N119</arg>&apos; has no driver
+</msg>
+
+<msg type="warning" file="NgdBuild" num="452" delta="new" ><arg fmt="%s" index="1">logical</arg> net &apos;<arg fmt="%s" index="2">N120</arg>&apos; has no driver
+</msg>
+
+<msg type="warning" file="NgdBuild" num="452" delta="new" ><arg fmt="%s" index="1">logical</arg> net &apos;<arg fmt="%s" index="2">N121</arg>&apos; has no driver
+</msg>
+
+<msg type="warning" file="NgdBuild" num="452" delta="new" ><arg fmt="%s" index="1">logical</arg> net &apos;<arg fmt="%s" index="2">N122</arg>&apos; has no driver
+</msg>
+
+<msg type="warning" file="NgdBuild" num="452" delta="new" ><arg fmt="%s" index="1">logical</arg> net &apos;<arg fmt="%s" index="2">N123</arg>&apos; has no driver
+</msg>
+
+<msg type="warning" file="NgdBuild" num="452" delta="new" ><arg fmt="%s" index="1">logical</arg> net &apos;<arg fmt="%s" index="2">N124</arg>&apos; has no driver
+</msg>
+
+<msg type="warning" file="NgdBuild" num="452" delta="new" ><arg fmt="%s" index="1">logical</arg> net &apos;<arg fmt="%s" index="2">N125</arg>&apos; has no driver
+</msg>
+
+<msg type="warning" file="NgdBuild" num="452" delta="new" ><arg fmt="%s" index="1">logical</arg> net &apos;<arg fmt="%s" index="2">N126</arg>&apos; has no driver
+</msg>
+
+<msg type="warning" file="NgdBuild" num="452" delta="new" ><arg fmt="%s" index="1">logical</arg> net &apos;<arg fmt="%s" index="2">N127</arg>&apos; has no driver
+</msg>
+
+<msg type="warning" file="NgdBuild" num="452" delta="new" ><arg fmt="%s" index="1">logical</arg> net &apos;<arg fmt="%s" index="2">N128</arg>&apos; has no driver
+</msg>
+
+<msg type="warning" file="NgdBuild" num="452" delta="new" ><arg fmt="%s" index="1">logical</arg> net &apos;<arg fmt="%s" index="2">N129</arg>&apos; has no driver
+</msg>
+
+<msg type="warning" file="NgdBuild" num="452" delta="new" ><arg fmt="%s" index="1">logical</arg> net &apos;<arg fmt="%s" index="2">N130</arg>&apos; has no driver
+</msg>
+
+<msg type="warning" file="NgdBuild" num="452" delta="new" ><arg fmt="%s" index="1">logical</arg> net &apos;<arg fmt="%s" index="2">N131</arg>&apos; has no driver
+</msg>
+
+<msg type="warning" file="NgdBuild" num="452" delta="new" ><arg fmt="%s" index="1">logical</arg> net &apos;<arg fmt="%s" index="2">N132</arg>&apos; has no driver
+</msg>
+
+<msg type="warning" file="NgdBuild" num="452" delta="new" ><arg fmt="%s" index="1">logical</arg> net &apos;<arg fmt="%s" index="2">N133</arg>&apos; has no driver
+</msg>
+
+<msg type="warning" file="NgdBuild" num="452" delta="new" ><arg fmt="%s" index="1">logical</arg> net &apos;<arg fmt="%s" index="2">N134</arg>&apos; has no driver
+</msg>
+
+<msg type="warning" file="NgdBuild" num="452" delta="new" ><arg fmt="%s" index="1">logical</arg> net &apos;<arg fmt="%s" index="2">N135</arg>&apos; has no driver
+</msg>
+
+<msg type="warning" file="NgdBuild" num="452" delta="new" ><arg fmt="%s" index="1">logical</arg> net &apos;<arg fmt="%s" index="2">N136</arg>&apos; has no driver
+</msg>
+
+<msg type="warning" file="NgdBuild" num="452" delta="new" ><arg fmt="%s" index="1">logical</arg> net &apos;<arg fmt="%s" index="2">N137</arg>&apos; has no driver
+</msg>
+
+<msg type="warning" file="NgdBuild" num="452" delta="new" ><arg fmt="%s" index="1">logical</arg> net &apos;<arg fmt="%s" index="2">N138</arg>&apos; has no driver
+</msg>
+
+<msg type="warning" file="NgdBuild" num="452" delta="new" ><arg fmt="%s" index="1">logical</arg> net &apos;<arg fmt="%s" index="2">N139</arg>&apos; has no driver
+</msg>
+
+<msg type="warning" file="NgdBuild" num="452" delta="new" ><arg fmt="%s" index="1">logical</arg> net &apos;<arg fmt="%s" index="2">N140</arg>&apos; has no driver
+</msg>
+
+<msg type="warning" file="NgdBuild" num="452" delta="new" ><arg fmt="%s" index="1">logical</arg> net &apos;<arg fmt="%s" index="2">N141</arg>&apos; has no driver
+</msg>
+
+<msg type="warning" file="NgdBuild" num="452" delta="new" ><arg fmt="%s" index="1">logical</arg> net &apos;<arg fmt="%s" index="2">N142</arg>&apos; has no driver
+</msg>
+
+</messages>
+

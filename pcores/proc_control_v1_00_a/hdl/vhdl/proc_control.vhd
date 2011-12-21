@@ -63,11 +63,13 @@ architecture implementation of proc_control is
 	signal page_fault_handled : std_logic;
 	signal data   : std_logic_Vector(C_FSL_WIDTH-1 downto 0);
 	signal state  :STATE_TYPE;
-	signal fsl    : fsl_t;
+	signal i_fsl    : i_fsl_t;
+	signal o_fsl    : o_fsl_t;
 begin
 
 	fsl_setup(
-		fsl,
+		i_fsl,
+		o_fsl,
 		FSL_Clk,
 		FSL_Rst,
 		FSL_S_Data,
@@ -82,11 +84,11 @@ begin
 --	fsl.hwt2fsl_data <= (others => '0');
 --	fsl.hwt2fsl_writing <= '0';
 
-	process (fsl.clk,fsl.rst) is
+	process (i_fsl.clk,i_fsl.rst) is
 		variable done : boolean;
 	begin
-		if fsl.rst = '1' then
-			fsl_reset(fsl);
+		if i_fsl.rst = '1' then
+			fsl_reset(o_fsl);
 			state <= STATE_WAIT;
 			data <= (others => '0');
 			done := False;
@@ -111,14 +113,14 @@ begin
 			page_fault_handled <= '0';
 			reset_counter <= (others => '0');
 			reconos_reset <= '1';
-		elsif rising_edge(fsl.clk) then
+		elsif rising_edge(i_fsl.clk) then
 			reconos_reset <= '0';
 			case state is
 				when STATE_WAIT =>
 					if FSL_S_Exists = '0' and page_fault = '1' and page_fault_handled = '0' then
 						state <= STATE_PAGE_FAULT;
 					end if;
-					fsl_read_word(fsl,data,done);
+					fsl_read_word(i_fsl,o_fsl,data,done);
 					if done then state <= STATE_BRANCH; end if;
 					
 				when STATE_BRANCH =>
@@ -155,7 +157,7 @@ begin
 					state <= STATE_WAIT;
 				
 				when STATE_PGD =>
-					fsl_read_word(fsl,pgd,done);
+					fsl_read_word(i_fsl,o_fsl,pgd,done);
 					if done then state <= STATE_WAIT; end if;
 
 				when STATE_PAGE_READY =>
@@ -168,7 +170,7 @@ begin
 
 				when STATE_PAGE_FAULT =>
 					page_fault_handled <= '1';
-					fsl_write_word(fsl,fault_addr,done);
+					fsl_write_word(i_fsl,o_fsl,fault_addr,done);
 					if done then state <= STATE_WAIT; end if;
 
 				when STATE_RECONOS_RESET =>

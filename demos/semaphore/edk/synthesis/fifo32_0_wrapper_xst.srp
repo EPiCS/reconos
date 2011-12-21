@@ -1,0 +1,516 @@
+Release 12.3 - xst M.70d (lin64)
+Copyright (c) 1995-2010 Xilinx, Inc.  All rights reserved.
+--> 
+
+TABLE OF CONTENTS
+  1) Synthesis Options Summary
+  2) HDL Parsing
+  3) HDL Elaboration
+  4) HDL Synthesis
+       4.1) HDL Synthesis Report
+  5) Advanced HDL Synthesis
+       5.1) Advanced HDL Synthesis Report
+  6) Low Level Synthesis
+  7) Partition Report
+  8) Design Summary
+       8.1) Primitive and Black Box Usage
+       8.2) Device utilization summary
+       8.3) Partition Resource Summary
+       8.4) Timing Report
+            8.4.1) Clock Information
+            8.4.2) Asynchronous Control Signals Information
+            8.4.3) Timing Summary
+            8.4.4) Timing Details
+            8.4.5) Cross Clock Domains Report
+
+
+=========================================================================
+*                      Synthesis Options Summary                        *
+=========================================================================
+---- Source Parameters
+Input Format                       : MIXED
+Input File Name                    : "fifo32_0_wrapper_xst.prj"
+Verilog Include Directory          : {"/data/work/reconos_v3/demos/semaphore/edk/pcores/" "/opt/Xilinx/12.3/ISE_DS/EDK/hw/XilinxProcessorIPLib/pcores/" }
+
+---- Target Parameters
+Target Device                      : xc6vlx240tff1156-1
+Output File Name                   : "../implementation/fifo32_0_wrapper.ngc"
+
+---- Source Options
+Top Module Name                    : fifo32_0_wrapper
+
+---- Target Options
+Add IO Buffers                     : NO
+
+---- General Options
+Optimization Goal                  : speed
+Netlist Hierarchy                  : as_optimized
+Optimization Effort                : 1
+Hierarchy Separator                : /
+
+---- Other Options
+Cores Search Directories           : {../implementation/fifo32_0_wrapper}
+
+=========================================================================
+
+
+=========================================================================
+*                          HDL Parsing                                  *
+=========================================================================
+Parsing VHDL file "/data/work/reconos_v3/demos/semaphore/edk/pcores/fifo32_v1_00_a/hdl/vhdl/fifo32.vhd" into library fifo32_v1_00_a
+Parsing entity <fifo32>.
+Parsing architecture <implementation> of entity <fifo32>.
+Parsing VHDL file "/data/work/reconos_v3/demos/semaphore/edk/synthesis/../hdl/fifo32_0_wrapper.vhd" into library work
+Parsing entity <fifo32_0_wrapper>.
+Parsing architecture <STRUCTURE> of entity <fifo32_0_wrapper>.
+
+=========================================================================
+*                            HDL Elaboration                            *
+=========================================================================
+
+Elaborating entity <fifo32_0_wrapper> (architecture <STRUCTURE>) from library <work>.
+
+Elaborating entity <fifo32> (architecture <implementation>) with generics from library <fifo32_v1_00_a>.
+
+=========================================================================
+*                           HDL Synthesis                               *
+=========================================================================
+
+Synthesizing Unit <fifo32_0_wrapper>.
+    Related source file is "/data/work/reconos_v3/demos/semaphore/edk/hdl/fifo32_0_wrapper.vhd".
+    Summary:
+	no macro.
+Unit <fifo32_0_wrapper> synthesized.
+
+Synthesizing Unit <fifo32>.
+    Related source file is "/data/work/reconos_v3/demos/semaphore/edk/pcores/fifo32_v1_00_a/hdl/vhdl/fifo32.vhd".
+        C_FIFO32_DEPTH = 1024
+    Found 1024x32-bit dual-port RAM <Mram_mem> for signal <mem>.
+    Found 16-bit register for signal <rdptr>.
+    Found 16-bit register for signal <wrptr>.
+    Found 16-bit adder for signal <GND_7_o_wrptr[15]_add_4_OUT> created at line 35.
+    Found 16-bit adder for signal <wrptr[15]_GND_7_o_add_11_OUT> created at line 48.
+    Found 16-bit adder for signal <rdptr[15]_GND_7_o_add_16_OUT> created at line 63.
+    Found 16-bit subtractor for signal <GND_7_o_GND_7_o_sub_6_OUT<15:0>> created at line 35.
+    Found 16-bit subtractor for signal <GND_7_o_GND_7_o_sub_7_OUT<15:0>> created at line 35.
+    Found 16-bit subtractor for signal <remainder> created at line 28.
+    Found 16-bit comparator lessequal for signal <n0003> created at line 35
+    Summary:
+	inferred   1 RAM(s).
+	inferred   5 Adder/Subtractor(s).
+	inferred  32 D-type flip-flop(s).
+	inferred   1 Comparator(s).
+	inferred   4 Multiplexer(s).
+Unit <fifo32> synthesized.
+RTL-Simplification CPUSTAT: 0.02 
+RTL-BasicInf CPUSTAT: 0.16 
+RTL-BasicOpt CPUSTAT: 0.01 
+RTL-Remain-Bus CPUSTAT: 0.00 
+
+=========================================================================
+HDL Synthesis Report
+
+Macro Statistics
+# RAMs                                                 : 1
+ 1024x32-bit dual-port RAM                             : 1
+# Adders/Subtractors                                   : 5
+ 16-bit adder                                          : 3
+ 16-bit subtractor                                     : 2
+# Registers                                            : 2
+ 16-bit register                                       : 2
+# Comparators                                          : 1
+ 16-bit comparator lessequal                           : 1
+# Multiplexers                                         : 4
+ 1-bit 2-to-1 multiplexer                              : 1
+ 16-bit 2-to-1 multiplexer                             : 3
+
+=========================================================================
+INFO:Xst:1767 - HDL ADVISOR - Resource sharing has identified that some arithmetic operations in this design can share the same physical resources for reduced device utilization. For improved clock frequency you may try to disable resource sharing.
+
+=========================================================================
+*                       Advanced HDL Synthesis                          *
+=========================================================================
+
+
+Synthesizing (advanced) Unit <fifo32>.
+The following registers are absorbed into counter <rdptr>: 1 register on signal <rdptr>.
+The following registers are absorbed into counter <wrptr>: 1 register on signal <wrptr>.
+INFO:Xst:3031 - HDL ADVISOR - The RAM <Mram_mem> will be implemented on LUTs either because you have described an asynchronous read or because of currently unsupported block RAM features. If you have described an asynchronous read, making it synchronous would allow you to take advantage of available block RAM resources, for optimized device usage and improved timings. Please refer to your documentation for coding guidelines.
+    -----------------------------------------------------------------------
+    | ram_type           | Distributed                         |          |
+    -----------------------------------------------------------------------
+    | Port A                                                              |
+    |     aspect ratio   | 1024-word x 32-bit                  |          |
+    |     clkA           | connected to signal <FIFO32_M_Clk>  | rise     |
+    |     weA            | connected to internal node          | high     |
+    |     addrA          | connected to signal <wrptr<9:0>>    |          |
+    |     diA            | connected to signal <FIFO32_M_Data> |          |
+    -----------------------------------------------------------------------
+    | Port B                                                              |
+    |     aspect ratio   | 1024-word x 32-bit                  |          |
+    |     addrB          | connected to signal <rdptr<9:0>>    |          |
+    |     doB            | connected to internal node          |          |
+    -----------------------------------------------------------------------
+Unit <fifo32> synthesized (advanced).
+
+=========================================================================
+Advanced HDL Synthesis Report
+
+Macro Statistics
+# RAMs                                                 : 1
+ 1024x32-bit dual-port distributed RAM                 : 1
+# Adders/Subtractors                                   : 3
+ 16-bit adder                                          : 1
+ 16-bit subtractor                                     : 2
+# Counters                                             : 2
+ 16-bit up counter                                     : 2
+# Comparators                                          : 1
+ 16-bit comparator lessequal                           : 1
+# Multiplexers                                         : 2
+ 1-bit 2-to-1 multiplexer                              : 1
+ 16-bit 2-to-1 multiplexer                             : 1
+
+=========================================================================
+
+=========================================================================
+*                         Low Level Synthesis                           *
+=========================================================================
+
+Optimizing unit <fifo32_0_wrapper> ...
+
+Optimizing unit <fifo32> ...
+
+Mapping all equations...
+Building and optimizing final netlist ...
+Found area constraint ratio of 100 (+ 0) on block fifo32_0_wrapper, actual ratio is 0.
+FlipFlop fifo32_0/rdptr_4 has been replicated 1 time(s)
+FlipFlop fifo32_0/rdptr_5 has been replicated 1 time(s)
+FlipFlop fifo32_0/wrptr_4 has been replicated 1 time(s)
+FlipFlop fifo32_0/wrptr_5 has been replicated 1 time(s)
+
+Final Macro Processing ...
+
+=========================================================================
+Final Register Report
+
+Macro Statistics
+# Registers                                            : 36
+ Flip-Flops                                            : 36
+
+=========================================================================
+
+=========================================================================
+*                           Partition Report                            *
+=========================================================================
+
+Partition Implementation Status
+-------------------------------
+
+  No Partitions were found in this design.
+
+-------------------------------
+
+=========================================================================
+*                            Design Summary                             *
+=========================================================================
+
+Top Level Output File Name         : fifo32_0_wrapper.ngc
+
+Primitive and Black Box Usage:
+------------------------------
+# BELS                             : 474
+#      GND                         : 1
+#      INV                         : 12
+#      LUT1                        : 30
+#      LUT2                        : 33
+#      LUT3                        : 17
+#      LUT4                        : 31
+#      LUT5                        : 2
+#      LUT6                        : 151
+#      MUXCY                       : 52
+#      MUXF7                       : 64
+#      MUXF8                       : 32
+#      VCC                         : 1
+#      XORCY                       : 48
+# FlipFlops/Latches                : 36
+#      FDCE                        : 36
+# RAMS                             : 192
+#      RAM64M                      : 160
+#      RAM64X1D                    : 32
+
+Device utilization summary:
+---------------------------
+
+Selected Device : 6vlx240tff1156-1 
+
+
+Slice Logic Utilization: 
+ Number of Slice Registers:              36  out of  301440     0%  
+ Number of Slice LUTs:                  980  out of  150720     0%  
+    Number used as Logic:               276  out of  150720     0%  
+    Number used as Memory:              704  out of  58400     1%  
+       Number used as RAM:              704
+
+Slice Logic Distribution: 
+ Number of LUT Flip Flop pairs used:    983
+   Number with an unused Flip Flop:     947  out of    983    96%  
+   Number with an unused LUT:             3  out of    983     0%  
+   Number of fully used LUT-FF pairs:    33  out of    983     3%  
+   Number of unique control sets:         2
+
+IO Utilization: 
+ Number of IOs:                         101
+ Number of bonded IOBs:                   0  out of    600     0%  
+
+Specific Feature Utilization:
+
+---------------------------
+Partition Resource Summary:
+---------------------------
+
+  No Partitions were found in this design.
+
+---------------------------
+
+
+=========================================================================
+Timing Report
+
+NOTE: THESE TIMING NUMBERS ARE ONLY A SYNTHESIS ESTIMATE.
+      FOR ACCURATE TIMING INFORMATION PLEASE REFER TO THE TRACE REPORT
+      GENERATED AFTER PLACE-and-ROUTE.
+
+Clock Information:
+------------------
+-----------------------------------+------------------------+-------+
+Clock Signal                       | Clock buffer(FF name)  | Load  |
+-----------------------------------+------------------------+-------+
+FIFO32_S_Clk                       | NONE(fifo32_0/rdptr_15)| 18    |
+FIFO32_M_Clk                       | NONE(fifo32_0/wrptr_15)| 210   |
+-----------------------------------+------------------------+-------+
+INFO:Xst:2169 - HDL ADVISOR - Some clock signals were not automatically buffered by XST with BUFG/BUFR resources. Please use the buffer_type constraint in order to insert these buffers to the clock signals to help prevent skew problems.
+
+Asynchronous Control Signals Information:
+----------------------------------------
+No asynchronous control signals found in this design
+
+Timing Summary:
+---------------
+Speed Grade: -1
+
+   Minimum period: 2.421ns (Maximum Frequency: 413.073MHz)
+   Minimum input arrival time before clock: 1.408ns
+   Maximum output required time after clock: 4.810ns
+   Maximum combinational path delay: No path found
+
+Timing Details:
+---------------
+All values displayed in nanoseconds (ns)
+
+=========================================================================
+Timing constraint: Default period analysis for Clock 'FIFO32_S_Clk'
+  Clock period: 2.407ns (frequency: 415.455MHz)
+  Total number of paths / destination ports: 435 / 18
+-------------------------------------------------------------------------
+Delay:               2.407ns (Levels of Logic = 3)
+  Source:            fifo32_0/rdptr_11 (FF)
+  Destination:       fifo32_0/rdptr_15 (FF)
+  Source Clock:      FIFO32_S_Clk rising
+  Destination Clock: FIFO32_S_Clk rising
+
+  Data Path: fifo32_0/rdptr_11 to fifo32_0/rdptr_15
+                                Gate     Net
+    Cell:in->out      fanout   Delay   Delay  Logical Name (Net Name)
+    ----------------------------------------  ------------
+     FDCE:C->Q             6   0.375   0.811  fifo32_0/rdptr_11 (fifo32_0/rdptr_11)
+     LUT6:I0->O            1   0.068   0.491  fifo32_0/GND_7_o_GND_7_o_equal_16_o<15>2 (fifo32_0/GND_7_o_GND_7_o_equal_16_o<15>1)
+     LUT6:I4->O           16   0.068   0.515  fifo32_0/GND_7_o_GND_7_o_equal_16_o<15>3 (fifo32_0/GND_7_o_GND_7_o_equal_16_o)
+     LUT2:I1->O            1   0.068   0.000  fifo32_0/Mcount_rdptr_eqn_151 (fifo32_0/Mcount_rdptr_eqn_15)
+     FDCE:D                    0.011          fifo32_0/rdptr_15
+    ----------------------------------------
+    Total                      2.407ns (0.590ns logic, 1.817ns route)
+                                       (24.5% logic, 75.5% route)
+
+=========================================================================
+Timing constraint: Default period analysis for Clock 'FIFO32_M_Clk'
+  Clock period: 2.421ns (frequency: 413.073MHz)
+  Total number of paths / destination ports: 2355 / 1362
+-------------------------------------------------------------------------
+Delay:               2.421ns (Levels of Logic = 18)
+  Source:            fifo32_0/wrptr_0 (FF)
+  Destination:       fifo32_0/wrptr_15 (FF)
+  Source Clock:      FIFO32_M_Clk rising
+  Destination Clock: FIFO32_M_Clk rising
+
+  Data Path: fifo32_0/wrptr_0 to fifo32_0/wrptr_15
+                                Gate     Net
+    Cell:in->out      fanout   Delay   Delay  Logical Name (Net Name)
+    ----------------------------------------  ------------
+     FDCE:C->Q           198   0.375   0.588  fifo32_0/wrptr_0 (fifo32_0/wrptr_0)
+     INV:I->O              1   0.086   0.000  fifo32_0/Mcount_wrptr_lut<0>_INV_0 (fifo32_0/Mcount_wrptr_lut<0>)
+     MUXCY:S->O            1   0.290   0.000  fifo32_0/Mcount_wrptr_cy<0> (fifo32_0/Mcount_wrptr_cy<0>)
+     MUXCY:CI->O           1   0.020   0.000  fifo32_0/Mcount_wrptr_cy<1> (fifo32_0/Mcount_wrptr_cy<1>)
+     MUXCY:CI->O           1   0.020   0.000  fifo32_0/Mcount_wrptr_cy<2> (fifo32_0/Mcount_wrptr_cy<2>)
+     MUXCY:CI->O           1   0.020   0.000  fifo32_0/Mcount_wrptr_cy<3> (fifo32_0/Mcount_wrptr_cy<3>)
+     MUXCY:CI->O           1   0.020   0.000  fifo32_0/Mcount_wrptr_cy<4> (fifo32_0/Mcount_wrptr_cy<4>)
+     MUXCY:CI->O           1   0.020   0.000  fifo32_0/Mcount_wrptr_cy<5> (fifo32_0/Mcount_wrptr_cy<5>)
+     MUXCY:CI->O           1   0.020   0.000  fifo32_0/Mcount_wrptr_cy<6> (fifo32_0/Mcount_wrptr_cy<6>)
+     MUXCY:CI->O           1   0.020   0.000  fifo32_0/Mcount_wrptr_cy<7> (fifo32_0/Mcount_wrptr_cy<7>)
+     MUXCY:CI->O           1   0.020   0.000  fifo32_0/Mcount_wrptr_cy<8> (fifo32_0/Mcount_wrptr_cy<8>)
+     MUXCY:CI->O           1   0.020   0.000  fifo32_0/Mcount_wrptr_cy<9> (fifo32_0/Mcount_wrptr_cy<9>)
+     MUXCY:CI->O           1   0.020   0.000  fifo32_0/Mcount_wrptr_cy<10> (fifo32_0/Mcount_wrptr_cy<10>)
+     MUXCY:CI->O           1   0.020   0.000  fifo32_0/Mcount_wrptr_cy<11> (fifo32_0/Mcount_wrptr_cy<11>)
+     MUXCY:CI->O           1   0.020   0.000  fifo32_0/Mcount_wrptr_cy<12> (fifo32_0/Mcount_wrptr_cy<12>)
+     MUXCY:CI->O           1   0.020   0.000  fifo32_0/Mcount_wrptr_cy<13> (fifo32_0/Mcount_wrptr_cy<13>)
+     MUXCY:CI->O           0   0.020   0.000  fifo32_0/Mcount_wrptr_cy<14> (fifo32_0/Mcount_wrptr_cy<14>)
+     XORCY:CI->O           1   0.239   0.491  fifo32_0/Mcount_wrptr_xor<15> (fifo32_0/Result<15>)
+     LUT2:I0->O            1   0.068   0.000  fifo32_0/Mcount_wrptr_eqn_151 (fifo32_0/Mcount_wrptr_eqn_15)
+     FDCE:D                    0.011          fifo32_0/wrptr_15
+    ----------------------------------------
+    Total                      2.421ns (1.342ns logic, 1.079ns route)
+                                       (55.4% logic, 44.6% route)
+
+=========================================================================
+Timing constraint: Default OFFSET IN BEFORE for Clock 'FIFO32_S_Clk'
+  Total number of paths / destination ports: 36 / 36
+-------------------------------------------------------------------------
+Offset:              0.434ns (Levels of Logic = 0)
+  Source:            Rst (PAD)
+  Destination:       fifo32_0/rdptr_15 (FF)
+  Destination Clock: FIFO32_S_Clk rising
+
+  Data Path: Rst to fifo32_0/rdptr_15
+                                Gate     Net
+    Cell:in->out      fanout   Delay   Delay  Logical Name (Net Name)
+    ----------------------------------------  ------------
+     FDCE:CLR                  0.434          fifo32_0/rdptr_0
+    ----------------------------------------
+    Total                      0.434ns (0.434ns logic, 0.000ns route)
+                                       (100.0% logic, 0.0% route)
+
+=========================================================================
+Timing constraint: Default OFFSET IN BEFORE for Clock 'FIFO32_M_Clk'
+  Total number of paths / destination ports: 932 / 740
+-------------------------------------------------------------------------
+Offset:              1.408ns (Levels of Logic = 1)
+  Source:            FIFO32_M_Wr (PAD)
+  Destination:       fifo32_0/Mram_mem160 (RAM)
+  Destination Clock: FIFO32_M_Clk rising
+
+  Data Path: FIFO32_M_Wr to fifo32_0/Mram_mem160
+                                Gate     Net
+    Cell:in->out      fanout   Delay   Delay  Logical Name (Net Name)
+    ----------------------------------------  ------------
+     LUT6:I0->O           12   0.068   0.471  fifo32_0/write_ctrl15 (fifo32_0/write_ctrl15)
+     RAM64M:WE                 0.490          fifo32_0/Mram_mem16
+    ----------------------------------------
+    Total                      1.408ns (0.937ns logic, 0.471ns route)
+                                       (66.5% logic, 33.5% route)
+
+=========================================================================
+Timing constraint: Default OFFSET OUT AFTER for Clock 'FIFO32_S_Clk'
+  Total number of paths / destination ports: 3606 / 64
+-------------------------------------------------------------------------
+Offset:              4.810ns (Levels of Logic = 17)
+  Source:            fifo32_0/rdptr_0 (FF)
+  Destination:       FIFO32_M_Rem<0> (PAD)
+  Source Clock:      FIFO32_S_Clk rising
+
+  Data Path: fifo32_0/rdptr_0 to FIFO32_M_Rem<0>
+                                Gate     Net
+    Cell:in->out      fanout   Delay   Delay  Logical Name (Net Name)
+    ----------------------------------------  ------------
+     FDCE:C->Q            38   0.375   0.792  fifo32_0/rdptr_0 (fifo32_0/rdptr_0)
+     LUT4:I0->O            1   0.068   0.000  fifo32_0/Mcompar_rdptr[15]_wrptr[15]_LessThan_4_o_lut<0> (fifo32_0/Mcompar_rdptr[15]_wrptr[15]_LessThan_4_o_lut<0>)
+     MUXCY:S->O            1   0.290   0.000  fifo32_0/Mcompar_rdptr[15]_wrptr[15]_LessThan_4_o_cy<0> (fifo32_0/Mcompar_rdptr[15]_wrptr[15]_LessThan_4_o_cy<0>)
+     MUXCY:CI->O           1   0.020   0.000  fifo32_0/Mcompar_rdptr[15]_wrptr[15]_LessThan_4_o_cy<1> (fifo32_0/Mcompar_rdptr[15]_wrptr[15]_LessThan_4_o_cy<1>)
+     MUXCY:CI->O           1   0.020   0.000  fifo32_0/Mcompar_rdptr[15]_wrptr[15]_LessThan_4_o_cy<2> (fifo32_0/Mcompar_rdptr[15]_wrptr[15]_LessThan_4_o_cy<2>)
+     MUXCY:CI->O           1   0.020   0.000  fifo32_0/Mcompar_rdptr[15]_wrptr[15]_LessThan_4_o_cy<3> (fifo32_0/Mcompar_rdptr[15]_wrptr[15]_LessThan_4_o_cy<3>)
+     MUXCY:CI->O           1   0.020   0.000  fifo32_0/Mcompar_rdptr[15]_wrptr[15]_LessThan_4_o_cy<4> (fifo32_0/Mcompar_rdptr[15]_wrptr[15]_LessThan_4_o_cy<4>)
+     MUXCY:CI->O           1   0.020   0.000  fifo32_0/Mcompar_rdptr[15]_wrptr[15]_LessThan_4_o_cy<5> (fifo32_0/Mcompar_rdptr[15]_wrptr[15]_LessThan_4_o_cy<5>)
+     MUXCY:CI->O           1   0.220   0.491  fifo32_0/Mcompar_rdptr[15]_wrptr[15]_LessThan_4_o_cy<6> (fifo32_0/Mcompar_rdptr[15]_wrptr[15]_LessThan_4_o_cy<6>)
+     LUT5:I3->O            2   0.068   0.423  fifo32_0/Mmux_fill_A_rs_A<10>_inv1 (fifo32_0/Mmux_fill_A_rs_A<10>)
+     LUT3:I2->O            1   0.068   0.417  fifo32_0/Mmux_fill_rs10 (fifo32_0/Mmux_fill_rs10)
+     LUT4:I3->O            1   0.068   0.000  fifo32_0/Mmux_fill_rs_lut<0>11 (fifo32_0/Mmux_fill_rs_lut<0>11)
+     MUXCY:S->O            1   0.290   0.000  fifo32_0/Mmux_fill_rs_cy<0>_10 (fifo32_0/Mmux_fill_rs_cy<0>11)
+     MUXCY:CI->O           1   0.020   0.000  fifo32_0/Mmux_fill_rs_cy<0>_11 (fifo32_0/Mmux_fill_rs_cy<0>12)
+     MUXCY:CI->O           1   0.020   0.000  fifo32_0/Mmux_fill_rs_cy<0>_12 (fifo32_0/Mmux_fill_rs_cy<0>13)
+     MUXCY:CI->O           0   0.020   0.000  fifo32_0/Mmux_fill_rs_cy<0>_13 (fifo32_0/Mmux_fill_rs_cy<0>14)
+     XORCY:CI->O           1   0.239   0.778  fifo32_0/Mmux_fill_rs_xor<0>_14 (FIFO32_S_Fill<0>)
+     LUT6:I0->O            0   0.068   0.000  fifo32_0/Msub_remainder_xor<15>11 (FIFO32_M_Rem<0>)
+    ----------------------------------------
+    Total                      4.810ns (1.910ns logic, 2.901ns route)
+                                       (39.7% logic, 60.3% route)
+
+=========================================================================
+Timing constraint: Default OFFSET OUT AFTER for Clock 'FIFO32_M_Clk'
+  Total number of paths / destination ports: 3574 / 64
+-------------------------------------------------------------------------
+Offset:              4.788ns (Levels of Logic = 17)
+  Source:            fifo32_0/wrptr_0 (FF)
+  Destination:       FIFO32_M_Rem<0> (PAD)
+  Source Clock:      FIFO32_M_Clk rising
+
+  Data Path: fifo32_0/wrptr_0 to FIFO32_M_Rem<0>
+                                Gate     Net
+    Cell:in->out      fanout   Delay   Delay  Logical Name (Net Name)
+    ----------------------------------------  ------------
+     FDCE:C->Q           198   0.375   0.770  fifo32_0/wrptr_0 (fifo32_0/wrptr_0)
+     LUT4:I1->O            1   0.068   0.000  fifo32_0/Mcompar_rdptr[15]_wrptr[15]_LessThan_4_o_lut<0> (fifo32_0/Mcompar_rdptr[15]_wrptr[15]_LessThan_4_o_lut<0>)
+     MUXCY:S->O            1   0.290   0.000  fifo32_0/Mcompar_rdptr[15]_wrptr[15]_LessThan_4_o_cy<0> (fifo32_0/Mcompar_rdptr[15]_wrptr[15]_LessThan_4_o_cy<0>)
+     MUXCY:CI->O           1   0.020   0.000  fifo32_0/Mcompar_rdptr[15]_wrptr[15]_LessThan_4_o_cy<1> (fifo32_0/Mcompar_rdptr[15]_wrptr[15]_LessThan_4_o_cy<1>)
+     MUXCY:CI->O           1   0.020   0.000  fifo32_0/Mcompar_rdptr[15]_wrptr[15]_LessThan_4_o_cy<2> (fifo32_0/Mcompar_rdptr[15]_wrptr[15]_LessThan_4_o_cy<2>)
+     MUXCY:CI->O           1   0.020   0.000  fifo32_0/Mcompar_rdptr[15]_wrptr[15]_LessThan_4_o_cy<3> (fifo32_0/Mcompar_rdptr[15]_wrptr[15]_LessThan_4_o_cy<3>)
+     MUXCY:CI->O           1   0.020   0.000  fifo32_0/Mcompar_rdptr[15]_wrptr[15]_LessThan_4_o_cy<4> (fifo32_0/Mcompar_rdptr[15]_wrptr[15]_LessThan_4_o_cy<4>)
+     MUXCY:CI->O           1   0.020   0.000  fifo32_0/Mcompar_rdptr[15]_wrptr[15]_LessThan_4_o_cy<5> (fifo32_0/Mcompar_rdptr[15]_wrptr[15]_LessThan_4_o_cy<5>)
+     MUXCY:CI->O           1   0.220   0.491  fifo32_0/Mcompar_rdptr[15]_wrptr[15]_LessThan_4_o_cy<6> (fifo32_0/Mcompar_rdptr[15]_wrptr[15]_LessThan_4_o_cy<6>)
+     LUT5:I3->O            2   0.068   0.423  fifo32_0/Mmux_fill_A_rs_A<10>_inv1 (fifo32_0/Mmux_fill_A_rs_A<10>)
+     LUT3:I2->O            1   0.068   0.417  fifo32_0/Mmux_fill_rs10 (fifo32_0/Mmux_fill_rs10)
+     LUT4:I3->O            1   0.068   0.000  fifo32_0/Mmux_fill_rs_lut<0>11 (fifo32_0/Mmux_fill_rs_lut<0>11)
+     MUXCY:S->O            1   0.290   0.000  fifo32_0/Mmux_fill_rs_cy<0>_10 (fifo32_0/Mmux_fill_rs_cy<0>11)
+     MUXCY:CI->O           1   0.020   0.000  fifo32_0/Mmux_fill_rs_cy<0>_11 (fifo32_0/Mmux_fill_rs_cy<0>12)
+     MUXCY:CI->O           1   0.020   0.000  fifo32_0/Mmux_fill_rs_cy<0>_12 (fifo32_0/Mmux_fill_rs_cy<0>13)
+     MUXCY:CI->O           0   0.020   0.000  fifo32_0/Mmux_fill_rs_cy<0>_13 (fifo32_0/Mmux_fill_rs_cy<0>14)
+     XORCY:CI->O           1   0.239   0.778  fifo32_0/Mmux_fill_rs_xor<0>_14 (FIFO32_S_Fill<0>)
+     LUT6:I0->O            0   0.068   0.000  fifo32_0/Msub_remainder_xor<15>11 (FIFO32_M_Rem<0>)
+    ----------------------------------------
+    Total                      4.788ns (1.910ns logic, 2.879ns route)
+                                       (39.9% logic, 60.1% route)
+
+=========================================================================
+
+Cross Clock Domains Report:
+--------------------------
+
+Clock to Setup on destination clock FIFO32_M_Clk
+---------------+---------+---------+---------+---------+
+               | Src:Rise| Src:Fall| Src:Rise| Src:Fall|
+Source Clock   |Dest:Rise|Dest:Rise|Dest:Fall|Dest:Fall|
+---------------+---------+---------+---------+---------+
+FIFO32_M_Clk   |    2.421|         |         |         |
+FIFO32_S_Clk   |    1.004|         |         |         |
+---------------+---------+---------+---------+---------+
+
+Clock to Setup on destination clock FIFO32_S_Clk
+---------------+---------+---------+---------+---------+
+               | Src:Rise| Src:Fall| Src:Rise| Src:Fall|
+Source Clock   |Dest:Rise|Dest:Rise|Dest:Fall|Dest:Fall|
+---------------+---------+---------+---------+---------+
+FIFO32_S_Clk   |    2.407|         |         |         |
+---------------+---------+---------+---------+---------+
+
+=========================================================================
+
+
+Total REAL time to Xst completion: 8.00 secs
+Total CPU time to Xst completion: 8.31 secs
+ 
+--> 
+
+
+Total memory usage is 331136 kilobytes
+
+Number of errors   :    0 (   0 filtered)
+Number of warnings :    0 (   0 filtered)
+Number of infos    :    3 (   0 filtered)
+

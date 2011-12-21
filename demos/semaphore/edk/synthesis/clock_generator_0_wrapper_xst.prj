@@ -1,0 +1,5 @@
+vhdl clock_generator_v4_00_a /opt/Xilinx/12.3/ISE_DS/EDK/hw/XilinxProcessorIPLib/pcores/clock_generator_v4_00_a/hdl/vhdl/dcm_module.vhd
+vhdl clock_generator_v4_00_a /opt/Xilinx/12.3/ISE_DS/EDK/hw/XilinxProcessorIPLib/pcores/clock_generator_v4_00_a/hdl/vhdl/pll_module.vhd
+vhdl clock_generator_v4_00_a /opt/Xilinx/12.3/ISE_DS/EDK/hw/XilinxProcessorIPLib/pcores/clock_generator_v4_00_a/hdl/vhdl/mmcm_module.vhd
+VHDL clock_generator_0_v4_00_a /data/work/reconos_v3/demos/semaphore/edk/hdl/elaborate/clock_generator_0_v4_00_a/hdl/vhdl/clock_generator.vhd
+vhdl work ../hdl/clock_generator_0_wrapper.vhd

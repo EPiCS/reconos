@@ -5,7 +5,7 @@
 BEGIN OS
  PARAMETER OS_NAME = device-tree
  PARAMETER PROC_INSTANCE = microblaze_0
- PARAMETER bootargs = console=ttyUL0 root=/dev/nfs rw nfsroot=192.168.31.1:/exports/rootfs_mb,tcp ip=192.168.31.2::192.168.31.1:255.255.255.0:reconos:eth0:off
+ PARAMETER bootargs = console=ttyUL0 root=/dev/nfs rw nfsroot=192.168.35.1:/exports/rootfs_mb,tcp ip=192.168.35.2::192.168.35.1:255.255.255.0:reconos:eth0:off
  PARAMETER console device = RS232_Uart_1
  PARAMETER OS_VER = 0.00.x
 END

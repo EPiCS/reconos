@@ -1,0 +1,352 @@
+Release 12.3 ngdbuild M.70d (lin64)
+Copyright (c) 1995-2010 Xilinx, Inc.  All rights reserved.
+
+Command Line: /opt/Xilinx/12.3/ISE_DS/ISE/bin/lin64/unwrapped/ngdbuild -p
+xc6vlx240tff1156-1 -nt timestamp -bm system.bmm
+/data/work/reconos_v3/demos/semaphore/edk/implementation/system.ngc -uc
+system.ucf system.ngd
+
+Reading NGO file
+"/data/work/reconos_v3/demos/semaphore/edk/implementation/system.ngc" ...
+Gathering constraint information from source properties...
+Done.
+
+Annotating constraints to design from ucf file "system.ucf" ...
+Resolving constraint associations...
+Checking Constraint Associations...
+INFO:ConstraintSystem:178 - TNM 'sys_clk_pin', used in period specification
+   'TS_sys_clk_pin', was traced into MMCM_ADV instance
+   clock_generator_0/MMCM0_INST/MMCM_ADV_inst. The following new TNM groups and
+   period specifications were generated at the MMCM_ADV output(s): 
+   CLKOUT3: <TIMESPEC TS_clk_400_0000MHzMMCM0_nobuf_varphase = PERIOD
+   "clk_400_0000MHzMMCM0_nobuf_varphase" TS_sys_clk_pin * 2 HIGH 50%>
+
+INFO:ConstraintSystem:178 - TNM 'sys_clk_pin', used in period specification
+   'TS_sys_clk_pin', was traced into MMCM_ADV instance
+   clock_generator_0/MMCM0_INST/MMCM_ADV_inst. The following new TNM groups and
+   period specifications were generated at the MMCM_ADV output(s): 
+   CLKOUT1: <TIMESPEC TS_clock_generator_0_clock_generator_0_SIG_MMCM0_CLKOUT1 =
+   PERIOD "clock_generator_0_clock_generator_0_SIG_MMCM0_CLKOUT1" TS_sys_clk_pin
+   HIGH 50%>
+
+INFO:ConstraintSystem:178 - TNM 'sys_clk_pin', used in period specification
+   'TS_sys_clk_pin', was traced into MMCM_ADV instance
+   clock_generator_0/MMCM0_INST/MMCM_ADV_inst. The following new TNM groups and
+   period specifications were generated at the MMCM_ADV output(s): 
+   CLKOUT0: <TIMESPEC TS_clock_generator_0_clock_generator_0_SIG_MMCM0_CLKOUT0 =
+   PERIOD "clock_generator_0_clock_generator_0_SIG_MMCM0_CLKOUT0" TS_sys_clk_pin
+   * 0.5 HIGH 50%>
+
+INFO:ConstraintSystem:178 - TNM 'sys_clk_pin', used in period specification
+   'TS_sys_clk_pin', was traced into MMCM_ADV instance
+   clock_generator_0/MMCM0_INST/MMCM_ADV_inst. The following new TNM groups and
+   period specifications were generated at the MMCM_ADV output(s): 
+   CLKOUT2: <TIMESPEC TS_clock_generator_0_clock_generator_0_SIG_MMCM0_CLKOUT2 =
+   PERIOD "clock_generator_0_clock_generator_0_SIG_MMCM0_CLKOUT2" TS_sys_clk_pin
+   * 2 HIGH 50%>
+
+Done...
+
+Processing BMM file "system.bmm" ...
+
+WARNING:Data2MEM:53 - File 'system.bmm' was empty or had no BMM content.
+
+
+Checking expanded design ...
+WARNING:NgdBuild:443 - SFF primitive
+   'Ethernet_MAC/Ethernet_MAC/XEMAC_I/XPS_IPIF_I/PLBV46_BURST_I/I_SLAVE_ATTACHME
+   NT/I_DECODER/MEM_DECODE_GEN[0].GEN_PLB_SHARED.I_BKEND_CS_REG' has unconnected
+   output pin
+WARNING:NgdBuild:443 - SFF primitive
+   'Ethernet_MAC/Ethernet_MAC/XEMAC_I/XPS_IPIF_I/PLBV46_BURST_I/I_SLAVE_ATTACHME
+   NT/I_BUS_ADDRESS_COUNTER/GEN_FOR_SHARED.GEN_S_H_SIZE_REG[0].I_SIZE_S_H_REG'
+   has unconnected output pin
+WARNING:NgdBuild:443 - SFF primitive
+   'Ethernet_MAC/Ethernet_MAC/XEMAC_I/XPS_IPIF_I/PLBV46_BURST_I/I_SLAVE_ATTACHME
+   NT/I_STEER_ADDRESS_COUNTER/GEN_FOR_SHARED.GEN_S_H_SIZE_REG[0].I_SIZE_S_H_REG'
+   has unconnected output pin
+WARNING:NgdBuild:443 - SFF primitive
+   'Ethernet_MAC/Ethernet_MAC/XEMAC_I/XPS_IPIF_I/PLBV46_BURST_I/I_SLAVE_ATTACHME
+   NT/I_BURST_SUPPORT/RESPONSE_DBEAT_CNTR_I/STRUCTURAL_A_GEN.I_ADDSUB_GEN[6].FDR
+   E_I' has unconnected output pin
+WARNING:NgdBuild:443 - SFF primitive
+   'Ethernet_MAC/Ethernet_MAC/XEMAC_I/XPS_IPIF_I/PLBV46_BURST_I/I_SLAVE_ATTACHME
+   NT/I_BURST_SUPPORT/CONTROL_DBEAT_CNTR_I/STRUCTURAL_A_GEN.I_ADDSUB_GEN[6].FDRE
+   _I' has unconnected output pin
+WARNING:NgdBuild:443 - SFF primitive
+   'Ethernet_MAC/Ethernet_MAC/XEMAC_I/EMAC_I/COLLISION_SYNC' has unconnected
+   output pin
+WARNING:NgdBuild:486 - Attribute "INIT_FILE" is not allowed on symbol
+   "DDR3_SDRAM/mpmc_core_0/gen_paths.mpmc_data_path_0/gen_read_fifos[0].gen_fifo
+   s.mpmc_read_fifo_0/gen_fifos_bram.mpmc_bram_fifo_0/gen_brams_normal.gen_v4.ge
+   n_brams[3].bram" of type "RAMB16".  This attribute will be ignored.
+WARNING:NgdBuild:486 - Attribute "INIT_FILE" is not allowed on symbol
+   "DDR3_SDRAM/mpmc_core_0/gen_paths.mpmc_data_path_0/gen_read_fifos[0].gen_fifo
+   s.mpmc_read_fifo_0/gen_fifos_bram.mpmc_bram_fifo_0/gen_brams_normal.gen_v4.ge
+   n_brams[2].bram" of type "RAMB16".  This attribute will be ignored.
+WARNING:NgdBuild:486 - Attribute "INIT_FILE" is not allowed on symbol
+   "DDR3_SDRAM/mpmc_core_0/gen_paths.mpmc_data_path_0/gen_read_fifos[0].gen_fifo
+   s.mpmc_read_fifo_0/gen_fifos_bram.mpmc_bram_fifo_0/gen_brams_normal.gen_v4.ge
+   n_brams[1].bram" of type "RAMB16".  This attribute will be ignored.
+WARNING:NgdBuild:486 - Attribute "INIT_FILE" is not allowed on symbol
+   "DDR3_SDRAM/mpmc_core_0/gen_paths.mpmc_data_path_0/gen_read_fifos[0].gen_fifo
+   s.mpmc_read_fifo_0/gen_fifos_bram.mpmc_bram_fifo_0/gen_brams_normal.gen_v4.ge
+   n_brams[0].bram" of type "RAMB16".  This attribute will be ignored.
+WARNING:NgdBuild:486 - Attribute "INIT_FILE" is not allowed on symbol
+   "DDR3_SDRAM/mpmc_core_0/gen_paths.mpmc_data_path_0/gen_read_fifos[1].gen_fifo
+   s.mpmc_read_fifo_0/gen_fifos_bram.mpmc_bram_fifo_0/gen_brams_normal.gen_v4.ge
+   n_brams[3].bram" of type "RAMB16".  This attribute will be ignored.
+WARNING:NgdBuild:486 - Attribute "INIT_FILE" is not allowed on symbol
+   "DDR3_SDRAM/mpmc_core_0/gen_paths.mpmc_data_path_0/gen_read_fifos[1].gen_fifo
+   s.mpmc_read_fifo_0/gen_fifos_bram.mpmc_bram_fifo_0/gen_brams_normal.gen_v4.ge
+   n_brams[2].bram" of type "RAMB16".  This attribute will be ignored.
+WARNING:NgdBuild:486 - Attribute "INIT_FILE" is not allowed on symbol
+   "DDR3_SDRAM/mpmc_core_0/gen_paths.mpmc_data_path_0/gen_read_fifos[1].gen_fifo
+   s.mpmc_read_fifo_0/gen_fifos_bram.mpmc_bram_fifo_0/gen_brams_normal.gen_v4.ge
+   n_brams[1].bram" of type "RAMB16".  This attribute will be ignored.
+WARNING:NgdBuild:486 - Attribute "INIT_FILE" is not allowed on symbol
+   "DDR3_SDRAM/mpmc_core_0/gen_paths.mpmc_data_path_0/gen_read_fifos[1].gen_fifo
+   s.mpmc_read_fifo_0/gen_fifos_bram.mpmc_bram_fifo_0/gen_brams_normal.gen_v4.ge
+   n_brams[0].bram" of type "RAMB16".  This attribute will be ignored.
+WARNING:NgdBuild:486 - Attribute "INIT_FILE" is not allowed on symbol
+   "DDR3_SDRAM/mpmc_core_0/gen_paths.mpmc_data_path_0/gen_read_fifos[2].gen_fifo
+   s.mpmc_read_fifo_0/gen_fifos_bram.mpmc_bram_fifo_0/gen_brams_normal.gen_v4.ge
+   n_brams[3].bram" of type "RAMB16".  This attribute will be ignored.
+WARNING:NgdBuild:486 - Attribute "INIT_FILE" is not allowed on symbol
+   "DDR3_SDRAM/mpmc_core_0/gen_paths.mpmc_data_path_0/gen_read_fifos[2].gen_fifo
+   s.mpmc_read_fifo_0/gen_fifos_bram.mpmc_bram_fifo_0/gen_brams_normal.gen_v4.ge
+   n_brams[2].bram" of type "RAMB16".  This attribute will be ignored.
+WARNING:NgdBuild:486 - Attribute "INIT_FILE" is not allowed on symbol
+   "DDR3_SDRAM/mpmc_core_0/gen_paths.mpmc_data_path_0/gen_read_fifos[2].gen_fifo
+   s.mpmc_read_fifo_0/gen_fifos_bram.mpmc_bram_fifo_0/gen_brams_normal.gen_v4.ge
+   n_brams[1].bram" of type "RAMB16".  This attribute will be ignored.
+WARNING:NgdBuild:486 - Attribute "INIT_FILE" is not allowed on symbol
+   "DDR3_SDRAM/mpmc_core_0/gen_paths.mpmc_data_path_0/gen_read_fifos[2].gen_fifo
+   s.mpmc_read_fifo_0/gen_fifos_bram.mpmc_bram_fifo_0/gen_brams_normal.gen_v4.ge
+   n_brams[0].bram" of type "RAMB16".  This attribute will be ignored.
+WARNING:NgdBuild:486 - Attribute "INIT_FILE" is not allowed on symbol
+   "DDR3_SDRAM/mpmc_core_0/gen_paths.mpmc_data_path_0/gen_write_fifos[0].gen_fif
+   os.mpmc_write_fifo_0/gen_fifo_bram.mpmc_bram_fifo_0/gen_brams_normal.gen_v4.g
+   en_brams[3].bram" of type "RAMB16".  This attribute will be ignored.
+WARNING:NgdBuild:486 - Attribute "INIT_FILE" is not allowed on symbol
+   "DDR3_SDRAM/mpmc_core_0/gen_paths.mpmc_data_path_0/gen_write_fifos[0].gen_fif
+   os.mpmc_write_fifo_0/gen_fifo_bram.mpmc_bram_fifo_0/gen_brams_normal.gen_v4.g
+   en_brams[2].bram" of type "RAMB16".  This attribute will be ignored.
+WARNING:NgdBuild:486 - Attribute "INIT_FILE" is not allowed on symbol
+   "DDR3_SDRAM/mpmc_core_0/gen_paths.mpmc_data_path_0/gen_write_fifos[0].gen_fif
+   os.mpmc_write_fifo_0/gen_fifo_bram.mpmc_bram_fifo_0/gen_brams_normal.gen_v4.g
+   en_brams[1].bram" of type "RAMB16".  This attribute will be ignored.
+WARNING:NgdBuild:486 - Attribute "INIT_FILE" is not allowed on symbol
+   "DDR3_SDRAM/mpmc_core_0/gen_paths.mpmc_data_path_0/gen_write_fifos[0].gen_fif
+   os.mpmc_write_fifo_0/gen_fifo_bram.mpmc_bram_fifo_0/gen_brams_normal.gen_v4.g
+   en_brams[0].bram" of type "RAMB16".  This attribute will be ignored.
+WARNING:NgdBuild:486 - Attribute "INIT_FILE" is not allowed on symbol
+   "DDR3_SDRAM/mpmc_core_0/gen_paths.mpmc_data_path_0/gen_write_fifos[2].gen_fif
+   os.mpmc_write_fifo_0/gen_fifo_bram.mpmc_bram_fifo_0/gen_brams_normal.gen_v4.g
+   en_brams[3].bram" of type "RAMB16".  This attribute will be ignored.
+WARNING:NgdBuild:486 - Attribute "INIT_FILE" is not allowed on symbol
+   "DDR3_SDRAM/mpmc_core_0/gen_paths.mpmc_data_path_0/gen_write_fifos[2].gen_fif
+   os.mpmc_write_fifo_0/gen_fifo_bram.mpmc_bram_fifo_0/gen_brams_normal.gen_v4.g
+   en_brams[2].bram" of type "RAMB16".  This attribute will be ignored.
+WARNING:NgdBuild:486 - Attribute "INIT_FILE" is not allowed on symbol
+   "DDR3_SDRAM/mpmc_core_0/gen_paths.mpmc_data_path_0/gen_write_fifos[2].gen_fif
+   os.mpmc_write_fifo_0/gen_fifo_bram.mpmc_bram_fifo_0/gen_brams_normal.gen_v4.g
+   en_brams[1].bram" of type "RAMB16".  This attribute will be ignored.
+WARNING:NgdBuild:486 - Attribute "INIT_FILE" is not allowed on symbol
+   "DDR3_SDRAM/mpmc_core_0/gen_paths.mpmc_data_path_0/gen_write_fifos[2].gen_fif
+   os.mpmc_write_fifo_0/gen_fifo_bram.mpmc_bram_fifo_0/gen_brams_normal.gen_v4.g
+   en_brams[0].bram" of type "RAMB16".  This attribute will be ignored.
+WARNING:NgdBuild:443 - SFF primitive
+   'xps_timer_0/xps_timer_0/TC_CORE_I/TIMER_CONTROL_I/TCSR1_GENERATE[20].TCSR1_F
+   F_I' has unconnected output pin
+WARNING:NgdBuild:443 - SFF primitive
+   'xps_timer_0/xps_timer_0/TC_CORE_I/TIMER_CONTROL_I/TCSR1_GENERATE[19].TCSR1_F
+   F_I' has unconnected output pin
+WARNING:NgdBuild:443 - SFF primitive
+   'xps_timer_0/xps_timer_0/TC_CORE_I/TIMER_CONTROL_I/TCSR1_GENERATE[18].TCSR1_F
+   F_I' has unconnected output pin
+WARNING:NgdBuild:443 - SFF primitive
+   'xps_timer_0/xps_timer_0/TC_CORE_I/TIMER_CONTROL_I/TCSR1_GENERATE[17].TCSR1_F
+   F_I' has unconnected output pin
+WARNING:NgdBuild:443 - SFF primitive
+   'xps_timer_0/xps_timer_0/TC_CORE_I/TIMER_CONTROL_I/TCSR1_GENERATE[16].TCSR1_F
+   F_I' has unconnected output pin
+WARNING:NgdBuild:443 - SFF primitive
+   'xps_timer_0/xps_timer_0/TC_CORE_I/TIMER_CONTROL_I/TCSR1_GENERATE[15].TCSR1_F
+   F_I' has unconnected output pin
+WARNING:NgdBuild:443 - SFF primitive
+   'xps_timer_0/xps_timer_0/TC_CORE_I/TIMER_CONTROL_I/TCSR1_GENERATE[14].TCSR1_F
+   F_I' has unconnected output pin
+WARNING:NgdBuild:443 - SFF primitive
+   'xps_timer_0/xps_timer_0/TC_CORE_I/TIMER_CONTROL_I/TCSR1_GENERATE[13].TCSR1_F
+   F_I' has unconnected output pin
+WARNING:NgdBuild:443 - SFF primitive
+   'xps_timer_0/xps_timer_0/TC_CORE_I/TIMER_CONTROL_I/TCSR1_GENERATE[12].TCSR1_F
+   F_I' has unconnected output pin
+WARNING:NgdBuild:443 - SFF primitive
+   'xps_timer_0/xps_timer_0/TC_CORE_I/TIMER_CONTROL_I/TCSR1_GENERATE[11].TCSR1_F
+   F_I' has unconnected output pin
+WARNING:NgdBuild:443 - SFF primitive
+   'xps_timer_0/xps_timer_0/TC_CORE_I/TIMER_CONTROL_I/TCSR1_GENERATE[10].TCSR1_F
+   F_I' has unconnected output pin
+WARNING:NgdBuild:443 - SFF primitive
+   'xps_timer_0/xps_timer_0/TC_CORE_I/TIMER_CONTROL_I/TCSR1_GENERATE[9].TCSR1_FF
+   _I' has unconnected output pin
+WARNING:NgdBuild:443 - SFF primitive
+   'xps_timer_0/xps_timer_0/TC_CORE_I/TIMER_CONTROL_I/TCSR1_GENERATE[8].TCSR1_FF
+   _I' has unconnected output pin
+WARNING:NgdBuild:443 - SFF primitive
+   'xps_timer_0/xps_timer_0/TC_CORE_I/TIMER_CONTROL_I/TCSR1_GENERATE[7].TCSR1_FF
+   _I' has unconnected output pin
+WARNING:NgdBuild:443 - SFF primitive
+   'xps_timer_0/xps_timer_0/TC_CORE_I/TIMER_CONTROL_I/TCSR1_GENERATE[6].TCSR1_FF
+   _I' has unconnected output pin
+WARNING:NgdBuild:443 - SFF primitive
+   'xps_timer_0/xps_timer_0/TC_CORE_I/TIMER_CONTROL_I/TCSR1_GENERATE[5].TCSR1_FF
+   _I' has unconnected output pin
+WARNING:NgdBuild:443 - SFF primitive
+   'xps_timer_0/xps_timer_0/TC_CORE_I/TIMER_CONTROL_I/TCSR1_GENERATE[4].TCSR1_FF
+   _I' has unconnected output pin
+WARNING:NgdBuild:443 - SFF primitive
+   'xps_timer_0/xps_timer_0/TC_CORE_I/TIMER_CONTROL_I/TCSR1_GENERATE[3].TCSR1_FF
+   _I' has unconnected output pin
+WARNING:NgdBuild:443 - SFF primitive
+   'xps_timer_0/xps_timer_0/TC_CORE_I/TIMER_CONTROL_I/TCSR1_GENERATE[2].TCSR1_FF
+   _I' has unconnected output pin
+WARNING:NgdBuild:443 - SFF primitive
+   'xps_timer_0/xps_timer_0/TC_CORE_I/TIMER_CONTROL_I/TCSR1_GENERATE[1].TCSR1_FF
+   _I' has unconnected output pin
+WARNING:NgdBuild:443 - SFF primitive
+   'xps_timer_0/xps_timer_0/TC_CORE_I/TIMER_CONTROL_I/TCSR1_GENERATE[0].TCSR1_FF
+   _I' has unconnected output pin
+WARNING:NgdBuild:443 - SFF primitive
+   'xps_timer_0/xps_timer_0/TC_CORE_I/TIMER_CONTROL_I/TCSR0_GENERATE[20].TCSR0_F
+   F_I' has unconnected output pin
+WARNING:NgdBuild:443 - SFF primitive
+   'xps_timer_0/xps_timer_0/TC_CORE_I/TIMER_CONTROL_I/TCSR0_GENERATE[19].TCSR0_F
+   F_I' has unconnected output pin
+WARNING:NgdBuild:443 - SFF primitive
+   'xps_timer_0/xps_timer_0/TC_CORE_I/TIMER_CONTROL_I/TCSR0_GENERATE[18].TCSR0_F
+   F_I' has unconnected output pin
+WARNING:NgdBuild:443 - SFF primitive
+   'xps_timer_0/xps_timer_0/TC_CORE_I/TIMER_CONTROL_I/TCSR0_GENERATE[17].TCSR0_F
+   F_I' has unconnected output pin
+WARNING:NgdBuild:443 - SFF primitive
+   'xps_timer_0/xps_timer_0/TC_CORE_I/TIMER_CONTROL_I/TCSR0_GENERATE[16].TCSR0_F
+   F_I' has unconnected output pin
+WARNING:NgdBuild:443 - SFF primitive
+   'xps_timer_0/xps_timer_0/TC_CORE_I/TIMER_CONTROL_I/TCSR0_GENERATE[15].TCSR0_F
+   F_I' has unconnected output pin
+WARNING:NgdBuild:443 - SFF primitive
+   'xps_timer_0/xps_timer_0/TC_CORE_I/TIMER_CONTROL_I/TCSR0_GENERATE[14].TCSR0_F
+   F_I' has unconnected output pin
+WARNING:NgdBuild:443 - SFF primitive
+   'xps_timer_0/xps_timer_0/TC_CORE_I/TIMER_CONTROL_I/TCSR0_GENERATE[13].TCSR0_F
+   F_I' has unconnected output pin
+WARNING:NgdBuild:443 - SFF primitive
+   'xps_timer_0/xps_timer_0/TC_CORE_I/TIMER_CONTROL_I/TCSR0_GENERATE[12].TCSR0_F
+   F_I' has unconnected output pin
+WARNING:NgdBuild:443 - SFF primitive
+   'xps_timer_0/xps_timer_0/TC_CORE_I/TIMER_CONTROL_I/TCSR0_GENERATE[11].TCSR0_F
+   F_I' has unconnected output pin
+WARNING:NgdBuild:443 - SFF primitive
+   'xps_timer_0/xps_timer_0/TC_CORE_I/TIMER_CONTROL_I/TCSR0_GENERATE[10].TCSR0_F
+   F_I' has unconnected output pin
+WARNING:NgdBuild:443 - SFF primitive
+   'xps_timer_0/xps_timer_0/TC_CORE_I/TIMER_CONTROL_I/TCSR0_GENERATE[9].TCSR0_FF
+   _I' has unconnected output pin
+WARNING:NgdBuild:443 - SFF primitive
+   'xps_timer_0/xps_timer_0/TC_CORE_I/TIMER_CONTROL_I/TCSR0_GENERATE[8].TCSR0_FF
+   _I' has unconnected output pin
+WARNING:NgdBuild:443 - SFF primitive
+   'xps_timer_0/xps_timer_0/TC_CORE_I/TIMER_CONTROL_I/TCSR0_GENERATE[7].TCSR0_FF
+   _I' has unconnected output pin
+WARNING:NgdBuild:443 - SFF primitive
+   'xps_timer_0/xps_timer_0/TC_CORE_I/TIMER_CONTROL_I/TCSR0_GENERATE[6].TCSR0_FF
+   _I' has unconnected output pin
+WARNING:NgdBuild:443 - SFF primitive
+   'xps_timer_0/xps_timer_0/TC_CORE_I/TIMER_CONTROL_I/TCSR0_GENERATE[5].TCSR0_FF
+   _I' has unconnected output pin
+WARNING:NgdBuild:443 - SFF primitive
+   'xps_timer_0/xps_timer_0/TC_CORE_I/TIMER_CONTROL_I/TCSR0_GENERATE[4].TCSR0_FF
+   _I' has unconnected output pin
+WARNING:NgdBuild:443 - SFF primitive
+   'xps_timer_0/xps_timer_0/TC_CORE_I/TIMER_CONTROL_I/TCSR0_GENERATE[3].TCSR0_FF
+   _I' has unconnected output pin
+WARNING:NgdBuild:443 - SFF primitive
+   'xps_timer_0/xps_timer_0/TC_CORE_I/TIMER_CONTROL_I/TCSR0_GENERATE[2].TCSR0_FF
+   _I' has unconnected output pin
+WARNING:NgdBuild:443 - SFF primitive
+   'xps_timer_0/xps_timer_0/TC_CORE_I/TIMER_CONTROL_I/TCSR0_GENERATE[1].TCSR0_FF
+   _I' has unconnected output pin
+WARNING:NgdBuild:443 - SFF primitive
+   'xps_timer_0/xps_timer_0/TC_CORE_I/TIMER_CONTROL_I/TCSR0_GENERATE[0].TCSR0_FF
+   _I' has unconnected output pin
+WARNING:NgdBuild:443 - SFF primitive
+   'xps_mem_0/xps_mem_0/PLBV46_MASTER_BURST_I/I_RD_WR_CONTROL/I_RDSOP_REG' has
+   unconnected output pin
+WARNING:NgdBuild:443 - SFF primitive
+   'xps_mem_0/xps_mem_0/PLBV46_MASTER_BURST_I/I_RD_WR_CONTROL/I_WRERR_REG' has
+   unconnected output pin
+WARNING:NgdBuild:443 - SFF primitive
+   'xps_mem_0/xps_mem_0/PLBV46_MASTER_BURST_I/I_RD_WR_CONTROL/I_RDERR_REG' has
+   unconnected output pin
+WARNING:NgdBuild:452 - logical net 'N103' has no driver
+WARNING:NgdBuild:452 - logical net 'N104' has no driver
+WARNING:NgdBuild:452 - logical net 'N105' has no driver
+WARNING:NgdBuild:452 - logical net 'N106' has no driver
+WARNING:NgdBuild:452 - logical net 'N107' has no driver
+WARNING:NgdBuild:452 - logical net 'N108' has no driver
+WARNING:NgdBuild:452 - logical net 'N109' has no driver
+WARNING:NgdBuild:452 - logical net 'N110' has no driver
+WARNING:NgdBuild:452 - logical net 'N111' has no driver
+WARNING:NgdBuild:452 - logical net 'N112' has no driver
+WARNING:NgdBuild:452 - logical net 'N113' has no driver
+WARNING:NgdBuild:452 - logical net 'N114' has no driver
+WARNING:NgdBuild:452 - logical net 'N115' has no driver
+WARNING:NgdBuild:452 - logical net 'N116' has no driver
+WARNING:NgdBuild:452 - logical net 'N117' has no driver
+WARNING:NgdBuild:452 - logical net 'N118' has no driver
+WARNING:NgdBuild:452 - logical net 'N119' has no driver
+WARNING:NgdBuild:452 - logical net 'N120' has no driver
+WARNING:NgdBuild:452 - logical net 'N121' has no driver
+WARNING:NgdBuild:452 - logical net 'N122' has no driver
+WARNING:NgdBuild:452 - logical net 'N123' has no driver
+WARNING:NgdBuild:452 - logical net 'N124' has no driver
+WARNING:NgdBuild:452 - logical net 'N125' has no driver
+WARNING:NgdBuild:452 - logical net 'N126' has no driver
+WARNING:NgdBuild:452 - logical net 'N127' has no driver
+WARNING:NgdBuild:452 - logical net 'N128' has no driver
+WARNING:NgdBuild:452 - logical net 'N129' has no driver
+WARNING:NgdBuild:452 - logical net 'N130' has no driver
+WARNING:NgdBuild:452 - logical net 'N131' has no driver
+WARNING:NgdBuild:452 - logical net 'N132' has no driver
+WARNING:NgdBuild:452 - logical net 'N133' has no driver
+WARNING:NgdBuild:452 - logical net 'N134' has no driver
+WARNING:NgdBuild:452 - logical net 'N135' has no driver
+WARNING:NgdBuild:452 - logical net 'N136' has no driver
+WARNING:NgdBuild:452 - logical net 'N137' has no driver
+WARNING:NgdBuild:452 - logical net 'N138' has no driver
+WARNING:NgdBuild:452 - logical net 'N139' has no driver
+WARNING:NgdBuild:452 - logical net 'N140' has no driver
+WARNING:NgdBuild:452 - logical net 'N141' has no driver
+WARNING:NgdBuild:452 - logical net 'N142' has no driver
+
+Partition Implementation Status
+-------------------------------
+
+  No Partitions were found in this design.
+
+-------------------------------
+
+NGDBUILD Design Results Summary:
+  Number of errors:     0
+  Number of warnings: 111
+
+Total memory usage is 407208 kilobytes
+
+Writing NGD file "system.ngd" ...
+Total REAL time to NGDBUILD completion:  42 sec
+Total CPU time to NGDBUILD completion:   41 sec
+
+Writing NGDBUILD log file "system.bld"...

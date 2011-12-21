@@ -1,0 +1,14 @@
+NET "PHY_tx_clk" TNM_NET = "TXCLK_GRP_Ethernet_MAC";
+TIMESPEC "TSTXOUT_Ethernet_MAC" = FROM "TXCLK_GRP_Ethernet_MAC" TO "PADS" 10 ns;
+OFFSET = IN 6.000 BEFORE  "fpga_0_Ethernet_MAC_PHY_rx_clk_pin";
+NET "PHY_tx_clk" MAXSKEW= 6.0 ns;
+NET "PHY_rx_clk" MAXSKEW= 6.0 ns;
+NET "PHY_rx_clk" PERIOD = 40 ns HIGH 14 ns;
+NET "PHY_tx_clk" PERIOD = 40 ns HIGH 14 ns;
+NET "PHY_rx_data<3>" IOBDELAY=NONE;
+NET "PHY_rx_data<2>" IOBDELAY=NONE;
+NET "PHY_rx_data<1>" IOBDELAY=NONE;
+NET "PHY_rx_data<0>" IOBDELAY=NONE;
+NET "PHY_dv" IOBDELAY=NONE;
+NET "PHY_rx_er" IOBDELAY=NONE;
+NET "PHY_crs" IOBDELAY=NONE;

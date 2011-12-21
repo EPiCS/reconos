@@ -53,14 +53,17 @@ architecture implementation of hwt_memaccess is
 	signal len      : std_logic_vector(23 downto 0);
 	signal cmd      : std_logic_vector(7 downto 0);
 	signal state  : STATE_TYPE;
-	signal osif     : fsl_t;
-	signal memif    : memif_t;
+	signal i_osif   : i_osif_t;
+	signal o_osif   : o_osif_t;
+	signal i_memif  : i_memif_t;
+	signal o_memif  : o_memif_t;
 
 	signal ignore   : std_logic_vector(C_FSL_WIDTH-1 downto 0);
 begin
 
-	fsl_setup(
-		osif,
+	osif_setup(
+		i_osif,
+		o_osif,
 		OSFSL_Clk,
 		OSFSL_Rst,
 		OSFSL_S_Data,
@@ -73,7 +76,8 @@ begin
 	);
 		
 	memif_setup(
-		memif,
+		i_memif,
+		o_memif,
 		OSFSL_Clk,
 		FIFO32_S_Clk,
 		FIFO32_S_Data,
@@ -88,12 +92,12 @@ begin
 	cmd <= req(31 downto 24);
 
 	-- os and memory synchronisation state machine
-	process (osif.clk) is
+	process (i_osif.clk) is
 		variable done : boolean;
 	begin
 		if rst = '1' then
-			osif_reset(osif);
-			memif_reset(memif);
+			osif_reset(o_osif);
+			memif_reset(o_memif);
 			state <= STATE_GET_REQUEST;
 			done := False;
 			addr <= (others => '0');
@@ -101,14 +105,14 @@ begin
 			req <= (others => '0');
 			len <= (others => '0');
 			req <= (others => '0');
-		elsif rising_edge(osif.clk) then
+		elsif rising_edge(i_osif.clk) then
 			case state is
 				when STATE_GET_REQUEST =>
-					osif_mbox_get(osif, MBOX_RECV, req, done);
+					osif_mbox_get(i_osif, o_osif, MBOX_RECV, req, done);
 					if done then state <= STATE_GET_ADDR; end if;
 	
 				when STATE_GET_ADDR =>
-					osif_mbox_get(osif, MBOX_RECV, addr, done);
+					osif_mbox_get(i_osif, o_osif, MBOX_RECV, addr, done);
 					if done then
 						len <= req(23 downto 2) & "00";
 						addr <= addr(31 downto 2) & "00";
@@ -120,22 +124,22 @@ begin
 					end if;
 						
 				when STATE_READ_REQ =>
-					memif_read_request(memif,addr,len,done);
+					memif_read_request(i_memif, o_memif,addr,len,done);
 					if done then state <= STATE_READ; end if;
 
 				when STATE_WRITE_REQ =>
-					memif_write_request(memif,addr,len,done);
+					memif_write_request(i_memif, o_memif,addr,len,done);
 					if done then state <= STATE_MBOX_GET; end if;
 					
 				when STATE_READ =>
-					memif_fifo_pull(memif,data,done);
+					memif_fifo_pull(i_memif, o_memif,data,done);
 					if done then
 						state <= STATE_MBOX_PUT;
 						len <= len - 4;
 					end if;
 
 				when STATE_MBOX_PUT =>
-					osif_mbox_put(osif, MBOX_SEND, data, ignore, done);
+					osif_mbox_put(i_osif, o_osif, MBOX_SEND, data, ignore, done);
 					if done then
 						if len = 0 then
 							state <= STATE_GET_REQUEST;
@@ -145,14 +149,14 @@ begin
 					end if;
 					
 				when STATE_MBOX_GET =>
-					osif_mbox_get(osif, MBOX_RECV, data, done);
+					osif_mbox_get(i_osif, o_osif, MBOX_RECV, data, done);
 					if done then
 						state <= STATE_WRITE;
 						len <= len - 4;
 					end if;
 
 				when STATE_WRITE =>
-					memif_fifo_push(memif, data, done);
+					memif_fifo_push(i_memif, o_memif, data, done);
 					if done then
 						if len = 0 then
 							state <= STATE_ACK;
@@ -162,7 +166,7 @@ begin
 					end if;
 				
 				when STATE_ACK => -- this informs the sw that we are done writing
-					osif_mbox_put(osif, MBOX_SEND, addr, ignore, done);
+					osif_mbox_put(i_osif, o_osif, MBOX_SEND, addr, ignore, done);
 					if done then state <= STATE_GET_REQUEST; end if;
 			
 			end case;

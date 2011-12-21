@@ -1,0 +1,512 @@
+Release 12.3 - xst M.70d (lin64)
+Copyright (c) 1995-2010 Xilinx, Inc.  All rights reserved.
+--> 
+
+TABLE OF CONTENTS
+  1) Synthesis Options Summary
+  2) HDL Parsing
+  3) HDL Elaboration
+  4) HDL Synthesis
+       4.1) HDL Synthesis Report
+  5) Advanced HDL Synthesis
+       5.1) Advanced HDL Synthesis Report
+  6) Low Level Synthesis
+  7) Partition Report
+  8) Design Summary
+       8.1) Primitive and Black Box Usage
+       8.2) Device utilization summary
+       8.3) Partition Resource Summary
+       8.4) Timing Report
+            8.4.1) Clock Information
+            8.4.2) Asynchronous Control Signals Information
+            8.4.3) Timing Summary
+            8.4.4) Timing Details
+            8.4.5) Cross Clock Domains Report
+
+
+=========================================================================
+*                      Synthesis Options Summary                        *
+=========================================================================
+---- Source Parameters
+Input Format                       : MIXED
+Input File Name                    : "mmu_0_wrapper_xst.prj"
+Verilog Include Directory          : {"/data/work/reconos_v3/demos/semaphore/edk/pcores/" "/opt/Xilinx/12.3/ISE_DS/EDK/hw/XilinxProcessorIPLib/pcores/" }
+
+---- Target Parameters
+Target Device                      : xc6vlx240tff1156-1
+Output File Name                   : "../implementation/mmu_0_wrapper.ngc"
+
+---- Source Options
+Top Module Name                    : mmu_0_wrapper
+
+---- Target Options
+Add IO Buffers                     : NO
+
+---- General Options
+Optimization Goal                  : speed
+Netlist Hierarchy                  : as_optimized
+Optimization Effort                : 1
+Hierarchy Separator                : /
+
+---- Other Options
+Cores Search Directories           : {../implementation/mmu_0_wrapper}
+
+=========================================================================
+
+
+=========================================================================
+*                          HDL Parsing                                  *
+=========================================================================
+Parsing VHDL file "/data/work/reconos_v3/demos/semaphore/edk/pcores/reconos_v3_00_a/hdl/vhdl/reconos_pkg.vhd" into library reconos_v3_00_a
+Parsing package <reconos_pkg>.
+Parsing package body <reconos_pkg>.
+Parsing VHDL file "/data/work/reconos_v3/demos/semaphore/edk/pcores/mmu_v1_00_a/hdl/vhdl/mmu.vhd" into library mmu_v1_00_a
+Parsing entity <mmu>.
+Parsing architecture <implementation> of entity <mmu>.
+WARNING:HDLCompiler:1369 - "/data/work/reconos_v3/demos/semaphore/edk/pcores/mmu_v1_00_a/hdl/vhdl/mmu.vhd" Line 200: Possible infinite loop; process does not have a wait statement
+Parsing VHDL file "/data/work/reconos_v3/demos/semaphore/edk/synthesis/../hdl/mmu_0_wrapper.vhd" into library work
+Parsing entity <mmu_0_wrapper>.
+Parsing architecture <STRUCTURE> of entity <mmu_0_wrapper>.
+
+=========================================================================
+*                            HDL Elaboration                            *
+=========================================================================
+
+Elaborating entity <mmu_0_wrapper> (architecture <STRUCTURE>) from library <work>.
+
+Elaborating entity <mmu> (architecture <implementation>) with generics from library <mmu_v1_00_a>.
+WARNING:HDLCompiler:92 - "/data/work/reconos_v3/demos/semaphore/edk/pcores/mmu_v1_00_a/hdl/vhdl/mmu.vhd" Line 222: rst should be on the sensitivity list of the process
+WARNING:HDLCompiler:634 - "/data/work/reconos_v3/demos/semaphore/edk/pcores/mmu_v1_00_a/hdl/vhdl/mmu.vhd" Line 83: Net <HWT_M_Data[31]> does not have a driver.
+
+=========================================================================
+*                           HDL Synthesis                               *
+=========================================================================
+
+Synthesizing Unit <mmu_0_wrapper>.
+    Related source file is "/data/work/reconos_v3/demos/semaphore/edk/hdl/mmu_0_wrapper.vhd".
+    Summary:
+	no macro.
+Unit <mmu_0_wrapper> synthesized.
+
+Synthesizing Unit <mmu>.
+    Related source file is "/data/work/reconos_v3/demos/semaphore/edk/pcores/mmu_v1_00_a/hdl/vhdl/mmu.vhd".
+        C_ENABLE_ILA = 0
+    Set property "KEEP_HIERARCHY = TRUE".
+WARNING:Xst:647 - Input <pgd<31:30>> is never used. This port will be preserved and left unconnected if it belongs to a top-level block or it belongs to a sub-block and the hierarchy of this sub-block is preserved.
+WARNING:Xst:647 - Input <pgd<11:0>> is never used. This port will be preserved and left unconnected if it belongs to a top-level block or it belongs to a sub-block and the hierarchy of this sub-block is preserved.
+WARNING:Xst:647 - Input <MEM_FIFO32_S_Clk> is never used. This port will be preserved and left unconnected if it belongs to a top-level block or it belongs to a sub-block and the hierarchy of this sub-block is preserved.
+WARNING:Xst:647 - Input <MEM_FIFO32_M_Clk> is never used. This port will be preserved and left unconnected if it belongs to a top-level block or it belongs to a sub-block and the hierarchy of this sub-block is preserved.
+WARNING:Xst:653 - Signal <HWT_M_Data> is used but never assigned. This sourceless signal will be automatically connected to value GND.
+    Found 32-bit register for signal <MEM_S_Data>.
+    Found 32-bit register for signal <pgde>.
+    Found 32-bit register for signal <pte>.
+    Found 32-bit register for signal <vaddr>.
+    Found 32-bit register for signal <fault_addr_dup>.
+    Found 16-bit register for signal <MEM_S_Fill>.
+    Found 4-bit register for signal <state>.
+    Found 24-bit register for signal <counter>.
+    Found 24-bit register for signal <len>.
+    Found 8-bit register for signal <cmd>.
+    Found 1-bit register for signal <copy>.
+    Found 1-bit register for signal <page_fault_dup>.
+    Found 1-bit register for signal <HWT_S_Rd>.
+    Found finite state machine <FSM_0> for signal <state>.
+    -----------------------------------------------------------------------
+    | States             | 13                                             |
+    | Transitions        | 26                                             |
+    | Inputs             | 7                                              |
+    | Outputs            | 6                                              |
+    | Clock              | clk (rising_edge)                              |
+    | Reset              | rst (positive)                                 |
+    | Reset type         | asynchronous                                   |
+    | Reset State        | state_wait_header                              |
+    | Power Up State     | state_wait_header                              |
+    | Encoding           | auto                                           |
+    | Implementation     | LUT                                            |
+    -----------------------------------------------------------------------
+    Found 24-bit adder for signal <counter[23]_GND_8_o_add_70_OUT> created at line 325.
+    Found 16-bit comparator greater for signal <GND_8_o_HWT_FIFO32_S_Fill[15]_LessThan_46_o> created at line 241
+    Found 22-bit comparator equal for signal <counter[23]_len[23]_equal_73_o> created at line 327
+    Summary:
+	inferred   1 Adder/Subtractor(s).
+	inferred 235 D-type flip-flop(s).
+	inferred   2 Comparator(s).
+	inferred  17 Multiplexer(s).
+	inferred   1 Finite State Machine(s).
+Unit <mmu> synthesized.
+RTL-Simplification CPUSTAT: 0.22 
+RTL-BasicInf CPUSTAT: 0.20 
+RTL-BasicOpt CPUSTAT: 0.01 
+RTL-Remain-Bus CPUSTAT: 0.00 
+
+=========================================================================
+HDL Synthesis Report
+
+Macro Statistics
+# Adders/Subtractors                                   : 1
+ 24-bit adder                                          : 1
+# Registers                                            : 12
+ 1-bit register                                        : 3
+ 16-bit register                                       : 1
+ 24-bit register                                       : 2
+ 32-bit register                                       : 5
+ 8-bit register                                        : 1
+# Comparators                                          : 2
+ 16-bit comparator greater                             : 1
+ 22-bit comparator equal                               : 1
+# Multiplexers                                         : 17
+ 1-bit 2-to-1 multiplexer                              : 2
+ 16-bit 2-to-1 multiplexer                             : 7
+ 24-bit 2-to-1 multiplexer                             : 1
+ 32-bit 2-to-1 multiplexer                             : 7
+# FSMs                                                 : 1
+
+=========================================================================
+
+=========================================================================
+*                       Advanced HDL Synthesis                          *
+=========================================================================
+
+WARNING:Xst:2677 - Node <pgde_0> of sequential type is unconnected in block <mmu>.
+WARNING:Xst:2677 - Node <pgde_1> of sequential type is unconnected in block <mmu>.
+WARNING:Xst:2677 - Node <pgde_2> of sequential type is unconnected in block <mmu>.
+WARNING:Xst:2677 - Node <pgde_3> of sequential type is unconnected in block <mmu>.
+WARNING:Xst:2677 - Node <pgde_4> of sequential type is unconnected in block <mmu>.
+WARNING:Xst:2677 - Node <pgde_5> of sequential type is unconnected in block <mmu>.
+WARNING:Xst:2677 - Node <pgde_6> of sequential type is unconnected in block <mmu>.
+WARNING:Xst:2677 - Node <pgde_7> of sequential type is unconnected in block <mmu>.
+WARNING:Xst:2677 - Node <pgde_8> of sequential type is unconnected in block <mmu>.
+WARNING:Xst:2677 - Node <pgde_9> of sequential type is unconnected in block <mmu>.
+WARNING:Xst:2677 - Node <pgde_10> of sequential type is unconnected in block <mmu>.
+WARNING:Xst:2677 - Node <pgde_11> of sequential type is unconnected in block <mmu>.
+WARNING:Xst:2677 - Node <pgde_30> of sequential type is unconnected in block <mmu>.
+WARNING:Xst:2677 - Node <pgde_31> of sequential type is unconnected in block <mmu>.
+WARNING:Xst:2677 - Node <pte_0> of sequential type is unconnected in block <mmu>.
+WARNING:Xst:2677 - Node <pte_1> of sequential type is unconnected in block <mmu>.
+WARNING:Xst:2677 - Node <pte_2> of sequential type is unconnected in block <mmu>.
+WARNING:Xst:2677 - Node <pte_3> of sequential type is unconnected in block <mmu>.
+WARNING:Xst:2677 - Node <pte_4> of sequential type is unconnected in block <mmu>.
+WARNING:Xst:2677 - Node <pte_5> of sequential type is unconnected in block <mmu>.
+WARNING:Xst:2677 - Node <pte_6> of sequential type is unconnected in block <mmu>.
+WARNING:Xst:2677 - Node <pte_7> of sequential type is unconnected in block <mmu>.
+WARNING:Xst:2677 - Node <pte_8> of sequential type is unconnected in block <mmu>.
+WARNING:Xst:2677 - Node <pte_9> of sequential type is unconnected in block <mmu>.
+WARNING:Xst:2677 - Node <pte_10> of sequential type is unconnected in block <mmu>.
+WARNING:Xst:2677 - Node <pte_11> of sequential type is unconnected in block <mmu>.
+
+=========================================================================
+Advanced HDL Synthesis Report
+
+Macro Statistics
+# Adders/Subtractors                                   : 1
+ 24-bit adder                                          : 1
+# Registers                                            : 209
+ Flip-Flops                                            : 209
+# Comparators                                          : 2
+ 16-bit comparator greater                             : 1
+ 22-bit comparator equal                               : 1
+# Multiplexers                                         : 48
+ 1-bit 2-to-1 multiplexer                              : 34
+ 16-bit 2-to-1 multiplexer                             : 7
+ 24-bit 2-to-1 multiplexer                             : 1
+ 32-bit 2-to-1 multiplexer                             : 6
+# FSMs                                                 : 1
+
+=========================================================================
+
+=========================================================================
+*                         Low Level Synthesis                           *
+=========================================================================
+Analyzing FSM <MFsm> for best encoding.
+Optimizing FSM <mmu_0/FSM_0> on signal <state[1:4]> with user encoding.
+----------------------------------
+ State                | Encoding
+----------------------------------
+ state_wait_header    | 0000
+ state_read_cmd       | 0001
+ state_read_addr      | 0010
+ state_read_pgde_0    | 0011
+ state_read_pgde_1    | 0100
+ state_read_pgde_2    | 0101
+ state_read_pte_0     | 0110
+ state_read_pte_1     | 0111
+ state_read_pte_2     | 1000
+ state_write_header_0 | 1001
+ state_write_header_1 | 1010
+ state_copy           | 1011
+ state_page_fault     | 1100
+----------------------------------
+WARNING:Xst:1710 - FF/Latch <MEM_S_Fill_2> (without init value) has a constant value of 0 in block <mmu>. This FF/Latch will be trimmed during the optimization process.
+WARNING:Xst:1895 - Due to other FF/Latch trimming, FF/Latch <MEM_S_Fill_3> (without init value) has a constant value of 0 in block <mmu>. This FF/Latch will be trimmed during the optimization process.
+WARNING:Xst:1895 - Due to other FF/Latch trimming, FF/Latch <MEM_S_Fill_4> (without init value) has a constant value of 0 in block <mmu>. This FF/Latch will be trimmed during the optimization process.
+WARNING:Xst:1895 - Due to other FF/Latch trimming, FF/Latch <MEM_S_Fill_5> (without init value) has a constant value of 0 in block <mmu>. This FF/Latch will be trimmed during the optimization process.
+WARNING:Xst:1895 - Due to other FF/Latch trimming, FF/Latch <MEM_S_Fill_6> (without init value) has a constant value of 0 in block <mmu>. This FF/Latch will be trimmed during the optimization process.
+WARNING:Xst:1895 - Due to other FF/Latch trimming, FF/Latch <MEM_S_Fill_7> (without init value) has a constant value of 0 in block <mmu>. This FF/Latch will be trimmed during the optimization process.
+WARNING:Xst:1895 - Due to other FF/Latch trimming, FF/Latch <MEM_S_Fill_8> (without init value) has a constant value of 0 in block <mmu>. This FF/Latch will be trimmed during the optimization process.
+WARNING:Xst:1895 - Due to other FF/Latch trimming, FF/Latch <MEM_S_Fill_9> (without init value) has a constant value of 0 in block <mmu>. This FF/Latch will be trimmed during the optimization process.
+WARNING:Xst:1895 - Due to other FF/Latch trimming, FF/Latch <MEM_S_Fill_10> (without init value) has a constant value of 0 in block <mmu>. This FF/Latch will be trimmed during the optimization process.
+WARNING:Xst:1895 - Due to other FF/Latch trimming, FF/Latch <MEM_S_Fill_11> (without init value) has a constant value of 0 in block <mmu>. This FF/Latch will be trimmed during the optimization process.
+WARNING:Xst:1895 - Due to other FF/Latch trimming, FF/Latch <MEM_S_Fill_12> (without init value) has a constant value of 0 in block <mmu>. This FF/Latch will be trimmed during the optimization process.
+WARNING:Xst:1895 - Due to other FF/Latch trimming, FF/Latch <MEM_S_Fill_13> (without init value) has a constant value of 0 in block <mmu>. This FF/Latch will be trimmed during the optimization process.
+WARNING:Xst:1895 - Due to other FF/Latch trimming, FF/Latch <MEM_S_Fill_14> (without init value) has a constant value of 0 in block <mmu>. This FF/Latch will be trimmed during the optimization process.
+WARNING:Xst:1895 - Due to other FF/Latch trimming, FF/Latch <MEM_S_Fill_15> (without init value) has a constant value of 0 in block <mmu>. This FF/Latch will be trimmed during the optimization process.
+WARNING:Xst:2677 - Node <counter_0> of sequential type is unconnected in block <mmu>.
+WARNING:Xst:2677 - Node <counter_1> of sequential type is unconnected in block <mmu>.
+
+Optimizing unit <mmu_0_wrapper> ...
+
+Optimizing unit <mmu> ...
+
+Mapping all equations...
+Building and optimizing final netlist ...
+Found area constraint ratio of 100 (+ 0) on block mmu_0_wrapper, actual ratio is 0.
+FlipFlop mmu_0/state_FSM_FFd2 has been replicated 1 time(s)
+
+Final Macro Processing ...
+
+=========================================================================
+Final Register Report
+
+Macro Statistics
+# Registers                                            : 198
+ Flip-Flops                                            : 198
+
+=========================================================================
+
+=========================================================================
+*                           Partition Report                            *
+=========================================================================
+
+Partition Implementation Status
+-------------------------------
+
+  No Partitions were found in this design.
+
+-------------------------------
+
+=========================================================================
+*                            Design Summary                             *
+=========================================================================
+
+Top Level Output File Name         : mmu_0_wrapper.ngc
+
+Primitive and Black Box Usage:
+------------------------------
+# BELS                             : 306
+#      GND                         : 1
+#      INV                         : 2
+#      LUT1                        : 21
+#      LUT2                        : 91
+#      LUT3                        : 66
+#      LUT4                        : 11
+#      LUT5                        : 25
+#      LUT6                        : 35
+#      MUXCY                       : 31
+#      VCC                         : 1
+#      XORCY                       : 22
+# FlipFlops/Latches                : 198
+#      FDC                         : 6
+#      FDCE                        : 192
+
+Device utilization summary:
+---------------------------
+
+Selected Device : 6vlx240tff1156-1 
+
+
+Slice Logic Utilization: 
+ Number of Slice Registers:             198  out of  301440     0%  
+ Number of Slice LUTs:                  251  out of  150720     0%  
+    Number used as Logic:               251  out of  150720     0%  
+
+Slice Logic Distribution: 
+ Number of LUT Flip Flop pairs used:    388
+   Number with an unused Flip Flop:     190  out of    388    48%  
+   Number with an unused LUT:           137  out of    388    35%  
+   Number of fully used LUT-FF pairs:    61  out of    388    15%  
+   Number of unique control sets:        10
+
+IO Utilization: 
+ Number of IOs:                         268
+ Number of bonded IOBs:                   0  out of    600     0%  
+
+Specific Feature Utilization:
+
+---------------------------
+Partition Resource Summary:
+---------------------------
+
+  No Partitions were found in this design.
+
+---------------------------
+
+
+=========================================================================
+Timing Report
+
+NOTE: THESE TIMING NUMBERS ARE ONLY A SYNTHESIS ESTIMATE.
+      FOR ACCURATE TIMING INFORMATION PLEASE REFER TO THE TRACE REPORT
+      GENERATED AFTER PLACE-and-ROUTE.
+
+Clock Information:
+------------------
+-----------------------------------+------------------------+-------+
+Clock Signal                       | Clock buffer(FF name)  | Load  |
+-----------------------------------+------------------------+-------+
+Clk                                | NONE(mmu_0/vaddr_0)    | 198   |
+-----------------------------------+------------------------+-------+
+INFO:Xst:2169 - HDL ADVISOR - Some clock signals were not automatically buffered by XST with BUFG/BUFR resources. Please use the buffer_type constraint in order to insert these buffers to the clock signals to help prevent skew problems.
+
+Asynchronous Control Signals Information:
+----------------------------------------
+No asynchronous control signals found in this design
+
+Timing Summary:
+---------------
+Speed Grade: -1
+
+   Minimum period: 2.281ns (Maximum Frequency: 438.404MHz)
+   Minimum input arrival time before clock: 2.813ns
+   Maximum output required time after clock: 1.191ns
+   Maximum combinational path delay: 0.160ns
+
+Timing Details:
+---------------
+All values displayed in nanoseconds (ns)
+
+=========================================================================
+Timing constraint: Default period analysis for Clock 'Clk'
+  Clock period: 2.281ns (frequency: 438.404MHz)
+  Total number of paths / destination ports: 1417 / 287
+-------------------------------------------------------------------------
+Delay:               2.281ns (Levels of Logic = 24)
+  Source:            mmu_0/counter_2 (FF)
+  Destination:       mmu_0/counter_23 (FF)
+  Source Clock:      Clk rising
+  Destination Clock: Clk rising
+
+  Data Path: mmu_0/counter_2 to mmu_0/counter_23
+                                Gate     Net
+    Cell:in->out      fanout   Delay   Delay  Logical Name (Net Name)
+    ----------------------------------------  ------------
+     FDCE:C->Q             2   0.375   0.405  counter_2 (counter_2)
+     INV:I->O              1   0.086   0.000  Madd_counter[23]_GND_8_o_add_70_OUT_lut<2>_INV_0 (Madd_counter[23]_GND_8_o_add_70_OUT_lut<2>)
+     MUXCY:S->O            1   0.290   0.000  Madd_counter[23]_GND_8_o_add_70_OUT_cy<2> (Madd_counter[23]_GND_8_o_add_70_OUT_cy<2>)
+     MUXCY:CI->O           1   0.020   0.000  Madd_counter[23]_GND_8_o_add_70_OUT_cy<3> (Madd_counter[23]_GND_8_o_add_70_OUT_cy<3>)
+     MUXCY:CI->O           1   0.020   0.000  Madd_counter[23]_GND_8_o_add_70_OUT_cy<4> (Madd_counter[23]_GND_8_o_add_70_OUT_cy<4>)
+     MUXCY:CI->O           1   0.020   0.000  Madd_counter[23]_GND_8_o_add_70_OUT_cy<5> (Madd_counter[23]_GND_8_o_add_70_OUT_cy<5>)
+     MUXCY:CI->O           1   0.020   0.000  Madd_counter[23]_GND_8_o_add_70_OUT_cy<6> (Madd_counter[23]_GND_8_o_add_70_OUT_cy<6>)
+     MUXCY:CI->O           1   0.020   0.000  Madd_counter[23]_GND_8_o_add_70_OUT_cy<7> (Madd_counter[23]_GND_8_o_add_70_OUT_cy<7>)
+     MUXCY:CI->O           1   0.020   0.000  Madd_counter[23]_GND_8_o_add_70_OUT_cy<8> (Madd_counter[23]_GND_8_o_add_70_OUT_cy<8>)
+     MUXCY:CI->O           1   0.020   0.000  Madd_counter[23]_GND_8_o_add_70_OUT_cy<9> (Madd_counter[23]_GND_8_o_add_70_OUT_cy<9>)
+     MUXCY:CI->O           1   0.020   0.000  Madd_counter[23]_GND_8_o_add_70_OUT_cy<10> (Madd_counter[23]_GND_8_o_add_70_OUT_cy<10>)
+     MUXCY:CI->O           1   0.020   0.000  Madd_counter[23]_GND_8_o_add_70_OUT_cy<11> (Madd_counter[23]_GND_8_o_add_70_OUT_cy<11>)
+     MUXCY:CI->O           1   0.020   0.000  Madd_counter[23]_GND_8_o_add_70_OUT_cy<12> (Madd_counter[23]_GND_8_o_add_70_OUT_cy<12>)
+     MUXCY:CI->O           1   0.020   0.000  Madd_counter[23]_GND_8_o_add_70_OUT_cy<13> (Madd_counter[23]_GND_8_o_add_70_OUT_cy<13>)
+     MUXCY:CI->O           1   0.020   0.000  Madd_counter[23]_GND_8_o_add_70_OUT_cy<14> (Madd_counter[23]_GND_8_o_add_70_OUT_cy<14>)
+     MUXCY:CI->O           1   0.020   0.000  Madd_counter[23]_GND_8_o_add_70_OUT_cy<15> (Madd_counter[23]_GND_8_o_add_70_OUT_cy<15>)
+     MUXCY:CI->O           1   0.020   0.000  Madd_counter[23]_GND_8_o_add_70_OUT_cy<16> (Madd_counter[23]_GND_8_o_add_70_OUT_cy<16>)
+     MUXCY:CI->O           1   0.020   0.000  Madd_counter[23]_GND_8_o_add_70_OUT_cy<17> (Madd_counter[23]_GND_8_o_add_70_OUT_cy<17>)
+     MUXCY:CI->O           1   0.020   0.000  Madd_counter[23]_GND_8_o_add_70_OUT_cy<18> (Madd_counter[23]_GND_8_o_add_70_OUT_cy<18>)
+     MUXCY:CI->O           1   0.020   0.000  Madd_counter[23]_GND_8_o_add_70_OUT_cy<19> (Madd_counter[23]_GND_8_o_add_70_OUT_cy<19>)
+     MUXCY:CI->O           1   0.020   0.000  Madd_counter[23]_GND_8_o_add_70_OUT_cy<20> (Madd_counter[23]_GND_8_o_add_70_OUT_cy<20>)
+     MUXCY:CI->O           1   0.020   0.000  Madd_counter[23]_GND_8_o_add_70_OUT_cy<21> (Madd_counter[23]_GND_8_o_add_70_OUT_cy<21>)
+     MUXCY:CI->O           0   0.020   0.000  Madd_counter[23]_GND_8_o_add_70_OUT_cy<22> (Madd_counter[23]_GND_8_o_add_70_OUT_cy<22>)
+     XORCY:CI->O           1   0.239   0.417  Madd_counter[23]_GND_8_o_add_70_OUT_xor<23> (counter[23]_GND_8_o_add_70_OUT<23>)
+     LUT2:I1->O            1   0.068   0.000  Mmux__n0312161 (_n0312<23>)
+     FDCE:D                    0.011          counter_23
+    ----------------------------------------
+    Total                      2.281ns (1.459ns logic, 0.822ns route)
+                                       (64.0% logic, 36.0% route)
+
+=========================================================================
+Timing constraint: Default OFFSET IN BEFORE for Clock 'Clk'
+  Total number of paths / destination ports: 565 / 404
+-------------------------------------------------------------------------
+Offset:              2.813ns (Levels of Logic = 6)
+  Source:            HWT_FIFO32_S_Fill<9> (PAD)
+  Destination:       mmu_0/state_FSM_FFd4 (FF)
+  Destination Clock: Clk rising
+
+  Data Path: HWT_FIFO32_S_Fill<9> to mmu_0/state_FSM_FFd4
+                                Gate     Net
+    Cell:in->out      fanout   Delay   Delay  Logical Name (Net Name)
+    ----------------------------------------  ------------
+     begin scope: 'mmu_0'
+     LUT6:I0->O            1   0.068   0.581  state_FSM_FFd4-In612 (state_FSM_FFd4-In611)
+     LUT3:I0->O            1   0.068   0.778  state_FSM_FFd4-In611_SW0 (N58)
+     LUT6:I0->O            2   0.068   0.423  state_FSM_FFd4-In615 (N55)
+     LUT6:I5->O            1   0.068   0.000  state_FSM_FFd4-In6_lut1 (state_FSM_FFd4-In6_lut1)
+     MUXCY:S->O            1   0.369   0.000  state_FSM_FFd4-In6_cy1 (state_FSM_FFd4-In)
+     FDC:D                     0.011          state_FSM_FFd4
+    ----------------------------------------
+    Total                      2.813ns (1.031ns logic, 1.782ns route)
+                                       (36.7% logic, 63.3% route)
+
+=========================================================================
+Timing constraint: Default OFFSET OUT AFTER for Clock 'Clk'
+  Total number of paths / destination ports: 166 / 131
+-------------------------------------------------------------------------
+Offset:              1.191ns (Levels of Logic = 2)
+  Source:            mmu_0/copy (FF)
+  Destination:       MEM_FIFO32_S_Data<0> (PAD)
+  Source Clock:      Clk rising
+
+  Data Path: mmu_0/copy to MEM_FIFO32_S_Data<0>
+                                Gate     Net
+    Cell:in->out      fanout   Delay   Delay  Logical Name (Net Name)
+    ----------------------------------------  ------------
+     FDCE:C->Q            99   0.375   0.748  copy (copy)
+     LUT3:I0->O            0   0.068   0.000  Mmux_MEM_FIFO32_S_Data_dup321 (MEM_FIFO32_S_Data<9>)
+     end scope: 'mmu_0'
+    ----------------------------------------
+    Total                      1.191ns (0.443ns logic, 0.748ns route)
+                                       (37.2% logic, 62.8% route)
+
+=========================================================================
+Timing constraint: Default path analysis
+  Total number of paths / destination ports: 100 / 100
+-------------------------------------------------------------------------
+Delay:               0.160ns (Levels of Logic = 2)
+  Source:            HWT_FIFO32_S_Data<0> (PAD)
+  Destination:       MEM_FIFO32_S_Data<0> (PAD)
+
+  Data Path: HWT_FIFO32_S_Data<0> to MEM_FIFO32_S_Data<0>
+                                Gate     Net
+    Cell:in->out      fanout   Delay   Delay  Logical Name (Net Name)
+    ----------------------------------------  ------------
+     begin scope: 'mmu_0'
+     LUT3:I1->O            0   0.068   0.000  Mmux_MEM_FIFO32_S_Data_dup251 (MEM_FIFO32_S_Data<31>)
+     end scope: 'mmu_0'
+    ----------------------------------------
+    Total                      0.160ns (0.160ns logic, 0.000ns route)
+                                       (100.0% logic, 0.0% route)
+
+=========================================================================
+
+Cross Clock Domains Report:
+--------------------------
+
+Clock to Setup on destination clock Clk
+---------------+---------+---------+---------+---------+
+               | Src:Rise| Src:Fall| Src:Rise| Src:Fall|
+Source Clock   |Dest:Rise|Dest:Rise|Dest:Fall|Dest:Fall|
+---------------+---------+---------+---------+---------+
+Clk            |    2.281|         |         |         |
+---------------+---------+---------+---------+---------+
+
+=========================================================================
+
+
+Total REAL time to Xst completion: 7.00 secs
+Total CPU time to Xst completion: 7.13 secs
+ 
+--> 
+
+
+Total memory usage is 387668 kilobytes
+
+Number of errors   :    0 (   0 filtered)
+Number of warnings :   50 (   0 filtered)
+Number of infos    :    1 (   0 filtered)
+

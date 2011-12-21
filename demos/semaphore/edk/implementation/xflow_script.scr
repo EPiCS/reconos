@@ -1,0 +1,25 @@
+#!/bin/csh -f
+###########################################
+# Script file to run the flow 
+# 
+###########################################
+#
+# Command line for ngdbuild
+#
+ngdbuild -p xc6vlx240tff1156-1 -nt timestamp -bm system.bmm "/data/work/reconos_v3/demos/semaphore/edk/implementation/system.ngc" -uc system.ucf system.ngd 
+
+#
+# Command line for map
+#
+map -o system_map.ncd -w -pr b -ol std -timing -detail system.ngd system.pcf 
+
+#
+# Command line for par
+#
+par -w system_map.ncd system.ncd system.pcf 
+
+#
+# Command line for post_par_trce
+#
+trce -e 3 -xml system.twx system.ncd system.pcf 
+

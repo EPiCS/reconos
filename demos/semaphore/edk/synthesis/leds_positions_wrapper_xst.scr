@@ -1,0 +1,13 @@
+run
+-opt_mode speed
+-netlist_hierarchy as_optimized
+-opt_level 1
+-p xc6vlx240tff1156-1
+-top leds_positions_wrapper
+-ifmt MIXED
+-ifn leds_positions_wrapper_xst.prj
+-ofn ../implementation/leds_positions_wrapper.ngc
+-hierarchy_separator /
+-iobuf NO
+-sd {../implementation/leds_positions_wrapper}
+-vlgincdir {"/data/work/reconos_v3/demos/semaphore/edk/pcores/" "/opt/Xilinx/12.3/ISE_DS/EDK/hw/XilinxProcessorIPLib/pcores/" }
