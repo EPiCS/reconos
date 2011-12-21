@@ -114,6 +114,7 @@ use xps_mem_v1_00_a.user_logic;
 entity xps_mem is
 	generic
 	(
+		C_ENABLE_ILA                   : integer              := 0;
 		C_INCLUDE_DPHASE_TIMER         : integer              := 0;
 		C_FAMILY                       : string               := "virtex6";
 		C_MPLB_AWIDTH                  : integer              := 32;
@@ -414,7 +415,7 @@ begin
 	USER_LOGIC_I : entity xps_mem_v1_00_a.user_logic
 	generic map
 	(
-		--C_SLV_DWIDTH                   => USER_SLV_DWIDTH,
+		C_ENABLE_ILA                   => C_ENABLE_ILA,
 		C_MST_AWIDTH                   => USER_MST_AWIDTH,
 		C_MST_DWIDTH                   => USER_MST_DWIDTH,
 		C_NUM_REG                      => USER_NUM_REG
