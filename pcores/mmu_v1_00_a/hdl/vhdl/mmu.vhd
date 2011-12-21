@@ -7,6 +7,9 @@ library reconos_v3_00_a;
 use reconos_v3_00_a.reconos_pkg.all;
 
 entity mmu is
+	generic (
+		C_ENABLE_ILA : integer := 0
+	);
 	port (
 		-- FIFO Interface to HWT
 		HWT_FIFO32_S_Clk : out std_logic;
@@ -101,6 +104,8 @@ begin
 
 --------------------- CHIPSCOPE -------------------------
 	
+	GENERATE_ILA : if C_ENABLE_ILA = 1 generate
+
 	icon_i : mmu_icon
 	port map (
 		CONTROL0 => CONTROL
@@ -113,6 +118,8 @@ begin
 		DATA => DATA,
 		TRIG0 => TRIG
 	);
+
+	end generate;
 	
 	DATA(31 downto 0)  <= HWT_FIFO32_S_Data;
 	DATA(63 downto 32) <= HWT_FIFO32_M_Data_dup;
