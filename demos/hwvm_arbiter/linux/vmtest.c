@@ -22,6 +22,9 @@ struct mbox hw2sw,sw2hw;
 #define PAGE_WORDS 1024
 #define PAGE_MASK 0xFFFFF000
 
+#define MAX_BURST_SIZE 1024
+
+
 uint32 * alloc_pages(int n)
 {
 	uint8 *mem;
@@ -59,8 +62,84 @@ void hwt_write(uint32 * src, int n, uint32 * dst)
 	for(i = 0; i < n; i++){
 		mbox_put(&sw2hw,src[i]);
 	}
+
+	mbox_get(&hw2sw); // sync
 }
 
+void read_tests()
+{
+	int i,j,n;
+	uint32 *mem;
+	uint32 *data;
+
+	// allocate 1 page
+	mem = alloc_pages(1);
+
+	// allocate buffer
+	data = malloc(PAGE_SIZE);
+
+	// all burst sized from 1 to MAX_BURST_SIZE
+	for(n = 1; n < MAX_BURST_SIZE; n++){
+		printf("Burst read %d\n",n);
+
+		// software write to the page
+		for(i = 0; i < PAGE_WORDS; i++){
+			uint32 rnd = rand();
+			rnd = rnd & 0xFFF00000;
+			mem[i] = (n << 16) | i | rnd;
+			data[i] = 0;
+		}
+	
+		// sequential n word burst reads
+		for(i = 0; i < PAGE_WORDS - n; i += n){
+			hwt_read(mem + i, n, data + i);
+			for(j = 0; j < n; j++){
+				if(mem[i+j] != data[i+j]){
+					fprintf(stderr,"HWT %d-burst read from 0x%08X: 0x%08X (should be 0x%08X)\n",n,(uint32)(mem + i+j),data[i+j],mem[i+j]);
+					//exit(1);
+				}
+			}  
+		}
+	}
+}
+
+void write_tests()
+{
+	int i,j,n;
+	uint32 *mem;
+	uint32 *data;
+
+	// allocate 1 page
+	mem = alloc_pages(1);
+
+	// allocate buffer
+	data = malloc(PAGE_SIZE);
+
+	// all burst sized from 1 to MAX_BURST_SIZE
+	for(n = 1; n < MAX_BURST_SIZE; n++){
+		printf("Burst write %d\n",n);
+
+		// software write to buffer
+		for(i = 0; i < PAGE_WORDS; i++){
+			uint32 rnd = rand();
+			rnd = rnd & 0xFFF00000;
+			data[i] = (n << 16) | i | rnd;
+			mem[i] = 0;
+		}
+	
+		// sequential n word burst writes
+		for(i = 0; i < PAGE_WORDS - n; i += n){
+			hwt_write(data + i, n, mem + i);
+			for(j = 0; j < n; j++){
+				if(mem[i+j] != data[i+j]){
+					fprintf(stderr,"HWT %d-burst write to 0x%08X: 0x%08X (should be 0x%08X)\n",n,(uint32)(mem + i+j),mem[i+j],data[i+j]);
+				//	exit(1);
+				} //else { fprintf(stderr,"HWT %d-burst write to 0x%08X: 0x%08X OK!\n",n,(uint32)(mem + i+j),mem[i+j]); }
+
+			}  
+		}
+	}
+}
 void run_tests()
 {
 	int i;
@@ -115,7 +194,12 @@ int main(int argc, char ** argv)
 	reconos_hwt_setresources(&hwt,res,2);
 	reconos_hwt_create(&hwt,0,NULL);
 	
-	run_tests();
+	//run_tests();
+
+	printf("performing read tests:\n");
+	read_tests();
+	printf("performing write tests:\n");
+	write_tests();
 
 	pthread_join(hwt.delegate,NULL);
 	
