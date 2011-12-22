@@ -12,7 +12,7 @@
 #include <unistd.h>
 
 
-#if 1
+#if 0
 #define RECONOS_DEBUG(...) fprintf(stderr,__VA_ARGS__);
 #else
 #define RECONOS_DEBUG(...)
