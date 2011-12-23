@@ -39,7 +39,6 @@ begin
 	begin
 		if Rst = '1' then
 			wrptr <= (others => '0');
-                        mem <= (others => (others => '0'));
 		elsif rising_edge(FIFO32_M_Clk) then
 			if FIFO32_M_Wr = '1' then
 				mem(CONV_INTEGER(wrptr)) <= FIFO32_M_Data;
