@@ -11,8 +11,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-
-#if 1
+#if 0
 #define RECONOS_DEBUG(...) fprintf(stderr,__VA_ARGS__);
 #else
 #define RECONOS_DEBUG(...)
@@ -137,6 +136,10 @@ void reconos_hwt_setresources(struct reconos_hwt * hwt, struct reconos_resource 
 	hwt->num_resources = num_resources;
 }
 
+void reconos_hwt_setinitdata(struct reconos_hwt * hwt, void * init_data)
+{
+	hwt->init_data = init_data;
+}
 
 
 void * delegate_thread_entry(void * arg)
@@ -153,6 +156,7 @@ void * delegate_thread_entry(void * arg)
 	while(1){
 		uint32 cmd;
 		uint32 handle;
+		uint32 handle2;
 		uint32 arg0;
 		uint32 result;
 		
@@ -209,6 +213,220 @@ void * delegate_thread_entry(void * arg)
 				
 				fsl_write(hwt->slot, 0);
 				break;
+
+			case RECONOS_CMD_SEM_WAIT:
+				RECONOS_DEBUG("slot %d: command is SEM_WAIT\n", hwt->slot);
+				handle = fsl_read(hwt->slot);
+				RECONOS_DEBUG("slot %d: resource id is 0x%08X\n", hwt->slot, handle);
+			
+				if(handle >= hwt->num_resources){
+					RECONOS_ERROR("slot %d: resource id %d out of range, must be lesser than %d\n",
+						hwt->slot, handle, hwt->num_resources);
+					exit(1);
+				}
+				
+				if(hwt->resources[handle].type != RECONOS_TYPE_SEM){
+					RECONOS_ERROR("slot %d: resource type 0x%08X expected, found 0x%08X\n",
+						hwt->slot, RECONOS_TYPE_SEM, hwt->resources[handle].type);
+					exit(1);
+				}
+				
+			
+				result = sem_wait(hwt->resources[handle].ptr);
+				RECONOS_DEBUG("slot %d: sem_wait returns 0x%08X\n", hwt->slot, result);
+				
+				fsl_write(hwt->slot, result);
+				break;	
+			
+			case RECONOS_CMD_SEM_POST:
+				RECONOS_DEBUG("slot %d: command is SEM_POST\n", hwt->slot);
+				handle = fsl_read(hwt->slot);
+				RECONOS_DEBUG("slot %d: resource id is 0x%08X\n", hwt->slot, handle);
+				
+				if(handle >= hwt->num_resources){
+					RECONOS_ERROR("slot %d: resource id %d out of range, must be lesser than %d\n",
+						hwt->slot, handle, hwt->num_resources);
+					exit(1);
+				}
+				
+				if(hwt->resources[handle].type != RECONOS_TYPE_SEM){
+					RECONOS_ERROR("slot %d: resource type 0x%08X expected, found 0x%08X\n",
+						hwt->slot, RECONOS_TYPE_SEM, hwt->resources[handle].type);
+					exit(1);
+				}
+				
+				result = sem_post(hwt->resources[handle].ptr);
+				RECONOS_DEBUG("slot %d: sem_post returns 0x%08X\n", hwt->slot, result);
+				
+				fsl_write(hwt->slot, 0);
+				break;
+
+			case RECONOS_CMD_MUTEX_LOCK:
+				RECONOS_DEBUG("slot %d: command is MUTEX_LOCK\n", hwt->slot);
+				handle = fsl_read(hwt->slot);
+				RECONOS_DEBUG("slot %d: resource id is 0x%08X\n", hwt->slot, handle);
+			
+				if(handle >= hwt->num_resources){
+					RECONOS_ERROR("slot %d: resource id %d out of range, must be lesser than %d\n",
+						hwt->slot, handle, hwt->num_resources);
+					exit(1);
+				}
+				
+				if(hwt->resources[handle].type != RECONOS_TYPE_MUTEX){
+					RECONOS_ERROR("slot %d: resource type 0x%08X expected, found 0x%08X\n",
+						hwt->slot, RECONOS_TYPE_MUTEX, hwt->resources[handle].type);
+					exit(1);
+				}
+				
+			
+				result = pthread_mutex_lock(hwt->resources[handle].ptr);
+				RECONOS_DEBUG("slot %d: mutex_lock returns 0x%08X\n", hwt->slot, result);
+				
+				fsl_write(hwt->slot, result);
+				break;	
+
+			case RECONOS_CMD_MUTEX_UNLOCK:
+				RECONOS_DEBUG("slot %d: command is MUTEX_UNLOCK\n", hwt->slot);
+				handle = fsl_read(hwt->slot);
+				RECONOS_DEBUG("slot %d: resource id is 0x%08X\n", hwt->slot, handle);
+				
+				if(handle >= hwt->num_resources){
+					RECONOS_ERROR("slot %d: resource id %d out of range, must be lesser than %d\n",
+						hwt->slot, handle, hwt->num_resources);
+					exit(1);
+				}
+				
+				if(hwt->resources[handle].type != RECONOS_TYPE_MUTEX){
+					RECONOS_ERROR("slot %d: resource type 0x%08X expected, found 0x%08X\n",
+						hwt->slot, RECONOS_TYPE_MUTEX, hwt->resources[handle].type);
+					exit(1);
+				}
+				
+				result = pthread_mutex_unlock(hwt->resources[handle].ptr);
+				RECONOS_DEBUG("slot %d: mutex_unlock returns 0x%08X\n", hwt->slot, result);
+				
+				fsl_write(hwt->slot, 0);
+				break;
+
+			case RECONOS_CMD_MUTEX_TRYLOCK:
+				RECONOS_DEBUG("slot %d: command is MUTEX_TRYLOCK\n", hwt->slot);
+				handle = fsl_read(hwt->slot);
+				RECONOS_DEBUG("slot %d: resource id is 0x%08X\n", hwt->slot, handle);
+			
+				if(handle >= hwt->num_resources){
+					RECONOS_ERROR("slot %d: resource id %d out of range, must be lesser than %d\n",
+						hwt->slot, handle, hwt->num_resources);
+					exit(1);
+				}
+				
+				if(hwt->resources[handle].type != RECONOS_TYPE_MUTEX){
+					RECONOS_ERROR("slot %d: resource type 0x%08X expected, found 0x%08X\n",
+						hwt->slot, RECONOS_TYPE_MUTEX, hwt->resources[handle].type);
+					exit(1);
+				}
+				
+			
+				result = pthread_mutex_trylock(hwt->resources[handle].ptr);
+				RECONOS_DEBUG("slot %d: mutex_trylock returns 0x%08X\n", hwt->slot, result);
+				
+				fsl_write(hwt->slot, result);
+				break;
+
+			case RECONOS_CMD_COND_WAIT:
+				RECONOS_DEBUG("slot %d: command is COND_WAIT\n", hwt->slot);
+				handle = fsl_read(hwt->slot);
+				RECONOS_DEBUG("slot %d: resource id is 0x%08X\n", hwt->slot, handle);
+				handle2 = fsl_read(hwt->slot);
+				RECONOS_DEBUG("slot %d: resource id is 0x%08X\n", hwt->slot, handle2);
+			
+				if(handle >= hwt->num_resources){
+					RECONOS_ERROR("slot %d: 1st resource id %d out of range, must be lesser than %d\n",
+						hwt->slot, handle, hwt->num_resources);
+					exit(1);
+				}
+
+				if(handle2 >= hwt->num_resources){
+					RECONOS_ERROR("slot %d: 2nd resource id %d out of range, must be lesser than %d\n",
+						hwt->slot, handle2, hwt->num_resources);
+					exit(1);
+				}
+				
+				if(hwt->resources[handle].type != RECONOS_TYPE_COND){
+					RECONOS_ERROR("slot %d: 1st resource type 0x%08X expected, found 0x%08X\n",
+						hwt->slot, RECONOS_TYPE_COND, hwt->resources[handle].type);
+					exit(1);
+				}
+				
+				if(hwt->resources[handle2].type != RECONOS_TYPE_MUTEX){
+					RECONOS_ERROR("slot %d: 2nd resource type 0x%08X expected, found 0x%08X\n",
+						hwt->slot, RECONOS_TYPE_MUTEX, hwt->resources[handle2].type);
+					exit(1);
+				}				
+			
+				result = pthread_cond_wait(hwt->resources[handle].ptr, hwt->resources[handle2].ptr);
+				RECONOS_DEBUG("slot %d: cond_wait returns 0x%08X\n", hwt->slot, result);
+				
+				fsl_write(hwt->slot, result);
+				break;
+
+			case RECONOS_CMD_COND_SIGNAL:
+				RECONOS_DEBUG("slot %d: command is COND_SIGNAL\n", hwt->slot);
+				handle = fsl_read(hwt->slot);
+				RECONOS_DEBUG("slot %d: resource id is 0x%08X\n", hwt->slot, handle);
+				
+				if(handle >= hwt->num_resources){
+					RECONOS_ERROR("slot %d: resource id %d out of range, must be lesser than %d\n",
+						hwt->slot, handle, hwt->num_resources);
+					exit(1);
+				}
+				
+				if(hwt->resources[handle].type != RECONOS_TYPE_COND){
+					RECONOS_ERROR("slot %d: resource type 0x%08X expected, found 0x%08X\n",
+						hwt->slot, RECONOS_TYPE_COND, hwt->resources[handle].type);
+					exit(1);
+				}
+				
+				result = pthread_cond_signal(hwt->resources[handle].ptr);
+				RECONOS_DEBUG("slot %d: cond_signal returns 0x%08X\n", hwt->slot, result);
+				
+				fsl_write(hwt->slot, 0);
+				break;
+
+			case RECONOS_CMD_COND_BROADCAST:
+				RECONOS_DEBUG("slot %d: command is COND_BROADCAST\n", hwt->slot);
+				handle = fsl_read(hwt->slot);
+				RECONOS_DEBUG("slot %d: resource id is 0x%08X\n", hwt->slot, handle);
+				
+				if(handle >= hwt->num_resources){
+					RECONOS_ERROR("slot %d: resource id %d out of range, must be lesser than %d\n",
+						hwt->slot, handle, hwt->num_resources);
+					exit(1);
+				}
+				
+				if(hwt->resources[handle].type != RECONOS_TYPE_COND){
+					RECONOS_ERROR("slot %d: resource type 0x%08X expected, found 0x%08X\n",
+						hwt->slot, RECONOS_TYPE_COND, hwt->resources[handle].type);
+					exit(1);
+				}
+				
+				result = pthread_cond_broadcast(hwt->resources[handle].ptr);
+				RECONOS_DEBUG("slot %d: cond_broadcast returns 0x%08X\n", hwt->slot, result);
+				
+				fsl_write(hwt->slot, 0);
+				break;
+
+			case RECONOS_CMD_THREAD_GET_INIT_DATA:
+				RECONOS_DEBUG("slot %d: command is GET_INIT_DATA\n", hwt->slot);
+							
+				result = (uint32)hwt->init_data;
+				RECONOS_DEBUG("slot %d: init_data is 0x%08X\n", hwt->slot, result);
+				
+				fsl_write(hwt->slot, result);
+				break;
+
+			case RECONOS_CMD_THREAD_EXIT:
+				RECONOS_DEBUG("slot %d: command is THREAD_EXIT\n", hwt->slot);
+				return NULL;
 			
 			default:
 				RECONOS_ERROR("slot %d: unknown command 0x%08X\n", hwt->slot, cmd);
