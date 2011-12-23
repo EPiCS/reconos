@@ -18,9 +18,9 @@ use reconos_v3_00_a.reconos_pkg.all;
 
 entity fifo32_burst_converter is
   generic (
-    C_PAGE_SIZE : natural := 4096;      -- Dictated by Linux Memory Management;
+    C_PAGE_SIZE : natural := 4096;      -- In Bytes; Dictated by Linux Memory Management;
                                         -- must be power of 2
-    C_BURST_SIZE: natural := 2048      -- 512 words á 32 bits
+    C_BURST_SIZE: natural := 16         -- 16 words á 32 bits
     );
   port (
     -- FIFO32 Input
@@ -114,6 +114,15 @@ begin  -- of architecture ------------------------------------------------------
     if rst = '1' then
       state         := STATE_MODE_LENGTH;
       transfer_mode := READ;
+      transfer_size := 0;
+      transfer_address := 0;
+      transfer_offset  := 0;
+
+      calc_size := 0;
+      calc_address:= 0;
+      next_address:= 0;
+      IN_FIFO32_S_Rd <= '0';
+      
     elsif clk'event and clk = '1' then
       -- default is to hold all outputs.
       state         := state;
@@ -124,7 +133,7 @@ begin  -- of architecture ------------------------------------------------------
 
       calc_size := calc_size;
       calc_address:= calc_address;
-
+      next_address:= next_address;
       IN_FIFO32_S_Rd <= '0';
       
       OUT_FIFO32_S_Data <= IN_FIFO32_S_Data;
@@ -137,6 +146,7 @@ begin  -- of architecture ------------------------------------------------------
           -- Outputs are in "no data" state
           if to_integer(unsigned(IN_FIFO32_S_Fill)) > 1 then
             state := STATE_ADDRESS;
+            IN_FIFO32_S_Rd <= '1';
           end if;
           case IN_FIFO32_S_DATA(31) is
             when '0'    => transfer_mode := READ;
@@ -145,7 +155,11 @@ begin  -- of architecture ------------------------------------------------------
           -- lower 24 bits of first word are defined to be the length
           -- of the transfer.
           transfer_size := to_integer(unsigned(IN_FIFO32_S_DATA(23 downto 0)));
-          IN_FIFO32_S_Rd <= '1';
+
+          -- reset calculated values
+          calc_size := 0;
+          calc_address:= 0;
+          
           OUT_FIFO32_S_Data <= (others => '0');
           OUT_FIFO32_S_Fill <= (others => '0');
           
@@ -155,51 +169,68 @@ begin  -- of architecture ------------------------------------------------------
           state:= STATE_CALC_SIZE;
           transfer_address := to_integer(unsigned(IN_FIFO32_S_DATA));
           transfer_offset  := to_integer(unsigned(IN_FIFO32_S_DATA(clog2(C_PAGE_SIZE)-1 downto 0)));
+          IN_FIFO32_S_Rd <= '1';
           OUT_FIFO32_S_Data <= (others => '0');
           OUT_FIFO32_S_Fill <= (others => '0');
+          
         when STATE_CALC_SIZE =>
           -- Inputs are not read.
           -- New address and size of header is calculated and put on the outputs.
           if OUT_FIFO32_S_rd = '1' then
-            state := STATE_CALC_ADDRESS;  
+            state := STATE_CALC_ADDRESS;
+            OUT_FIFO32_S_Data <= std_logic_vector(to_unsigned(calc_address,32));
+          else
+            case transfer_mode is
+              when READ  =>
+                OUT_FIFO32_S_Data <= MEMIF_CMD_READ  & std_logic_vector(to_unsigned(calc_size,24));
+              when WRITE =>
+                OUT_FIFO32_S_Data <= MEMIF_CMD_WRITE & std_logic_vector(to_unsigned(calc_size,24));
+            end case;            
           end if;
 
           calc_size :=  calc_transfer_size(C_PAGE_SIZE, C_BURST_SIZE,transfer_offset, transfer_size);
           calc_address := next_address;
           next_address := calc_address + calc_size;
-                          
-          case transfer_mode is
-            when READ  =>
-              OUT_FIFO32_S_Data <= MEMIF_CMD_READ  or std_logic_vector(to_unsigned(calc_size,32));
-            when WRITE =>
-              OUT_FIFO32_S_Data <= MEMIF_CMD_WRITE or std_logic_vector(to_unsigned(calc_size,32));
-          end case;
-          
+          OUT_FIFO32_S_Fill <= std_logic_vector(to_unsigned(to_integer(unsigned(IN_FIFO32_S_Fill)) + 2, 16));
           
         when STATE_CALC_ADDRESS =>
+          -- Outputs calculated address
           if OUT_FIFO32_S_rd = '1' then          
             case transfer_mode is
               when READ  => state := STATE_DATA_READ;
               when WRITE => state := STATE_DATA_WRITE;
             end case;
+            OUT_FIFO32_S_Data <= IN_FIFO32_S_Data;
+          else
+            OUT_FIFO32_S_Data <= std_logic_vector(to_unsigned(calc_address,32));  
           end if;
-          OUT_FIFO32_S_Data <= std_logic_vector(to_unsigned(calc_size,32));
           
         when STATE_DATA_READ =>
+          -- Waits until current data chunk has been read.
           if OUT_FIFO32_M_Wr = '1' then
             transfer_size := transfer_size-4;
+            calc_size := calc_size - 4 ;
           end if;
           if transfer_size = 0 then
             state := STATE_MODE_LENGTH;
+          elsif calc_size = 0 then
+            state := STATE_CALC_SIZE;
           end if;
+          OUT_FIFO32_S_Data <= IN_FIFO32_S_Data;
           
         when STATE_DATA_WRITE =>
+          -- Waits until current data chunk has been written.
           if OUT_FIFO32_S_Rd = '1' then
             transfer_size := transfer_size-4;
+            calc_size := calc_size - 4 ;
           end if;
           if transfer_size = 0 then
             state := STATE_MODE_LENGTH;
+          elsif calc_size = 0 then
+            state := STATE_CALC_SIZE;
           end if;
+          OUT_FIFO32_S_Data <= IN_FIFO32_S_Data;
+          
         when others =>
           state     := STATE_MODE_LENGTH;
       end case;

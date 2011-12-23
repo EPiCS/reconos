@@ -814,6 +814,7 @@ package body reconos_pkg is
 		o_memif.step <= 0;
 		o_memif.s_rd <= '0';
 		o_memif.m_wr <= '0';
+                o_memif.m_data <= (others => '0');
 	end procedure;
 	
 	procedure memif_write (
@@ -1042,4 +1043,3 @@ package body reconos_pkg is
 	end procedure;
 	
 end reconos_pkg;
-

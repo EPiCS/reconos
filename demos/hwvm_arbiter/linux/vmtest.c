@@ -176,9 +176,24 @@ void run_tests()
 }
 
 
+void print_help ()
+{
+  printf(
+"vmtest - tests virtual memory accesses of hardware threads in ReconOS.\n\n"
+"Usage: vmtest <thread number> \n\n "
+  );
+}
+
 int main(int argc, char ** argv)
 {
-	assert(argc == 1);
+  int hwt_nr;
+
+  if (argc != 2){
+    print_help();
+    exit(1);
+  }
+  
+  hwt_nr = atoi(argv[1]);
 
 	res[0].type = RECONOS_TYPE_MBOX;
 	res[0].ptr  = &sw2hw;
@@ -192,7 +207,7 @@ int main(int argc, char ** argv)
 	reconos_init(1);
 	
 	reconos_hwt_setresources(&hwt,res,2);
-	reconos_hwt_create(&hwt,0,NULL);
+	reconos_hwt_create(&hwt,hwt_nr,NULL);
 	
 	//run_tests();
 
