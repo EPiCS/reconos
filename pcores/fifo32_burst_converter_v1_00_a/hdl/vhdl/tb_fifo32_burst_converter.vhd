@@ -83,7 +83,7 @@ architecture testbench of tb_fifo32_burst_converter is
     (X"00000004", X"00000FFC"),  -- 1 word read from end       of first page
     (X"00000008", X"00000000"),  -- 2 word read from beginning of first page
     (X"00000008", X"00000FFC"),  -- 2 word read from end       of first page
-    (X"00FFFFFF", X"00000800")
+    (X"00FFFFFC", X"00000800")
     );
 
 --------------------------------------------------------------------------------
