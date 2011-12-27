@@ -79,6 +79,7 @@ architecture testbench of tb_fifo32_burst_converter is
   end record;
   type mem_request_array_t is array (natural range <>) of mem_request_t;
   constant requests : mem_request_array_t := (
+    --(X"00000005", X"00000003"),  -- testing unaligned access; hw works, input process not...
     (X"00000004", X"00000000"),  -- 1 word read from beginning of first page
     (X"00000004", X"00000FFC"),  -- 1 word read from end       of first page
     (X"00000008", X"00000000"),  -- 2 word read from beginning of first page
