@@ -1,0 +1,43 @@
+PetaLinux User Application Template
+===================================
+
+This directory contains a PetaLinux user application created from a template.
+
+If you are developing your application from scratch, simply start editing the
+file sort_demo_posix.c.
+
+You can easily import any existing application code by copying it into this 
+directory, and editing the automatically generated Makefile as described below.
+
+To build your application, simply run the "make" command in this directory.
+
+To copy your application binary into your Embedded Linux root filesystem, run
+"make romfs" from this directory.  It will be copied into the directory
+   - petalinux/software/petalinux-dist/romfs/bin
+
+From there, when you run  "make image" (or simply "make"), in the petalinux-dist directory, it will be copied into the downloadable kernel and linux image.
+
+There are several useful and easy customisations that you can perform on this
+template application.  
+
+To add extra source code files (for example, to split a large application into 
+multiple source files), add the relevant .o files to the list in the local 
+Makefile where indicated.  
+
+To have other files (for example application configuration files or scripts) 
+copied into the root file system, add addition lines under the "romfs: target in
+the Makefile.  For example
+
+$(ROMFSINST) myfile.conf /etc
+
+	Copy the file myfile.conf from this directory into the /etc directory
+	on the Embedded Linux filesystem)
+
+
+$(ROMFSINST) -a -a "some text here" /etc/system.conf
+	
+	Add the line "some text here" to the /etc/system.conf file.
+
+See petalinux-dist/tools/romfsinst.sh for details and more options.
+
+
