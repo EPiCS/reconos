@@ -49,7 +49,10 @@ entity fifo32_burst_converter is
 
     -- Misc
     Rst : in std_logic;
-    clk : in std_logic                  -- separate clock for control logic
+    clk : in std_logic;                  -- separate clock for control logic
+
+    -- Debug
+    ila_signals : out std_logic_vector(202 downto 0)
     );
 end entity;
 
@@ -63,6 +66,10 @@ architecture behavioural of fifo32_burst_converter is
 -- Signals
 --------------------------------------------------------------------------------
 
+ -- internal replication for reading of output signal.
+ signal OUT_FIFO32_S_Data_int : std_logic_vector(31 downto 0);
+ signal OUT_FIFO32_S_Fill_int : std_logic_vector(15 downto 0);
+  
 begin  -- of architecture -------------------------------------------------------
 
   IN_FIFO32_M_Clk  <= OUT_FIFO32_M_Clk;
@@ -72,6 +79,9 @@ begin  -- of architecture ------------------------------------------------------
 
   IN_FIFO32_S_Clk <= OUT_FIFO32_S_Clk;
 
+  OUT_FIFO32_S_Data <= OUT_FIFO32_S_Data_int;
+  OUT_FIFO32_S_Fill <= OUT_FIFO32_S_Fill_int;
+  
   fsm_p : process (clk, rst)
     is
     type FSM_STATE_T is (STATE_MODE_LENGTH, STATE_ADDRESS, STATE_CALC, STATE_WRITE_MODE_LENGTH,
@@ -123,6 +133,8 @@ begin  -- of architecture ------------------------------------------------------
       calc_address   := (others => '0');
       next_address   := (others => '0');
       IN_FIFO32_S_Rd <= '0';
+
+      ila_signals <= (others => '0');
       
     elsif clk'event and clk = '1' then
       -- default is to hold all outputs.
@@ -135,10 +147,28 @@ begin  -- of architecture ------------------------------------------------------
       next_address   := next_address;
       IN_FIFO32_S_Rd <= '0';
 
-      OUT_FIFO32_S_Data <= IN_FIFO32_S_Data;
-      OUT_FIFO32_S_Fill <= IN_FIFO32_S_Fill;
+      OUT_FIFO32_S_Data_int <= IN_FIFO32_S_Data;
+      OUT_FIFO32_S_Fill_int <= IN_FIFO32_S_Fill;
 
-
+      case state is
+        when STATE_MODE_LENGTH       => ila_signals(2 downto 0) <= "000";
+        when STATE_ADDRESS           => ila_signals(2 downto 0) <= "001";
+        when STATE_CALC              => ila_signals(2 downto 0) <= "010";
+        when STATE_WRITE_MODE_LENGTH => ila_signals(2 downto 0) <= "011";
+        when STATE_WRITE_ADDRESS     => ila_signals(2 downto 0) <= "100";
+        when STATE_DATA_READ         => ila_signals(2 downto 0) <= "101";
+        when STATE_DATA_WRITE        => ila_signals(2 downto 0) <= "110";
+        when others                  => ila_signals(2 downto 0) <= "111";
+      end case;
+      ila_signals(24  downto 3)   <= std_logic_vector(calc_size);       -- 22 Bits
+      ila_signals(54  downto 25)  <= std_logic_vector(calc_address);    -- 30 Bits
+      ila_signals(84  downto 55)  <= std_logic_vector(next_address);    -- 30 Bits
+      ila_signals(106 downto 85)  <= std_logic_vector(remaining_size);  -- 22 Bits
+      ila_signals(122 downto 107) <= IN_FIFO32_S_Fill;  -- 16 Bits
+      ila_signals(154 downto 123) <= IN_FIFO32_S_Data;  -- 32 Bits
+      ila_signals(170 downto 155) <= OUT_FIFO32_S_Fill_int;  -- 16 Bits
+      ila_signals(202 downto 171) <= OUT_FIFO32_S_Data_int;  -- 32 Bits
+      
       case state is
         when STATE_MODE_LENGTH =>
           -- Read in first word of header for analysis.
@@ -156,8 +186,8 @@ begin  -- of architecture ------------------------------------------------------
           calc_size         := (others => '0');
           calc_address      := (others => '0');
           next_address      := (others => '0');
-          OUT_FIFO32_S_Data <= (others => '0');
-          OUT_FIFO32_S_Fill <= (others => '0');
+          OUT_FIFO32_S_Data_int <= (others => '0');
+          OUT_FIFO32_S_Fill_int <= (others => '0');
           
         when STATE_ADDRESS =>
           -- Read in second word of header for analysis.
@@ -165,8 +195,8 @@ begin  -- of architecture ------------------------------------------------------
           state             := STATE_CALC;
           next_address      := unsigned(IN_FIFO32_S_DATA(31 downto 2));
           IN_FIFO32_S_Rd    <= '1';
-          OUT_FIFO32_S_Data <= (others => '0');
-          OUT_FIFO32_S_Fill <= (others => '0');
+          OUT_FIFO32_S_Data_int <= (others => '0');
+          OUT_FIFO32_S_Fill_int <= (others => '0');
 
         when STATE_CALC =>
           -- Calculate how long the request may be
@@ -177,26 +207,26 @@ begin  -- of architecture ------------------------------------------------------
                                              remaining_size);
           calc_address := next_address;
           next_address := calc_address + calc_size;
-          OUT_FIFO32_S_Data <= (others => '0');
-          OUT_FIFO32_S_Fill <= (others => '0');
+          OUT_FIFO32_S_Data_int <= (others => '0');
+          OUT_FIFO32_S_Fill_int <= (others => '0');
           
         when STATE_WRITE_MODE_LENGTH =>
           -- Inputs are not read.
           -- First word of header is put on the outputs.
           if OUT_FIFO32_S_rd = '1' then
             state             := STATE_WRITE_ADDRESS;
-            OUT_FIFO32_S_Data <= std_logic_vector(calc_address) & "00";
-            OUT_FIFO32_S_Fill <= std_logic_vector(to_unsigned(to_integer(unsigned(IN_FIFO32_S_Fill)) + 1, 16));
+            OUT_FIFO32_S_Data_int <= std_logic_vector(calc_address) & "00";
+            OUT_FIFO32_S_Fill_int <= std_logic_vector(to_unsigned(to_integer(unsigned(IN_FIFO32_S_Fill)) + 1, 16));
           else
             case transfer_mode is
               when unsigned(MEMIF_CMD_READ)  =>
-                OUT_FIFO32_S_Data <= MEMIF_CMD_READ & std_logic_vector(calc_size)& "00" ;
+                OUT_FIFO32_S_Data_int <= MEMIF_CMD_READ & std_logic_vector(calc_size)& "00" ;
               when unsigned(MEMIF_CMD_WRITE) =>
-                OUT_FIFO32_S_Data <= MEMIF_CMD_WRITE & std_logic_vector(calc_size)& "00";
+                OUT_FIFO32_S_Data_int <= MEMIF_CMD_WRITE & std_logic_vector(calc_size)& "00";
               when others =>
-                OUT_FIFO32_S_Data <= MEMIF_CMD_READ & std_logic_vector(calc_size)& "00";
+                OUT_FIFO32_S_Data_int <= MEMIF_CMD_READ & std_logic_vector(calc_size)& "00";
             end case;
-            OUT_FIFO32_S_Fill <= std_logic_vector(to_unsigned(to_integer(unsigned(IN_FIFO32_S_Fill)) + 2, 16));
+            OUT_FIFO32_S_Fill_int <= std_logic_vector(to_unsigned(to_integer(unsigned(IN_FIFO32_S_Fill)) + 2, 16));
           end if;
           
           
@@ -209,11 +239,11 @@ begin  -- of architecture ------------------------------------------------------
               when unsigned(MEMIF_CMD_WRITE) => state := STATE_DATA_WRITE;
               when others => state := STATE_DATA_READ;
             end case;
-            OUT_FIFO32_S_Data <= IN_FIFO32_S_Data;
-            OUT_FIFO32_S_Fill <= std_logic_vector(to_unsigned(to_integer(unsigned(IN_FIFO32_S_Fill)), 16));
+            OUT_FIFO32_S_Data_int <= IN_FIFO32_S_Data;
+            OUT_FIFO32_S_Fill_int <= std_logic_vector(to_unsigned(to_integer(unsigned(IN_FIFO32_S_Fill)), 16));
           else
-            OUT_FIFO32_S_Data <= std_logic_vector(calc_address) & "00";
-            OUT_FIFO32_S_Fill <= std_logic_vector(to_unsigned(to_integer(unsigned(IN_FIFO32_S_Fill)) + 1, 16));
+            OUT_FIFO32_S_Data_int <= std_logic_vector(calc_address) & "00";
+            OUT_FIFO32_S_Fill_int <= std_logic_vector(to_unsigned(to_integer(unsigned(IN_FIFO32_S_Fill)) + 1, 16));
           end if;
           
         when STATE_DATA_READ =>
@@ -227,8 +257,8 @@ begin  -- of architecture ------------------------------------------------------
           elsif calc_size = 0 then
             state := STATE_CALC;
           end if;
-          OUT_FIFO32_S_Data <= IN_FIFO32_S_Data;
-          OUT_FIFO32_S_Fill <= IN_FIFO32_S_Fill;
+          OUT_FIFO32_S_Data_int <= IN_FIFO32_S_Data;
+          OUT_FIFO32_S_Fill_int <= IN_FIFO32_S_Fill;
           
         when STATE_DATA_WRITE =>
           -- Waits until current data chunk has been written.
@@ -241,8 +271,8 @@ begin  -- of architecture ------------------------------------------------------
           elsif calc_size = 0 then
             state := STATE_CALC;
           end if;
-          OUT_FIFO32_S_Data <= IN_FIFO32_S_Data;
-          OUT_FIFO32_S_Fill <= IN_FIFO32_S_Fill;
+          OUT_FIFO32_S_Data_int <= IN_FIFO32_S_Data;
+          OUT_FIFO32_S_Fill_int <= IN_FIFO32_S_Fill;
           
         when others =>
           state := STATE_MODE_LENGTH;
