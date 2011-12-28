@@ -19,9 +19,8 @@ architecture testbench of tb_fifo32_burst_converter is
 
   component fifo32_burst_converter
     generic (
-      C_PAGE_SIZE  : natural := 4096;  -- In Bytes; Dictated by Linux Memory Management;
-      -- must be power of 2
-      C_BURST_SIZE : natural := 16      -- 16 words á 32 bits
+      C_PAGE_SIZE  : natural := 4096;
+      C_BURST_SIZE : natural := 1023*4 
       );
     port (
       -- FIFO32 Input
@@ -80,10 +79,12 @@ architecture testbench of tb_fifo32_burst_converter is
   end record;
   type mem_request_array_t is array (natural range <>) of mem_request_t;
   constant requests : mem_request_array_t := (
+    --(X"00000005", X"00000003"),  -- testing unaligned access; hw works, input process not...
     (X"00000004", X"00000000"),  -- 1 word read from beginning of first page
     (X"00000004", X"00000FFC"),  -- 1 word read from end       of first page
     (X"00000008", X"00000000"),  -- 2 word read from beginning of first page
-    (X"00000008", X"00000FFC")   -- 2 word read from end       of first page
+    (X"00000008", X"00000FFC"),  -- 2 word read from end       of first page
+    (X"00FFFFFC", X"00000800")
     );
 
 --------------------------------------------------------------------------------
@@ -298,11 +299,12 @@ begin  -- of architecture ------------------------------------------------------
             data(0),
             done
             );
-          if done then
+          if done then request_length := request_length - 4; end if;
+          if request_length = 0 then
             state      := STATE_PREPARE;
             request_nr := request_nr + 1;
           end if;
-
+          
         when STATE_STOP =>
           null;
           
@@ -346,7 +348,7 @@ begin  -- of architecture ------------------------------------------------------
   fifo32_burst_converter_i : fifo32_burst_converter
     generic map(
       C_PAGE_SIZE  => 4096,
-      C_BURST_SIZE => 16
+      C_BURST_SIZE => 1023*4
       )
     port map(
       -- FIFO32 Input

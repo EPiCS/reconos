@@ -70,11 +70,24 @@ package reconos_pkg is
 	---------------------------------------------------
 	-- task2os commands
 	---------------------------------------------------
-
-	constant OSIF_CMD_SEM_POST : std_logic_vector(0 to C_FSL_WIDTH-1) := X"000000AA";
-	constant OSIF_CMD_SEM_WAIT : std_logic_vector(0 to C_FSL_WIDTH-1) := X"000000AB";
+	
+	constant OSIF_CMD_SEM_POST : std_logic_vector(0 to C_FSL_WIDTH-1) := X"000000B0";
+	constant OSIF_CMD_SEM_WAIT : std_logic_vector(0 to C_FSL_WIDTH-1) := X"000000B1";
+	
+	constant OSIF_CMD_MUTEX_LOCK    : std_logic_vector(0 to C_FSL_WIDTH-1) := X"000000C0";
+	constant OSIF_CMD_MUTEX_UNLOCK  : std_logic_vector(0 to C_FSL_WIDTH-1) := X"000000C1";
+	constant OSIF_CMD_MUTEX_TRYLOCK : std_logic_vector(0 to C_FSL_WIDTH-1) := X"000000C2";
+	
+	constant OSIF_CMD_COND_WAIT      : std_logic_vector(0 to C_FSL_WIDTH-1) := X"000000D0";
+	constant OSIF_CMD_COND_SIGNAL    : std_logic_vector(0 to C_FSL_WIDTH-1) := X"000000D1";
+	constant OSIF_CMD_COND_BROADCAST : std_logic_vector(0 to C_FSL_WIDTH-1) := X"000000D2";
+	
 	constant OSIF_CMD_MBOX_PUT : std_logic_vector(0 to C_FSL_WIDTH-1) := X"000000F1";
 	constant OSIF_CMD_MBOX_GET : std_logic_vector(0 to C_FSL_WIDTH-1) := X"000000F0";
+
+	constant OSIF_CMD_THREAD_GET_INIT_DATA : std_logic_vector(0 to C_FSL_WIDTH-1) := X"000000A0";
+	constant OSIF_CMD_THREAD_EXIT          : std_logic_vector(0 to C_FSL_WIDTH-1) := X"000000A2";	
+	
 	constant MEMIF_CMD_READ    : std_logic_vector(7 downto 0) := X"00";
 	constant MEMIF_CMD_WRITE   : std_logic_vector(7 downto 0) := X"80";
 	
@@ -218,7 +231,7 @@ package reconos_pkg is
 		signal i_osif : in  i_osif_t;
 		signal o_osif : out o_osif_t;
 		handle        : in  std_logic_vector(C_FSL_WIDTH-1 downto 0);
-		signal result : out std_logic_vector(C_FSL_WIDTH-1 downto 0); --
+		signal result : out std_logic_vector(C_FSL_WIDTH-1 downto 0);
 		variable done : out boolean
 	);
 	
@@ -227,7 +240,62 @@ package reconos_pkg is
 		signal i_osif : in  i_osif_t;
 		signal o_osif : out o_osif_t;
 		handle        : in  std_logic_vector(C_FSL_WIDTH-1 downto 0);
-		signal result : out std_logic_vector(C_FSL_WIDTH-1 downto 0); --
+		signal result : out std_logic_vector(C_FSL_WIDTH-1 downto 0);
+		variable done : out boolean
+	);
+	
+	-- mutex lock
+	procedure osif_mutex_lock (
+		signal i_osif : in  i_osif_t;
+		signal o_osif : out o_osif_t;
+		handle        : in  std_logic_vector(C_FSL_WIDTH-1 downto 0);
+		signal result : out std_logic_vector(C_FSL_WIDTH-1 downto 0);
+		variable done : out boolean
+	);
+	
+	-- mutex unlock
+	procedure osif_mutex_unlock (
+		signal i_osif : in  i_osif_t;
+		signal o_osif : out o_osif_t;
+		handle        : in  std_logic_vector(C_FSL_WIDTH-1 downto 0);
+		signal result : out std_logic_vector(C_FSL_WIDTH-1 downto 0);
+		variable done : out boolean
+	);	
+	
+	-- mutex trylock
+	procedure osif_mutex_trylock (
+		signal i_osif : in  i_osif_t;
+		signal o_osif : out o_osif_t;
+		handle        : in  std_logic_vector(C_FSL_WIDTH-1 downto 0);
+		signal result : out std_logic_vector(C_FSL_WIDTH-1 downto 0);
+		variable done : out boolean
+	);
+	
+	-- condition variable wait
+	procedure osif_cond_wait (
+		signal i_osif : in  i_osif_t;
+		signal o_osif : out o_osif_t;
+		cond_handle   : in  std_logic_vector(C_FSL_WIDTH-1 downto 0);
+		mutex_handle  : in  std_logic_vector(C_FSL_WIDTH-1 downto 0);
+		signal result : out std_logic_vector(C_FSL_WIDTH-1 downto 0);
+		variable done : out boolean
+	);
+	
+	-- condition variable signal
+	procedure osif_cond_signal (
+		signal i_osif : in  i_osif_t;
+		signal o_osif : out o_osif_t;
+		handle        : in  std_logic_vector(C_FSL_WIDTH-1 downto 0);
+		signal result : out std_logic_vector(C_FSL_WIDTH-1 downto 0);
+		variable done : out boolean
+	);	
+	
+	-- condition variable broadcast
+	procedure osif_cond_broadcast (
+		signal i_osif : in  i_osif_t;
+		signal o_osif : out o_osif_t;
+		handle        : in  std_logic_vector(C_FSL_WIDTH-1 downto 0);
+		signal result : out std_logic_vector(C_FSL_WIDTH-1 downto 0);
 		variable done : out boolean
 	);
 	
@@ -237,7 +305,7 @@ package reconos_pkg is
 		signal o_osif : out o_osif_t;
 		handle        : in  std_logic_vector(C_FSL_WIDTH-1 downto 0);
 		word          : in  std_logic_vector(C_FSL_WIDTH-1 downto 0);
-		signal result : out std_logic_vector(C_FSL_WIDTH-1 downto 0); --
+		signal result : out std_logic_vector(C_FSL_WIDTH-1 downto 0);
 		variable done : out boolean
 	);
 	
@@ -246,8 +314,22 @@ package reconos_pkg is
 		signal i_osif : in  i_osif_t;
 		signal o_osif : out o_osif_t;
 		handle        : in  std_logic_vector(C_FSL_WIDTH-1 downto 0);
-		signal result : out std_logic_vector(C_FSL_WIDTH-1 downto 0); --
+		signal result : out std_logic_vector(C_FSL_WIDTH-1 downto 0);
 		variable done : out boolean
+	);
+	
+	-- get_init_data
+	procedure osif_get_init_data (
+		signal i_osif : in  i_osif_t;
+		signal o_osif : out o_osif_t;
+		signal result : out std_logic_vector(C_FSL_WIDTH-1 downto 0);
+		variable done : out boolean
+	);
+	
+	-- thread_exit
+	procedure osif_thread_exit (
+		signal i_osif : in  i_osif_t;
+		signal o_osif : out o_osif_t
 	);
 	
 	-- see fsl_reset()
@@ -488,6 +570,29 @@ package body reconos_pkg is
 	end procedure;
 	
 	
+	procedure osif_call_0 (
+		signal i_osif : in  i_osif_t;
+		signal o_osif : out o_osif_t;
+		call_id       : in  std_logic_vector(C_FSL_WIDTH-1 downto 0);
+		signal result : out std_logic_vector(C_FSL_WIDTH-1 downto 0);
+		variable done : out boolean
+	) is begin
+		done := False;
+		fsl_default(o_osif);
+		case i_osif.step is
+			when 0 =>
+				fsl_push(i_osif,o_osif,call_id,0,1);
+			when 1 =>
+				fsl_push_finish(i_osif,o_osif,2);
+			when 2=>
+				fsl_pull(i_osif,o_osif,result,3,False);
+			when others =>
+				done := True;
+				o_osif.step <= 0;
+		end case;
+	end procedure;
+	
+	
 	procedure osif_call_1 (
 		signal i_osif : in  i_osif_t;
 		signal o_osif : out o_osif_t;
@@ -511,7 +616,7 @@ package body reconos_pkg is
 				done := True;
 				o_osif.step <= 0;
 		end case;
-        end procedure;
+	end procedure;
 
 	procedure osif_call_2 (
 		signal i_osif : in  i_osif_t;
@@ -539,7 +644,7 @@ package body reconos_pkg is
 				done := True;
 				o_osif.step <= 0;
 		end case;
-        end procedure;
+	end procedure;
 
 	procedure osif_sem_post (
 		signal i_osif : in  i_osif_t;
@@ -549,7 +654,7 @@ package body reconos_pkg is
 		variable done : out boolean
 	) is begin
 		osif_call_1(i_osif, o_osif,OSIF_CMD_SEM_POST,handle,result,done);
-        end procedure;
+	end procedure;
 
 	procedure osif_sem_wait (
 		signal i_osif : in  i_osif_t;
@@ -559,7 +664,75 @@ package body reconos_pkg is
 		variable done : out boolean
 	) is begin
 		osif_call_1(i_osif, o_osif,OSIF_CMD_SEM_WAIT,handle,result,done);
-        end procedure;
+	end procedure;
+		  
+	-- mutex lock
+	procedure osif_mutex_lock (
+		signal i_osif : in  i_osif_t;
+		signal o_osif : out o_osif_t;
+		handle        : in  std_logic_vector(C_FSL_WIDTH-1 downto 0);
+		signal result : out std_logic_vector(C_FSL_WIDTH-1 downto 0);
+		variable done : out boolean
+	) is begin
+		osif_call_1(i_osif, o_osif,OSIF_CMD_MUTEX_LOCK,handle,result,done);
+	end procedure;
+	
+	-- mutex unlock
+	procedure osif_mutex_unlock (
+		signal i_osif : in  i_osif_t;
+		signal o_osif : out o_osif_t;
+		handle        : in  std_logic_vector(C_FSL_WIDTH-1 downto 0);
+		signal result : out std_logic_vector(C_FSL_WIDTH-1 downto 0);
+		variable done : out boolean
+	) is begin
+		osif_call_1(i_osif, o_osif,OSIF_CMD_MUTEX_UNLOCK,handle,result,done);
+	end procedure;
+	
+	-- mutex trylock
+	procedure osif_mutex_trylock (
+		signal i_osif : in  i_osif_t;
+		signal o_osif : out o_osif_t;
+		handle        : in  std_logic_vector(C_FSL_WIDTH-1 downto 0);
+		signal result : out std_logic_vector(C_FSL_WIDTH-1 downto 0);
+		variable done : out boolean
+	) is begin
+		osif_call_1(i_osif, o_osif,OSIF_CMD_MUTEX_TRYLOCK,handle,result,done);
+	end procedure;
+	
+	-- condition variable wait
+	procedure osif_cond_wait (
+		signal i_osif : in  i_osif_t;
+		signal o_osif : out o_osif_t;
+		cond_handle   : in  std_logic_vector(C_FSL_WIDTH-1 downto 0);
+		mutex_handle  : in  std_logic_vector(C_FSL_WIDTH-1 downto 0);
+		signal result : out std_logic_vector(C_FSL_WIDTH-1 downto 0);
+		variable done : out boolean
+	) is begin
+		osif_call_2(i_osif, o_osif,OSIF_CMD_COND_WAIT,cond_handle, mutex_handle,result,done);
+	end procedure;
+	
+	-- condition variable signal
+	procedure osif_cond_signal (
+		signal i_osif : in  i_osif_t;
+		signal o_osif : out o_osif_t;
+		handle        : in  std_logic_vector(C_FSL_WIDTH-1 downto 0);
+		signal result : out std_logic_vector(C_FSL_WIDTH-1 downto 0);
+		variable done : out boolean
+	) is begin
+		osif_call_1(i_osif, o_osif,OSIF_CMD_COND_SIGNAL,handle,result,done);
+	end procedure;
+	
+	-- condition variable broadcast
+	procedure osif_cond_broadcast (
+		signal i_osif : in  i_osif_t;
+		signal o_osif : out o_osif_t;
+		handle        : in  std_logic_vector(C_FSL_WIDTH-1 downto 0);
+		signal result : out std_logic_vector(C_FSL_WIDTH-1 downto 0);
+		variable done : out boolean
+	) is begin
+		osif_call_1(i_osif, o_osif,OSIF_CMD_COND_BROADCAST,handle,result,done);
+	end procedure;
+		  
 	
 	procedure osif_mbox_put (
 		signal i_osif : in  i_osif_t;
@@ -570,8 +743,7 @@ package body reconos_pkg is
 		variable done : out boolean
 	) is begin
 		osif_call_2(i_osif, o_osif,OSIF_CMD_MBOX_PUT,handle,word,result,done);
-
-        end procedure;
+	end procedure;
 	
 	procedure osif_mbox_get (
 		signal i_osif : in  i_osif_t;
@@ -581,7 +753,33 @@ package body reconos_pkg is
 		variable done : out boolean
 	) is begin
 		osif_call_1(i_osif, o_osif,OSIF_CMD_MBOX_GET,handle,result,done);
-	end;
+	end procedure;
+	
+	-- get_init_data
+	procedure osif_get_init_data (
+		signal i_osif : in  i_osif_t;
+		signal o_osif : out o_osif_t;
+		signal result : out std_logic_vector(C_FSL_WIDTH-1 downto 0);
+		variable done : out boolean
+	) is begin
+		osif_call_0(i_osif, o_osif,OSIF_CMD_THREAD_GET_INIT_DATA,result,done);
+	end procedure;
+		
+	-- thread_exit
+	procedure osif_thread_exit (
+		signal i_osif : in  i_osif_t;
+		signal o_osif : out o_osif_t
+	)is begin
+		fsl_default(o_osif);
+		case i_osif.step is
+			when 0 =>
+				fsl_push(i_osif,o_osif,OSIF_CMD_THREAD_EXIT,0,1);
+			when 1 =>
+				fsl_push_finish(i_osif,o_osif,2);
+			when others =>
+				o_osif.step <= 2;
+		end case;
+	end procedure;
 	
 	procedure memif_setup (
 		signal i_memif : out i_memif_t;
@@ -609,7 +807,7 @@ package body reconos_pkg is
 		m_wr <= o_memif.m_wr;
 		
 		i_memif.step <= o_memif.step;
-	end;
+	end procedure;
 	
 	procedure memif_reset( signal o_memif : out o_memif_t) is
 	begin
@@ -617,7 +815,7 @@ package body reconos_pkg is
 		o_memif.s_rd <= '0';
 		o_memif.m_wr <= '0';
                 o_memif.m_data <= (others => '0');
-	end;
+	end procedure;
 	
 	procedure memif_write (
 		signal i_memif : in  i_memif_t;
@@ -650,7 +848,7 @@ package body reconos_pkg is
 				o_memif.step <= 0;
 				done := True;
 		end case;
-	end;
+	end procedure;
 	
 	procedure memif_read (
 		signal i_memif : in  i_memif_t;
@@ -687,7 +885,7 @@ package body reconos_pkg is
 				o_memif.step <= 0;
 				done := True;
 		end case;
-	end;
+	end procedure;
 	
 	procedure memif_read_debug (
 		signal i_memif : in  i_memif_t;
@@ -734,7 +932,7 @@ package body reconos_pkg is
 				o_memif.step <= 0;
 				done := True;
 		end case;
-	end;
+	end procedure;
 	
 	procedure memif_read_request (
 		signal i_memif : in  i_memif_t;
@@ -763,7 +961,7 @@ package body reconos_pkg is
 				o_memif.step <= 0;
 				done := True;
 		end case;
-	end;
+	end procedure;
 
 	procedure memif_write_request (
 		signal i_memif : in  i_memif_t;
@@ -792,7 +990,7 @@ package body reconos_pkg is
 				o_memif.step <= 0;
 				done := True;
 		end case;
-	end;
+	end procedure;
 
 
 	procedure memif_fifo_pull (
@@ -817,7 +1015,7 @@ package body reconos_pkg is
 				o_memif.step <= 0;
 				done := True;
 		end case;
-	end;
+	end procedure;
 
 
 	procedure memif_fifo_push (
@@ -842,6 +1040,6 @@ package body reconos_pkg is
 				o_memif.step <= 0;
 				done := True;
 		end case;
-	end;
+	end procedure;
 	
 end reconos_pkg;
