@@ -626,7 +626,7 @@ begin  -- of architecture ------------------------------------------------------
     A2M_FIFO32_M_Wr
     );
 
-  mem_ctrl : process(clk, a2m_memif_in)
+  mem_ctrl : process(clk, rst, a2m_memif_in)
     is
     type FSM_STATE_T is (IDLE, MODE_LENGTH, ADDRESS, DATA_READ, DATA_WRITE);
     variable state : FSM_STATE_T;
