@@ -56,13 +56,13 @@ architecture implementation of mmu is
 	PORT (
 		CONTROL : INOUT STD_LOGIC_VECTOR(35 DOWNTO 0);
 		CLK : IN STD_LOGIC;
-		DATA : IN STD_LOGIC_VECTOR(1023 DOWNTO 0);
+		DATA : IN STD_LOGIC_VECTOR(524 DOWNTO 0);
 		TRIG0 : IN STD_LOGIC_VECTOR(15 DOWNTO 0)
 	);
 	end component;
 	
 	signal CONTROL : STD_LOGIC_VECTOR(35 DOWNTO 0);
-	signal DATA    : STD_LOGIC_VECTOR(1023 DOWNTO 0);
+	signal DATA    : STD_LOGIC_VECTOR(524 DOWNTO 0);
 	signal TRIG    : STD_LOGIC_VECTOR(15 DOWNTO 0);
 	
 	signal HWT_FIFO32_M_Data_dup : std_logic_vector(31 downto 0);
@@ -166,7 +166,7 @@ begin
 	DATA(492) <= retry;
 
 	DATA(524 downto 493) <= fault_addr_dup;
-	DATA(1023 downto 525) <= (others => '0');
+	--DATA(1023 downto 525) <= (others => '0');
 	
 	TRIG(14 downto 0) <= HWT_FIFO32_S_Fill(14 downto 0);
 	TRIG(15) <= retry;
@@ -224,7 +224,7 @@ begin
 			HWT_M_Wr <= '0';
 			MEM_S_Data <= (others => '0');
 			MEM_S_Fill <= (others => '0');
-			MEM_M_Rem <= (others => '1');
+			MEM_M_Rem <= x"0001";
 			state <= STATE_WAIT_HEADER;
 			counter <= (others => '0');
 			copy <= '0';

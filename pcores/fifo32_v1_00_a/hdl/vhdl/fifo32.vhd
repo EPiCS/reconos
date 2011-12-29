@@ -3,6 +3,9 @@ use ieee.std_logic_1164.all;
 use ieee.std_logic_arith.all;
 use ieee.std_logic_unsigned.all;
 
+library proc_common_v3_00_a;
+use proc_common_v3_00_a.proc_common_pkg.all;
+
 entity fifo32 is
 	generic (
 		C_FIFO32_DEPTH  : integer := 16
@@ -23,13 +26,16 @@ end entity;
 architecture implementation of fifo32 is
 	type MEM_T is array (0 to C_FIFO32_DEPTH-1) of std_logic_vector(31 downto 0);
 	signal mem : MEM_T;
-	signal wrptr : std_logic_vector(15 downto 0);
-	signal rdptr : std_logic_vector(15  downto 0);
-	signal remainder : std_logic_vector(15  downto 0);
-	signal fill      : std_logic_vector(15  downto 0);
+	signal wrptr : std_logic_vector(clog2(C_FIFO32_DEPTH)-1 downto 0);
+	signal rdptr : std_logic_vector(clog2(C_FIFO32_DEPTH)-1 downto 0);
+	signal remainder : std_logic_vector(clog2(C_FIFO32_DEPTH)-1  downto 0);
+	signal fill      : std_logic_vector(clog2(C_FIFO32_DEPTH)-1  downto 0);
+	signal pad       :std_logic_vector(15 - clog2(C_FIFO32_DEPTH) downto 0);
 begin
-	FIFO32_S_Fill <= fill;
-	FIFO32_M_Rem  <= remainder;
+	pad <= (others => '0');
+
+	FIFO32_S_Fill <= pad & fill;
+	FIFO32_M_Rem  <= pad & remainder;
 	FIFO32_S_Data <= mem(CONV_INTEGER(rdptr));
 	
 	fill <= wrptr - rdptr when wrptr >= rdptr else (C_FIFO32_DEPTH + wrptr) - rdptr;

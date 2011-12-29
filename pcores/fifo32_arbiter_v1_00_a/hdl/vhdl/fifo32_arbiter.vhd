@@ -504,16 +504,7 @@ begin  -- of architecture ------------------------------------------------------
       output   => IN_FIFO32_S_Rd
       );   
 
-  demux_S_Clk : demux
-    generic map (
-      element_width => 1,
-      element_count => FIFO32_PORTS
-      )
-    port map (
-      input(0) => OUT_FIFO32_S_Clk,
-      sel      => sel2mux,
-      output   => IN_FIFO32_S_Clk
-      );   
+  IN_FIFO32_S_Clk <= (others => OUT_FIFO32_S_Clk);
 
   -- Master part of fifo link
 
@@ -550,17 +541,7 @@ begin  -- of architecture ------------------------------------------------------
       output   => IN_FIFO32_M_Wr
       );   
 
-  demux_M_Clk : demux
-    generic map (
-      element_width => 1,
-      element_count => FIFO32_PORTS
-      )
-    port map (
-      input(0) => OUT_FIFO32_M_Clk,
-      sel      => sel2mux,
-      output   => IN_FIFO32_M_Clk
-      );   
-
+  IN_FIFO32_M_Clk <= (others => OUT_FIFO32_M_Clk);
 
   -- Arbiter controls sel signal
   rr_arbiter_i : rr_arbiter

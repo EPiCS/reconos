@@ -11,13 +11,15 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-#define NUM_HWT 1
+#define NUM_HWT 8
 
 struct reconos_resource res[NUM_HWT][2];
 
 struct reconos_hwt hwt[NUM_HWT];
 
 struct mbox hw2sw[NUM_HWT],sw2hw[NUM_HWT];
+
+int use_hwt[NUM_HWT] = {0};
 
 #define PAGE_SIZE 4096
 #define PAGE_WORDS 1024
@@ -55,19 +57,29 @@ void run_tests(uint32 n)
 	// initialize hwts
 
 	for(i = 0; i < NUM_HWT; i++){
+		if(!use_hwt[i]) continue;
 		mbox_put(sw2hw + i,addr_a + size*2*i);
 		mbox_put(sw2hw + i,addr_b + size*2*i);
 		mbox_put(sw2hw + i,size);
 		mbox_put(sw2hw + i,blen);
+	}
+	
+	for(i = 0; i < NUM_HWT; i++){
+		if(!use_hwt[i]) continue;
 		mbox_put(sw2hw + i,repeat);
 	}
 
 	for(i = 0; i < NUM_HWT; i++){
+		if(!use_hwt[i]) continue;
 		ack = mbox_get(hw2sw + i);
 	}
 
+	printf("\nRESULTS:\n\n");
+
 	// print results
 	for(i = 0; i < NUM_HWT; i++){
+		if(!use_hwt[i]) continue;
+		printf("HWT %d:\n",i);
 		for(j = 0; j < size/4; j++){
 			uint32 a, b;
 			a = j + i*size/2;
@@ -83,13 +95,27 @@ int main(int argc, char ** argv)
 	int i;
 	uint32 n;
 
-	assert(argc == 2);
+	assert(argc >= 2);
 	
 	n = atoi(argv[1]);
 
-	reconos_init(15);
+	if(argc > 2){
+		for(i = 2; i < argc; i++){
+			int k;
+			k = atoi(argv[i]);
+			assert(k >= 0);
+			assert(k < NUM_HWT);
+			use_hwt[k] = 1;
+		}
+	} else {
+		for(i = 0; i < NUM_HWT; i++) use_hwt[i] = 1;
+	}
+
+	reconos_init(NUM_HWT);
 	
 	for(i = 0; i < NUM_HWT; i++){
+		if(!use_hwt[i]) continue;
+
 		res[i][0].type = RECONOS_TYPE_MBOX;
 		res[i][0].ptr  = sw2hw + i;
 	
@@ -108,6 +134,7 @@ int main(int argc, char ** argv)
 	run_tests(n);
 
 	for(i = 0; i < NUM_HWT; i++){
+		if(!use_hwt[i]) continue;
 		pthread_join(hwt[i].delegate,NULL);
 	}
 
