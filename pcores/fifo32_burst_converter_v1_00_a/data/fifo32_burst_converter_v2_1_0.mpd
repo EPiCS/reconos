@@ -27,7 +27,7 @@ PORT clk = "", DIR = I, SIGIS = CLK
 PORT Rst = "", DIR = I, SIGIS = RST
 
 #debug
-PORT ila_signals = "", DIR = O, VEC=[0:202]
+PORT ila_signals = "", DIR = O, VEC=[0:205]
 
 # FIFO32 Port to memory controller
 PORT OUT_FIFO32_S_Clk  = FIFO32_S_Clk,  DIR=I, SIGIS=Clk,  BUS=SFIFO32_MEMCTRL

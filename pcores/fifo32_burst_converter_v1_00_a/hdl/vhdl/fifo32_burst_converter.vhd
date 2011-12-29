@@ -52,7 +52,7 @@ entity fifo32_burst_converter is
     clk : in std_logic;                  -- separate clock for control logic
 
     -- Debug
-    ila_signals : out std_logic_vector(202 downto 0)
+    ila_signals : out std_logic_vector(205 downto 0)
     );
 end entity;
 
@@ -66,25 +66,36 @@ architecture behavioural of fifo32_burst_converter is
 -- Signals
 --------------------------------------------------------------------------------
 
- -- internal replication for reading of output signal.
+ -- Mux select
+  signal mux_sel : std_logic;           -- '0' is input, '1' is fsm
+  
+ -- Internal output signals from FSM
  signal OUT_FIFO32_S_Data_int : std_logic_vector(31 downto 0);
  signal OUT_FIFO32_S_Fill_int : std_logic_vector(15 downto 0);
-  
+ signal IN_FIFO32_S_Rd_int    : std_logic;
+ 
 begin  -- of architecture -------------------------------------------------------
 
+  -- Master ports are just directly connected.
   IN_FIFO32_M_Clk  <= OUT_FIFO32_M_Clk;
   IN_FIFO32_M_Data <= OUT_FIFO32_M_Data;
   OUT_FIFO32_M_Rem <= IN_FIFO32_M_Rem;
   IN_FIFO32_M_Wr   <= OUT_FIFO32_M_Wr;
 
+  -- Slave ports are mutliplexed between FSM and slave inputs.
   IN_FIFO32_S_Clk <= OUT_FIFO32_S_Clk;
 
-  OUT_FIFO32_S_Data <= OUT_FIFO32_S_Data_int;
-  OUT_FIFO32_S_Fill <= OUT_FIFO32_S_Fill_int;
+  OUT_FIFO32_S_Data <= OUT_FIFO32_S_Data_int when mux_sel = '1'
+                       else IN_FIFO32_S_Data;
+  OUT_FIFO32_S_Fill <= OUT_FIFO32_S_Fill_int when mux_sel = '1'
+                       else IN_FIFO32_S_FILL;
+  -- The "after 1 ns" statement is needed for correct timing in simulation.
+  IN_FIFO32_S_Rd    <= IN_FIFO32_S_Rd_int after 1 ns when mux_sel = '1'
+                       else OUT_FIFO32_S_Rd after 1 ns;
   
-  fsm_p : process (clk, rst)
+  fsm_p : process (clk, rst, IN_FIFO32_S_DATA, IN_FIFO32_S_Fill, OUT_FIFO32_S_Clk)
     is
-    type FSM_STATE_T is (STATE_MODE_LENGTH, STATE_ADDRESS, STATE_CALC, STATE_WRITE_MODE_LENGTH,
+    type FSM_STATE_T is (STATE_IDLE, STATE_MODE_LENGTH, STATE_ADDRESS, STATE_CALC, STATE_WRITE_MODE_LENGTH,
                          STATE_WRITE_ADDRESS, STATE_DATA_READ, STATE_DATA_WRITE);
     variable state : FSM_STATE_T;
 
@@ -125,39 +136,45 @@ begin  -- of architecture ------------------------------------------------------
     
   begin
     if rst = '1' then
-      state            := STATE_MODE_LENGTH;
+      state            := STATE_IDLE;
       transfer_mode    := (others => '0');
       remaining_size    := (others => '0');
 
       calc_size      := (others => '0');
       calc_address   := (others => '0');
       next_address   := (others => '0');
-      IN_FIFO32_S_Rd <= '0';
+      IN_FIFO32_S_Rd_int <= '0';
 
+      mux_sel <= '1';
+      
       ila_signals <= (others => '0');
       
-    elsif clk'event and clk = '1' then
+    elsif rising_edge(clk) then
       -- default is to hold all outputs.
       state            := state;
       transfer_mode    := transfer_mode;
-      remaining_size    := remaining_size;
+      remaining_size   := remaining_size;
 
       calc_size      := calc_size;
       calc_address   := calc_address;
       next_address   := next_address;
-      IN_FIFO32_S_Rd <= '0';
+
+      mux_sel        <= mux_sel;
+      
+      IN_FIFO32_S_Rd_int <= '0';
 
       OUT_FIFO32_S_Data_int <= IN_FIFO32_S_Data;
       OUT_FIFO32_S_Fill_int <= IN_FIFO32_S_Fill;
 
       case state is
-        when STATE_MODE_LENGTH       => ila_signals(2 downto 0) <= "000";
-        when STATE_ADDRESS           => ila_signals(2 downto 0) <= "001";
-        when STATE_CALC              => ila_signals(2 downto 0) <= "010";
-        when STATE_WRITE_MODE_LENGTH => ila_signals(2 downto 0) <= "011";
-        when STATE_WRITE_ADDRESS     => ila_signals(2 downto 0) <= "100";
-        when STATE_DATA_READ         => ila_signals(2 downto 0) <= "101";
-        when STATE_DATA_WRITE        => ila_signals(2 downto 0) <= "110";
+        when STATE_IDLE              => ila_signals(2 downto 0) <= "001";
+        when STATE_MODE_LENGTH       => ila_signals(2 downto 0) <= "010";
+        when STATE_ADDRESS           => ila_signals(2 downto 0) <= "011";
+        when STATE_CALC              => ila_signals(2 downto 0) <= "100";
+        when STATE_WRITE_MODE_LENGTH => ila_signals(2 downto 0) <= "100";
+        when STATE_WRITE_ADDRESS     => ila_signals(2 downto 0) <= "101";
+        when STATE_DATA_READ         => ila_signals(2 downto 0) <= "110";
+        when STATE_DATA_WRITE        => ila_signals(2 downto 0) <= "111";
         when others                  => ila_signals(2 downto 0) <= "111";
       end case;
       ila_signals(24  downto 3)   <= std_logic_vector(calc_size);       -- 22 Bits
@@ -168,15 +185,28 @@ begin  -- of architecture ------------------------------------------------------
       ila_signals(154 downto 123) <= IN_FIFO32_S_Data;  -- 32 Bits
       ila_signals(170 downto 155) <= OUT_FIFO32_S_Fill_int;  -- 16 Bits
       ila_signals(202 downto 171) <= OUT_FIFO32_S_Data_int;  -- 32 Bits
+      ila_signals(203)            <= IN_FIFO32_S_Rd_int;
+      ila_signals(204)            <= OUT_FIFO32_S_Rd;
+      ila_signals(205)            <= mux_sel;
       
       case state is
+        when STATE_IDLE =>
+          -- Wait for header to appear in FIFO
+          -- Outputs are in "no data" state
+          if to_integer(unsigned(IN_FIFO32_S_Fill)) > 1 then
+            state          := STATE_MODE_LENGTH;
+            IN_FIFO32_S_Rd_int <= '1';
+          end if;
+          
+          OUT_FIFO32_S_Data_int <= (others => '0');
+          OUT_FIFO32_S_Fill_int <= (others => '0');
+          
         when STATE_MODE_LENGTH =>
           -- Read in first word of header for analysis.
           -- Outputs are in "no data" state
-          if to_integer(unsigned(IN_FIFO32_S_Fill)) > 1 then
-            state          := STATE_ADDRESS;
-            IN_FIFO32_S_Rd <= '1';
-          end if;
+
+          state          := STATE_ADDRESS;
+          IN_FIFO32_S_Rd_int <= '1';
           transfer_mode := unsigned(IN_FIFO32_S_DATA(31 downto 24));
           -- lower 24 bits of first word are defined to be the length
           -- of the transfer.
@@ -194,7 +224,7 @@ begin  -- of architecture ------------------------------------------------------
           -- Outputs are in "no data" state          
           state             := STATE_CALC;
           next_address      := unsigned(IN_FIFO32_S_DATA(31 downto 2));
-          IN_FIFO32_S_Rd    <= '1';
+          IN_FIFO32_S_Rd_int    <= '0';
           OUT_FIFO32_S_Data_int <= (others => '0');
           OUT_FIFO32_S_Fill_int <= (others => '0');
 
@@ -207,8 +237,16 @@ begin  -- of architecture ------------------------------------------------------
                                              remaining_size);
           calc_address := next_address;
           next_address := calc_address + calc_size;
-          OUT_FIFO32_S_Data_int <= (others => '0');
-          OUT_FIFO32_S_Fill_int <= (others => '0');
+
+          case transfer_mode is
+            when unsigned(MEMIF_CMD_READ)  =>
+              OUT_FIFO32_S_Data_int <= MEMIF_CMD_READ & std_logic_vector(calc_size)& "00" ;
+            when unsigned(MEMIF_CMD_WRITE) =>
+              OUT_FIFO32_S_Data_int <= MEMIF_CMD_WRITE & std_logic_vector(calc_size)& "00";
+            when others =>
+              OUT_FIFO32_S_Data_int <= MEMIF_CMD_READ & std_logic_vector(calc_size)& "00";
+          end case;
+          OUT_FIFO32_S_Fill_int <= std_logic_vector(to_unsigned(to_integer(unsigned(IN_FIFO32_S_Fill)) + 2, 16));
           
         when STATE_WRITE_MODE_LENGTH =>
           -- Inputs are not read.
@@ -237,6 +275,7 @@ begin  -- of architecture ------------------------------------------------------
             case transfer_mode is
               when unsigned(MEMIF_CMD_READ)  => state := STATE_DATA_READ;
               when unsigned(MEMIF_CMD_WRITE) => state := STATE_DATA_WRITE;
+                                                mux_sel <= '0';
               when others => state := STATE_DATA_READ;
             end case;
             OUT_FIFO32_S_Data_int <= IN_FIFO32_S_Data;
@@ -253,12 +292,15 @@ begin  -- of architecture ------------------------------------------------------
             calc_size     := calc_size - 1;
           end if;
           if remaining_size = 0 then
-            state := STATE_MODE_LENGTH;
+            state := STATE_IDLE;
           elsif calc_size = 0 then
             state := STATE_CALC;
           end if;
-          OUT_FIFO32_S_Data_int <= IN_FIFO32_S_Data;
-          OUT_FIFO32_S_Fill_int <= IN_FIFO32_S_Fill;
+          -- While in read mode, we signal to the next module in chain, that no
+          -- new words are available for reading, because we can't handle
+          -- parallel slave and master at the moment.
+          OUT_FIFO32_S_Data_int <= (others => '0');
+          OUT_FIFO32_S_Fill_int <= (others => '0');
           
         when STATE_DATA_WRITE =>
           -- Waits until current data chunk has been written.
@@ -267,15 +309,17 @@ begin  -- of architecture ------------------------------------------------------
             calc_size     := calc_size - 1;
           end if;
           if remaining_size = 0 then
-            state := STATE_MODE_LENGTH;
+            state := STATE_IDLE;
+            mux_sel <= '1';
           elsif calc_size = 0 then
             state := STATE_CALC;
+            mux_sel <= '1';
           end if;
-          OUT_FIFO32_S_Data_int <= IN_FIFO32_S_Data;
-          OUT_FIFO32_S_Fill_int <= IN_FIFO32_S_Fill;
+          OUT_FIFO32_S_Data_int <= (others => '0');
+          OUT_FIFO32_S_Fill_int <= (others => '0');
           
         when others =>
-          state := STATE_MODE_LENGTH;
+          state := STATE_IDLE;
       end case;
     end if;
   end process;
