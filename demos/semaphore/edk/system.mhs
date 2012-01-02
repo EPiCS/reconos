@@ -475,8 +475,8 @@ BEGIN fifo32
  PORT Rst = proc_control_0_reconos_reset
 END
 
-BEGIN hwt_memaccess
- PARAMETER INSTANCE = hwt_memaccess_0
+BEGIN hwt_semaphore_test
+ PARAMETER INSTANCE = hwt_semaphore_test_0
  PARAMETER HW_VER = 1.00.a
  BUS_INTERFACE OS_SFSL = fsl_v20_1
  BUS_INTERFACE OS_MFSL = fsl_v20_0
