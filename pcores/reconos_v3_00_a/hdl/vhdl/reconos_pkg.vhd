@@ -81,6 +81,9 @@ package reconos_pkg is
 	constant OSIF_CMD_COND_WAIT      : std_logic_vector(0 to C_FSL_WIDTH-1) := X"000000D0";
 	constant OSIF_CMD_COND_SIGNAL    : std_logic_vector(0 to C_FSL_WIDTH-1) := X"000000D1";
 	constant OSIF_CMD_COND_BROADCAST : std_logic_vector(0 to C_FSL_WIDTH-1) := X"000000D2";
+
+	constant OSIF_CMD_RQ_RECEIVE : std_logic_vector(0 to C_FSL_WIDTH-1) := X"000000E0";
+	constant OSIF_CMD_RQ_SEND    : std_logic_vector(0 to C_FSL_WIDTH-1) := X"000000E1";
 	
 	constant OSIF_CMD_MBOX_PUT : std_logic_vector(0 to C_FSL_WIDTH-1) := X"000000F1";
 	constant OSIF_CMD_MBOX_GET : std_logic_vector(0 to C_FSL_WIDTH-1) := X"000000F0";
@@ -327,6 +330,32 @@ package reconos_pkg is
 		signal i_osif : in  i_osif_t;
 		signal o_osif : out o_osif_t;
 		handle        : in  std_logic_vector(C_FSL_WIDTH-1 downto 0);
+		signal result : out std_logic_vector(C_FSL_WIDTH-1 downto 0);
+		variable done : out boolean
+	);
+
+	-- receive message from ReconOS message queue and store it into local memory
+	procedure osif_rq_receive (
+		signal i_osif : in  i_osif_t;
+		signal o_osif : out o_osif_t;
+		signal i_ram  : in  i_ram_t;
+		signal o_ram  : out o_ram_t;
+		handle        : in  std_logic_vector(C_FSL_WIDTH-1 downto 0);		
+		size          : in  std_logic_vector(31 downto 0);
+		addr          : in  std_logic_vector(31 downto 0);
+		signal result : out std_logic_vector(C_FSL_WIDTH-1 downto 0);
+		variable done : out boolean
+	);
+	
+	-- send data from local memory to ReconOS message queue
+	procedure osif_rq_send (
+		signal i_osif : in  i_osif_t;
+		signal o_osif : out o_osif_t;
+		signal i_ram  : in  i_ram_t;
+		signal o_ram  : out o_ram_t;
+		handle        : in  std_logic_vector(C_FSL_WIDTH-1 downto 0);		
+		size          : in  std_logic_vector(31 downto 0);
+		addr          : in  std_logic_vector(31 downto 0);
 		signal result : out std_logic_vector(C_FSL_WIDTH-1 downto 0);
 		variable done : out boolean
 	);
@@ -803,6 +832,118 @@ package body reconos_pkg is
 		variable done : out boolean
 	) is begin
 		osif_call_1(i_osif, o_osif,OSIF_CMD_MBOX_GET,handle,result,done);
+	end procedure;
+
+
+	-- receive message from ReconOS message queue and store it into local memory
+	procedure osif_rq_receive (
+		signal i_osif : in  i_osif_t;
+		signal o_osif : out o_osif_t;
+		signal i_ram  : in  i_ram_t;
+		signal o_ram  : out o_ram_t;
+		handle        : in  std_logic_vector(C_FSL_WIDTH-1 downto 0);		
+		size          : in  std_logic_vector(31 downto 0);
+		addr          : in  std_logic_vector(31 downto 0);
+		signal result : out std_logic_vector(C_FSL_WIDTH-1 downto 0);
+		variable done : out boolean
+	) is begin
+		done  := False;
+		o_ram.we <= '0';
+		fsl_default(o_osif);
+		case i_osif.step is
+			when 0 =>
+				fsl_push(i_osif, o_osif,OSIF_CMD_RQ_RECEIVE,0,1);
+			when 1 =>
+				fsl_push(i_osif, o_osif,handle,0,2);
+			when 2 =>
+				fsl_push(i_osif, o_osif,size,1,3);
+			when 3 =>
+				fsl_push_finish(i_osif, o_osif,4);
+			when 4 => 
+				-- this is some kind of hack:
+				-- I use the address field to store the number of words
+				fsl_pull(i_osif, o_osif,o_ram.addr,5,False);
+			when 5 =>
+				o_ram.remainder <= i_ram.addr(25 downto 2);
+				result          <= i_ram.addr;
+				o_osif.step <= 6;
+			when 6 => 
+				if (i_ram.remainder > 0) then
+					o_ram.addr <= addr; 
+					o_osif.step <= 10;
+				else
+					o_osif.step <= 11;
+				end if;
+			when 7 =>
+				o_ram.addr  <= i_ram.addr + 1;
+				o_osif.step <= 8;
+			when 8 =>
+				o_ram.remainder  <= i_ram.remainder - 1;
+				o_osif.step <= 9;
+			when 9 =>
+				if (i_ram.remainder > 0) then
+					o_osif.step <= 10;
+				else
+					o_osif.step <= 11;
+				end if;
+			when 10 => 
+				o_ram.we <= '1';
+				fsl_pull(i_osif, o_osif,o_ram.data,7,False);				
+			when others =>
+				done := True;
+				o_osif.step <= 0;
+		end case;
+	end procedure;
+	
+	-- send data from local memory to ReconOS message queue
+	procedure osif_rq_send (
+		signal i_osif : in  i_osif_t;
+		signal o_osif : out o_osif_t;
+		signal i_ram  : in  i_ram_t;
+		signal o_ram  : out o_ram_t;
+		handle        : in  std_logic_vector(C_FSL_WIDTH-1 downto 0);		
+		size          : in  std_logic_vector(31 downto 0);
+		addr          : in  std_logic_vector(31 downto 0);
+		signal result : out std_logic_vector(C_FSL_WIDTH-1 downto 0);
+		variable done : out boolean
+	) is 
+	begin 
+		done := False;
+		o_ram.we <= '0';
+		fsl_default(o_osif);
+		case i_osif.step is
+			when 0 =>
+				fsl_push(i_osif, o_osif,OSIF_CMD_RQ_SEND,0,1);
+			when 1 =>
+				fsl_push(i_osif, o_osif,handle,0,2);
+			when 2 =>
+				fsl_push(i_osif, o_osif,size,1,3);
+			when 3 =>
+				fsl_push_finish(i_osif, o_osif,4);
+			when 4 =>
+				o_ram.addr      <= addr;
+				o_ram.remainder <= size(25 downto 2);
+				o_osif.step     <= 6;
+			when 5 =>
+				if (i_ram.remainder > 0) then
+					o_ram.addr  <= i_ram.addr + 1;
+					o_osif.step <= 6;
+				else
+					o_osif.step <= 9;
+				end if;
+			when 6 => 
+				o_ram.remainder <= i_ram.remainder - 1;
+				o_osif.step <= 7;
+			when 7 =>
+				fsl_push(i_osif,o_osif,i_ram.data,7,8);
+			when 8 =>
+				fsl_push_finish(i_osif,o_osif,5);				
+			when 9 =>
+				fsl_pull(i_osif,o_osif,result,10,False);
+			when others =>
+				done := True;
+				o_osif.step <= 0;
+		end case;
 	end procedure;
 	
 	-- get_init_data
