@@ -36,6 +36,7 @@ Program map
 -ol std;
 -timing;
 -detail;
+-mt 4;
 #-global_opt off;
 #-logic_opt off;
 #-u
@@ -68,6 +69,7 @@ Program par
 <inputdir><design>_map.ncd;  # Input mapped NCD file
 <design>.ncd;                # Output placed and routed NCD
 <inputdir><design>.pcf;      # Input physical constraints file
+-mt 4;
 END Program par
 
 #
