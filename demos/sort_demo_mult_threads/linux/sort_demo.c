@@ -17,7 +17,7 @@
 #include "bubblesort.h"
 #include "sort8k.h"
 
-#define MAX_THREADS 1
+#define MAX_THREADS 2
 
 struct reconos_resource res[MAX_THREADS][2];
 
@@ -66,10 +66,10 @@ int main(int argc, char ** argv)
 	for (i = 0; i < MAX_THREADS; i++)
 	{
 	  res[i][0].type = RECONOS_TYPE_MBOX;
-	  res[i][0].ptr  = &(mb_start[i/2]);
+	  res[i][0].ptr  = &(mb_start[i]);
 	  	
 	  res[i][1].type = RECONOS_TYPE_MBOX;
-	  res[i][1].ptr  = &(mb_stop[i/2]);
+	  res[i][1].ptr  = &(mb_stop[i]);
 
 	  mbox_init(&(mb_start[i]),3);
 	  mbox_init(&(mb_stop[i]) ,3);
@@ -108,13 +108,13 @@ int main(int argc, char ** argv)
 	// Start sort threads
 	for (i=0; i<MAX_THREADS; i++)
 	{
-	  printf("Starting sort thread %i\n",i);
+	  printf("Starting sort thread %i via mailbox %p.\n",i,(void*)&(mb_start[i]));
 	  mbox_put(&(mb_start[i]),(unsigned int)data[i]);
 	}
 
 	for (i=0; i<MAX_THREADS; i++)
 	{
-	  printf("Waiting on result from thread %i\n",i);
+	  printf("Waiting for result from thread %i via mailbox %p.\n",i,(void*)&(mb_stop[i]));
 	  ret = mbox_get(&(mb_stop[i]));
 	}  
 
