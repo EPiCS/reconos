@@ -1,0 +1,48 @@
+##############################################################################
+## Filename:          hwt_mutex_test_v2_1_0.mpd
+## Description:       Mutex Test
+## Date:              Tue Sep 13 12:47:26 2011 (by Create and Import Peripheral Wizard)
+##############################################################################
+
+BEGIN hwt_mutex_test
+
+## Peripheral Options
+OPTION IPTYPE = PERIPHERAL
+OPTION IMP_NETLIST = TRUE
+OPTION HDL = VHDL
+
+
+## Bus Interfaces
+BUS_INTERFACE BUS=OS_SFSL, BUS_STD=FSL, BUS_TYPE=SLAVE
+BUS_INTERFACE BUS=OS_MFSL, BUS_STD=FSL, BUS_TYPE=MASTER
+BUS_INTERFACE BUS=SFIFO32, BUS_STD=SFIFO32_STD, BUS_TYPE=TARGET
+BUS_INTERFACE BUS=MFIFO32, BUS_STD=MFIFO32_STD, BUS_TYPE=TARGET
+
+## Peripheral ports
+PORT OSFSL_Clk = "", DIR=I, SIGIS=Clk, BUS=OS_MFSL:OS_SFSL
+PORT OSFSL_Rst = OPB_Rst, DIR=I, BUS=OS_MFSL:OS_SFSL
+PORT OSFSL_S_Clk = FSL_S_Clk, DIR=O, SIGIS=Clk, BUS=OS_SFSL
+PORT OSFSL_S_Read = FSL_S_Read, DIR=O, BUS=OS_SFSL
+PORT OSFSL_S_Data = FSL_S_Data, DIR=I, VEC=[0:31], BUS=OS_SFSL
+PORT OSFSL_S_Control = FSL_S_Control, DIR=I, BUS=OS_SFSL
+PORT OSFSL_S_Exists = FSL_S_Exists, DIR=I, BUS=OS_SFSL
+PORT OSFSL_M_Clk = FSL_M_Clk, DIR=O, SIGIS=Clk, BUS=OS_MFSL
+PORT OSFSL_M_Write = FSL_M_Write, DIR=O, BUS=OS_MFSL
+PORT OSFSL_M_Data = FSL_M_Data, DIR=O, VEC=[0:31], BUS=OS_MFSL
+PORT OSFSL_M_Control = FSL_M_Control, DIR=O, BUS=OS_MFSL
+PORT OSFSL_M_Full = FSL_M_Full, DIR=I, BUS=OS_MFSL
+
+PORT FIFO32_S_Clk  = FIFO32_S_Clk,  DIR=O, SIGIS=Clk,  BUS=SFIFO32
+PORT FIFO32_S_Data = FIFO32_S_Data, DIR=I, VEC=[0:31], BUS=SFIFO32
+PORT FIFO32_S_Rd   = FIFO32_S_Rd,   DIR=O,             BUS=SFIFO32
+PORT FIFO32_S_Fill = FIFO32_S_Fill, DIR=I, VEC=[0:15], BUS=SFIFO32
+
+PORT FIFO32_M_Clk  = FIFO32_M_Clk,  DIR=O, SIGIS=Clk,  BUS=MFIFO32
+PORT FIFO32_M_Data = FIFO32_M_Data, DIR=O, VEC=[0:31], BUS=MFIFO32
+PORT FIFO32_M_Wr   = FIFO32_M_Wr,   DIR=O,             BUS=MFIFO32
+PORT FIFO32_M_Rem  = FIFO32_M_Rem,  DIR=I, VEC=[0:15], BUS=MFIFO32
+
+
+PORT Rst="", DIR=I, SIGIS=Rst
+
+END
