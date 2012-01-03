@@ -167,10 +167,10 @@ begin  -- of architecture ------------------------------------------------------
       OUT_FIFO32_S_Fill_int <= IN_FIFO32_S_Fill;
 
       case state is
-        when STATE_IDLE              => ila_signals(2 downto 0) <= "001";
-        when STATE_MODE_LENGTH       => ila_signals(2 downto 0) <= "010";
-        when STATE_ADDRESS           => ila_signals(2 downto 0) <= "011";
-        when STATE_CALC              => ila_signals(2 downto 0) <= "100";
+        when STATE_IDLE              => ila_signals(2 downto 0) <= "000";
+        when STATE_MODE_LENGTH       => ila_signals(2 downto 0) <= "001";
+        when STATE_ADDRESS           => ila_signals(2 downto 0) <= "010";
+        when STATE_CALC              => ila_signals(2 downto 0) <= "011";
         when STATE_WRITE_MODE_LENGTH => ila_signals(2 downto 0) <= "100";
         when STATE_WRITE_ADDRESS     => ila_signals(2 downto 0) <= "101";
         when STATE_DATA_READ         => ila_signals(2 downto 0) <= "110";
