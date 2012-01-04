@@ -8,8 +8,8 @@ all: libreconos
 libreconos: libreconos.a
 	/bin/true
 
-libreconos.a: libreconos.o fsl.o mbox.o
-	$(AR) -rcsv libreconos.a libreconos.o fsl.o mbox.o
+libreconos.a: libreconos.o fsl.o mbox.o rq.o
+	$(AR) -rcsv libreconos.a libreconos.o fsl.o mbox.o rq.o
 
 clean:
 	rm -f *.o *.a
