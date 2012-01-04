@@ -14,6 +14,6 @@ libreconos.a: libreconos.o fsl.o mbox.o rq.o
 clean:
 	rm -f *.o *.a
 
-	
+
 
 
