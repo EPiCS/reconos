@@ -11,6 +11,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <limits.h>
+#include <string.h>
 #include "config.h"
 #include "merge.h"
 #include "data.h"
@@ -21,28 +22,29 @@
 #define PAGE_SIZE 4096
 #define PAGE_WORDS 1024
 #define PAGE_MASK 0xFFFFF000
-
 #define PAGES_PER_THREAD 2
 
-#define MAX_BURST_SIZE 1023
+#define BLOCK_SIZE PAGE_SIZE*PAGES_PER_THREAD
 
-#define SW_THREADS 2
-#define HW_THREADS 14
-#define MAX_THREADS (SW_THREADS+HW_THREADS)
+#define MAX_BURST_SIZE 1023
+#define MAX_THREADS 32
+
+#define TO_WORDS(x) ((x)/4)
+#define TO_PAGES(x) ((x)/PAGE_SIZE)
+#define TO_BLOCKS(x) ((x)/(PAGE_SIZE*PAGES_PER_THREAD))
 
 // software threads
-pthread_t swt[SW_THREADS];
-pthread_attr_t swt_attr[SW_THREADS];
+pthread_t swt[MAX_THREADS];
+pthread_attr_t swt_attr[MAX_THREADS];
 
 // hardware threads
-struct reconos_resource res[HW_THREADS][2];
-struct reconos_hwt hwt[HW_THREADS];
+struct reconos_resource res[2];
+struct reconos_hwt hwt[MAX_THREADS];
 
 
 // mailboxes
-struct mbox mb_start[MAX_THREADS];
-struct mbox mb_stop[MAX_THREADS];
-
+struct mbox mb_start;
+struct mbox mb_stop;
 
 unsigned int* malloc_page_aligned(unsigned int pages)
 {
@@ -70,129 +72,223 @@ void print_data(unsigned int* data, unsigned int size)
 void *sort_thread(void* data)
 {
     unsigned int ret;
-    int i = (int) data;
     unsigned int dummy = 23;
-    printf("SW Thread %i started with mailbox index %i ...\n", i-HW_THREADS, i);
+    struct reconos_resource *res  = (struct reconos_resource*) data;
+    struct mbox *mb_start = res[0].ptr;
+    struct mbox *mb_stop  = res[1].ptr;
+    //pthread_t self = pthread_self();
+    //printf("SW Thread %lu: Started with mailbox addresses %p and %p ...\n", self,  mb_start, mb_stop);
     while ( 1 ) {
-        ret = mbox_get(&mb_start[i]);
-	printf("SW Thread %i: Got address %p from mailbox %p.\n", i, (void*)ret, &mb_start[i]);
+        ret = mbox_get(mb_start);
+	//printf("SW Thread %lu: Got address %p from mailbox %p.\n", self, (void*)ret, mb_start);
 	if (ret == UINT_MAX)
 	{
+	  //  printf("SW Thread %lu: Got exit command from mailbox %p.\n", self, mb_start);
 	  pthread_exit((void*)0);
-	  printf("SW Thread %i: Got exit command from mailbox %p.\n", i, &mb_start[i]);
 	}
 	else
 	{
 	  bubblesort( (unsigned int*) ret, N);
 	}
         
-        mbox_put(&mb_stop[i], dummy);
+        mbox_put(mb_stop, dummy);
     }
 
     return (void*)0;
 }
 
+void print_help()
+{
+  printf(
+"ReconOS v3 sort demo application.\n"
+"Sorts a buffer full of data with a variable number of sw and hw threads.\n"
+"\n"
+"Usage:\n"
+"\tsort_demo <-h|--help>\n"
+"\tsort_demo <num_hw_threads> <num_sw_threads> <num_of_blocks>\n"
+"\n"
+"Size of a block in bytes: %i\n",
+PAGE_SIZE*PAGES_PER_THREAD
+);
+}
+
 int main(int argc, char ** argv)
 {
-	assert(argc == 1);
 	int i;
 	int ret;
+	int hw_threads;
+	int sw_threads;
+	int running_threads;
+	int buffer_size;
+	int slice_size;
 
+	timing_t t_start, t_stop;
+	ms_t t_generate;
+	ms_t t_sort;
+	ms_t t_merge;
+	ms_t t_check;
+
+	if ((argc < 4) || (argc > 4))
+	{
+	  print_help();
+	  exit(1);
+	}
+	// we have exactly 3 arguments now...
+	hw_threads = atoi(argv[1]);
+	sw_threads = atoi(argv[2]);
+
+	// Base unit is bytes. Use macros TO_WORDS, TO_PAGES and TO_BLOCKS for conversion.
+	buffer_size = atoi(argv[3])*PAGE_SIZE*PAGES_PER_THREAD;
+	slice_size  = PAGE_SIZE*PAGES_PER_THREAD;
+
+	running_threads = hw_threads + sw_threads;
+
+	//int gettimeofday(struct timeval *tv, struct timezone *tz);
 
 	// init mailboxes
-	for (i = 0; i < MAX_THREADS; i++)
-	{
-	  mbox_init(&(mb_start[i]),3);
-	  mbox_init(&(mb_stop[i]) ,3);
-	}
+	mbox_init(&mb_start,TO_BLOCKS(buffer_size));
+        mbox_init(&mb_stop ,TO_BLOCKS(buffer_size));
 
 	// init reconos and communication resources
 	reconos_init(0);
 
-	for (i = 0; i < HW_THREADS; i++)
-	{
-	  res[i][0].type = RECONOS_TYPE_MBOX;
-	  res[i][0].ptr  = &(mb_start[i]);
-	  	
-	  res[i][1].type = RECONOS_TYPE_MBOX;
-	  res[i][1].ptr  = &(mb_stop[i]);
+	res[0].type = RECONOS_TYPE_MBOX;
+	res[0].ptr  = &mb_start;	  	
+        res[1].type = RECONOS_TYPE_MBOX;
+	res[1].ptr  = &mb_stop;
 
-	  reconos_hwt_setresources(&(hwt[i]),res[i],2);
+	printf("Creating %i hw-threads: ", hw_threads);
+	fflush(stdout);
+	for (i = 0; i < hw_threads; i++)
+	{
+	  printf(" %i",i);fflush(stdout);
+	  reconos_hwt_setresources(&(hwt[i]),res,2);
 	  reconos_hwt_create(&(hwt[i]),i+1,NULL);
-	  printf("Created hw-thread %i, at FSL Link %i.\n", i, hwt[i].slot);
 	}
+	printf("\n");
 
 	// init software threads
-	for (i = 0; i < SW_THREADS; i++)
+	printf("Creating %i sw-threads: ",sw_threads);
+	fflush(stdout);
+	for (i = 0; i < sw_threads; i++)
 	{
+	  printf(" %i",i);fflush(stdout);
 	  pthread_attr_init(&swt_attr[i]);
-	  pthread_create(&swt[i], &swt_attr[i], sort_thread, (void*)i+HW_THREADS);
-	  printf("Created sw-thread %i, with mailbox index %i.\n", i, i+HW_THREADS);
+	  pthread_create(&swt[i], &swt_attr[i], sort_thread, (void*)res);
 	}
+	printf("\n");
 
 	// create pages and generate data
-	// every thread shall have its own slice of data to sort
+	t_start = gettime();
+
 	printf("malloc page aligned ...\n");
-	unsigned int *data = malloc_page_aligned(MAX_THREADS*PAGES_PER_THREAD);
+	unsigned int *data = malloc_page_aligned(TO_PAGES(buffer_size));
 	printf("generate data ...\n");
-	generate_data( data, (MAX_THREADS*PAGE_SIZE*PAGES_PER_THREAD)/4 );
+	generate_data( data, TO_WORDS(buffer_size));
+
+	t_stop = gettime();
+	t_generate = calc_timediff_ms(t_start,t_stop);
 
 	// print data of first page
-	//printf("Printing of generated data skipped. \n");
-	print_data(data, (MAX_THREADS*PAGE_SIZE*PAGES_PER_THREAD)/4);
+	printf("Printing of generated data skipped. \n");
+	//print_data(data, TO_WORDS(buffer_size));
 
 
 	// Start sort threads
-	for (i=0; i<MAX_THREADS; i++)
+	t_start = gettime();
+
+	printf("Putting %i blocks into job queue: ", TO_BLOCKS(buffer_size));
+	fflush(stdout);
+	for (i=0; i<TO_BLOCKS(buffer_size); i++)
 	{
-	  printf("Starting sort thread %i via mailbox %p.\n",i,(void*)&(mb_start[i]));
-	  mbox_put(&(mb_start[i]),(unsigned int)data+(i*PAGE_SIZE*PAGES_PER_THREAD));
+	  printf(" %i",i);fflush(stdout);
+	  mbox_put(&mb_start,(unsigned int)data+(i*BLOCK_SIZE));
 	}
+	printf("\n");
 
 	// Wait for results
-	for (i=0; i<MAX_THREADS; i++)
+	printf("Waiting for %i acknowledgements: ", TO_BLOCKS(buffer_size));
+	fflush(stdout);
+	for (i=0; i<TO_BLOCKS(buffer_size); i++)
 	{
-	  printf("Waiting for result from thread %i via mailbox %p.\n",i,(void*)&(mb_stop[i]));
-	  ret = mbox_get(&(mb_stop[i]));
+	  printf(" %i",i);fflush(stdout);
+	  ret = mbox_get(&mb_stop);
 	}  
+	printf("\n");
 
-	
-	//
+	t_stop = gettime();
+	t_sort = calc_timediff_ms(t_start,t_stop);
+
+
 	// merge data
+	t_start = gettime();	
+
 	printf("Merging sorted data slices...\n");
-	unsigned int * temp = malloc_page_aligned(MAX_THREADS*PAGES_PER_THREAD);
-	printf("Data buffer at address %p \n", (void*)data);
-	printf("Address of temporary merge buffer: %p\n", (void*)temp);
-	printf("Total size of data in bytes: %i\n",(MAX_THREADS*PAGE_SIZE*PAGES_PER_THREAD));
-	printf("Size of a data slice in bytes: %i\n",(PAGE_SIZE*PAGES_PER_THREAD));
+	unsigned int * temp = malloc_page_aligned(TO_PAGES(buffer_size));
+	//printf("Data buffer at address %p \n", (void*)data);
+	//printf("Address of temporary merge buffer: %p\n", (void*)temp);
+	//printf("Total size of data in bytes: %i\n",buffer_size);
+	//printf("Size of a sorting block in bytes: %i\n",BLOCK_SIZE);
 	data = recursive_merge( data, 
 				temp,
-				(MAX_THREADS*PAGE_SIZE*PAGES_PER_THREAD)/4, 
-				(PAGE_SIZE*PAGES_PER_THREAD)/4, 
+				TO_WORDS(buffer_size), 
+				TO_WORDS(BLOCK_SIZE), 
 				simple_merge 
 				);
 
+	t_stop = gettime();
+	t_merge = calc_timediff_ms(t_start,t_stop);
+	
 	// check data
 	//data[0] = 6666; // manual fault
+	t_start = gettime();
+
 	printf("Checking sorted data: ... ");
-	ret = check_data( data, (MAX_THREADS*PAGE_SIZE*PAGES_PER_THREAD)/4);
-	if (ret==-1)
+	fflush(stdout);
+	ret = check_data( data, TO_WORDS(buffer_size));
+	if (ret < 0)
 	  {
-	    printf("failure\n");
-	    print_data(data, (MAX_THREADS*PAGE_SIZE*PAGES_PER_THREAD)/4);
+	    printf("failure at word index %i\n", -ret);
+	    print_data(data-ret, 2);
 	  }
 	else
 	  {
 	    printf("success\n");
-	    print_data(data, (MAX_THREADS*PAGE_SIZE*PAGES_PER_THREAD)/4);
+	    //print_data(data, TO_WORDS(buffer_size));
 	  }
 
+	t_stop = gettime();
+	t_check = calc_timediff_ms(t_start,t_stop);
+
 	// terminate all threads
-	for (i=0; i<MAX_THREADS; i++)
+	printf("Sending terminate message to %i threads:", running_threads);
+	fflush(stdout);
+	for (i=0; i<running_threads; i++)
 	{
-	  mbox_put(&(mb_start[i]),UINT_MAX);
+	  printf(" %i",i);fflush(stdout);
+	  mbox_put(&mb_start,UINT_MAX);
+	}
+	printf("\n");
+
+	printf("Waiting for termination...\n");
+	for (i=0; i<hw_threads; i++)
+	{
 	  pthread_join(hwt[i].delegate,NULL);
 	}
+	for (i=0; i<sw_threads; i++)
+	{
+	  pthread_join(swt[i],NULL);
+	}
+
+	printf( "\nRunning times (size: %d words, %d hw-threads, %d sw-threads):\n"
+            "\tGenerate data: %lu ms\n"
+            "\tSort data    : %lu ms\n"
+            "\tMerge data   : %lu ms\n"
+            "\tCheck data   : %lu ms\n"
+            "Total computation time (sort & merge): %lu ms\n",
+		TO_WORDS(buffer_size), hw_threads, sw_threads,
+		t_generate, t_sort, t_merge, t_check, t_sort + t_merge );
+	
 
 	//free(data);
 	// Memory Leak on variable data!!!
