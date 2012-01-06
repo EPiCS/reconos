@@ -34,7 +34,7 @@ int check_data( unsigned int *data, unsigned int size )
     
     for ( i = 0; i < size - 1; i++ ) {
         if ( data[i] > data[i + 1] ) {
-            return -1;
+            return -i;
         }
     }
     return 0;
