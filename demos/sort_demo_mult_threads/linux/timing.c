@@ -21,6 +21,10 @@
 #include <stdio.h>
 #endif
 
+#ifdef USE_GETTIMEOFDAY
+#include <sys/time.h>
+#endif
+
 // fix for multithreaded linux: clock() only measures time spent in the current thread!
 #ifdef USE_DCR_TIMEBASE 
 #undef CLOCKS_PER_SEC
@@ -41,6 +45,12 @@ timing_t gettime(  )
 	//fprintf(stderr, "read time: %d\n", buf);
 
 	return buf;
+#elif defined USE_GETTIMEOFDAY
+	struct timeval now;
+
+	gettimeofday(&now, NULL);
+
+	return now;
 #else
 	return clock(  );
 #endif
@@ -66,15 +76,26 @@ void close_timebase()
 
 // calculate difference between start and stop time
 // and convert to milliseconds
-timing_t calc_timediff_ms( timing_t start, timing_t stop )
+ms_t calc_timediff_ms( timing_t start, timing_t stop )
 {
+#ifdef USE_GETTIMEOFDAY
+  ms_t ms;
+  struct timeval diff;
 
+  // calculate difference
+  timersub(&stop, &start, &diff);
+  // convert to miliseconds
+  ms = diff.tv_sec*1000+diff.tv_usec/1000;
+  // this is very dirty, but allows to print the value via printf("%lu",ms)
+  return ms;
+#else
 	if ( start <= stop ) 
 	{
-		return ( stop - start ) / ( CLOCKS_PER_SEC / 1000 );
+	  return (ms_t)( stop - start ) / ( CLOCKS_PER_SEC / 1000 );
 	} 
 	else 
 	{
-		return ( ULONG_MAX - start + stop ) / ( CLOCKS_PER_SEC / 1000 );  // Milliseconds
+	  return (ms_t)( ULONG_MAX - start + stop ) / ( CLOCKS_PER_SEC / 1000 );  // Milliseconds
 	}
+#endif
 }

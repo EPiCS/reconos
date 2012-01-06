@@ -15,16 +15,22 @@
 #define __TIMING_H__
 
 // NOTE: We can only time up to 42.9 seconds (32 bits @ 100 MHz) on eCos!
-#define USE_DCR_TIMEBASE
+#undef USE_DCR_TIMEBASE
+#define USE_GETTIMEOFDAY
 
 #ifdef USE_ECOS
 typedef unsigned int timing_t;
+typedef unsigned int ms_t;
+#elif defined USE_GETTIMEOFDAY
+typedef struct timeval timing_t;
+typedef unsigned long ms_t;
 #else
 typedef unsigned long timing_t;
+typedef unsigned long ms_t;
 #endif
 
 timing_t gettime(  );
-timing_t calc_timediff_ms( timing_t start, timing_t stop );
+ms_t calc_timediff_ms( timing_t start, timing_t stop );
 #ifdef USE_DCR_TIMEBASE
 int init_timebase();
 void close_timebase();
