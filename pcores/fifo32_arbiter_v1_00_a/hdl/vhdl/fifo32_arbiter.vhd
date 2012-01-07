@@ -196,7 +196,7 @@ entity fifo32_arbiter is
     clk : in std_logic;                  -- separate clock for control logic
 
     -- Debug signals to ILA
-    ila_signals : out std_logic_vector(3 downto 0)
+    ila_signals : out std_logic_vector(130 downto 0)
     );
 end entity;
 
@@ -271,6 +271,8 @@ architecture behavioural of fifo32_arbiter is
 
   --! Tap slave data output to memory controller
   signal INT_OUT_FIFO32_S_Data : std_logic_vector(31 downto 0);
+  signal INT_OUT_FIFO32_S_Fill : std_logic_vector(15 downto 0);
+  signal INT_OUT_FIFO32_M_Rem  : std_logic_vector(15 downto 0);
 
 begin  -- of architecture -------------------------------------------------------
 
@@ -468,7 +470,8 @@ begin  -- of architecture ------------------------------------------------------
   end generate;
   
   OUT_FIFO32_S_Data <= INT_OUT_FIFO32_S_Data;
-
+  OUT_FIFO32_S_Fill <= INT_OUT_FIFO32_S_Fill;
+  OUT_FIFO32_M_Rem  <= INT_OUT_FIFO32_M_Rem;
   -- Slave part of fifo link
 
   mux_S_DATA : mux
@@ -490,7 +493,7 @@ begin  -- of architecture ------------------------------------------------------
     port map (
       input  => IN_FIFO32_S_FILL,
       sel    => sel2mux,
-      output => OUT_FIFO32_S_Fill
+      output => INT_OUT_FIFO32_S_Fill
       );   
 
   demux_S_Rd : demux
@@ -527,7 +530,7 @@ begin  -- of architecture ------------------------------------------------------
     port map (
       input  => IN_FIFO32_M_Rem,
       sel    => sel2mux,
-      output => OUT_FIFO32_M_Rem
+      output => INT_OUT_FIFO32_M_Rem
       );   
 
   demux_M_Wr : demux
@@ -591,8 +594,7 @@ begin  -- of architecture ------------------------------------------------------
       transfer_mode := READ;
     elsif clk'event and clk = '1' then
       -- for ILA debug
-      ila_signals(0) <= sel2fsm(0);
-      ila_signals(1) <= sel2mux(0);
+
       case state is
         when MODE_LENGTH => ila_signals(3 downto 2)<= "00";
         when ADDRESS     => ila_signals(3 downto 2)<= "01";
@@ -600,6 +602,29 @@ begin  -- of architecture ------------------------------------------------------
         when DATA_WRITE  => ila_signals(3 downto 2)<= "11";
         when others => null;
       end case;
+
+      -- ila signals 0 to 7 are always present, but only available sel2fsm
+      -- signals are connected. ila_signals(7) is a buffer to prevent an
+      -- illegal assignment.
+      ila_signals(clog2(FIFO32_PORTS)-1 downto 0) <= sel2fsm;
+      ila_signals(7 downto clog2(FIFO32_PORTS)) <= (others => '0');
+      
+      -- ila signals 8 to 15 are always present, but only available sel2mux
+      -- signals are connected. ila_signals(15) is a buffer to prevent an
+      -- illegal assignment.
+      ila_signals(clog2(FIFO32_PORTS)-1+8 downto 8) <= sel2mux;
+      ila_signals(15 downto clog2(FIFO32_PORTS)+8) <= (others => '0');
+
+      ila_signals(FIFO32_PORTS-1+16 downto 16) <= requests;
+      ila_signals(32 downto FIFO32_PORTS+16) <= (others => '0');
+      
+      ila_signals(64 downto 33 ) <= INT_OUT_FIFO32_S_Data;
+      ila_signals(80 downto 65) <= INT_OUT_FIFO32_S_Fill;
+      ila_signals(81) <= OUT_FIFO32_S_Rd;
+
+      ila_signals(113 downto 82) <= OUT_FIFO32_M_Data;
+      ila_signals(129 downto 114) <= INT_OUT_FIFO32_M_Rem;
+      ila_signals(130) <= OUT_FIFO32_M_Wr;
       
       -- default is to hold all outputs.
       state         := state;

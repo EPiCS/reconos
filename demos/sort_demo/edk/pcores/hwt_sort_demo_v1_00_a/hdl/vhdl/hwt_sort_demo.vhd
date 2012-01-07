@@ -1,7 +1,6 @@
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.std_logic_arith.all;
---use ieee.numeric_std.all;
 use ieee.std_logic_unsigned.all;
 
 library proc_common_v3_00_a;
@@ -44,8 +43,8 @@ end hwt_sort_demo;
 
 architecture implementation of hwt_sort_demo is
 	type STATE_TYPE is (
-					STATE_GET_ADDR,STATE_READ_REQ,STATE_READ_CTRL,STATE_READ,STATE_SORTING,
-					STATE_WRITE_REQ,STATE_WRITE_CTRL,STATE_WRITE,STATE_ACK,STATE_THREAD_EXIT);
+					STATE_GET_ADDR,STATE_READ,STATE_SORTING,
+					STATE_WRITE,STATE_ACK,STATE_THREAD_EXIT);
 
 	component bubble_sorter is
 		generic (
@@ -77,63 +76,59 @@ architecture implementation of hwt_sort_demo is
 
 	type LOCAL_MEMORY_T is array (0 to C_LOCAL_RAM_SIZE-1) of std_logic_vector(31 downto 0);
 	
-	
-	
 	constant MBOX_RECV  : std_logic_vector(C_FSL_WIDTH-1 downto 0) := x"00000000";
 	constant MBOX_SEND  : std_logic_vector(C_FSL_WIDTH-1 downto 0) := x"00000001";
 
 	signal addr     : std_logic_vector(31 downto 0);
-	signal data     : std_logic_vector(31 downto 0);
-	signal req      : std_logic_vector(31 downto 0);
 	signal len      : std_logic_vector(23 downto 0);
-	signal cmd      : std_logic_vector(7 downto 0);
 	signal state    : STATE_TYPE;
 	signal i_osif   : i_osif_t;
 	signal o_osif   : o_osif_t;
 	signal i_memif  : i_memif_t;
 	signal o_memif  : o_memif_t;
+	signal i_ram    : i_ram_t;
+	signal o_ram    : o_ram_t;
 
 	signal o_RAMAddr_sorter : std_logic_vector(0 to C_LOCAL_RAM_ADDRESS_WIDTH-1);
 	signal o_RAMData_sorter : std_logic_vector(0 to 31);
 	signal o_RAMWE_sorter   : std_logic;
+	signal i_RAMData_sorter : std_logic_vector(0 to 31);
 
-	signal o_RAMAddr_reconos : std_logic_vector(0 to C_LOCAL_RAM_ADDRESS_WIDTH-1);
-	signal o_RAMData_reconos : std_logic_vector(0 to 31);
-	signal o_RAMWE_reconos   : std_logic;
-
-	signal o_RAMAddr : std_logic_vector(0 to C_LOCAL_RAM_ADDRESS_WIDTH-1);
-	signal o_RAMData : std_logic_vector(0 to 31);
-	signal i_RAMData : std_logic_vector(0 to 31);
-	signal o_RAMWE   : std_logic;
+	signal o_RAMAddr_reconos   : std_logic_vector(0 to C_LOCAL_RAM_ADDRESS_WIDTH-1);
+	signal o_RAMAddr_reconos_2 : std_logic_vector(0 to 31);
+	signal o_RAMData_reconos   : std_logic_vector(0 to 31);
+	signal o_RAMWE_reconos     : std_logic;
+	signal i_RAMData_reconos   : std_logic_vector(0 to 31);
 	
 	constant o_RAMAddr_max : std_logic_vector(0 to C_LOCAL_RAM_ADDRESS_WIDTH-1) := (others=>'1');
 
-	signal local_ram : LOCAL_MEMORY_T;
+	shared variable local_ram : LOCAL_MEMORY_T;
 
 	signal ignore   : std_logic_vector(C_FSL_WIDTH-1 downto 0);
 
 	signal sort_start : std_logic := '0';
 	signal sort_done  : std_logic := '0';
-	signal sort_en    : std_logic := '0';
 begin
-
-	-- switch 1: address
-	o_RAMAddr <= o_RAMAddr_sorter when sort_en = '1' else o_RAMAddr_reconos;
-
-	-- switch 2: write enable
-	o_RAMWE <= o_RAMWE_sorter     when sort_en = '1' else o_RAMWE_reconos;
-  
-	-- switch 3: output ram data
-	o_RAMData <= o_RAMData_sorter when sort_en = '1' else o_RAMData_reconos;
 	
-	-- local RAM
-	local_ram_ctrl : process (OSFSL_Clk) is
+	-- local dual-port RAM
+	local_ram_ctrl_1 : process (OSFSL_Clk) is
 	begin
 		if (rising_edge(OSFSL_Clk)) then
-			if (o_RAMWE = '1') then
-				local_ram(conv_integer(unsigned(o_RAMAddr))) <= o_RAMData;
+			if (o_RAMWE_reconos = '1') then
+				local_ram(conv_integer(unsigned(o_RAMAddr_reconos))) := o_RAMData_reconos;
 			else
-				i_RAMData <= local_ram(conv_integer(unsigned(o_RAMAddr)));
+				i_RAMData_reconos <= local_ram(conv_integer(unsigned(o_RAMAddr_reconos)));
+			end if;
+		end if;
+	end process;
+			
+	local_ram_ctrl_2 : process (OSFSL_Clk) is
+	begin
+		if (rising_edge(OSFSL_Clk)) then		
+			if (o_RAMWE_sorter = '1') then
+				local_ram(conv_integer(unsigned(o_RAMAddr_sorter))) := o_RAMData_sorter;
+			else
+				i_RAMData_sorter <= local_ram(conv_integer(unsigned(o_RAMAddr_sorter)));
 			end if;
 		end if;
 	end process;
@@ -151,7 +146,7 @@ begin
 			reset     => rst,
 			o_RAMAddr => o_RAMAddr_sorter,
 			o_RAMData => o_RAMData_sorter,
-			i_RAMData => i_RAMData,
+			i_RAMData => i_RAMData_sorter,
 			o_RAMWE   => o_RAMWE_sorter,
 			start     => sort_start,
 			done      => sort_done
@@ -185,27 +180,30 @@ begin
 		FIFO32_M_Wr
 	);
 	
-	cmd <= req(31 downto 24);
-
+	ram_setup(
+		i_ram,
+		o_ram,
+		o_RAMAddr_reconos_2,		
+		o_RAMData_reconos,
+		i_RAMData_reconos,
+		o_RAMWE_reconos
+	);
 	
+	o_RAMAddr_reconos(0 to C_LOCAL_RAM_ADDRESS_WIDTH-1) <= o_RAMAddr_reconos_2((32-C_LOCAL_RAM_ADDRESS_WIDTH) to 31);
+		
 	-- os and memory synchronisation state machine
 	reconos_fsm: process (i_osif.clk) is
-		variable done : boolean;
+		variable done  : boolean;
 	begin
 		if rst = '1' then
 			osif_reset(o_osif);
 			memif_reset(o_memif);
+			ram_reset(o_ram);
 			state <= STATE_GET_ADDR;
-			done := False;
+			done  := False;
 			addr <= (others => '0');
-			o_RAMAddr_reconos <= (others => '0');
-			data <= X"AFFEDEAD";
-			req <= (others => '0');
 			len <= (others => '0');
-			req <= (others => '0');
 			sort_start <= '0';
-			sort_en    <= '0';
-			o_RAMWE_reconos <= '0';
 		elsif rising_edge(i_osif.clk) then
 			case state is
 
@@ -218,74 +216,33 @@ begin
 						else
 							len               <= conv_std_logic_vector(C_LOCAL_RAM_SIZE_IN_BYTES,24);
 							addr              <= addr(31 downto 2) & "00";
-							o_RAMAddr_reconos <= (others => '0');
-							state             <= STATE_READ_REQ;
+							state             <= STATE_READ;
 						end if;
-					end if;
-						
-				-- start read request
-				when STATE_READ_REQ =>
-					memif_read_request(i_memif, o_memif,addr,len,done);
-					if done then state <= STATE_READ_CTRL; end if;
-
-				-- control the data transfer from main memory to local memory
-				when STATE_READ_CTRL =>
-					o_RAMWE_reconos <= '0';
-					if len = 0 then
-						o_RAMWE_reconos <= '0';
-						sort_start <= '1';
-						state <= STATE_SORTING;
-					else
-						o_RAMWE_reconos <= '1';
-						state <= STATE_READ;
 					end if;
 				
-				-- read: copy data into the local memory
+				-- copy data from main memory to local memory
 				when STATE_READ =>
-					memif_fifo_pull(i_memif, o_memif,o_RAMData_reconos,done);
+					memif_read(i_ram,o_ram,i_memif,o_memif,addr,X"00000000",len,done);
 					if done then
-						state <= STATE_READ_CTRL;
-						if (o_RAMAddr_reconos < o_RAMAddr_max) then
-							o_RAMAddr_reconos <= o_RAMAddr_reconos + 1;
-						end if;
-						len <= len - 4;
+						sort_start <= '1';
+						state <= STATE_SORTING;
 					end if;
 
 				-- sort the words in local RAM
 				when STATE_SORTING =>
-					sort_en    <= '1';
 					sort_start <= '0';
-					o_RAMAddr_reconos <= (others => '0');
+					--o_ram.addr <= (others => '0');
 					if sort_done = '1' then
 						len    <= conv_std_logic_vector(C_LOCAL_RAM_SIZE_IN_BYTES,24);
-						state  <= STATE_WRITE_REQ;
+						--state  <= STATE_WRITE_REQ;
+						state  <= STATE_WRITE;
 					end if;
-
-				-- start write request
-				when STATE_WRITE_REQ =>
-					sort_en    <= '0';
-					memif_write_request(i_memif, o_memif,addr,len,done);
-					if done then 
-						state <= STATE_WRITE_CTRL; 
-					end if;
-
-				-- control the data transfer from local memory to main memory
-				when STATE_WRITE_CTRL =>
-					if len = 0 then
-						state <= STATE_ACK;
-					else
-						state <= STATE_WRITE;
-					end if;
-
-				-- write: transfer data to the main memory
+					
+				-- copy data from local memory to main memory
 				when STATE_WRITE =>
-					memif_fifo_push(i_memif, o_memif, i_RAMData, done);
-					if done then 
-						state             <= STATE_WRITE_CTRL;
-						if (o_RAMAddr_reconos < o_RAMAddr_max) then
-							o_RAMAddr_reconos <= o_RAMAddr_reconos + 1;
-						end if;
-						len               <= len - 4;
+					memif_write(i_ram,o_ram,i_memif,o_memif,X"00000000",addr,len,done);
+					if done then
+						state <= STATE_ACK;
 					end if;
 				
 				-- send mbox that signals that the sorting is finished

@@ -84,9 +84,16 @@ architecture testbench of tb_fifo32_burst_converter is
     (X"00000004", X"00000FFC"),  -- 1 word read from end       of first page
     (X"00000008", X"00000000"),  -- 2 word read from beginning of first page
     (X"00000008", X"00000FFC"),  -- 2 word read from end       of first page
-    (X"00FFFFFC", X"00000800")
+--    (X"00FFFFFC", X"00000800"),  -- ~16MByte read across a lot of pages
+    (X"80000004", X"00000000"),  -- 1 word write from beginning of first page
+    (X"80000004", X"00000FFC"),  -- 1 word write from end       of first page
+    (X"80000008", X"00000000"),  -- 2 word write from beginning of first page
+    (X"80000008", X"00000FFC"),  -- 2 word write from end       of first page
+    (X"80FFFFFC", X"00000800")   -- ~16MByte write across a lot of pages    
     );
 
+  type payload_t is array (natural range <>) of std_logic_vector(31 downto 0);
+  signal  write_data : payload_t(0 downto 0) := (0 => (X"AFFEAFFE"));
 --------------------------------------------------------------------------------
 -- Signals
 --------------------------------------------------------------------------------
@@ -134,14 +141,11 @@ architecture testbench of tb_fifo32_burst_converter is
   signal B2T_MEMIF_IN  : i_memif_t;
   signal B2T_MEMIF_OUT : o_memif_t;
 
-  type payload_t is array (natural range <>) of std_logic_vector(31 downto 0);
-  signal data : payload_t(0 downto 0) := (0 => (X"00000000"));
-
   -- Misc
   signal Rst : std_logic;
   signal clk : std_logic;
 
-
+  signal read_data : payload_t(0 downto 0);
 
 begin  -- of architecture -------------------------------------------------------
 
@@ -273,7 +277,7 @@ begin  -- of architecture ------------------------------------------------------
           memif_fifo_push (
             T2F_MEMIF_IN,
             T2F_MEMIF_OUT,
-            data(0),
+            write_data(0),
             done
             );
           if done then request_length := request_length - 4; end if;
@@ -296,7 +300,7 @@ begin  -- of architecture ------------------------------------------------------
           memif_fifo_pull (
             T2F_MEMIF_IN,
             T2F_MEMIF_OUT,
-            data(0),
+            read_data(0),
             done
             );
           if done then request_length := request_length - 4; end if;
@@ -400,6 +404,7 @@ begin  -- of architecture ------------------------------------------------------
       state              := state;
       b2t_memif_out.s_rd <= b2t_memif_out.s_rd;
       b2t_memif_out.m_wr <= b2t_memif_out.m_wr;
+      b2t_memif_out.m_data <= b2t_memif_out.m_data;
       transfer_mode      := transfer_mode;
       transfer_size      := transfer_size;
       case state is
@@ -429,6 +434,9 @@ begin  -- of architecture ------------------------------------------------------
               b2t_memif_out.m_data <= transfer_address;
             when WRITE =>
               state := DATA_WRITE;
+              b2t_memif_out.s_rd   <= '1';
+              b2t_memif_out.m_wr   <= '0';
+              b2t_memif_out.m_data <= (others => '0');
             when others => null;
           end case;
         when DATA_WRITE =>

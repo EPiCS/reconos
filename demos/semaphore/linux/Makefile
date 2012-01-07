@@ -1,10 +1,10 @@
 CFLAGS=-O -g -Wall
 CC=microblaze-unknown-linux-gnu-gcc
 
-all: vmtest
+all: semaphore_test
 
-vmtest: vmtest.c
-	$(CC) $(CFLAGS) -L ../../../linux/libreconos -I ../../../linux/libreconos vmtest.c -o vmtest -static -lreconos -lpthread
+semaphore_test: semaphore_test.c
+	$(CC) $(CFLAGS) -L ../../../linux/libreconos -I ../../../linux/libreconos semaphore_test.c -o semaphore_test -static -lreconos -lpthread
 
 clean:
-	rm -f *.o vmtest 
+	rm -f *.o semaphore_test 

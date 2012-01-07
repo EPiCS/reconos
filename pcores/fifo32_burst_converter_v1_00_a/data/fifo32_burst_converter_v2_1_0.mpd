@@ -1,4 +1,4 @@
-BEGIN fifo32_arbiter
+BEGIN fifo32_burst_converter
 
 ## Peripheral Options
 OPTION IPTYPE = PERIPHERAL
@@ -17,14 +17,17 @@ BUS_INTERFACE BUS=MFIFO32, BUS_STD=MFIFO32_STD, BUS_TYPE=TARGET
 
 
 ## Generics for VHDL or Parameters for Verilog
-PARAMETER C_PAGE_SIZE = 4096, DT = INTEGER, RANGE = (1:16), LONG_DESC = In Bytes; Page size of the memory management the OS uses. Must be a power of 2.
-PARAMETER C_BURST_SIZE = 16, DT = INTEGER, RANGE = (1:1023), LONG_DESC = In bus transfer cycles. Longest Burst the bus system accepts.
+PARAMETER C_PAGE_SIZE = 4096, DT = INTEGER, RANGE = (512,1024,2048,4096,8192), LONG_DESC = In Bytes; Page size of the memory management the OS uses. Must be a power of 2.
+PARAMETER C_BURST_SIZE = 4092, DT = INTEGER, RANGE = (1:4092), LONG_DESC = In bus transfer cycles. Longest Burst the bus system accepts.
 
 ## Peripheral ports
 
 # core clock and reset (should be the same as all bus clocks)
 PORT clk = "", DIR = I, SIGIS = CLK
 PORT Rst = "", DIR = I, SIGIS = RST
+
+#debug
+PORT ila_signals = "", DIR = O, VEC=[0:205]
 
 # FIFO32 Port to memory controller
 PORT OUT_FIFO32_S_Clk  = FIFO32_S_Clk,  DIR=I, SIGIS=Clk,  BUS=SFIFO32_MEMCTRL

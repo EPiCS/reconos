@@ -81,6 +81,9 @@ package reconos_pkg is
 	constant OSIF_CMD_COND_WAIT      : std_logic_vector(0 to C_FSL_WIDTH-1) := X"000000D0";
 	constant OSIF_CMD_COND_SIGNAL    : std_logic_vector(0 to C_FSL_WIDTH-1) := X"000000D1";
 	constant OSIF_CMD_COND_BROADCAST : std_logic_vector(0 to C_FSL_WIDTH-1) := X"000000D2";
+
+	constant OSIF_CMD_RQ_RECEIVE : std_logic_vector(0 to C_FSL_WIDTH-1) := X"000000E0";
+	constant OSIF_CMD_RQ_SEND    : std_logic_vector(0 to C_FSL_WIDTH-1) := X"000000E1";
 	
 	constant OSIF_CMD_MBOX_PUT : std_logic_vector(0 to C_FSL_WIDTH-1) := X"000000F1";
 	constant OSIF_CMD_MBOX_GET : std_logic_vector(0 to C_FSL_WIDTH-1) := X"000000F0";
@@ -127,6 +130,19 @@ package reconos_pkg is
 		m_data : std_logic_vector(31 downto 0);
 		m_wr : std_logic;
 		step : integer range 0 to 15;
+	end record;
+	
+	type i_ram_t is record
+		addr : std_logic_vector(31 downto 0);
+		data : std_logic_vector(31 downto 0);
+		remainder : std_logic_vector(23 downto 0);
+	end record;
+	
+	type o_ram_t is record
+		addr : std_logic_vector(31 downto 0);
+		data : std_logic_vector(31 downto 0);
+		we   : std_logic; 
+		remainder : std_logic_vector(23 downto 0);
 	end record;
 	
 	-- set up OSIF interface. must be called in architecture body.
@@ -317,6 +333,32 @@ package reconos_pkg is
 		signal result : out std_logic_vector(C_FSL_WIDTH-1 downto 0);
 		variable done : out boolean
 	);
+
+	-- receive message from ReconOS message queue and store it into local memory
+	procedure osif_rq_receive (
+		signal i_osif : in  i_osif_t;
+		signal o_osif : out o_osif_t;
+		signal i_ram  : in  i_ram_t;
+		signal o_ram  : out o_ram_t;
+		handle        : in  std_logic_vector(C_FSL_WIDTH-1 downto 0);		
+		size          : in  std_logic_vector(31 downto 0);
+		addr          : in  std_logic_vector(31 downto 0);
+		signal result : out std_logic_vector(C_FSL_WIDTH-1 downto 0);
+		variable done : out boolean
+	);
+	
+	-- send data from local memory to ReconOS message queue
+	procedure osif_rq_send (
+		signal i_osif : in  i_osif_t;
+		signal o_osif : out o_osif_t;
+		signal i_ram  : in  i_ram_t;
+		signal o_ram  : out o_ram_t;
+		handle        : in  std_logic_vector(C_FSL_WIDTH-1 downto 0);		
+		size          : in  std_logic_vector(31 downto 0);
+		addr          : in  std_logic_vector(31 downto 0);
+		signal result : out std_logic_vector(C_FSL_WIDTH-1 downto 0);
+		variable done : out boolean
+	);
 	
 	-- get_init_data
 	procedure osif_get_init_data (
@@ -358,7 +400,7 @@ package reconos_pkg is
 	
 	procedure memif_reset(signal o_memif : out o_memif_t);
 	
-	procedure memif_write (
+	procedure memif_write_word (
 		signal i_memif : in  i_memif_t;
 		signal o_memif : out o_memif_t;
 		addr  : in std_logic_vector(31 downto 0);
@@ -366,7 +408,7 @@ package reconos_pkg is
 		variable done  : out boolean
 	);
 	
-	procedure memif_read (
+	procedure memif_read_word (
 		signal i_memif : in  i_memif_t;
 		signal o_memif : out o_memif_t;
 		addr  : in  std_logic_vector(31 downto 0);
@@ -412,6 +454,43 @@ package reconos_pkg is
 		variable done : out boolean
 	);
 
+	-- local ram setup
+	procedure ram_setup (
+		signal i_ram  : out i_ram_t;
+		signal o_ram  : in o_ram_t;
+		signal o_addr : out std_logic_vector(31 downto 0);
+		signal o_data : out std_logic_vector(31 downto 0);
+		signal i_data : in  std_logic_vector(31 downto 0);
+		signal o_we   : out std_logic
+	);
+	
+	procedure ram_reset(
+		signal o_ram   : out o_ram_t
+	);
+	
+	-- local ram: write from local memory to main memory
+	procedure memif_write(
+		signal i_ram   : in  i_ram_t;
+		signal o_ram   : out o_ram_t;
+		signal i_memif : in  i_memif_t;
+		signal o_memif : out o_memif_t;
+		src_addr : in std_logic_vector(31 downto 0);
+		dst_addr : in std_logic_vector(31 downto 0);
+		len      : in std_logic_vector(23 downto 0);
+		variable done : out boolean  
+	);	
+	
+	-- local ram: read from main memory to local memory
+	procedure memif_read(
+		signal i_ram   : in  i_ram_t;
+		signal o_ram   : out o_ram_t;
+		signal i_memif : in  i_memif_t;
+		signal o_memif : out o_memif_t;
+		src_addr : in std_logic_vector(31 downto 0);
+		dst_addr : in std_logic_vector(31 downto 0);
+		len      : in std_logic_vector(23 downto 0);
+		variable done     : out boolean  
+	);	
 
 end reconos_pkg;
 
@@ -754,6 +833,118 @@ package body reconos_pkg is
 	) is begin
 		osif_call_1(i_osif, o_osif,OSIF_CMD_MBOX_GET,handle,result,done);
 	end procedure;
+
+
+	-- receive message from ReconOS message queue and store it into local memory
+	procedure osif_rq_receive (
+		signal i_osif : in  i_osif_t;
+		signal o_osif : out o_osif_t;
+		signal i_ram  : in  i_ram_t;
+		signal o_ram  : out o_ram_t;
+		handle        : in  std_logic_vector(C_FSL_WIDTH-1 downto 0);		
+		size          : in  std_logic_vector(31 downto 0);
+		addr          : in  std_logic_vector(31 downto 0);
+		signal result : out std_logic_vector(C_FSL_WIDTH-1 downto 0);
+		variable done : out boolean
+	) is begin
+		done  := False;
+		o_ram.we <= '0';
+		fsl_default(o_osif);
+		case i_osif.step is
+			when 0 =>
+				fsl_push(i_osif, o_osif,OSIF_CMD_RQ_RECEIVE,0,1);
+			when 1 =>
+				fsl_push(i_osif, o_osif,handle,0,2);
+			when 2 =>
+				fsl_push(i_osif, o_osif,size,1,3);
+			when 3 =>
+				fsl_push_finish(i_osif, o_osif,4);
+			when 4 => 
+				-- this is some kind of hack:
+				-- I use the address field to store the number of words
+				fsl_pull(i_osif, o_osif,o_ram.addr,5,False);
+			when 5 =>
+				o_ram.remainder <= i_ram.addr(25 downto 2);
+				result          <= i_ram.addr;
+				o_osif.step <= 6;
+			when 6 => 
+				if (i_ram.remainder > 0) then
+					o_ram.addr <= addr; 
+					o_osif.step <= 10;
+				else
+					o_osif.step <= 11;
+				end if;
+			when 7 =>
+				o_ram.addr  <= i_ram.addr + 1;
+				o_osif.step <= 8;
+			when 8 =>
+				o_ram.remainder  <= i_ram.remainder - 1;
+				o_osif.step <= 9;
+			when 9 =>
+				if (i_ram.remainder > 0) then
+					o_osif.step <= 10;
+				else
+					o_osif.step <= 11;
+				end if;
+			when 10 => 
+				o_ram.we <= '1';
+				fsl_pull(i_osif, o_osif,o_ram.data,7,False);				
+			when others =>
+				done := True;
+				o_osif.step <= 0;
+		end case;
+	end procedure;
+	
+	-- send data from local memory to ReconOS message queue
+	procedure osif_rq_send (
+		signal i_osif : in  i_osif_t;
+		signal o_osif : out o_osif_t;
+		signal i_ram  : in  i_ram_t;
+		signal o_ram  : out o_ram_t;
+		handle        : in  std_logic_vector(C_FSL_WIDTH-1 downto 0);		
+		size          : in  std_logic_vector(31 downto 0);
+		addr          : in  std_logic_vector(31 downto 0);
+		signal result : out std_logic_vector(C_FSL_WIDTH-1 downto 0);
+		variable done : out boolean
+	) is 
+	begin 
+		done := False;
+		o_ram.we <= '0';
+		fsl_default(o_osif);
+		case i_osif.step is
+			when 0 =>
+				fsl_push(i_osif, o_osif,OSIF_CMD_RQ_SEND,0,1);
+			when 1 =>
+				fsl_push(i_osif, o_osif,handle,0,2);
+			when 2 =>
+				fsl_push(i_osif, o_osif,size,1,3);
+			when 3 =>
+				fsl_push_finish(i_osif, o_osif,4);
+			when 4 =>
+				o_ram.addr      <= addr;
+				o_ram.remainder <= size(25 downto 2);
+				o_osif.step     <= 6;
+			when 5 =>
+				if (i_ram.remainder > 0) then
+					o_ram.addr  <= i_ram.addr + 1;
+					o_osif.step <= 6;
+				else
+					o_osif.step <= 9;
+				end if;
+			when 6 => 
+				o_ram.remainder <= i_ram.remainder - 1;
+				o_osif.step <= 7;
+			when 7 =>
+				fsl_push(i_osif,o_osif,i_ram.data,7,8);
+			when 8 =>
+				fsl_push_finish(i_osif,o_osif,5);				
+			when 9 =>
+				fsl_pull(i_osif,o_osif,result,10,False);
+			when others =>
+				done := True;
+				o_osif.step <= 0;
+		end case;
+	end procedure;
 	
 	-- get_init_data
 	procedure osif_get_init_data (
@@ -814,10 +1005,10 @@ package body reconos_pkg is
 		o_memif.step <= 0;
 		o_memif.s_rd <= '0';
 		o_memif.m_wr <= '0';
-                o_memif.m_data <= (others => '0');
+		o_memif.m_data <= (others => '0');
 	end procedure;
 	
-	procedure memif_write (
+	procedure memif_write_word (
 		signal i_memif : in  i_memif_t;
 		signal o_memif : out o_memif_t;
 		addr  : in  std_logic_vector(31 downto 0);
@@ -850,7 +1041,7 @@ package body reconos_pkg is
 		end case;
 	end procedure;
 	
-	procedure memif_read (
+	procedure memif_read_word (
 		signal i_memif : in  i_memif_t;
 		signal o_memif : out o_memif_t;
 		addr  : in  std_logic_vector(31 downto 0);
@@ -1039,6 +1230,143 @@ package body reconos_pkg is
 			when others =>
 				o_memif.step <= 0;
 				done := True;
+		end case;
+	end procedure;
+	
+	-- local ram setup
+	procedure ram_setup (
+		signal i_ram  : out i_ram_t;
+		signal o_ram  : in o_ram_t;
+		signal o_addr : out std_logic_vector(31 downto 0);
+		signal o_data : out std_logic_vector(31 downto 0);
+		signal i_data : in  std_logic_vector(31 downto 0);
+		signal o_we   : out std_logic
+	) is begin
+		i_ram.data <= i_data;
+		o_addr     <= o_ram.addr;
+		o_data     <= o_ram.data;
+		o_we       <= o_ram.we;
+		i_ram.addr <= o_ram.addr;
+		i_ram.remainder <= o_ram.remainder;
+	end procedure;
+	
+	procedure ram_reset(
+		signal o_ram   : out o_ram_t
+	) is begin
+		o_ram.we        <= '0';
+		o_ram.addr      <= (others=>'0');
+		o_ram.data      <= (others=>'0');
+		o_ram.remainder <= (others=>'0');
+	end procedure;
+	
+	-- local ram: write from local memory to main memory
+	procedure memif_write(
+		signal i_ram   : in  i_ram_t;
+		signal o_ram   : out o_ram_t;
+		signal i_memif : in  i_memif_t;
+		signal o_memif : out o_memif_t;
+		src_addr : in std_logic_vector(31 downto 0);
+		dst_addr : in std_logic_vector(31 downto 0);
+		len      : in std_logic_vector(23 downto 0);
+		variable done : out boolean  
+	) is begin	
+		o_memif.m_wr <= '0';
+		o_memif.s_rd <= '0';
+		o_ram.we     <= '0';
+		done         := False;
+		case i_memif.step is
+			when 0 =>
+				if i_memif.m_remainder > 1 then
+					o_memif.step <= 1;
+					o_ram.addr   <= src_addr;
+					o_ram.remainder <= len;
+				end if;
+			when 1 =>
+				o_memif.m_wr <= '1';
+				o_memif.m_data <= MEMIF_CMD_WRITE & len;
+				o_memif.step <= 2;
+			when 2 =>
+				o_memif.m_wr <= '1';
+				o_memif.m_data <= dst_addr;
+				o_memif.step <= 3;
+			when 3 =>
+				if (len(23 downto 2) <= i_memif.m_remainder) then
+					o_ram.addr      <= i_ram.addr + 1;
+					o_memif.step <= 4;
+				end if;
+			when 4 => 
+				if (i_ram.remainder = 0) then
+					o_memif.step <= 5;
+				else
+					o_memif.m_wr    <= '1';
+					o_ram.remainder <= i_ram.remainder - 4;
+					if (i_ram.addr+1 < len(23 downto 2)) then
+						o_ram.addr      <= i_ram.addr + 1;
+					end if;
+					o_memif.m_data  <= i_ram.data;
+				end if;				
+			when others =>
+				o_memif.step <= 0;
+				done := True;
+		end case;
+	end procedure;	
+	
+	-- local ram: read from main memory to local memory
+	procedure memif_read(
+		signal i_ram   : in  i_ram_t;
+		signal o_ram   : out o_ram_t;
+		signal i_memif : in  i_memif_t;
+		signal o_memif : out o_memif_t;
+		src_addr : in std_logic_vector(31 downto 0);
+		dst_addr : in std_logic_vector(31 downto 0);
+		len      : in std_logic_vector(23 downto 0);
+		variable done     : out boolean
+	) is begin
+		o_ram.we     <= '0';
+		o_memif.m_wr <= '0';
+		o_memif.s_rd <= '0';
+		done         := False;
+		case i_memif.step is
+			-- mem_read_request
+			when 0 =>
+				if (i_memif.m_remainder > 1) then
+					o_memif.step <= 1;
+				end if;
+			when 1 =>
+				o_memif.m_wr <= '1';
+				o_memif.m_data <= MEMIF_CMD_READ & len;
+				o_ram.addr      <= dst_addr;
+				o_memif.step <= 2;
+			when 2 =>
+				o_memif.m_wr      <= '1';
+				o_memif.m_data    <= src_addr;
+				o_ram.remainder   <= len;
+				o_memif.step      <= 3;
+			-- read data and store them into the local memory
+			when 3 =>
+				if (len(23 downto 2) <= i_memif.s_fill) then
+					o_memif.s_rd <= '1';
+					o_memif.step <= 4;
+				end if;
+			when 4 =>
+				o_memif.s_rd    <= '1';
+				o_ram.data      <= i_memif.s_data;
+				o_ram.remainder <= i_ram.remainder - 4;
+				o_ram.we        <= '1';
+				o_memif.step    <= 5;	
+			when 5 =>
+				if (i_ram.remainder = 0) then
+					o_memif.step <= 6;
+				else
+					o_memif.s_rd    <= '1';
+					o_ram.we        <= '1';
+					o_ram.remainder <= i_ram.remainder - 4;
+					o_ram.addr      <= i_ram.addr + 1;
+					o_ram.data      <= i_memif.s_data;
+				end if;
+			when others =>
+				done := True;
+				o_memif.step <= 0;
 		end case;
 	end procedure;
 	

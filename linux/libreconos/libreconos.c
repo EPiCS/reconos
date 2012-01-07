@@ -2,6 +2,7 @@
 #include "reconos.h"
 #include "fsl.h"
 #include "mbox.h"
+#include "rq.h"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -195,6 +196,9 @@ void * delegate_thread_entry(void * arg)
 		uint32 handle2;
 		uint32 arg0;
 		uint32 result;
+		uint32 msg_size;
+		uint32* msg;
+		int i;
 		
 		cmd = fsl_read(hwt->slot);
 		
@@ -450,6 +454,100 @@ void * delegate_thread_entry(void * arg)
 				
 				fsl_write(hwt->slot, 0);
 				break;
+
+			case RECONOS_CMD_RQ_RECEIVE:
+				RECONOS_DEBUG("slot %d: command is RQ_RECEIVE\n", hwt->slot);
+				handle = fsl_read(hwt->slot);
+				RECONOS_DEBUG("slot %d: resource id is 0x%08X\n", hwt->slot, handle);
+				arg0 = fsl_read(hwt->slot);
+				RECONOS_DEBUG("slot %d: msg_size is 0x%08X\n", hwt->slot, arg0);
+
+				if(handle >= hwt->num_resources){
+					RECONOS_ERROR("slot %d: resource id %d out of range, must be lesser than %d\n",
+						hwt->slot, handle, hwt->num_resources);
+					exit(1);
+				}
+				
+				if(hwt->resources[handle].type != RECONOS_TYPE_RQ){
+					RECONOS_ERROR("slot %d: resource type 0x%08X expected, found 0x%08X\n",
+						hwt->slot, RECONOS_TYPE_RQ, hwt->resources[handle].type);
+					exit(1);
+				}
+				msg_size   = arg0;                                
+				msg        = (uint32*) malloc(msg_size); 			
+				if ((result = rq_receive (hwt->resources[handle].ptr, msg, msg_size)) < 0)
+		  		{
+		    			RECONOS_DEBUG ("slot %d: rq_receive (0x%08X) receives error\n", 
+						hwt->slot, hwt->resources[handle].ptr);
+		    			result = 0;	// signal error
+		  		}
+				RECONOS_DEBUG("slot %d: rq_receive returns 0x%08X\n", hwt->slot, result);
+				// restore old queue attributes			
+				if (result == 0 || result > msg_size)
+				{			
+					// error code, if there is an error or if the message exceeds the expected size
+					if (result>msg_size && ((int)result)!=-1)
+					{
+						RECONOS_ERROR("slot %d: The received message size for rq (0x%08X) is bigger than expecetd (received %d > expected %d bytes) \n", 
+						hwt->slot, handle, (int)result, (int)msg_size);
+					}
+					fsl_write(hwt->slot, 0);
+				}
+				else
+				{
+					fsl_write(hwt->slot, result);
+					// write data to hw thread
+					for(i=0; i<(result/sizeof(uint32));i++)
+					{
+						fsl_write(hwt->slot, msg[i]);
+					}
+				}
+				free (msg);
+				break;
+
+
+
+			case RECONOS_CMD_RQ_SEND:
+				RECONOS_DEBUG("slot %d: command is RQ_SEND\n", hwt->slot);
+				handle = fsl_read(hwt->slot);
+				RECONOS_DEBUG("slot %d: resource id is 0x%08X\n", hwt->slot, handle);
+				arg0 = fsl_read(hwt->slot);
+				RECONOS_DEBUG("slot %d: msg_size is 0x%08X\n", hwt->slot, arg0);
+
+				if(handle >= hwt->num_resources){
+					RECONOS_ERROR("slot %d: resource id %d out of range, must be lesser than %d\n",
+						hwt->slot, handle, hwt->num_resources);
+					exit(1);
+				}
+				
+				if(hwt->resources[handle].type != RECONOS_TYPE_RQ){
+					RECONOS_ERROR("slot %d: resource type 0x%08X expected, found 0x%08X\n",
+						hwt->slot, RECONOS_TYPE_RQ, hwt->resources[handle].type);
+					exit(1);
+				}
+
+				msg_size   = arg0; 
+				msg        = (uint32*) malloc(msg_size); 
+
+				/*if (msg_size > (12*sizeof(uint32)))
+				{
+					RECONOS_ERROR("slot %d: the message size for rq (0x%08X) is to big for the fsl_links: %d > %d \n", 
+						hwt->slot, (int)handle, (int)msg_size, (int)(12*sizeof(uint32)));
+					result = 1;
+					fsl_write(hwt->slot, result);
+					break;
+				}*/
+
+				// read message
+				for(i=0; i<(msg_size/sizeof(uint32));i++)
+				{
+					msg[i] = fsl_read(hwt->slot);
+				}
+				rq_send(hwt->resources[handle].ptr, msg, msg_size);
+				fsl_write(hwt->slot, 0);
+				free(msg);
+				break;
+
 
 			case RECONOS_CMD_THREAD_GET_INIT_DATA:
 				RECONOS_DEBUG("slot %d: command is GET_INIT_DATA\n", hwt->slot);
