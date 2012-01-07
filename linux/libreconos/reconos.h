@@ -57,14 +57,20 @@ struct reconos_hwt {
 
 struct reconos_process
 {
-	int proc_control_fsl;
+	uint32 page_faults;
+	int proc_control_fsl_a; // proc_control initiates requests
+	int proc_control_fsl_b; // sw initiates requests
 	pthread_t proc_control_thread;
 	int slot_flags[MAX_SLOTS];
 };
 
 extern struct reconos_process reconos_proc;
 
-int reconos_init(int proc_ctrl_fsl);
+int reconos_init(int proc_ctrl_fsl_a, int proc_control_fsl_b);
+
+void proc_control_selftest();
+
+void reconos_mmu_stats(uint32 * tlb_hits, uint32 * tlb_misses, uint32 * page_faults);
 
 void reconos_hwt_setresources(struct reconos_hwt * hwt, struct reconos_resource * res, int num_resources);
 

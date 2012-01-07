@@ -44,7 +44,7 @@ static void slot_reset(int num, int reset){
 	
 	cmd = mask | 0x01000000;
 	
-	fsl_write(reconos_proc.proc_control_fsl,cmd);
+	fsl_write(reconos_proc.proc_control_fsl_b,cmd);
 }
 
 uint32 getpgd()
@@ -71,6 +71,31 @@ uint32 getpgd()
 	return pgd;
 }
 
+void reconos_mmu_stats(uint32 * tlb_hits, uint32 * tlb_misses, uint32 * page_faults)
+{
+	uint32 hits,misses;
+	
+	fsl_write(reconos_proc.proc_control_fsl_b,0x05000000);
+	hits = fsl_read(reconos_proc.proc_control_fsl_b);
+	misses = fsl_read(reconos_proc.proc_control_fsl_b);
+	
+	if(page_faults) *page_faults = reconos_proc.page_faults;
+	if(tlb_misses) *tlb_misses = misses;
+	if(tlb_hits) *tlb_hits = hits;
+}
+
+void proc_control_selftest()
+{
+	uint32 result;
+	fsl_write(reconos_proc.proc_control_fsl_b,0x06000000);
+	result = fsl_read(reconos_proc.proc_control_fsl_b);
+	if(result == 0x5E1F7E57){
+		fprintf(stderr,"PROC_CONTROL selftest part 1 success\n");
+	} else {
+		fprintf(stderr,"PROC_CONTROL selftest part 1 FAILED (read 0x%08X instead of 0x5E1F7E57)\n",result);
+	}
+}
+
 void * control_thread_entry(void * arg)
 {
 	RECONOS_DEBUG("control thread listening on fsl %d\n",reconos_proc.proc_control_fsl);
@@ -78,39 +103,50 @@ void * control_thread_entry(void * arg)
 		uint32 cmd;
 		uint32 ret;
 		uint32 *addr;
+	
 
-		cmd = fsl_read(reconos_proc.proc_control_fsl);
+		/* receive page fault address */
+		cmd = fsl_read(reconos_proc.proc_control_fsl_a);
 		RECONOS_DEBUG("control thread received 0x%08X\n", cmd);
 		
-		/* for now, all we receive here is page fault addresses */
-		addr = (uint32*)cmd;
+		if(cmd == 0x00000001){	
+			addr = (uint32*)fsl_read(reconos_proc.proc_control_fsl_a);
+			reconos_proc.page_faults++;
+			RECONOS_DEBUG("control thread received page fault @ 0x%08X\n",(uint32)addr);
 		
-		ret = *addr; /* access memory */
-		
-		ret = ret & 0x00FFFFFF; /* clear upper 8 bits */
-		ret = ret | 0x03000000; /* set page ready command */
+			ret = *addr; /* access memory */
+	
+			ret = ret & 0x00FFFFFF; /* clear upper 8 bits */
+			ret = ret | 0x03000000; /* set page ready command */
 
-		fsl_write(reconos_proc.proc_control_fsl,ret); /* Note: the lower 24 bits of ret are ignored by the HW. */
+			fsl_write(reconos_proc.proc_control_fsl_a,ret); /* Note: the lower 24 bits of ret are ignored by the HW. */
+		}
+		if(cmd == 0x00000002){
+			fprintf(stderr,"PROC_CONTROL selftest part 2 success\n");
+		}
 	}
 }
 
-int reconos_init(int proc_control_fsl)
+int reconos_init(int proc_control_fsl_a, int proc_control_fsl_b)
 {
 	int i;
 	uint32 pgd;
 	pthread_attr_t attr;
 
-	reconos_proc.proc_control_fsl = proc_control_fsl;
+	reconos_proc.proc_control_fsl_a = proc_control_fsl_a;
+	reconos_proc.proc_control_fsl_b = proc_control_fsl_b;
+
+	reconos_proc.page_faults = 0;
 	for(i = 0; i < MAX_SLOTS; i++){
 		reconos_proc.slot_flags[i] |= SLOT_FLAG_RESET;
 	}
 	
-	fsl_write(proc_control_fsl,0x04000000);
+	fsl_write(proc_control_fsl_b,0x04000000);
 
 	pgd = getpgd();
 
-	fsl_write(proc_control_fsl,0x02000000);
-	fsl_write(proc_control_fsl,pgd);
+	fsl_write(proc_control_fsl_b,0x02000000);
+	fsl_write(proc_control_fsl_b,pgd);
 
 	pthread_attr_init(&attr);	
 	pthread_create(&reconos_proc.proc_control_thread, NULL, control_thread_entry,NULL);
