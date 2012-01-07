@@ -3,12 +3,19 @@ use ieee.std_logic_1164.all;
 use ieee.std_logic_arith.all;
 use ieee.std_logic_unsigned.all;
 
+library mmu_v1_00_a;
+use mmu_v1_00_a.all;
+
 library reconos_v3_00_a;
 use reconos_v3_00_a.reconos_pkg.all;
 
+library proc_common_v3_00_a;
+use proc_common_v3_00_a.proc_common_pkg.all;
+
 entity mmu is
 	generic (
-		C_ENABLE_ILA : integer := 0
+		C_ENABLE_ILA : integer := 0;
+		C_TLB_SIZE   : integer := 32
 	);
 	port (
 		-- FIFO Interface to HWT
@@ -34,6 +41,8 @@ entity mmu is
 		retry         : in std_logic;
 		page_fault    : out std_logic;
 		fault_addr    : out std_logic_vector(31 downto 0);
+		tlb_hits      : out std_logic_vector(31 downto 0);
+		tlb_misses    : out std_logic_vector(31 downto 0);
 		pgd           : in std_logic_vector(31 downto 0);
 		rst           : in std_logic;
 		clk           : in std_logic
@@ -100,6 +109,17 @@ architecture implementation of mmu is
 	signal counter   : std_logic_vector(23 downto 0);
 	signal cmd       : std_logic_vector(7 downto 0);
 	signal copy      : std_logic;
+
+	signal tlb_tag   : std_logic_vector(19 downto 0);
+	signal tlb_di    : std_logic_vector(19 downto 0);
+	signal tlb_do    : std_logic_vector(19 downto 0);
+	signal tlb_we    : std_logic;
+	signal tlb_match : std_logic;
+
+	signal tlb_hits_dup   : std_logic_vector(31 downto 0);
+	signal tlb_misses_dup : std_logic_vector(31 downto 0);
+	
+
 begin
 
 --------------------- CHIPSCOPE -------------------------
@@ -190,6 +210,9 @@ begin
 	pte_addr  <= "00" & pgde(29 downto 12) & vaddr(21 downto 12) & "00";
 	paddr     <= pte(31 downto 12) & vaddr(11 downto 0);
 
+	tlb_hits   <= tlb_hits_dup;
+	tlb_misses <= tlb_misses_dup;
+
 	HWT_FIFO32_S_Clk <= clk;
 	HWT_FIFO32_M_Clk <= clk;
 	
@@ -234,6 +257,9 @@ begin
 			pte <= (others => '0');
 			vaddr <= (others => '0');
 			page_fault_dup <= '0';
+			tlb_we <= '0';
+			tlb_hits_dup <= (others => '0');
+			tlb_misses_dup <= (others => '0');
 			fault_addr_dup <= (others => '0');
 		elsif rising_edge(clk) then
 			case state is
@@ -254,12 +280,19 @@ begin
 					state <= STATE_READ_PGDE_0;
 					
 				when STATE_READ_PGDE_0 =>
-					MEM_S_Fill <= x"0002";
-					MEM_S_Data <= x"00000004";
-					if MEM_FIFO32_S_Rd = '1' then
-						MEM_S_Fill <= x"0001";
-						MEM_S_Data <= pgde_addr;
-						state <= STATE_READ_PGDE_1;
+					if tlb_match = '1' then
+						tlb_hits_dup <= tlb_hits_dup + 1;
+						pte(31 downto 12) <= tlb_do;
+						state <= STATE_WRITE_HEADER_0;
+					else
+						MEM_S_Fill <= x"0002";
+						MEM_S_Data <= x"00000004";
+						if MEM_FIFO32_S_Rd = '1' then
+							MEM_S_Fill <= x"0001";
+							MEM_S_Data <= pgde_addr;
+							tlb_misses_dup <= tlb_misses_dup + 1;
+							state <= STATE_READ_PGDE_1;
+						end if;
 					end if;
 				
 				when STATE_READ_PGDE_1 =>
@@ -299,11 +332,13 @@ begin
 						if MEM_FIFO32_M_Data(1) = '0' then
 							state <= STATE_PAGE_FAULT;
 						else
+							tlb_we <= '1';
 							state <= STATE_WRITE_HEADER_0;
 						end if;
 					end if;
 					
 				when STATE_WRITE_HEADER_0 =>
+					tlb_we <= '0';
 					MEM_S_Fill <= x"0002";
 					MEM_S_Data <= cmd & len;
 					if MEM_FIFO32_S_Rd = '1' then
@@ -340,7 +375,28 @@ begin
 			end case;
 		end if;
 	end process;
-	
+
+	tlb_tag <= vaddr(31 downto 12);
+	tlb_di  <= paddr(31 downto 12);
+
+	tlb_gen : if C_TLB_SIZE > 0 generate
+		tlb_i : entity mmu_v1_00_a.tlb
+		generic map (
+			C_TLB_LOGSIZE => clog2(C_TLB_SIZE),
+			C_TAG_SIZE => 20,
+			C_DATA_SIZE => 20
+		)
+		port map (
+			clk        => clk,
+			rst        => rst,
+			tag        => tlb_tag,
+			di         => tlb_di,
+			do         => tlb_do,
+			we         => tlb_we,
+			match      => tlb_match
+		);
+	end generate;
+
 end architecture;
 
 -- These are the PTE flags as defined in arch/microblaze/include/asm/pgtable.h
