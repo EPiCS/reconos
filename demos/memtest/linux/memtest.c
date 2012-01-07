@@ -25,6 +25,8 @@ int use_hwt[NUM_HWT] = {0};
 #define PAGE_WORDS 1024
 #define PAGE_MASK 0xFFFFF000
 
+//#define NUM_WORDS 16
+
 //#define MAX_BURST_SIZE 1024
 //#define ITERATIONS 48
 
@@ -36,6 +38,48 @@ uint32 * alloc_pages(int n)
 	return (uint32*)mem;
 }
 
+void simulate(int num_iter, int pos, int size, uint32 *a, uint32 *b)
+{
+	int cyc,rem,icyc,irem,ieff,atmp,btmp;
+	
+	assert(a);
+	assert(b);
+	
+	cyc = num_iter / size;
+	rem = num_iter % size;
+	
+	icyc = size - pos;
+	irem = rem - pos;
+	
+	if(irem < 0) irem = 0;
+	
+	ieff = icyc*cyc + irem;
+	
+	if(pos % 2 == 1){
+		int tmp = cyc;
+		
+		if(irem > 0) tmp = tmp + 1;
+		
+		tmp = tmp - 1;
+		
+		if(tmp < 0) tmp = 0;
+		
+		ieff = ieff - tmp;
+	}
+	
+	atmp = (ieff/2)*2;
+	btmp = ((ieff+1)/2)*2 - 1;
+	if(btmp < 0) btmp = 0;
+	
+	if((pos % 2) == 0){
+		*a = atmp;
+		*b = btmp;
+	} else {
+		*a = btmp;
+		*b = atmp;
+	}
+}
+
 void run_tests(uint32 n)
 {
 	int i,j;
@@ -43,12 +87,12 @@ void run_tests(uint32 n)
 	uint32 *mem;
 	
 	// allocate 1 page
-	mem = alloc_pages(1);
+	mem = alloc_pages(100);
 
 	// software write to the first page
 	for(i = 0; i < PAGE_WORDS; i++) mem[i] = 0;
 
-	size   = 16*4;
+	size   = 512*4;
 	addr_a = (uint32)mem;
 	addr_b = size + addr_a;
 	blen   = 4;
@@ -74,9 +118,9 @@ void run_tests(uint32 n)
 		ack = mbox_get(hw2sw + i);
 	}
 
-	printf("\nRESULTS:\n\n");
+	printf("\nRESULTS:\n");
 
-	// print results
+	/* print results
 	for(i = 0; i < NUM_HWT; i++){
 		if(!use_hwt[i]) continue;
 		printf("HWT %d:\n",i);
@@ -87,8 +131,46 @@ void run_tests(uint32 n)
 			printf("0x%08X: 0x%08X        0x%08X: 0x%08X\n", (uint32)(mem + a),mem[a], (uint32)(mem + b), mem[b]);
 		}
 	}
+	*/
+	
+	// check results
+	for(i = 0; i < NUM_HWT; i++){
+		int ok = 1;
+		
+		if(!use_hwt[i]) continue;
+		
+		printf("HWT %d: ",i);
+		
+		for(j = 0; j < size/4; j++){
+			uint32 a, b, aidx, bidx;
+			aidx = j + i*size/2;
+			bidx = j + i*size/2 + size/4;
+			simulate(n+1,j,size/4,&a,&b);
+			if(a != mem[aidx] || b != mem[bidx]){
+				ok = 0;
+				printf("ERROR: expected:\n");
+				printf("0x%08X: 0x%08X        0x%08X: 0x%08X\n", (uint32)(mem + aidx),a,(uint32)(mem + bidx), b);
+				
+				printf("ERROR: found:\n");
+				printf("0x%08X: 0x%08X        0x%08X: 0x%08X\n", (uint32)(mem + aidx),mem[aidx],
+							(uint32)(mem + bidx), mem[bidx]);
+			}
+		}
+		
+		if(ok) printf("ok\n");
+	}
+	
+	printf("\n");
 }
 
+void print_mmu_stats()
+{
+	uint32 hits,misses,pgfaults;
+	
+	reconos_mmu_stats(&hits,&misses,&pgfaults);
+	
+	printf("MMU stats: TLB hits: %d    TLB misses: %d    page faults: %d\n",hits,misses,pgfaults);
+}
 
 int main(int argc, char ** argv)
 {
@@ -111,7 +193,7 @@ int main(int argc, char ** argv)
 		for(i = 0; i < NUM_HWT; i++) use_hwt[i] = 1;
 	}
 
-	reconos_init(NUM_HWT);
+	reconos_init(NUM_HWT,NUM_HWT+1);
 	
 	for(i = 0; i < NUM_HWT; i++){
 		if(!use_hwt[i]) continue;
@@ -131,8 +213,13 @@ int main(int argc, char ** argv)
 	}
 	
 	printf("performing memory subsystem stress test (%d iterations):\n",n);
+	
+	print_mmu_stats();
+	
 	run_tests(n);
 
+	print_mmu_stats();
+	
 	for(i = 0; i < NUM_HWT; i++){
 		if(!use_hwt[i]) continue;
 		pthread_join(hwt[i].delegate,NULL);
