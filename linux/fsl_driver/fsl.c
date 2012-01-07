@@ -149,7 +149,7 @@ int fsl_open(struct inode *inode, struct file *filp)
 	
 	// report any unhandled IRQs in the meantime
 	if (dev->irq_count > 0) {
-		printk(KERN_WARNING "osif: there have been %d unhandled IRQs\n", dev->irq_count);
+		PDEBUG("osif: there have been %d unhandled IRQs\n", dev->irq_count);
 	}
 	
 	// TODO: Reset OSIF and hardware thread?
@@ -161,9 +161,7 @@ int fsl_open(struct inode *inode, struct file *filp)
 /// Close FSL device.
 int fsl_release(struct inode *inode, struct file *filp) {
 	
-	struct fsl_dev *dev = filp->private_data;
-	PDEBUG("closing FSL %d\n", dev->fsl_num);
-	
+	PDEBUG("closing FSL %d\n", ((struct fsl_dev*)(filp->private_data))->fsl_num);
 	return 0;
 }
 
@@ -231,7 +229,7 @@ ssize_t fsl_write(struct file *filp, const char __user *buf, size_t count, loff_
 		PDEBUG("ERROR trying to write %d bytes to FSL%d\n: access must be word aligned",count,dev->fsl_num);
 		return -EINVAL;
 	} else {
-		PDEBUG("trying to write %d words to FSL%d\n",count,dev->fsl_num);
+		PDEBUG("trying to write %d words to FSL%d\n",count/4,dev->fsl_num);
 	}
 	
 	num_words = count/4;
@@ -248,6 +246,7 @@ ssize_t fsl_write(struct file *filp, const char __user *buf, size_t count, loff_
 		
 		// no space available:
 		if(invalid){
+			printk( KERN_WARNING "fsl.ko: WARNING: No space left in FSL%d\n",dev->fsl_num);
 			// handle blocking and non-blocking write:
 			return 4*i;
 		}
