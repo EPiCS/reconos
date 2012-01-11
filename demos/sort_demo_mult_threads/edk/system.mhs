@@ -98,42 +98,44 @@ BEGIN microblaze
  PARAMETER C_USE_HW_MUL = 2
  PARAMETER C_USE_DIV = 1
  PARAMETER C_BRANCH_TARGET_CACHE_SIZE = 1
- PARAMETER C_FSL_LINKS = 15
+ PARAMETER C_FSL_LINKS = 16
  BUS_INTERFACE DPLB = mb_plb
  BUS_INTERFACE IPLB = mb_plb
  BUS_INTERFACE DXCL = microblaze_0_DXCL
  BUS_INTERFACE IXCL = microblaze_0_IXCL
  BUS_INTERFACE DEBUG = microblaze_0_mdm_bus
  BUS_INTERFACE SFSL0 = fsl_v20_0
- BUS_INTERFACE MFSL0 = fsl_v20_1
  BUS_INTERFACE SFSL1 = fsl_v20_2
- BUS_INTERFACE MFSL1 = fsl_v20_3
  BUS_INTERFACE SFSL2 = fsl_v20_4
- BUS_INTERFACE MFSL2 = fsl_v20_5
  BUS_INTERFACE SFSL3 = fsl_v20_6
- BUS_INTERFACE MFSL3 = fsl_v20_7
  BUS_INTERFACE SFSL4 = fsl_v20_8
- BUS_INTERFACE MFSL4 = fsl_v20_9
  BUS_INTERFACE SFSL5 = fsl_v20_10
- BUS_INTERFACE MFSL5 = fsl_v20_11
  BUS_INTERFACE SFSL6 = fsl_v20_12
- BUS_INTERFACE MFSL6 = fsl_v20_13
  BUS_INTERFACE SFSL7 = fsl_v20_14
- BUS_INTERFACE MFSL7 = fsl_v20_15
  BUS_INTERFACE SFSL8 = fsl_v20_16
- BUS_INTERFACE MFSL8 = fsl_v20_17
  BUS_INTERFACE SFSL9 = fsl_v20_18
- BUS_INTERFACE MFSL9 = fsl_v20_19
  BUS_INTERFACE SFSL10 = fsl_v20_20
- BUS_INTERFACE MFSL10 = fsl_v20_21
  BUS_INTERFACE SFSL11 = fsl_v20_22
- BUS_INTERFACE MFSL11 = fsl_v20_23
  BUS_INTERFACE SFSL12 = fsl_v20_24
- BUS_INTERFACE MFSL12 = fsl_v20_25
  BUS_INTERFACE SFSL13 = fsl_v20_26
- BUS_INTERFACE MFSL13 = fsl_v20_27
  BUS_INTERFACE SFSL14 = fsl_v20_28
+ BUS_INTERFACE MFSL0 = fsl_v20_1
+ BUS_INTERFACE MFSL1 = fsl_v20_3
+ BUS_INTERFACE MFSL2 = fsl_v20_5
+ BUS_INTERFACE MFSL3 = fsl_v20_7
+ BUS_INTERFACE MFSL4 = fsl_v20_9
+ BUS_INTERFACE MFSL5 = fsl_v20_11
+ BUS_INTERFACE MFSL6 = fsl_v20_13
+ BUS_INTERFACE MFSL7 = fsl_v20_15
+ BUS_INTERFACE MFSL8 = fsl_v20_17
+ BUS_INTERFACE MFSL9 = fsl_v20_19
+ BUS_INTERFACE MFSL10 = fsl_v20_21
+ BUS_INTERFACE MFSL11 = fsl_v20_23
+ BUS_INTERFACE MFSL12 = fsl_v20_25
+ BUS_INTERFACE MFSL13 = fsl_v20_27
  BUS_INTERFACE MFSL14 = fsl_v20_29
+ BUS_INTERFACE SFSL15 = fsl_v20_30
+ BUS_INTERFACE MFSL15 = fsl_v20_31
  PORT MB_RESET = mb_reset
  PORT INTERRUPT = microblaze_0_Interrupt
 END
@@ -415,7 +417,7 @@ BEGIN xps_intc
  PARAMETER C_BASEADDR = 0x81800000
  PARAMETER C_HIGHADDR = 0x8180ffff
  BUS_INTERFACE SPLB = mb_plb
- PORT Intr = fpga_0_Ethernet_MAC_MDINT_pin & xps_timer_0_Interrupt & RS232_Uart_1_Interrupt & Ethernet_MAC_IP2INTC_Irpt & fsl_v20_28_FSL_Has_Data & fsl_v20_26_FSL_Has_Data & fsl_v20_24_FSL_Has_Data & fsl_v20_22_FSL_Has_Data & fsl_v20_20_FSL_Has_Data & fsl_v20_18_FSL_Has_Data & fsl_v20_16_FSL_Has_Data & fsl_v20_14_FSL_Has_Data & fsl_v20_12_FSL_Has_Data & fsl_v20_10_FSL_Has_Data & fsl_v20_8_FSL_Has_Data & fsl_v20_6_FSL_Has_Data & fsl_v20_4_FSL_Has_Data & fsl_v20_2_FSL_Has_Data & fsl_v20_0_FSL_Has_Data
+ PORT Intr = fpga_0_Ethernet_MAC_MDINT_pin & xps_timer_0_Interrupt & RS232_Uart_1_Interrupt & Ethernet_MAC_IP2INTC_Irpt & fsl_v20_30_FSL_Has_Data & fsl_v20_28_FSL_Has_Data & fsl_v20_26_FSL_Has_Data & fsl_v20_24_FSL_Has_Data & fsl_v20_22_FSL_Has_Data & fsl_v20_20_FSL_Has_Data & fsl_v20_18_FSL_Has_Data & fsl_v20_16_FSL_Has_Data & fsl_v20_14_FSL_Has_Data & fsl_v20_12_FSL_Has_Data & fsl_v20_10_FSL_Has_Data & fsl_v20_8_FSL_Has_Data & fsl_v20_6_FSL_Has_Data & fsl_v20_4_FSL_Has_Data & fsl_v20_2_FSL_Has_Data & fsl_v20_0_FSL_Has_Data
  PORT Irq = microblaze_0_Interrupt
 END
 
@@ -686,8 +688,11 @@ END
 BEGIN proc_control
  PARAMETER INSTANCE = proc_control_0
  PARAMETER HW_VER = 1.00.a
- BUS_INTERFACE SFSL = fsl_v20_1
- BUS_INTERFACE MFSL = fsl_v20_0
+ PARAMETER C_ENABLE_ILA = 0
+ BUS_INTERFACE SFSLA = fsl_v20_1
+ BUS_INTERFACE SFSLB = fsl_v20_31
+ BUS_INTERFACE MFSLA = fsl_v20_0
+ BUS_INTERFACE MFSLB = fsl_v20_30
  PORT reset0 = proc_control_0_reset0
  PORT reset1 = proc_control_0_reset1
  PORT reset2 = proc_control_0_reset2
@@ -709,6 +714,10 @@ BEGIN proc_control
  PORT fault_addr = mmu_0_FAULT_ADDR
  PORT retry = proc_control_0_retry
  PORT reconos_reset = proc_control_0_reconos_reset
+ PORT Clk = clk_100_0000MHzMMCM0
+ PORT Rst = sys_bus_reset
+ PORT tlb_hits = mmu_0_TLB_HITS
+ PORT tlb_misses = mmu_0_TLB_MISSES
 END
 
 BEGIN xps_mem
@@ -1125,6 +1134,8 @@ BEGIN mmu
  PORT PAGE_FAULT = mmu_0_PAGE_FAULT
  PORT FAULT_ADDR = mmu_0_FAULT_ADDR
  PORT RETRY = proc_control_0_retry
+ PORT TLB_HITS = mmu_0_TLB_HITS
+ PORT TLB_MISSES = mmu_0_TLB_MISSES
 END
 
 BEGIN fifo32_burst_converter
@@ -1177,5 +1188,20 @@ BEGIN fifo32_arbiter
  PORT clk = clk_100_0000MHzMMCM0
  PORT Rst = proc_control_0_reconos_reset
  PORT ILA_SIGNALS = fifo32_arbiter_0_ILA_SIGNALS
+END
+
+BEGIN fsl_v20
+ PARAMETER INSTANCE = fsl_v20_30
+ PARAMETER HW_VER = 2.11.c
+ PORT FSL_Clk = clk_100_0000MHzMMCM0
+ PORT SYS_Rst = proc_control_0_reconos_reset
+ PORT FSL_Has_Data = fsl_v20_30_FSL_Has_Data
+END
+
+BEGIN fsl_v20
+ PARAMETER INSTANCE = fsl_v20_31
+ PARAMETER HW_VER = 2.11.c
+ PORT FSL_Clk = clk_100_0000MHzMMCM0
+ PORT SYS_Rst = proc_control_0_reconos_reset
 END
 
