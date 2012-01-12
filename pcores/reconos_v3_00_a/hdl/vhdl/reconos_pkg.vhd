@@ -210,7 +210,7 @@ package reconos_pkg is
 	procedure fsl_write_word (
 		signal i_fsl   : in  i_fsl_t;
 		signal o_fsl   : out o_fsl_t;
-		signal data   : in  std_logic_vector(C_FSL_WIDTH-1 downto 0);
+		data   : in  std_logic_vector(C_FSL_WIDTH-1 downto 0);
 		variable done : out boolean
 	);
 
@@ -624,7 +624,7 @@ package body reconos_pkg is
 	procedure fsl_write_word (
 		signal i_fsl   : in  i_fsl_t;
 		signal o_fsl   : out o_fsl_t;
-		signal data   : in std_logic_vector(C_FSL_WIDTH-1 downto 0);
+		data   : in std_logic_vector(C_FSL_WIDTH-1 downto 0);
 		variable done : out boolean
 	) is begin
 		done := False;

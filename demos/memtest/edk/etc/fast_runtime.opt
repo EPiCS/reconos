@@ -32,6 +32,7 @@ Program map
 -o <design>_map.ncd;     # Output Mapped ncd file
 -w;			 # Overwrite output files.
 -pr b;                   # Pack internal FF/latches into IOBs
+-mt 4;
 #-fp <design>.mfp;       # Floorplan file
 -ol high;
 -timing;
@@ -64,6 +65,7 @@ END Program post_map_trce
 #
 Program par
 -w;                 # Overwrite existing placed and routed ncd
+-mt 4;
 -ol high;              # Overall effort level
 <inputdir><design>_map.ncd;  # Input mapped NCD file
 <design>.ncd;                # Output placed and routed NCD

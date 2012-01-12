@@ -97,6 +97,16 @@ void *sort_thread(void* data)
     return (void*)0;
 }
 
+void print_mmu_stats()
+{
+	uint32 hits,misses,pgfaults;
+
+	reconos_mmu_stats(&hits,&misses,&pgfaults);
+
+	printf("MMU stats: TLB hits: %d    TLB misses: %d    page faults: %d\n",hits,misses,pgfaults);
+}
+
+
 void print_help()
 {
   printf(
@@ -150,7 +160,7 @@ int main(int argc, char ** argv)
         mbox_init(&mb_stop ,TO_BLOCKS(buffer_size));
 
 	// init reconos and communication resources
-	reconos_init(0);
+	reconos_init(0,15);
 
 	res[0].type = RECONOS_TYPE_MBOX;
 	res[0].ptr  = &mb_start;	  	
@@ -177,6 +187,9 @@ int main(int argc, char ** argv)
 	  pthread_create(&swt[i], &swt_attr[i], sort_thread, (void*)res);
 	}
 	printf("\n");
+
+
+	//print_mmu_stats();
 
 	// create pages and generate data
 	t_start = gettime();
@@ -280,7 +293,9 @@ int main(int argc, char ** argv)
 	  pthread_join(swt[i],NULL);
 	}
 
-	printf( "\nRunning times (size: %d words, %d hw-threads, %d sw-threads):\n"
+	printf("\n");
+	print_mmu_stats();
+	printf( "Running times (size: %d words, %d hw-threads, %d sw-threads):\n"
             "\tGenerate data: %lu ms\n"
             "\tSort data    : %lu ms\n"
             "\tMerge data   : %lu ms\n"
