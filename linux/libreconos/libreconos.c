@@ -442,7 +442,7 @@ void * delegate_thread_entry(void * arg)
 				if ((result = rq_receive (hwt->resources[handle].ptr, msg, msg_size)) < 0)
 		  		{
 		    			RECONOS_DEBUG ("slot %d: rq_receive (0x%08X) receives error\n", 
-						hwt->slot, hwt->resources[handle].ptr);
+						hwt->slot, handle);
 		    			result = 0;	// signal error
 		  		}
 				RECONOS_DEBUG("slot %d: rq_receive returns 0x%08X\n", hwt->slot, result);
