@@ -85,7 +85,7 @@ architecture implementation of proc_control is
 	constant C_RETURN_ADDR       : std_logic_vector(31 downto 0) := x"00000001";
 	constant C_RETURN_SELFTEST   : std_logic_Vector(31 downto 0) := x"00000002";
 	
-	type ASTATE_TYPE is (A_WAIT, A_SELFTEST, A_PAGE_FAULT_0, A_PAGE_FAULT_1, A_WAIT_PAGE_READY);
+	type ASTATE_TYPE is (A_WAIT, A_SELFTEST, A_PAGE_FAULT_0, A_PAGE_FAULT_1, A_WAIT_PAGE_READY_0, A_WAIT_PAGE_READY_1);
 	type BSTATE_TYPE is (B_WAIT, B_BRANCH, B_SELFTEST, B_SELFTEST_REQ, B_RESET, B_TLB_HITS, B_TLB_MISSES, B_PGD, B_RECONOS_RESET);
 
 	
@@ -112,7 +112,6 @@ architecture implementation of proc_control is
 	
 	signal hwt_reset : std_logic_vector(15 downto 0);
 	signal reset_counter : std_logic_vector(11 downto 0);
-	signal page_fault_handled : std_logic;
 	signal reconos_reset_dup : std_logic;
 	signal data   : std_logic_Vector(C_FSL_WIDTH-1 downto 0);
 	signal ignore : std_logic_Vector(C_FSL_WIDTH-1 downto 0);
@@ -151,7 +150,7 @@ begin
 	CSDATA(1) <= '1' when astate = A_SELFTEST else '0';
 	CSDATA(2) <= '1' when astate = A_PAGE_FAULT_0 else '0';
 	CSDATA(3) <= '1' when astate = A_PAGE_FAULT_1 else '0';
-	CSDATA(4) <= '1' when astate = A_WAIT_PAGE_READY else '0';
+	CSDATA(4) <= '1' when astate = A_WAIT_PAGE_READY_0 else '0';
 	
 	CSDATA(16) <= '1' when bstate = B_WAIT else '0';
 	CSDATA(17) <= '1' when bstate = B_BRANCH else '0';
@@ -176,7 +175,7 @@ begin
 	CSDATA(165 downto 134) <= ignore;
 	CSDATA(181 downto 166) <= hwt_reset;
 	CSDATA(193 downto 182) <= reset_counter;
-	CSDATA(194) <= page_fault_handled;
+	CSDATA(194) <= page_fault;
 	CSDATA(195) <= reconos_reset_dup;
 	CSDATA(196) <= selftest_initiate_req;
 	CSDATA(197) <= selftest_req_initiated;
@@ -243,7 +242,6 @@ begin
 		elsif rising_edge(clk) then
 			case astate is
 				when A_WAIT =>
-					retry <= '0';
 					if page_fault = '1' then
 						astate <= A_PAGE_FAULT_0;
 					elsif selftest_initiate_req = '1' then
@@ -262,12 +260,18 @@ begin
 				
 				when A_PAGE_FAULT_1 =>
 					fsl_write_word(i_fsla,o_fsla,fault_addr,done);
-					if done then astate <= A_WAIT_PAGE_READY; end if;
+					if done then astate <= A_WAIT_PAGE_READY_0; end if;
 					
-				when A_WAIT_PAGE_READY =>
+				when A_WAIT_PAGE_READY_0 =>
 					fsl_read_word(i_fsla,o_fsla,ignore,done);
 					if done then
 						retry <= '1';
+						astate <= A_WAIT_PAGE_READY_1;
+					end if;
+
+				when A_WAIT_PAGE_READY_1 =>
+					if page_fault = '0' then
+						retry <= '0';
 						astate <= A_WAIT;
 					end if;
 			end case;
