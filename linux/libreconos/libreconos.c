@@ -115,7 +115,8 @@ void * control_thread_entry(void * arg)
 			reconos_proc.page_faults++;
 			RECONOS_DEBUG("control thread received page fault @ 0x%08X\n",(uint32)addr);
 		
-			ret = *addr; /* access memory */
+			*addr = 0;   /* this page has not been touched yet. we can safely write 0 to the page */
+			ret = *addr;
 	
 			ret = ret & 0x00FFFFFF; /* clear upper 8 bits */
 			ret = ret | 0x03000000; /* set page ready command */
