@@ -68,6 +68,7 @@ struct reconos_process
 extern struct reconos_process reconos_proc;
 
 int reconos_init(int proc_ctrl_fsl_a, int proc_control_fsl_b);
+int reconos_init_autodetect();
 
 void proc_control_selftest();
 

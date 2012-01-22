@@ -129,6 +129,13 @@ void * control_thread_entry(void * arg)
 	}
 }
 
+int get_numfsl()
+{
+	unsigned int pvr3;
+	asm volatile ("mfs %0,rPVR3" : "=d" (pvr3));
+	return 0x0000001F & (pvr3 >> 7);
+}	
+
 int reconos_init(int proc_control_fsl_a, int proc_control_fsl_b)
 {
 	int i;
@@ -154,6 +161,14 @@ int reconos_init(int proc_control_fsl_a, int proc_control_fsl_b)
 	pthread_create(&reconos_proc.proc_control_thread, NULL, control_thread_entry,NULL);
 	
 	return 0;
+}
+
+int reconos_init_autodetect()
+{
+	int n;
+	n = get_numfsl();
+	RECONOS_DEBUG("proc_control FSL auto dectection: FSL%d, FSL%d\n",n-2,n-1);
+	return reconos_init(n-2,n-1);
 }
 
 

@@ -25,6 +25,7 @@ static void fsl_open(int n)
 	
 	fsl_fd[n] = open(s,O_RDWR);
 	if(fsl_fd[n] < 0){
+		fprintf(stderr,"Error opening /dev/fsl%d\n",n);
 		perror("open");
 		exit(1);
 	}
