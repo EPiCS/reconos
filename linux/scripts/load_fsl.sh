@@ -3,8 +3,32 @@
 MODULE="fsl"
 DEVICE="fsl"
 
-INTERRUPT_LIST=0,1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1
-INTERRUPTS=$(echo $INTERRUPT_LIST | tr ',' ' ')
+# Example for 16 FSLs: 
+#INTERRUPT_LIST=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
+
+# Example for 4 FSLs:
+#INTERRUPT_LIST=0,1,2,3
+
+# Example for using FSLs 4 to 8 using interrupts 10 to 14:
+#INTERRUPT_LIST=-1,-1,-1,-1,10,11,12,13,14,-1,-1,-1,-1,-1,-1,-1
+
+
+# Automatic generation of interrupt list. This assumes that
+# FSL interrupts start at 0 and end at NUMFSL-1. Also, each
+# FSL must have an interrupt connected to the CPU.
+
+if [ -z $INTERRUPT_LIST ]
+then
+	echo "No interrupt list supplied by user. Using defaults with auto detection."
+	NUMFSL=$(./readpvr NUMFSL)
+	NUMFSL=${NUMFSL#NUMFSL:}
+	NUMFSL=$(expr $NUMFSL - 1)
+	INTERRUPTS=$(seq  0 $NUMFSL)
+	INTERRUPT_LIST=$(echo $INTERRUPTS | tr ' ' ',')
+else
+	echo "Using supplied interrupt list"
+	INTERRUPTS=$(echo $INTERRUPT_LIST | tr ',' ' ')
+fi
 
 # invoke insmod with all arguments we got
 # and use a pathname, as newer modutils don't look in . by default
