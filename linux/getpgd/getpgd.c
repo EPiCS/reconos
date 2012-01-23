@@ -15,6 +15,20 @@ MODULE_LICENSE("Dual BSD/GPL");
 static dev_t getpgd_dev;
 static struct cdev getpgd_cdev;
 
+void flush_dcache(void)
+{
+	int i;
+	//unsigned int pvr3;
+	int baseaddr, bytesize,linelen;
+
+	baseaddr = 0;
+	bytesize = 64*1024;
+	linelen  = 4*4;
+
+	//for (i = 0; i < bytesize; i += linelen) __asm__ __volatile__ ("wdc.flush        %0, r0;" : : "r" (i));
+	for (i = 0; i < bytesize; i += linelen) asm volatile ("wdc.flush %0, %1;" :: "d" (baseaddr), "d" (i));
+}
+
 static ssize_t getpgd_read(struct file *filp, char __user *buf, size_t len, loff_t *ignore)
 {
 	unsigned long res;
@@ -32,6 +46,12 @@ static ssize_t getpgd_read(struct file *filp, char __user *buf, size_t len, loff
 	}
 	
 	return 4;
+}
+
+static ssize_t getpgd_write(struct file *filp, const char __user *buf, size_t len, loff_t *ignore)
+{
+	flush_dcache();
+	return len;
 }
 
 static int getpgd_open(struct inode *inode, struct file *filp)
@@ -85,6 +105,7 @@ static int getpgd_open(struct inode *inode, struct file *filp)
 static struct file_operations getpgd_fops = {
 	.owner = THIS_MODULE,
 	.read  = getpgd_read,
+	.write = getpgd_write,
 	.open  = getpgd_open
 };
 
