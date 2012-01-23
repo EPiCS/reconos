@@ -115,7 +115,8 @@ void * control_thread_entry(void * arg)
 			reconos_proc.page_faults++;
 			RECONOS_DEBUG("control thread received page fault @ 0x%08X\n",(uint32)addr);
 		
-			ret = *addr; /* access memory */
+			*addr = 0;   /* this page has not been touched yet. we can safely write 0 to the page */
+			ret = *addr;
 	
 			ret = ret & 0x00FFFFFF; /* clear upper 8 bits */
 			ret = ret | 0x03000000; /* set page ready command */
@@ -127,6 +128,13 @@ void * control_thread_entry(void * arg)
 		}
 	}
 }
+
+int get_numfsl()
+{
+	unsigned int pvr3;
+	asm volatile ("mfs %0,rPVR3" : "=d" (pvr3));
+	return 0x0000001F & (pvr3 >> 7);
+}	
 
 int reconos_init(int proc_control_fsl_a, int proc_control_fsl_b)
 {
@@ -153,6 +161,14 @@ int reconos_init(int proc_control_fsl_a, int proc_control_fsl_b)
 	pthread_create(&reconos_proc.proc_control_thread, NULL, control_thread_entry,NULL);
 	
 	return 0;
+}
+
+int reconos_init_autodetect()
+{
+	int n;
+	n = get_numfsl();
+	RECONOS_DEBUG("proc_control FSL auto dectection: FSL%d, FSL%d\n",n-2,n-1);
+	return reconos_init(n-2,n-1);
 }
 
 

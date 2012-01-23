@@ -32,9 +32,13 @@ int use_hwt[NUM_HWT] = {0};
 
 uint32 * alloc_pages(int n)
 {
+	//int i;
 	uint8 *mem;
 	mem = malloc((n+1)*PAGE_SIZE);
 	mem = (uint8*)((uint32)(mem + PAGE_SIZE) & PAGE_MASK);
+	
+	//for(i = 0; i < n; i++) mem[4096*i] = 0;
+
 	return (uint32*)mem;
 }
 
@@ -92,7 +96,7 @@ void run_tests(uint32 n)
 	// software write to the first page
 	for(i = 0; i < PAGE_WORDS; i++) mem[i] = 0;
 
-	size   = 512*4;
+	size   = 511*4;
 	addr_a = (uint32)mem;
 	addr_b = size + addr_a;
 	blen   = 4;
@@ -102,6 +106,7 @@ void run_tests(uint32 n)
 
 	for(i = 0; i < NUM_HWT; i++){
 		if(!use_hwt[i]) continue;
+		printf("HWT %d @ 0x%08X <-> 0x%08X\n",i,addr_a + size*2*i,addr_b + size*2*i);
 		mbox_put(sw2hw + i,addr_a + size*2*i);
 		mbox_put(sw2hw + i,addr_b + size*2*i);
 		mbox_put(sw2hw + i,size);

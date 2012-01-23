@@ -62,7 +62,8 @@ use ieee.std_logic_unsigned.all;
 package reconos_pkg is
 	
 	constant C_FSL_WIDTH      : natural := 32;
-	
+	constant C_BLOCK_SIZE     : natural := 64;
+
 	-- common constants
 	constant C_RECONOS_FAILURE : std_logic_vector(0 to C_FSL_WIDTH-1) := X"00000000";
 	constant C_RECONOS_SUCCESS : std_logic_vector(0 to C_FSL_WIDTH-1) := X"00000001";
@@ -136,6 +137,8 @@ package reconos_pkg is
 		addr : std_logic_vector(31 downto 0);
 		data : std_logic_vector(31 downto 0);
 		remainder : std_logic_vector(23 downto 0);
+		count : integer range 0 to C_BLOCK_SIZE;
+		remote_addr : std_logic_vector(29 downto 0);
 	end record;
 	
 	type o_ram_t is record
@@ -143,6 +146,8 @@ package reconos_pkg is
 		data : std_logic_vector(31 downto 0);
 		we   : std_logic; 
 		remainder : std_logic_vector(23 downto 0);
+		count : integer range 0 to C_BLOCK_SIZE;
+		remote_addr : std_logic_vector(29 downto 0);
 	end record;
 	
 	-- set up OSIF interface. must be called in architecture body.
@@ -1248,6 +1253,8 @@ package body reconos_pkg is
 		o_we       <= o_ram.we;
 		i_ram.addr <= o_ram.addr;
 		i_ram.remainder <= o_ram.remainder;
+		i_ram.count <= o_ram.count;
+		i_ram.remote_addr <= o_ram.remote_addr;
 	end procedure;
 	
 	procedure ram_reset(
@@ -1276,32 +1283,51 @@ package body reconos_pkg is
 		done         := False;
 		case i_memif.step is
 			when 0 =>
-				if i_memif.m_remainder > 1 then
-					o_memif.step <= 1;
-					o_ram.addr   <= src_addr;
-					o_ram.remainder <= len;
-				end if;
+				o_ram.remainder <= "00" & len(23 downto 2);
+				o_ram.addr <= src_addr;
+				o_ram.remote_addr <= dst_addr(31 downto 2);
+				o_memif.step <= 1;
+
 			when 1 =>
-				o_memif.m_wr <= '1';
-				o_memif.m_data <= MEMIF_CMD_WRITE & len;
-				o_memif.step <= 2;
+				if i_ram.remainder = 0 then
+					o_memif.step <= 15;
+				else
+					if i_memif.m_remainder > 1 then
+						o_memif.step <= 2;
+					end if;
+				end if;
+
+				if i_ram.remainder > C_BLOCK_SIZE then
+					o_ram.count <= C_BLOCK_SIZE;
+				else
+					o_ram.count <= CONV_INTEGER(i_ram.remainder);
+				end if; 
+
 			when 2 =>
 				o_memif.m_wr <= '1';
-				o_memif.m_data <= dst_addr;
+				o_memif.m_data <= MEMIF_CMD_WRITE & CONV_STD_LOGIC_VECTOR(i_ram.count,22) & "00";
 				o_memif.step <= 3;
 			when 3 =>
-				if (len(23 downto 2) <= i_memif.m_remainder) then
-					o_ram.addr      <= i_ram.addr + 1;
-					o_memif.step <= 4;
+				o_memif.m_wr <= '1';
+				o_memif.m_data <= i_ram.remote_addr & "00";
+				o_memif.step <= 4;
+
+			when 4 =>
+				if (i_ram.count <= i_memif.m_remainder) then
+					o_ram.addr        <= i_ram.addr + 1;
+					o_ram.remote_addr <= i_ram.remote_addr + 1;
+					o_memif.step      <= 5;
 				end if;
-			when 4 => 
-				if (i_ram.remainder = 0) then
-					o_memif.step <= 5;
+			when 5 => 
+				if (i_ram.count = 0) then
+					o_memif.step <= 1;
 				else
 					o_memif.m_wr    <= '1';
-					o_ram.remainder <= i_ram.remainder - 4;
-					if (i_ram.addr+1 < len(23 downto 2)) then
-						o_ram.addr      <= i_ram.addr + 1;
+					o_ram.remainder <= i_ram.remainder - 1;
+					o_ram.count     <= i_ram.count - 1;
+					if (i_ram.count > 1) then
+						o_ram.addr        <= i_ram.addr + 1;
+						o_ram.remote_addr <= i_ram.remote_addr + 1;
 					end if;
 					o_memif.m_data  <= i_ram.data;
 				end if;				
@@ -1327,42 +1353,70 @@ package body reconos_pkg is
 		o_memif.s_rd <= '0';
 		done         := False;
 		case i_memif.step is
-			-- mem_read_request
+
 			when 0 =>
-				if (i_memif.m_remainder > 1) then
-					o_memif.step <= 1;
-				end if;
+				o_ram.remainder <= "00" & len(23 downto 2);
+				o_ram.addr <= dst_addr;
+				o_ram.remote_addr <= src_addr(31 downto 2);
+				o_memif.step <= 1;
+
+			-- divide into blocks
 			when 1 =>
-				o_memif.m_wr <= '1';
-				o_memif.m_data <= MEMIF_CMD_READ & len;
-				o_ram.addr      <= dst_addr;
-				o_memif.step <= 2;
-			when 2 =>
-				o_memif.m_wr      <= '1';
-				o_memif.m_data    <= src_addr;
-				o_ram.remainder   <= len;
-				o_memif.step      <= 3;
-			-- read data and store them into the local memory
-			when 3 =>
-				if (len(23 downto 2) <= i_memif.s_fill) then
-					o_memif.s_rd <= '1';
-					o_memif.step <= 4;
+				if i_ram.remainder = 0 then
+					o_memif.step <= 15;
+				else
+					if i_memif.m_remainder > 1 then
+						o_memif.step <= 2;
+					end if;
 				end if;
+
+				if i_ram.remainder > C_BLOCK_SIZE then
+					o_ram.count <= C_BLOCK_SIZE;
+				else
+					o_ram.count <= CONV_INTEGER(i_ram.remainder);
+				end if; 
+
+			-- write header
+			when 2 =>
+				o_memif.m_wr <= '1';
+				o_memif.m_data <= MEMIF_CMD_READ & CONV_STD_LOGIC_VECTOR(i_ram.count,22) & "00";
+				--o_ram.addr      <= dst_addr;
+				o_memif.step <= 3;
+			when 3 =>
+				o_memif.m_wr      <= '1';
+				o_memif.m_data    <= i_ram.remote_addr & "00";
+				o_memif.step      <= 4;
+
+			-- read data and store it into the local memory
 			when 4 =>
+				if (i_ram.count <= i_memif.s_fill) then
+					o_memif.s_rd <= '1';
+					o_memif.step <= 5;
+				end if;
+
+			when 5 =>
 				o_memif.s_rd    <= '1';
 				o_ram.data      <= i_memif.s_data;
-				o_ram.remainder <= i_ram.remainder - 4;
+				o_ram.remainder <= i_ram.remainder - 1;
+				o_ram.count     <= i_ram.count - 1;
 				o_ram.we        <= '1';
-				o_memif.step    <= 5;	
-			when 5 =>
-				if (i_ram.remainder = 0) then
-					o_memif.step <= 6;
+				o_memif.step    <= 6;
+
+			when 6 =>
+				if (i_ram.count = 0) then
+					o_ram.addr <= i_ram.addr + 1;
+					o_ram.remote_addr <= i_ram.remote_addr + 1;
+					o_memif.step <= 1;
 				else
-					o_memif.s_rd    <= '1';
-					o_ram.we        <= '1';
-					o_ram.remainder <= i_ram.remainder - 4;
-					o_ram.addr      <= i_ram.addr + 1;
-					o_ram.data      <= i_memif.s_data;
+					if (i_ram.count > 1) then
+						o_memif.s_rd    <= '1';
+					end if; 
+					o_ram.we          <= '1';
+					o_ram.remainder   <= i_ram.remainder - 1;
+					o_ram.count       <= i_ram.count - 1;
+					o_ram.addr        <= i_ram.addr + 1;
+					o_ram.remote_addr <= i_ram.remote_addr + 1;
+					o_ram.data        <= i_memif.s_data;
 				end if;
 			when others =>
 				done := True;
