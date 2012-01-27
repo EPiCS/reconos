@@ -33,7 +33,7 @@ int main(int argc, char ** argv)
 	
 	mbox_init(&mb_1,3);
 	
-	reconos_init(1);
+	reconos_init_autodetect();
 	
 	reconos_hwt_setresources(&hwt,res,2);
 	reconos_hwt_setinitdata(&hwt,(void *) init_data);
