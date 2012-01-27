@@ -36,6 +36,7 @@ void * wait_on_condvar(void * arg){
 int main(int argc, char ** argv)
 {
 	int i=0,j;
+	printf("%d\n",argc);
 	assert(argc == 1);
 
 	res[0].type = RECONOS_TYPE_MUTEX;
@@ -63,7 +64,7 @@ int main(int argc, char ** argv)
 
 	// create hardware thread
 	printf("creating hw thread... ");	
-	reconos_init(1);	
+	reconos_init_autodetect();	
 	reconos_hwt_setresources(&hwt,res,4);
 	reconos_hwt_create(&hwt,0,NULL);
 	printf("ok\n");
