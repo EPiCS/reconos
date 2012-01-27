@@ -97,6 +97,14 @@ void proc_control_selftest()
 	}
 }
 
+
+void cache_flush(void)
+{
+	int foo = 1;
+	write(reconos_proc.fd_cache,&foo,(sizeof(foo)));
+}
+
+
 void * control_thread_entry(void * arg)
 {
 	RECONOS_DEBUG("control thread listening on fsl %d\n",reconos_proc.proc_control_fsl_a);
@@ -116,6 +124,7 @@ void * control_thread_entry(void * arg)
 			RECONOS_DEBUG("control thread received page fault @ 0x%08X\n",(uint32)addr);
 		
 			*addr = 0;   /* this page has not been touched yet. we can safely write 0 to the page */
+			cache_flush();
 			ret = *addr;
 	
 			ret = ret & 0x00FFFFFF; /* clear upper 8 bits */
@@ -159,6 +168,9 @@ int reconos_init(int proc_control_fsl_a, int proc_control_fsl_b)
 
 	pthread_attr_init(&attr);	
 	pthread_create(&reconos_proc.proc_control_thread, NULL, control_thread_entry,NULL);
+
+	// init cache file descriptor
+	reconos_proc.fd_cache = open("/dev/getpgd", O_WRONLY);
 	
 	return 0;
 }

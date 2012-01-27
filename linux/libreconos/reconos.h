@@ -63,12 +63,15 @@ struct reconos_process
 	int proc_control_fsl_b; // sw initiates requests
 	pthread_t proc_control_thread;
 	int slot_flags[MAX_SLOTS];
+	int fd_cache;
 };
 
 extern struct reconos_process reconos_proc;
 
 int reconos_init(int proc_ctrl_fsl_a, int proc_control_fsl_b);
 int reconos_init_autodetect();
+
+void cache_flush(void);
 
 void proc_control_selftest();
 

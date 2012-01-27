@@ -63,7 +63,7 @@ void * filter_1_function(void * data)
 	while (42)
 	{
 		ret = mbox_get( &mb_start_filter_1);
-		//apply_mirror_filter( (unsigned int *)ret, SIZE_X, SIZE_Y);
+		apply_mirror_filter( (unsigned int *)ret, SIZE_X, SIZE_Y);
 		mbox_put( &mb_start_filter_2, ( uint32 ) ret );
 	}
 	return NULL;
@@ -82,23 +82,12 @@ void * filter_2_function(void * data)
 	while (42)
 	{
 		ret = mbox_get( &mb_start_filter_2);
-		//apply_sobel_filter( (unsigned int *)ret, SIZE_X, SIZE_Y);
+		apply_sobel_filter( (unsigned int *)ret, SIZE_X, SIZE_Y);
 		mbox_put( &mb_done_filtering, ( uint32 ) ret );
 	}
 	return NULL;
 }
 
-
-void cache_flush(void)
-{
-	int foo = 1;
-	write(fd,&foo,(sizeof(foo)));
-}
-
-void cache_init(void)
-{
-	fd = open("/dev/getpgd", O_WRONLY);
-}
 
 
 
@@ -110,7 +99,6 @@ void cache_init(void)
 void * ethernet_function(void * data)
 {
 	unsigned int ret = (unsigned int) framebuffer;
-	cache_init();
 	while (42)
 	{
 		read_frame();
