@@ -33,7 +33,7 @@ int main(int argc, char ** argv)
 	pthread_mutex_init(&mutex_a, NULL);
 	pthread_mutex_lock(&mutex_a);
 	
-	reconos_init(1);
+	reconos_init_autodetect();
 	
 	reconos_hwt_setresources(&hwt,res,1);
 	reconos_hwt_create(&hwt,0,NULL);
