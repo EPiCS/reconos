@@ -27,15 +27,26 @@ void generate_data( unsigned int *array, unsigned int size )
     }
 }
 
+int cmp(const void * a, const void * b)
+{
+    unsigned int x,y;
+    x = (unsigned int)a;
+    y = (unsigned int)b;
+    return y - x;
+}
+
 // checks whether data is sorted
-int check_data( unsigned int *data, unsigned int size )
+int check_data( unsigned int *data, unsigned int *copy, unsigned int size )
 {
     int i;
     
+    qsort(copy,size,4,cmp);
+
     for ( i = 0; i < size - 1; i++ ) {
-        if ( data[i] > data[i + 1] ) {
-            return -i;
-        }
+        if(data[i] != copy[i]) return i;
+//        if ( data[i] > data[i + 1] ) {
+//            return -i;
+//        }
     }
-    return 0;
+    return -1;
 }

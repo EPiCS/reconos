@@ -132,25 +132,6 @@ begin
 			end if;
 		end if;
 	end process;
-	
-
-	-- instantiate bubble_sorter module
-	sorter_i : bubble_sorter
-		generic map (
-			G_LEN     => C_LOCAL_RAM_SIZE,
-			G_AWIDTH  => C_LOCAL_RAM_ADDRESS_WIDTH,
-			G_DWIDTH  => 32
-		)
-		port map (
-			clk       => OSFSL_Clk,
-			reset     => rst,
-			o_RAMAddr => o_RAMAddr_sorter,
-			o_RAMData => o_RAMData_sorter,
-			i_RAMData => i_RAMData_sorter,
-			o_RAMWE   => o_RAMWE_sorter,
-			start     => sort_start,
-			done      => sort_done
-	);
 
 	fsl_setup(
 		i_osif,
@@ -190,7 +171,26 @@ begin
 	);
 	
 	o_RAMAddr_reconos(0 to C_LOCAL_RAM_ADDRESS_WIDTH-1) <= o_RAMAddr_reconos_2((32-C_LOCAL_RAM_ADDRESS_WIDTH) to 31);
-		
+	
+
+	-- instantiate bubble_sorter module
+	sorter_i : bubble_sorter
+		generic map (
+			G_LEN     => C_LOCAL_RAM_SIZE,
+			G_AWIDTH  => C_LOCAL_RAM_ADDRESS_WIDTH,
+			G_DWIDTH  => 32
+		)
+		port map (
+			clk       => OSFSL_Clk,
+			reset     => rst,
+			o_RAMAddr => o_RAMAddr_sorter,
+			o_RAMData => o_RAMData_sorter,
+			i_RAMData => i_RAMData_sorter,
+			o_RAMWE   => o_RAMWE_sorter,
+			start     => sort_start,
+			done      => sort_done
+	);
+	
 	-- os and memory synchronisation state machine
 	reconos_fsm: process (i_osif.clk) is
 		variable done  : boolean;

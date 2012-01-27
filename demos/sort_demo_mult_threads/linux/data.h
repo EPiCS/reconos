@@ -18,6 +18,6 @@
 void generate_data( unsigned int *array, unsigned int size );
 
 // checks whether data is sorted
-int check_data( unsigned int *data, unsigned int size );
+int check_data( unsigned int *data, unsigned int *copy, unsigned int size );
 
 #endif                          //__DATA_H__

@@ -131,6 +131,7 @@ int main(int argc, char ** argv)
 	int running_threads;
 	int buffer_size;
 	int slice_size;
+	unsigned int *data, *copy;
 
 	timing_t t_start, t_stop;
 	ms_t t_generate;
@@ -195,9 +196,11 @@ int main(int argc, char ** argv)
 	t_start = gettime();
 
 	printf("malloc page aligned ...\n");
-	unsigned int *data = malloc_page_aligned(TO_PAGES(buffer_size));
+	data = malloc_page_aligned(TO_PAGES(buffer_size));
+	copy = malloc_page_aligned(TO_PAGES(buffer_size));
 	printf("generate data ...\n");
 	generate_data( data, TO_WORDS(buffer_size));
+	memcpy(copy,data,TO_WORDS(buffer_size)*4);
 
 	t_stop = gettime();
 	t_generate = calc_timediff_ms(t_start,t_stop);
@@ -258,11 +261,11 @@ int main(int argc, char ** argv)
 
 	printf("Checking sorted data: ... ");
 	fflush(stdout);
-	ret = check_data( data, TO_WORDS(buffer_size));
-	if (ret < 0)
+	ret = check_data( data, copy, TO_WORDS(buffer_size));
+	if (ret >= 0)
 	  {
 	    printf("failure at word index %i\n", -ret);
-	    print_data(data-ret, 2);
+	    printf("expected 0x%08X    found 0x%08X\n",data[copy[ret]],data[ret]);
 	  }
 	else
 	  {
