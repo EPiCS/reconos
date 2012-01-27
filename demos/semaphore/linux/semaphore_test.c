@@ -33,7 +33,7 @@ int main(int argc, char ** argv)
 	sem_init(&sem_a,0,0);
 	sem_init(&sem_b,0,0);
 	
-	reconos_init(1);
+	reconos_init_autodetect();
 	
 	reconos_hwt_setresources(&hwt,res,2);
 	reconos_hwt_create(&hwt,0,NULL);
