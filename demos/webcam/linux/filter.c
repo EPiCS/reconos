@@ -8,8 +8,8 @@ void apply_sobel_filter( unsigned int *buf, int width, int height)
 {
 	int i;
 	int c;
-	int THRESH_H = 50;
-	int THRESH_V = 50;
+	int THRESH_H = 40;
+	int THRESH_V = 60;
 	unsigned int * buf2 = malloc(sizeof(unsigned int)*width*height);
 
 	for (i=0;i<height*width;i++)
@@ -24,27 +24,27 @@ void apply_sobel_filter( unsigned int *buf, int width, int height)
 			//  1   2   1
 			//  0   0   0
 			// -1  -2  -1
-			c = buf[i-width-1] % 256;
-			c += 2*(buf[i-width] % 256);
-			c += buf[i-width+1] % 256;
-			c -= buf[i+width-1] % 256;
-			c -= 2*(buf[i+width] % 256);
-			c -= buf[i+width+1] % 256;
+			c = buf[i-width-1] >> 24;
+			c += 2*(buf[i-width] >> 24);
+			c += buf[i-width+1] >> 24; 
+			c -= buf[i+width-1] >> 24; 
+			c -= 2*(buf[i+width] >> 24); 
+			c -= buf[i+width+1] >> 24;
 			if (c>THRESH_V)
-				buf2[i] = 0xFFFFFF;
+				buf2[i] = 0xFFFFFF00;
 
 			// matrix horizonal
 			//  1   0  -1
 			//  2   0  -2
 			//  1   0  -1
-			c = buf[i-width-1] % 256;
-			c += 2*(buf[i-1] % 256);
-			c += buf[i+width-1] % 256;
-			c -= buf[i-width+1] % 256;
-			c -= 2*(buf[i+1] % 256);
-			c -= buf[i+width+1] % 256;
+			c = buf[i-width-1] >> 24; 
+			c += 2*(buf[i-1] >> 24); 
+			c += buf[i+width-1] >> 24; 
+			c -= buf[i-width+1] >> 24; 
+			c -= 2*(buf[i+1] >> 24);
+			c -= buf[i+width+1] >> 24; 
 			if (c>THRESH_H)
-				buf2[i] = 0xFFFFFF;
+				buf2[i] = 0xFFFFFF00;
 
 		} 
 	}
@@ -58,7 +58,7 @@ void apply_mirror_filter( unsigned int *buf, int width, int height)
 	unsigned int * buf2 = malloc(sizeof(unsigned int)*width*height);
 	for (i=0;i<(height*width);i+=width)
 	{
-		for (j=0; j<width;j+=1)
+		for (j=0; j<width;j++)
 		{
 			buf2[i+(width-1)-j] = buf[i+j];
 		}

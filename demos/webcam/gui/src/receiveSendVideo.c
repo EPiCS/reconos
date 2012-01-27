@@ -553,6 +553,7 @@ int main( int argc, char *argv[] )
                     // change video frame
                     cvResize(frame, frame2,CV_INTER_LINEAR);
                     apply_mirror_filter (frame2->imageData, frame2->imageSize, frame2->width, frame2->height );
+                    apply_sobel_filter (frame2->imageData, frame2->imageSize, frame2->width, frame2->height );
                     convert_to_4_channels(frame2->imageData, byte_stream_2, frame2->width, frame2->height);
 
                     counter++;
