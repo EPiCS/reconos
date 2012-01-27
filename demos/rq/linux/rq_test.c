@@ -44,7 +44,7 @@ int main(int argc, char ** argv)
 	res[1].type = RECONOS_TYPE_RQ;
 	res[1].ptr  = &rq_2;
 	
-	reconos_init(1);
+	reconos_init_autodetect();
 	
 	reconos_hwt_setresources(&hwt,res,2);
 	reconos_hwt_create(&hwt,0,NULL);
