@@ -545,15 +545,15 @@ int main( int argc, char *argv[] )
             result = 1;
             freeze = 0;
             while ( ( char ) key != 'q' && result > 0 ) {
-                result = tcp_receive( con, frame->imageData, frame->imageSize );
-		//result = tcp_receive( con, byte_stream, byte_stream_length );
+                //result = tcp_receive( con, frame->imageData, frame->imageSize );
+		result = tcp_receive( con, byte_stream, byte_stream_length );
                 if ( result > 0 ) {
 
-                    //convert_to_3_channels(byte_stream, frame->imageData, frame->width, frame->height);
+                    convert_to_3_channels(byte_stream, frame->imageData, frame->width, frame->height);
                     // change video frame
                     cvResize(frame, frame2,CV_INTER_LINEAR);
                     apply_mirror_filter (frame2->imageData, frame2->imageSize, frame2->width, frame2->height );
-                    //convert_to_4_channels(frame2->imageData, byte_stream_2, frame2->width, frame2->height);
+                    convert_to_4_channels(frame2->imageData, byte_stream_2, frame2->width, frame2->height);
 
                     counter++;
                     // display video
@@ -569,8 +569,8 @@ int main( int argc, char *argv[] )
                     if ( output )
                         cvWriteFrame( writer, frame2 );
                     // send frame back
-                    result = tcp_send( con, frame2->imageData, frame2->imageSize );
-                    //result = tcp_send( con, byte_stream_2, byte_stream_length );
+                    //result = tcp_send( con, frame2->imageData, frame2->imageSize );
+                    result = tcp_send( con, byte_stream_2, byte_stream_length );
                 }
 
 		if (counter%2==0){
