@@ -44,8 +44,7 @@ end hwt_graphical_filter;
 
 architecture implementation of hwt_graphical_filter is
 	type STATE_TYPE is (STATE_GET_INIT_DATA,STATE_READ_PARAMETER,STATE_READ_PARAMETER_2,
-		STATE_GET_ADDR,STATE_CONTROL,STATE_LOAD_LINE,STATE_MIRROR_LINE,STATE_MIRROR_LINE_2,
-		STATE_MIRROR_LINE_3,STATE_MIRROR_LINE_4,STATE_MIRROR_LINE_5,
+		STATE_GET_ADDR,STATE_CONTROL,STATE_LOAD_LINE,
 		STATE_STORE_LINE,STATE_ACK,STATE_THREAD_EXIT);
 	
 	-- IMPORTANT: define size of local RAM here!!!! 
@@ -67,16 +66,17 @@ architecture implementation of hwt_graphical_filter is
 	signal i_ram    : i_ram_t;
 	signal o_ram    : o_ram_t;
 
-	signal o_RAMAddr_uf : std_logic_vector(0 to C_LOCAL_RAM_ADDRESS_WIDTH-1);
-	signal o_RAMData_uf : std_logic_vector(0 to 31);
+	signal o_RAMAddr_uf : std_logic_vector(C_LOCAL_RAM_ADDRESS_WIDTH-1 downto 0);
+	signal o_RAMData_uf : std_logic_vector(31 downto 0);
 	signal o_RAMWE_uf   : std_logic;
-	signal i_RAMData_uf : std_logic_vector(0 to 31);
+	signal i_RAMData_uf : std_logic_vector(31 downto 0);
 
-	signal o_RAMAddr_reconos   : std_logic_vector(0 to C_LOCAL_RAM_ADDRESS_WIDTH-1);
-	signal o_RAMAddr_reconos_2 : std_logic_vector(0 to 31);
-	signal o_RAMData_reconos   : std_logic_vector(0 to 31);
+	signal o_RAMAddr_reconos   : std_logic_vector(C_LOCAL_RAM_ADDRESS_WIDTH-1 downto 0);
+	signal o_RAMAddr_reconos_2 : std_logic_vector(31 downto 0);
+	signal o_RAMData_reconos   : std_logic_vector(31 downto 0);
+	signal o_RAMData_reconos_2 : std_logic_vector(31 downto 0);
 	signal o_RAMWE_reconos     : std_logic;
-	signal i_RAMData_reconos   : std_logic_vector(0 to 31);
+	signal i_RAMData_reconos   : std_logic_vector(31 downto 0);
 
 	shared variable local_ram : LOCAL_MEMORY_T;
 
@@ -86,12 +86,9 @@ architecture implementation of hwt_graphical_filter is
 	signal size_x : std_logic_vector(31 downto 0);
 	signal size_y : std_logic_vector(31 downto 0);
 	signal y : std_logic_vector(31 downto 0);
-	signal x : std_logic_vector(31 downto 0);
 	signal ptr : std_logic_vector(31 downto 0);
-	signal ram_src : std_logic_vector(0 to C_LOCAL_RAM_ADDRESS_WIDTH-1);
-	signal ram_dst : std_logic_vector(0 to C_LOCAL_RAM_ADDRESS_WIDTH-1);
-	signal data : std_logic_vector(31 downto 0);
-
+	signal select_sig : std_logic;
+	signal o_RAMData_grey : std_logic_vector(31 downto 0);
 begin
 
 	-- local dual-port RAM
@@ -117,13 +114,16 @@ begin
 		end if;
 	end process;
 
-	o_RAMAddr_reconos(0 to C_LOCAL_RAM_ADDRESS_WIDTH-1) <= o_RAMAddr_reconos_2((32-C_LOCAL_RAM_ADDRESS_WIDTH) to 31);
+	-- inverse the line using a multiplexer
+	o_RAMAddr_reconos(C_LOCAL_RAM_ADDRESS_WIDTH-1 downto 0) <= o_RAMAddr_reconos_2(C_LOCAL_RAM_ADDRESS_WIDTH-1 downto 0); 
+	o_RAMData_reconos <= o_RAMData_reconos_2 when select_sig = '0' else o_RAMData_grey;
+	o_RAMData_grey <= X"00" & o_RAMData_reconos_2(23 downto 16) & o_RAMData_reconos_2(23 downto 16) & o_RAMData_reconos_2(23 downto 16);
 
 	ram_setup(
 		i_ram,
 		o_ram,
 		o_RAMAddr_reconos_2,		
-		o_RAMData_reconos,
+		o_RAMData_reconos_2,
 		i_RAMData_reconos,
 		o_RAMWE_reconos
 	);
@@ -165,11 +165,13 @@ begin
 			osif_reset(o_osif);
 			memif_reset(o_memif);
 			ram_reset(o_ram);
+			select_sig <='0';
+			size_x <= X"000000A0";
 			state <= STATE_GET_INIT_DATA;
 			done := False;
 			addr <= (others => '0');
 		elsif rising_edge(i_osif.clk) then
-			o_RAMWE_uf <= '0';
+			select_sig <='0'; 
 			case state is
 				
 				-- read init data
@@ -180,12 +182,16 @@ begin
 				-- read frame width
 				when STATE_READ_PARAMETER =>
 					memif_read_word(i_memif,o_memif,information_struct_addr,size_x,done);
-					if done then state <= STATE_READ_PARAMETER_2; end if;
+					if done then 
+						state <= STATE_READ_PARAMETER_2; 
+					end if;
 					
 				--read frame height
 				when STATE_READ_PARAMETER_2 =>
 					memif_read_word(i_memif,o_memif,information_struct_addr+4,size_y,done);
-					if done then state <= STATE_GET_ADDR; end if;
+					if done then 
+						state <= STATE_GET_ADDR; 
+					end if;
 
 				-- get address via mbox: the data will be copied from this address to the local ram in the next states
 				when STATE_GET_ADDR =>
@@ -195,71 +201,35 @@ begin
 							state <= STATE_THREAD_EXIT;
 						else
 							ptr <= addr;
-							state <= STATE_ACK;
-							--state <= STATE_CONTROL;
+							state <= STATE_CONTROL;
 							y <= (others=>'0');
 						end if;
 					end if;
 				
---				-- control the processing of lines
---				when STATE_CONTROL =>
---					if (y < size_y) then
---						y <= y + 1;
---						state <= STATE_LOAD_LINE;
---					else
---						state <= STATE_ACK;
---					end if;
---				
---				-- load line from main memory
---				when STATE_LOAD_LINE =>
---					memif_read(i_ram,o_ram,i_memif,o_memif,ptr,X"00000000",size_x(21 downto 0)&"00",done);
---					if done then 
---						x <= (others=>'0');
---						ram_src <= (others=>'0');
---						ram_dst <= "100000000" + size_x;
---						state <= STATE_MIRROR_LINE; 
---					end if;
---				
---				-- start to mirror the pixel line
---				when STATE_MIRROR_LINE =>	
---					ram_dst <= ram_dst - 1;
---					o_RAMAddr_uf <= ram_src;
---					state <= STATE_MIRROR_LINE_2;
---				
---				-- count the pixels in the line. load the pixel data
---				when STATE_MIRROR_LINE_2 =>
---					o_RAMAddr_uf <= ram_src;
---					if (x<size_x) then
---						x <= x + 1;
---						state <= STATE_MIRROR_LINE_3;
---					else 
---						state <= STATE_STORE_LINE;
---					end if;
---				
---				-- wait 1 clock cycle (BRAM delay)
---				when STATE_MIRROR_LINE_3 =>	
---					state <= STATE_MIRROR_LINE_4;
---				
---				-- store pixel in the second half of the local RAM
---				when STATE_MIRROR_LINE_4 =>	
---					o_RAMData_uf <= i_RAMData_uf;
---					o_RAMAddr_uf <= ram_dst;
---					o_RAMWE_uf   <= '1';
---					state <= STATE_MIRROR_LINE_5;
---				
---				-- set new src and dst addresses
---				when STATE_MIRROR_LINE_5 =>
---					ram_dst <= ram_dst - 1;
---					ram_src <= ram_src + 1;
---					state <= STATE_MIRROR_LINE_2;
---				
---				-- store pixel line to main memory
---				when STATE_STORE_LINE =>
---					memif_write(i_ram,o_ram,i_memif,o_memif,X"00000100",ptr,size_x(21 downto 0)&"00",done);
---					if done then 
---						ptr <= ptr + (size_x(29 downto 0)&"00");
---						state <= STATE_CONTROL; 
---					end if;
+				-- control the processing of lines
+				when STATE_CONTROL =>
+					if (y < size_y) then
+						y <= y + 1;
+						state <= STATE_LOAD_LINE;
+					else
+						state <= STATE_ACK;
+					end if;
+				
+				-- load line from main memory
+				when STATE_LOAD_LINE =>
+					memif_read(i_ram,o_ram,i_memif,o_memif,ptr,X"00000000",(size_x(21 downto 0)&"00"),done);
+					if done then 
+						state <= STATE_STORE_LINE; 
+					end if;				
+				
+				-- store pixel line to main memory
+				when STATE_STORE_LINE =>
+					select_sig <='1'; 
+					memif_write(i_ram,o_ram,i_memif,o_memif,X"00000000",ptr,(size_x(21 downto 0)&"00"),done);
+					if done then 
+						ptr <= ptr + (size_x(29 downto 0)&"00");
+						state <= STATE_CONTROL; 
+					end if;
 				
 				-- send mbox that signals that filtering is done
 				when STATE_ACK =>
@@ -269,9 +239,6 @@ begin
 				-- thread exit
 				when STATE_THREAD_EXIT =>
 					osif_thread_exit(i_osif,o_osif);
-					
-				when others =>
-					state <= STATE_GET_ADDR;
 			
 			end case;
 		end if;
