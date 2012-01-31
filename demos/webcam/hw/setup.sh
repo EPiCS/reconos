@@ -1,6 +1,6 @@
 #!/bin/bash
 
-BASE_DESIGN="ml605_linux_13.3"
+BASE_DESIGN="ml605_linux_13.3_cache"
 HWTS="hwt_graphical_filter_v1_00_a\
       hwt_graphical_filter_v1_00_b"
 

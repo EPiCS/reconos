@@ -143,8 +143,8 @@ int main(int argc, char *argv[])
 	mbox_init(&mb_done_filtering,3);
 
 	
-	/*// create filter sw thread no. 1
-	pthread_attr_init(&filter_thread_1_attr);
+	// create filter sw thread no. 1
+	/*pthread_attr_init(&filter_thread_1_attr);
 	pthread_attr_setstacksize(&filter_thread_1_attr, STACK_SIZE);
 	pthread_create(&filter_thread_1, &filter_thread_1_attr, filter_1_function, 0);
 	
@@ -153,8 +153,7 @@ int main(int argc, char *argv[])
 	pthread_attr_setstacksize(&filter_thread_2_attr, STACK_SIZE);
 	pthread_create(&filter_thread_2, &filter_thread_2_attr, filter_2_function, 0);*/
 	
-
-	reconos_init(0,3);
+	reconos_init_autodetect();
 
 	res_1[0].type = RECONOS_TYPE_MBOX;
 	res_1[0].ptr  = &mb_start_filter_1;
@@ -176,19 +175,19 @@ int main(int argc, char *argv[])
 	// create filter hardware thread no. 1
 	reconos_hwt_setresources(&hwt_filter_1,res_1,2);
 	reconos_hwt_setinitdata(&hwt_filter_1, (void *)init_data);
-	reconos_hwt_create(&hwt_filter_1,1,NULL);
+	reconos_hwt_create(&hwt_filter_1,0,NULL);
 
 	// create filter hardware thread no. 2
 	reconos_hwt_setresources(&hwt_filter_2,res_2,2);
 	reconos_hwt_setinitdata(&hwt_filter_2, (void *)init_data);
-	reconos_hwt_create(&hwt_filter_2,2,NULL);
+	reconos_hwt_create(&hwt_filter_2,1,NULL);
 
 	// create ethernet sw thread
 	pthread_attr_init(&ethernet_thread_attr);
 	pthread_attr_setstacksize(&ethernet_thread_attr, STACK_SIZE);
 	pthread_create(&ethernet_thread, &ethernet_thread_attr, ethernet_function, 0);
 
-	//while(42){}
+	while(42){}
 	pthread_join(hwt_filter_1.delegate,NULL);
 	pthread_join(hwt_filter_2.delegate,NULL);
 	free(init_data);
