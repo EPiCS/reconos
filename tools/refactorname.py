@@ -90,7 +90,13 @@ def refactorname(oldname, newname, path):
             if movesCommand != "":
                 movesCount += 1
                 movesAllCommands += movesCommand
-            
+
+    # One more for the root directory
+    movesCommand = diffFileName(oldname, newname, path)
+    if movesCommand != "":
+        movesCount += 1
+        movesAllCommands += movesCommand
+                            
     movesDiffHeader = "--- {0}/move.sh ''timestamp''\n+++ {0}/move.sh ''timestamp''\n".format(path) + "@@ -0,0 +1,{0} @@\n".format(movesCount+1) + "+#!/bin/sh\n"
     movesDiff = movesDiffHeader + movesAllCommands
 
