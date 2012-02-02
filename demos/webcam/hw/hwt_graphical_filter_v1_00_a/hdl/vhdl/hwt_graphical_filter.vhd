@@ -117,7 +117,7 @@ begin
 	-- inverse the line using a multiplexer
 	o_RAMAddr_reconos(C_LOCAL_RAM_ADDRESS_WIDTH-1 downto 0) <= o_RAMAddr_reconos_2(C_LOCAL_RAM_ADDRESS_WIDTH-1 downto 0); 
 	o_RAMData_reconos <= o_RAMData_reconos_2 when select_sig = '0' else o_RAMData_grey;
-	o_RAMData_grey <= X"00" & o_RAMData_reconos_2(23 downto 16) & o_RAMData_reconos_2(23 downto 16) & o_RAMData_reconos_2(23 downto 16);
+	o_RAMData_grey <= o_RAMData_reconos_2(23 downto 16) & o_RAMData_reconos_2(23 downto 16) & o_RAMData_reconos_2(23 downto 16) & X"00";
 
 	ram_setup(
 		i_ram,
@@ -217,6 +217,7 @@ begin
 				
 				-- load line from main memory
 				when STATE_LOAD_LINE =>
+					select_sig <='1'; 
 					memif_read(i_ram,o_ram,i_memif,o_memif,ptr,X"00000000",(size_x(21 downto 0)&"00"),done);
 					if done then 
 						state <= STATE_STORE_LINE; 
@@ -224,7 +225,6 @@ begin
 				
 				-- store pixel line to main memory
 				when STATE_STORE_LINE =>
-					select_sig <='1'; 
 					memif_write(i_ram,o_ram,i_memif,o_memif,X"00000000",ptr,(size_x(21 downto 0)&"00"),done);
 					if done then 
 						ptr <= ptr + (size_x(29 downto 0)&"00");
