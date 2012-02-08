@@ -7,6 +7,8 @@ DEFAULT_CLK = "clk_100_0000MHzMMCM0"
 DEFAULT_RST = "sys_bus_reset"
 DEFAULT_MEMFIFO_DEPTH = 128
 
+FSL_VERSION="2.11.e"
+
 def fifo32(name,rst,depth = DEFAULT_MEMFIFO_DEPTH):
 	instance = mhsmodule.MHSPCore("fifo32")
 	instance.addEntry("PARAMETER","INSTANCE",name)
@@ -25,7 +27,7 @@ def fsl(num,mb_is_slave,rst):
 	instance = mhsmodule.MHSPCore("fsl_v20")
 	name = ("fsl_v20_%d" % num) + c
 	instance.addEntry("PARAMETER","INSTANCE",name)
-	instance.addEntry("PARAMETER","HW_VER","2.11.c")
+	instance.addEntry("PARAMETER","HW_VER",FSL_VERSION)
 	instance.addEntry("PARAMETER","C_USE_CONTROL",0)
 	instance.addEntry("PORT","FSL_Clk",DEFAULT_CLK)
 	instance.addEntry("PORT","SYS_Rst",rst)
@@ -119,8 +121,27 @@ def xps_mem():
 	instance.addEntry("BUS_INTERFACE","SFIFO32","mmu_0_MEM_SFIFO32")
 	instance.addEntry("BUS_INTERFACE","MFIFO32","mmu_0_MEM_MFIFO32")
 	return instance
-	
-	
+
+def gnd2int():
+	instance = mhsmodule.MHSPCore("gnd2int")
+	instance.addEntry("PARAMETER","INSTANCE","gnd2int_0")
+	instance.addEntry("PARAMETER","HW_VER","1.00.a")
+	for i in range(16):
+		instance.addEntry("PORT","GND%X" % i,"gnd2int_0_gnd%d" % i)
+	return instance
+
+def print_help():
+	sys.stderr.write("Usage: mhsaddhwts.py <system.mhs> <hwt0_directory> <hwt1_directory> ...\n")
+	sys.stderr.write("output: The new mhs-file with added ReconOS system and hardware threads.\n")
+
+if len(sys.argv) < 3:
+	print_help()
+	sys.exit(1)
+
+if len(sys.argv) > 16:
+	sys.stderr.write("More than 14 hardware threads are not supported\n")
+	sys.exit(1)
+
 mhs = mhsmodule.MHS(sys.argv[1])
 
 
@@ -190,19 +211,21 @@ mhs.addPCore(proc_control(len(hwts),"fsl_v20_%da" % n,"fsl_v20_%db" % n,"fsl_v20
 
 # Connect interrupts
 
+mhs.addPCore(gnd2int())
+
 intc = mhs.getPCores("xps_intc")[0]
 interrupts = intc.getValue("Intr")
 
-interrupts += " & fsl_v20_%da_FSL_Has_Data" % (len(hwts)+1)
-interrupts += " & fsl_v20_%da_FSL_Has_Data" % len(hwts)
+reconos_int = ""
 
-for i in range(len(hwts)-1,-1,-1):
-	interrupts += " & fsl_v20_%da_FSL_Has_Data" % i
+for i in range(16):
+	if i < len(hwts) + 2:
+		reconos_int = (" & fsl_v20_%da_FSL_Has_Data" % i) + reconos_int
+	else:
+		reconos_int = (" & gnd2int_0_gnd%d" % i) + reconos_int	
 
-
-
+interrupts = interrupts + reconos_int
 intc.setValue("Intr",interrupts)
-
 
 # Done
 
