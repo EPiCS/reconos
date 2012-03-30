@@ -8,8 +8,6 @@
 #include <asm/page.h>
 #include <asm/pgtable.h>
 
-#define GETPGD_NAME "getpgd"
-
 static void flush_dcache(void)
 {
 	int i;
@@ -54,7 +52,7 @@ static struct file_operations getpgd_fops __read_mostly = {
 static struct miscdevice getpgd_misc_dev __read_mostly = {
 	.fops	=	&getpgd_fops,
 	.minor	=	MISC_DYNAMIC_MINOR,
-	.name	=	GETPGD_NAME,
+	.name	=	"getpgd",
 };
 
 static __init int getpgd_init(void)
