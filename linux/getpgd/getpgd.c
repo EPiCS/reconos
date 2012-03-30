@@ -35,7 +35,7 @@ static ssize_t getpgd_read(struct file *filp, char __user *buf, size_t len,
 
 	res = copy_to_user(buf, &data, sizeof data);
 
-	return res < 0 ? -EIO : res;
+	return res <= 0 ? -EIO : res;
 }
 
 static ssize_t getpgd_write(struct file *filp, const char __user *buf,
