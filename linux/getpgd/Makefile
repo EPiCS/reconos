@@ -1,5 +1,6 @@
 # if KERNELRELEASE is defined (i.e. != ""), we've been invoked from
 # the kernel build system and can build the module
+
 ARCH = microblaze
 CROSS_COMPILE = microblaze-unknown-linux-gnu-
 export ARCH CROSS_COMPILE
