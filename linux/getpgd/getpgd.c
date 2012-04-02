@@ -25,15 +25,12 @@ static void flush_dcache(void)
 static ssize_t getpgd_read(struct file *filp, char __user *buf, size_t len,
 			   loff_t *ignore)
 {
-	long res;
 	unsigned long data = (unsigned long) current->mm->pgd - 0xC0000000;
 
 	if (len != sizeof(data))
 		return -EINVAL;
 
-	res = copy_to_user(buf, &data, sizeof data);
-
-	return res <= 0 ? -EIO : res;
+	return copy_to_user(buf, &data, sizeof(data)) ? -EIO : len;
 }
 
 static ssize_t getpgd_write(struct file *filp, const char __user *buf,
