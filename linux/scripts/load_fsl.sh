@@ -12,7 +12,7 @@ cp ./$mname.ko /lib/modules/`uname -r`/
 rmmod $mname
 if [ -z $interrupt_list ]
 then
-	numfsl=`./readpvr NUMFSL`
+	numfsl=`./readpvr -V NUMFSL`
 	interrupts=`seq 0 $numfsl`
 	interrupt_list=`echo $interrupts | tr ' ' ','`
 else
