@@ -13,6 +13,7 @@ rmmod $mname
 if [ -z $interrupt_list ]
 then
 	numfsl=`./readpvr -V NUMFSL`
+	numfsl=`expr $numfsl - 1`
 	interrupts=`seq 0 $numfsl`
 	interrupt_list=`echo $interrupts | tr ' ' ','`
 else
