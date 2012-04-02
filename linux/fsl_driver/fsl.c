@@ -253,7 +253,7 @@ static ssize_t fsl_write(struct file *filp, const char __user *buf,
 		if (ret) {
 			printk(KERN_WARNING "[fsl%d] No space left in FSL!\n",
 			       dev->fsl_num);
-			return sizeof(uint32_t) * i;
+			return -ENOMEM;
 		}
 	}
 
