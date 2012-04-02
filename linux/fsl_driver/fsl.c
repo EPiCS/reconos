@@ -369,7 +369,6 @@ static void fsl_remove_dev(struct fsl_dev *dev, int index)
 {
 	if (dev->irq == -1)
 		return;
-
 	free_irq(dev->irq, dev);
 	misc_deregister(&dev->mdev);
 	kfree(dev->mdev.name);
@@ -379,7 +378,7 @@ int __init fsl_init(void)
 {
 	int i;
 	for (i = 0; i < FSL_MAX; i++)
-		fsl_setup_dev(dev_array + i, i);
+		fsl_setup_dev(&dev_array[i], i);
 	return 0;
 }
 
@@ -387,7 +386,7 @@ void __exit fsl_cleanup(void)
 {
 	int i;
 	for (i = 0; i < FSL_MAX; i++)
-		fsl_remove_dev(dev_array + i, i);
+		fsl_remove_dev(&dev_array[i], i);
 }
 
 module_init(fsl_init);
