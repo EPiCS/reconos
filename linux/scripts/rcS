@@ -1,29 +1,16 @@
 #!/bin/sh
 
-# File /etc/init.d/rcS
-
 /bin/echo "Starting rcS..."
-
 /bin/echo "++ Creating device points"
-/bin/mkdir /dev/pts
+/bin/mkdir -p /dev/pts
 /bin/mount -t devpts devpts /dev/pts
-
 /bin/echo "++ Mounting filesystem"
 /bin/mount -t proc none /proc
 /bin/mount -t sysfs none /sys
 /bin/mount -t tmpfs none /tmp
-
 /bin/echo "++ Loading system loggers"
 /sbin/syslogd
 /sbin/klogd
-
-#/bin/echo "++ Starting telnet daemon"
-#/sbin/telnetd -l /bin/sh
-
-echo "Microblaze CPU info #####################################"
+echo "++ Microblaze CPU info"
 cat /proc/cpuinfo
-echo "#########################################################"
-
-
-/bin/echo "rcS Complete"
-
+/bin/echo "... rcS Complete"

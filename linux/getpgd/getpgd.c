@@ -44,9 +44,9 @@ static ssize_t getpgd_write(struct file *filp, const char __user *buf,
 }
 
 static struct file_operations getpgd_fops __read_mostly = {
-	.owner	=	THIS_MODULE,
-	.read	=	getpgd_read,
-	.write	=	getpgd_write,
+	.owner		=	THIS_MODULE,
+	.read		=	getpgd_read,
+	.write		=	getpgd_write,
 };
 
 static struct miscdevice getpgd_misc_dev __read_mostly = {
@@ -57,12 +57,19 @@ static struct miscdevice getpgd_misc_dev __read_mostly = {
 
 static __init int getpgd_init(void)
 {
-	return misc_register(&getpgd_misc_dev);
+	int ret = misc_register(&getpgd_misc_dev);
+	if (ret < 0 )
+		printk(KERN_INFO "[getpgd] load failed with %d!\n", ret);
+	else
+		printk(KERN_INFO "[getpgd] loaded with minor %d!\n",
+		       getpgd_misc_dev.minor);
+	return ret;
 }
 
 static __exit void getpgd_exit(void)
 {
 	misc_deregister(&getpgd_misc_dev);
+	printk(KERN_INFO "[getpgd] unloaded!\n");
 }
 
 module_init(getpgd_init);
