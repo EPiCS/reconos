@@ -4,6 +4,7 @@
 /bin/echo "++ Creating device points"
 /bin/mkdir -p /dev/pts
 /bin/mount -t devpts devpts /dev/pts
+/bin/mkdir -p /lib/modules/`uname -r`/
 /bin/echo "++ Mounting filesystem"
 /bin/mount -t proc none /proc
 /bin/mount -t sysfs none /sys

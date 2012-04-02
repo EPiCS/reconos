@@ -1,71 +1,34 @@
 #!/bin/sh
 
-MODULE="fsl"
-DEVICE="fsl"
-
 # Example for 16 FSLs: 
-#INTERRUPT_LIST=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
-
+#interrupt_list=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
 # Example for 4 FSLs:
-#INTERRUPT_LIST=0,1,2,3
-
+#interrupt_list=0,1,2,3
 # Example for using FSLs 4 to 8 using interrupts 10 to 14:
-#INTERRUPT_LIST=-1,-1,-1,-1,10,11,12,13,14,-1,-1,-1,-1,-1,-1,-1
+#interrupt_list=-1,-1,-1,-1,10,11,12,13,14,-1,-1,-1,-1,-1,-1,-1
 
-
-# Automatic generation of interrupt list. This assumes that
-# FSL interrupts start at 0 and end at NUMFSL-1. Also, each
-# FSL must have an interrupt connected to the CPU.
-
-if [ -z $INTERRUPT_LIST ]
+mname="fsl"
+cp ./$mname.ko /lib/modules/`uname -r`/
+rmmod $mname
+if [ -z $interrupt_list ]
 then
-	echo "No interrupt list supplied by user. Using defaults with auto detection."
-	NUMFSL=$(./readpvr NUMFSL)
-	NUMFSL=${NUMFSL#NUMFSL:}
-	NUMFSL=$(expr $NUMFSL - 1)
-	INTERRUPTS=$(seq  0 $NUMFSL)
-	INTERRUPT_LIST=$(echo $INTERRUPTS | tr ' ' ',')
+	numfsl=`./readpvr NUMFSL`
+	interrupts=`seq 0 $numfsl`
+	interrupt_list=`echo $interrupts | tr ' ' ','`
 else
-	echo "Using supplied interrupt list"
-	INTERRUPTS=$(echo $INTERRUPT_LIST | tr ',' ' ')
+	interrupts=`echo $interrupt_list | tr ',' ' '`
 fi
-
-# invoke insmod with all arguments we got
-# and use a pathname, as newer modutils don't look in . by default
-
-mkdir -p /lib/modules/$(uname -r)
-cp /fsl.ko /lib/modules/$(uname -r)
-
-echo "removing module"
-rmmod $MODULE
-
-echo "inserting module"
-modprobe $MODULE fsl_interrupts=$INTERRUPT_LIST
-
-# remove stale nodes
-echo "removing stale device nodes"
-rm -f /dev/$DEVICE*
-
-MAJOR=$(grep $DEVICE /proc/devices)
-MAJOR=${MAJOR% $DEVICE}
-
-echo "MAJOR=$MAJOR"
-
+insmod $mname.ko fsl_interrupts=$interrupt_list
 i=0
-for n in $INTERRUPTS
+for n in $interrupts
 do
 	if [ $n = -1 ]
 	then
-		i=$(expr $i + 1)
+		i=`expr $i + 1`
 		continue
 	fi
-	echo "creating device node /dev/$DEVICE$i"
-	mknod /dev/$DEVICE$i c $MAJOR $i
-	i=$(expr $i + 1)
+	rm -f /dev/$mname$i
+	minor=`cat /sys/devices/virtual/misc/$mname$i/dev | sed -e 's/10://'`
+	mknod /dev/$mname$i c 10 $minor
+	i=`expr $i + 1`
 done
-
-# give appropriate group/permissions, and change the group.
-# Not all distributions have staff, some have "wheel" instead.
-
-
-
