@@ -3,6 +3,7 @@
 #include <linux/irq.h>
 #include <linux/fs.h>
 #include <linux/slab.h>
+#include <linux/atomic.h>
 #include <linux/module.h>
 #include <linux/ioctl.h>
 #include <linux/miscdevice.h>
@@ -10,19 +11,29 @@
 #include <linux/of_device.h>
 #include <linux/of_platform.h>
 
-#define PDEBUG(c, ...)
-
-#define FSL_MAX 16
+#define FSL_MAX		16
+#define FSL_MAX_NAMSIZ	64
 
 #define FSL_IOC_MAGIC 'k'
 #define FSL_IOC_WRITE _IOW(FSL_IOC_MAGIC, 0xF0, int)
 #define FSL_IOC_READ  _IOR(FSL_IOC_MAGIC, 0xF1, int)
 
-static int fsl_interrupts[16] = { -1, -1, -1, -1, -1, -1, -1, -1,
-				  -1, -1, -1, -1, -1, -1, -1, -1 };
+struct fsl_dev {
+	int irq;
+	unsigned int fsl_num;
+	volatile int irq_enabled;
+	wait_queue_head_t read_queue;
+	atomic_t irq_count;
+	struct miscdevice mdev;
+};
+
+static struct fsl_dev dev_array[FSL_MAX];
+
+static int fsl_interrupts[FSL_MAX] = {
+ -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 };
 module_param_array(fsl_interrupts, int, NULL, S_IRUGO | S_IWUSR);
 
-static inline int nputfsl(int id, int val)
+static inline int __must_check nputfsl(int id, int val)
 {
 	int ret;
 	switch (id) {
@@ -96,7 +107,7 @@ static inline int nputfsl(int id, int val)
 	return ret;
 }
 
-static inline int ngetfsl(int id, int *val)
+static inline int __must_check ngetfsl(int id, int *val)
 {
 	int ret;
 	switch (id) {
@@ -170,23 +181,6 @@ static inline int ngetfsl(int id, int *val)
 	return ret;
 }
 
-int fsl_major = 0;
-int fsl_minor = 0;
-int fsl_count = FSL_MAX;
-
-struct fsl_dev {
-	unsigned int fsl_num;                   // fsl number
-	int irq;                                // interrupt number of FSL
-	int irq_enabled;
-	loff_t next_read;                       // next expected read offset
-	loff_t next_write;                      // next expected write offset
-	wait_queue_head_t read_queue;           // queue for blocking reads
-	volatile unsigned short irq_count;      // number of occurred interrupts, should never exceed 1!
-	struct miscdevice mdev;
-};
-
-static struct fsl_dev dev_array[FSL_MAX];
-
 static int fsl_open(struct inode *inode, struct file *filp)
 {
 	int i, minor;
@@ -200,123 +194,86 @@ static int fsl_open(struct inode *inode, struct file *filp)
 	return 0;
 }
 
-static ssize_t fsl_read(struct file *filp, char __user *buf, size_t count,
-			loff_t *f_pos)
+static ssize_t fsl_read(struct file *filp, char __user *buf,
+			size_t count, loff_t *pos)
 {
-	int num_words, i, invalid, data;
+	int data, ret, num_words, i;
 	struct fsl_dev *dev = filp->private_data;
 
-	if(count % 4 != 0){
-		PDEBUG("ERROR trying to read %d bytes from FSL%d\n: access must be word aligned",count,dev->fsl_num);
+	if ((count & (sizeof(uint32_t) - 1)) != 0)
 		return -EINVAL;
-	} else {
-		num_words = count/4;
-		PDEBUG("trying to read %d words from FSL%d\n",num_words,dev->fsl_num);
-	}
-	
+
+	num_words = count / sizeof(uint32_t);
+	if (num_words == 0)
+		return 0;
+
 	for (i = 0; i < num_words; i++) {
-		invalid = ngetfsl(dev->fsl_num, &data);
-		
-		// no data available:
-		if(invalid){
-			dev->irq_count = 0; // FIXME: this is not thread save
-			// handle non-blocking read
-			if(filp->f_flags & O_NONBLOCK) { 
-				return i*4;
-			}
-			
-			if(!dev->irq_enabled){
+		ret = ngetfsl(dev->fsl_num, &data);
+		if (ret) {
+			atomic_set(&dev->irq_count, 0);
+			if(filp->f_flags & O_NONBLOCK)
+				return -EAGAIN;
+			if (!dev->irq_enabled) {
 				dev->irq_enabled = 1;
 				enable_irq(dev->irq);
 			}
-			
-			// handle blocking read
-			if (wait_event_interruptible(dev->read_queue, (dev->irq_count > 0))){
+			if (wait_event_interruptible(dev->read_queue,
+					atomic_read(&dev->irq_count) > 0))
 				return -ERESTARTSYS;
-			}
-			
-			// repeat this loop iteration:
 			i--;
 			continue;
 		}
-		
-		if(copy_to_user(buf + 4*i, &data, 4)){
+
+		if (copy_to_user(buf + sizeof(uint32_t) * i,
+				 &data, sizeof(uint32_t)))
 			return -EFAULT;
-		}
 	}
-	
+
 	return count;
 }
 
-// Write to FSL
-// currently this never blocks
-ssize_t fsl_write(struct file *filp, const char __user *buf, size_t count, loff_t *f_pos) {
-	struct fsl_dev *dev = filp->private_data;
-	int data;
-	int invalid;
-	int num_words;
-	int i;
-	
-	if(count % 4 != 0){
-		PDEBUG("ERROR trying to write %d bytes to FSL%d\n: access must be word aligned",count,dev->fsl_num);
-		return -EINVAL;
-	} else {
-		PDEBUG("trying to write %d words to FSL%d\n",count/4,dev->fsl_num);
-	}
-	
-	num_words = count/4;
-	
-	if(num_words == 0) return 0;
-	
-	
-	for(i = 0; i < num_words; i++){
-		if (copy_from_user(&data, buf + 4*i, 4)){
-			return -EFAULT;
-		}
-		
-		invalid = nputfsl(dev->fsl_num,data);
-		
-		// no space available:
-		if(invalid){
-			printk( KERN_WARNING "fsl.ko: WARNING: No space left in FSL%d\n",dev->fsl_num);
-			// handle blocking and non-blocking write:
-			return 4*i;
-		}
-	}
-	
-	return count;
-}
-
-static long fsl_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
+static ssize_t fsl_write(struct file *filp, const char __user *buf,
+			 size_t count, loff_t *pos)
 {
-	int result = 0;
+	int data, ret, num_words, i;
 	struct fsl_dev *dev = filp->private_data;
-	switch(cmd) {
-	case FSL_IOC_WRITE:
-		nputfsl(dev->fsl_num,arg);
+
+	if ((count & (sizeof(uint32_t) - 1)) != 0)
+		return -EINVAL;
+
+	num_words = count / sizeof(uint32_t);
+	if (num_words == 0)
 		return 0;
-	case FSL_IOC_READ:
-		ngetfsl(dev->fsl_num,&result);
-		return result;
+
+	for (i = 0; i < num_words; i++) {
+		if (copy_from_user(&data, buf + sizeof(uint32_t) * i,
+				   sizeof(uint32_t)))
+			return -EFAULT;
+		ret = nputfsl(dev->fsl_num, data);
+		if (ret) {
+			printk(KERN_WARNING "[fsl%d] No space left in FSL!\n",
+			       dev->fsl_num);
+			return sizeof(uint32_t) * i;
+		}
 	}
-	return -ENOTTY;
+
+	return count;
 }
 
-static irqreturn_t fsl_interrupt(int irq, void *dev_id)
+static irqreturn_t fsl_interrupt(int irq, void *fsldev)
 {	
-	struct fsl_dev *dev = dev_id;
-	dev->irq_count++;
-	// TODO: handle concurrency!
-	PDEBUG("IRQ:%d\n",irq);
+	struct fsl_dev *dev = fsldev;
+
+	atomic_inc(&dev->irq_count);
 	wake_up_interruptible(&dev->read_queue);
-	disable_irq_nosync(irq); // since interrupt is active high, we must suppress it until all data is read
+	disable_irq_nosync(irq);
 	dev->irq_enabled = 0;
+
 	return IRQ_HANDLED;
 }
 
 static struct file_operations fsl_fops __read_mostly = {
 	.owner		=	THIS_MODULE,
-	.unlocked_ioctl	=	fsl_ioctl,
 	.read		=	fsl_read,
 	.write		=	fsl_write,
 	.open		=	fsl_open,
@@ -325,38 +282,34 @@ static struct file_operations fsl_fops __read_mostly = {
 static void fsl_setup_dev(struct fsl_dev *dev, int index)
 {
 	int err;
-	size_t nlen = 128;
+	size_t nlen = FSL_MAX_NAMSIZ;
 
 	dev->irq = fsl_interrupts[index];
 	if(dev->irq == -1)
 		return;
-
 	err = request_irq(dev->irq, fsl_interrupt, 0, "fsl", dev);
 	if (err) {
-		printk(KERN_WARNING "fsl: can't get assigned IRQ 0\n");
+		printk(KERN_WARNING "[fsl] can't get assigned IRQ %d\n",
+		       dev->irq);
 		dev->irq = -1;
 		return;
 	}
-	
+
 	dev->mdev.minor = MISC_DYNAMIC_MINOR;
 	dev->mdev.fops = &fsl_fops;
 	dev->mdev.name = kzalloc(nlen, GFP_KERNEL);
-	if (err) {
-		printk(KERN_WARNING "fsl: no mem left!\n");
+	if (err)
 		goto out;
-	}
-
 	snprintf((char *) dev->mdev.name, nlen - 1, "fsl%d", index);
 	err = misc_register(&dev->mdev);
-	if (err) {
-		printk(KERN_WARNING "fsl: can't register miscdev%i\n", index);
+	if (err)
 		goto out_free;
-	}
 
 	init_waitqueue_head(&dev->read_queue);
+	atomic_set(&dev->irq_count, 0);
 	dev->irq_enabled = 1;
 
-	printk(KERN_INFO "fsl: registered fsl%d irq %d\n", index, dev->irq);
+	printk(KERN_INFO "[fsl] registered fsl%d irq %d\n", index, dev->irq);
 	return;
 out_free:
 	kfree(dev->mdev.name);
@@ -365,7 +318,7 @@ out:
 	return;
 }
 
-static void fsl_remove_dev(struct fsl_dev *dev, int index)
+static void fsl_remove_dev(struct fsl_dev *dev)
 {
 	if (dev->irq == -1)
 		return;
@@ -386,7 +339,7 @@ void __exit fsl_cleanup(void)
 {
 	int i;
 	for (i = 0; i < FSL_MAX; i++)
-		fsl_remove_dev(&dev_array[i], i);
+		fsl_remove_dev(&dev_array[i]);
 }
 
 module_init(fsl_init);
