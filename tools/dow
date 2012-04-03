@@ -1,32 +1,9 @@
 #!/bin/sh
-#
+
 # Downloads bitstreams or ELF files to XUP FPGA
-#
 
 DOW_BIT=$RECONOS/tools/download_bitstream.sh
 DOW_ELF=$RECONOS/tools/download_executable.sh
-
-if [ -z $RECONOS_BOARD ]; then
-    RECONOS_BOARD=xup
-fi
-
-# select device to look for (XUP is default)
-if [ "$RECONOS_BOARD" = "ml403" ]; then
-    POS=2
-elif [ "$RECONOS_BOARD" = "xup" ]; then
-    POS=3
-elif [ "$RECONOS_BOARD" = "ml605" ]; then
-    POS=2
-else
-    echo "Unsupported board or no board specified."
-    exit 1
-fi
-
-if [ ! -z $2 ]; then
-    POS=$2
-fi
-
-echo "Using JTAG chain position $POS."
 
 if [ -z $1 ]; then
 	echo "USAGE: dow bitstream.bit [jtag_chain_position]"
@@ -34,33 +11,34 @@ if [ -z $1 ]; then
 	echo "       dow executable.elf"
 	echo ""
 	echo "Standard jtag chain position is 3 (XUP)"
-	exit -1
+	exit 1
+fi
+if [ -z $RECONOS_BOARD ]; then
+	RECONOS_BOARD=xup
+fi
+if [ "$RECONOS_BOARD" = "ml403" ]; then
+	POS=2
+elif [ "$RECONOS_BOARD" = "xup" ]; then
+	POS=3
+elif [ "$RECONOS_BOARD" = "ml605" ]; then
+	POS=2
+else
+	echo "Unsupported board or no board specified."
+	exit 1
+fi
+if [ ! -z $2 ]; then
+	POS=$2
 fi
 
+echo "Using JTAG chain position $POS."
 
-echo $1 | grep -e "\.bit" > /dev/null
-if [ $? -eq 0 ]; then
-	echo "it's a bitfile!"
-	$DOW_BIT $1 $JTAG_POS
-	echo
-	exit 0
-fi
-
-echo $1 | grep -e "\.elf" > /dev/null
-if [ $? -eq 0 ]; then
-	echo "it's an executable!"
+if [ "`file $1 | grep \"BIT\"`" ]; then
+	echo "It's a bitfile!"
+	$DOW_BIT $1 $POS
+elif [ "`file $1 | grep \"ELF\"`" ]; then
+	echo "It's an executable!"
 	$DOW_ELF $1
-	echo
-	exit 0
+else
+	echo "Neither an executable nor a bitfile!"
+	exit 1
 fi
-
-echo $1 | grep -e "\.ml605_epics" > /dev/null
-if [ $? -eq 0 ]; then
-	echo "it's an EPiCS Linux kernel!"
-	$DOW_ELF $1
-	echo
-	exit 0
-fi
-
-echo "Not an executable or bitfile!"
-
