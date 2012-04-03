@@ -24,8 +24,8 @@ int slprintf(char *dst, size_t size, const char *fmt, ...)
 	va_start(ap, fmt);
 	ret = vsnprintf(dst, size, fmt, ap);
 	dst[size - 1] = '\0';
-
 	va_end(ap);
+
 	return ret;
 }
 
@@ -34,5 +34,6 @@ int open_or_die(const char *file, int flags)
 	int ret = open(file, flags);
 	if (ret < 0)
 		panic("Cannot open file %s!\n", file);
+
 	return ret;
 }

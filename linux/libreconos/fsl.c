@@ -69,5 +69,6 @@ uint32_t fsl_read(int num)
 
 	/* XXX: @aagne: what about checking return values? ---DB */
 	read(fsl_fd[num], &value, sizeof(value));
+
 	return value;
 }
