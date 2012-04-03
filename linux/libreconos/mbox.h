@@ -7,7 +7,6 @@
 
 #include <semaphore.h>
 #include <pthread.h>
-#include "config.h"
 
 struct mbox {
 	sem_t sem_read;

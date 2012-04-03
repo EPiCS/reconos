@@ -5,8 +5,8 @@ AR	=	microblaze-unknown-linux-gnu-ar
 libreconos: libreconos.a
 	@true
 
-libreconos.a: libreconos.o fsl.o mbox.o rq.o
-	$(AR) -rcsv libreconos.a libreconos.o fsl.o mbox.o rq.o
+libreconos.a: reconos.o fsl.o mbox.o rqueue.o xutils.o
+	$(AR) -rcsv libreconos.a reconos.o fsl.o mbox.o rqueue.o xutils.o
 
 clean:
 	rm -f *.o *.a

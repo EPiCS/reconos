@@ -1,7 +1,9 @@
 #ifndef RECONOS_H
 #define RECONOS_H
 
-#include "config.h"
+#define RECONOS_VERSION_STRING "v3.0"
+
+#define MAX_SLOTS 16
 
 #include <pthread.h>
 

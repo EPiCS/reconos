@@ -6,7 +6,6 @@
 
 #include <semaphore.h>
 #include <pthread.h>
-#include "config.h"
 #include "mbox.h"
 
 //! ReconOS message queue internally uses mbox

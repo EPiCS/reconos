@@ -1,68 +1,73 @@
-#include "fsl.h"
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <stdint.h>
 #include <unistd.h>
 
-#define MAX_FSL_DEVICES 16
-#define FSL_PATH_LEN 256
+#include "fsl.h"
+#include "xutils.h"
 
-//#define FSL_DEBUG(...) fprintf(stderr,__VA_ARGS__);
-#define FSL_DEBUG(...)
+#define FSL_MAX		16
+#define FSL_PATH_MAX	256
 
-static int fsl_fd[MAX_FSL_DEVICES] = {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1};
+static int fsl_fd[FSL_MAX] = {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1};
 
-static void fsl_open(int n)
+static inline int fsl_within_range(int num)
 {
-	char s[FSL_PATH_LEN];
-	vsnprintf(s, FSL_PATH_LEN, "/dev/fsl%d", &n);
-	
-	s[FSL_PATH_LEN-1] = '\0';
-	
-	fsl_fd[n] = open(s,O_RDWR);
-	if(fsl_fd[n] < 0){
-		fprintf(stderr,"Error opening /dev/fsl%d\n",n);
-		perror("open");
-		exit(1);
-	}
-}
-/*
-static void fsl_closeall()
-{
-	int i;
-	for(i = 0; i < MAX_FSL_DEVICES; i++){
-		if(fsl_fd[i] != -1) close(fsl_fd[i]);
-	}
-}
-*/
-void fsl_write(int n, uint32 value)
-{	
-	assert(n >= 0);
-	assert(n < MAX_FSL_DEVICES);
-	
-	if(fsl_fd[n] == -1) fsl_open(n);
-	
-	write(fsl_fd[n],&value,4);
-	FSL_DEBUG("wrote 0x%08X to fsl%d...\n",value,n);
+	return (num >= 0 && num < array_size(fsl_fd));
 }
 
-uint32 fsl_read(int n)
+static inline void fsl_within_range_assert(int num)
 {
-	uint32 value;
-	
-	assert(n >= 0);
-	assert(n < MAX_FSL_DEVICES);	
-	
-	if(fsl_fd[n] == -1) fsl_open(n);
-	
-	read(fsl_fd[n],&value,4);
-	FSL_DEBUG("read 0x%08X from fsl%d...\n",value,n);
-	
+	assert(num >= 0 && num < array_size(fsl_fd));
+}
+
+static inline int fsl_already_open(int num)
+{
+	fsl_within_range_assert(num);
+	return fsl_fd[n] != -1;
+}
+
+static void fsl_close_all(void)
+{
+	int num;
+	for (num = 0; num < array_size(fsl_fd); ++num)
+		if (fsl_fd[num] != -1)
+			close(fsl_fd[num]);
+}
+
+static void fsl_open(int num)
+{
+	char path[FSL_PATH_MAX];
+
+	slprintf(path, sizeof(path), "/dev/fsl%d", num);
+	fsl_fd[n] = open_or_die(path, O_RDWR);
+
+	atexit(fsl_close_all);
+}
+
+void fsl_write(int num, uint32_t value)
+{
+	fsl_within_range_assert(num);
+	if (!fsl_already_open(num))
+		fsl_open(num);
+
+	/* XXX: @aagne: what about checking return values? ---DB */
+	write(fsl_fd[num], &value, sizeof(value));
+}
+
+uint32_t fsl_read(int num)
+{
+	uint32_t value;
+
+	fsl_within_range_assert(num);
+	if (!fsl_already_open(num))
+		fsl_open(num);
+
+	/* XXX: @aagne: what about checking return values? ---DB */
+	read(fsl_fd[num], &value, sizeof(value));
 	return value;
 }
-
-

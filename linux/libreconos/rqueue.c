@@ -1,8 +1,9 @@
-#include "rq.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
+
+#include "rqueue.h"
 
 //! initializes ReconOS message queue with maximum 'size' messages. internally it uses mboxes.
 int rq_init(rqueue * rq, int size)
