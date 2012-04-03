@@ -1,28 +1,24 @@
 #ifndef MBOX_H
 #define MBOX_H
 
-/* This is the linux implementation of ecos message boxes.
-   It uses two counting semaphores and two mutexes to enable
-   synchronous access */
-
 #include <semaphore.h>
 #include <pthread.h>
+#include <stdint.h>
 
 struct mbox {
 	sem_t sem_read;
 	sem_t sem_write;
 	pthread_mutex_t mutex_read;
 	pthread_mutex_t mutex_write;	
-	uint32 *messages;
-	int read_idx;
-	int write_idx;
-	int size;
+	uint32_t *messages;
+	off_t read_idx;
+	off_t write_idx;
+	size_t size;
 };
 
-int mbox_init(struct mbox * mb, int size);
-void mbox_destroy(struct mbox * mb);
-void mbox_put(struct mbox * mb, uint32 msg);
-uint32 mbox_get(struct mbox * mb);
+extern int mbox_init(struct mbox *mb, size_t size);
+extern void mbox_destroy(struct mbox *mb);
+extern void mbox_put(struct mbox *mb, uint32_t msg);
+extern uint32_t mbox_get(struct mbox *mb);
 
-#endif
-
+#endif /* MBOX_H */

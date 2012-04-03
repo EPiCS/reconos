@@ -1,6 +1,9 @@
 #include <string.h>
 #include <stdarg.h>
 #include <ctype.h>
+#include <stdlib.h>
+
+#include "xutils.h"
 
 size_t strlcpy(char *dest, const char *src, size_t size)
 {
@@ -36,4 +39,20 @@ int open_or_die(const char *file, int flags)
 		panic("Cannot open file %s!\n", file);
 
 	return ret;
+}
+
+void *xmalloc_aligned(size_t size, size_t alignment)
+{
+	int ret;
+	void *ptr;
+
+	if (unlikely(size == 0))
+		panic("xmalloc_aligned: zero size\n");
+
+	ret = posix_memalign(&ptr, alignment, size);
+	if (unlikely(ret != 0))
+		panic("xmalloc_aligned: out of memory (allocating %zu "
+		      "bytes)\n", size);
+
+	return ptr;
 }
