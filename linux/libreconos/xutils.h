@@ -1,6 +1,14 @@
 #ifndef XUTILS_H
 #define XUTILS_H
 
+#ifndef likely
+# define likely(x)		__builtin_expect(!!(x), 1)
+#endif
+
+#ifndef unlikely
+# define unlikely(x)		__builtin_expect(!!(x), 0)
+#endif
+
 #ifndef array_size
 # define array_size(x)		(sizeof(x) / sizeof((x)[0]) + __must_be_array(x))
 #endif
