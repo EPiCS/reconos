@@ -13,7 +13,7 @@ typedef struct mbox rqueue;
 
 extern int rq_init(rqueue *rq, size_t size);
 extern void rq_close(rqueue *rq);
-extern int rq_receive(rqueue *rq, uint32_t *msg, size_t size);
+extern ssize_t rq_receive(rqueue *rq, uint32_t *msg, size_t size);
 extern void rq_send(rqueue *rq, uint32_t *msg, size_t size);
 
 #endif /* RQUEUE_H */
