@@ -11,7 +11,7 @@ int mbox_init(struct mbox *mb, size_t size)
 
 	mb->read_idx = 0;
 	mb->write_idx = 0;
-	mb->size = round_up(size, sizeof(void *));
+	mb->size = round_up(size, sizeof(void *) * 8);
 
 	ret = sem_init(&mb->sem_read, 0, 0);
 	if (ret)
@@ -27,7 +27,7 @@ int mbox_init(struct mbox *mb, size_t size)
 		goto out_err;
 
 	mb->messages = xmalloc_aligned(mb->size * sizeof(*mb->messages),
-				       sizeof(void *));
+				       sizeof(void *) * 8);
 	return 0;
 out_err:
 	return -EIO;
