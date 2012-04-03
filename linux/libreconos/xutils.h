@@ -1,6 +1,10 @@
 #ifndef XUTILS_H
 #define XUTILS_H
 
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+
 #ifndef likely
 # define likely(x)		__builtin_expect(!!(x), 1)
 #endif
@@ -26,9 +30,10 @@
 # define round_up(x, alignment)	(((x) + (alignment) - 1) & ~((alignment) - 1))
 #endif
 
-size_t strlcpy(char *dest, const char *src, size_t size);
-int slprintf(char *dst, size_t size, const char *fmt, ...);
-int open_or_die(const char *file, int flags);
+extern size_t strlcpy(char *dest, const char *src, size_t size);
+extern int slprintf(char *dst, size_t size, const char *fmt, ...);
+extern int open_or_die(const char *file, int flags);
+extern void *xmalloc_aligned(size_t size, size_t alignment);
 
 static inline void die(void)
 {

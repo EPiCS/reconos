@@ -8,11 +8,7 @@
 #include <unistd.h>
 
 #include "fsl.h"
-#include "reconos.h"
 #include "xutils.h"
-
-#define FSL_MAX		SLOTS_MAX
-#define FSL_PATH_MAX	256
 
 static int fsl_fd[FSL_MAX] = {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1};
 
@@ -29,7 +25,7 @@ static inline void fsl_within_range_assert(int num)
 static inline int fsl_already_open(int num)
 {
 	fsl_within_range_assert(num);
-	return fsl_fd[n] != -1;
+	return fsl_fd[num] != -1;
 }
 
 static void fsl_close_all(void)
@@ -45,7 +41,7 @@ static void fsl_open(int num)
 	char path[FSL_PATH_MAX];
 
 	slprintf(path, sizeof(path), "/dev/fsl%d", num);
-	fsl_fd[n] = open_or_die(path, O_RDWR);
+	fsl_fd[num] = open_or_die(path, O_RDWR);
 
 	atexit(fsl_close_all);
 }

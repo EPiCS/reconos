@@ -1,33 +1,27 @@
-
-#include "reconos.h"
-#include "fsl.h"
-#include "mbox.h"
-#include "rq.h"
-
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
 #include <pthread.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
 
-#if 0
-#define RECONOS_DEBUG(...) fprintf(stderr,__VA_ARGS__);
-#else
-#define RECONOS_DEBUG(...)
-#endif
+#include "reconos.h"
+#include "fsl.h"
+#include "mbox.h"
+#include "rqueue.h"
+#include "xutils.h"
 
-#define RECONOS_ERROR(...) fprintf(stderr,"ERROR:" __VA_ARGS__);
+#define RECONOS_DEBUG(x, ...)
+#define RECONOS_ERROR(x, ...)
 
-#define FSL_PATH_LEN 256
+static struct reconos_process reconos_proc;
 
-struct reconos_process reconos_proc;
-
-
-static void slot_reset(int num, int reset){
-	uint32 cmd;
-	uint32 mask = 0;
+static void slot_reset(int num, int reset)
+{
+	uint32_t cmd;
+	uint32_t mask = 0;
 	int i;
 	
 	if (reset) {
@@ -36,7 +30,7 @@ static void slot_reset(int num, int reset){
 		reconos_proc.slot_flags[num] &= ~SLOT_FLAG_RESET;
 	}
 	
-	for(i = MAX_SLOTS - 1; i >= 0; i--){
+	for(i = SLOTS_MAX - 1; i >= 0; i--){
 		mask = mask << 1;
 		if((reconos_proc.slot_flags[i] & SLOT_FLAG_RESET)){
 			mask = mask | 1;
@@ -48,10 +42,10 @@ static void slot_reset(int num, int reset){
 	fsl_write(reconos_proc.proc_control_fsl_b,cmd);
 }
 
-uint32 getpgd()
+uint32_t getpgd()
 {
 	int res,fd;
-	uint32 pgd;
+	uint32_t pgd;
 
 	fd = open("/dev/getpgd",O_RDONLY);
 	if(fd == -1){
@@ -72,9 +66,9 @@ uint32 getpgd()
 	return pgd;
 }
 
-void reconos_mmu_stats(uint32 * tlb_hits, uint32 * tlb_misses, uint32 * page_faults)
+void reconos_mmu_stats(uint32_t * tlb_hits, uint32_t * tlb_misses, uint32_t * page_faults)
 {
-	uint32 hits,misses;
+	uint32_t hits,misses;
 	
 	fsl_write(reconos_proc.proc_control_fsl_b,0x05000000);
 	hits = fsl_read(reconos_proc.proc_control_fsl_b);
@@ -87,7 +81,7 @@ void reconos_mmu_stats(uint32 * tlb_hits, uint32 * tlb_misses, uint32 * page_fau
 
 void proc_control_selftest()
 {
-	uint32 result;
+	uint32_t result;
 	fsl_write(reconos_proc.proc_control_fsl_b,0x06000000);
 	result = fsl_read(reconos_proc.proc_control_fsl_b);
 	if(result == 0x5E1F7E57){
@@ -109,9 +103,9 @@ void * control_thread_entry(void * arg)
 {
 	RECONOS_DEBUG("control thread listening on fsl %d\n",reconos_proc.proc_control_fsl_a);
 	while(1){
-		uint32 cmd;
-		uint32 ret;
-		uint32 *addr;
+		uint32_t cmd;
+		uint32_t ret;
+		uint32_t *addr;
 	
 
 		/* receive page fault address */
@@ -119,9 +113,9 @@ void * control_thread_entry(void * arg)
 		RECONOS_DEBUG("control thread received 0x%08X\n", cmd);
 		
 		if(cmd == 0x00000001){	
-			addr = (uint32*)fsl_read(reconos_proc.proc_control_fsl_a);
+			addr = (uint32_t*)fsl_read(reconos_proc.proc_control_fsl_a);
 			reconos_proc.page_faults++;
-			RECONOS_DEBUG("control thread received page fault @ 0x%08X\n",(uint32)addr);
+			RECONOS_DEBUG("control thread received page fault @ 0x%08X\n",(uint32_t)addr);
 		
 			*addr = 0;   /* this page has not been touched yet. we can safely write 0 to the page */
 			cache_flush();
@@ -148,14 +142,14 @@ int get_numfsl()
 int reconos_init(int proc_control_fsl_a, int proc_control_fsl_b)
 {
 	int i;
-	uint32 pgd;
+	uint32_t pgd;
 	pthread_attr_t attr;
 
 	reconos_proc.proc_control_fsl_a = proc_control_fsl_a;
 	reconos_proc.proc_control_fsl_b = proc_control_fsl_b;
 
 	reconos_proc.page_faults = 0;
-	for(i = 0; i < MAX_SLOTS; i++){
+	for(i = 0; i < SLOTS_MAX; i++){
 		reconos_proc.slot_flags[i] |= SLOT_FLAG_RESET;
 	}
 	
@@ -195,7 +189,7 @@ int reconos_hwt_create(
 	return pthread_create(&hwt->delegate,NULL,delegate_thread_entry,hwt);
 }
 
-void reconos_hwt_setresources(struct reconos_hwt * hwt, struct reconos_resource * res, int num_resources)
+void reconos_hwt_setresources(struct reconos_hwt * hwt, struct reconos_resource * res, size_t num_resources)
 {
 	hwt->resources = res;
 	hwt->num_resources = num_resources;
@@ -219,13 +213,7 @@ void * delegate_thread_entry(void * arg)
 	slot_reset(hwt->slot,0);
 	
 	while(1){
-		uint32 cmd;
-		uint32 handle;
-		uint32 handle2;
-		uint32 arg0;
-		uint32 result;
-		uint32 msg_size;
-		uint32* msg;
+		uint32_t cmd, handle, handle2, arg0, result, msg_size, *msg;
 		int i;
 		
 		cmd = fsl_read(hwt->slot);
@@ -502,7 +490,7 @@ void * delegate_thread_entry(void * arg)
 					exit(1);
 				}
 				msg_size   = arg0;                                
-				msg        = (uint32*) malloc(msg_size); 			
+				msg        = (uint32_t *) malloc(msg_size); 			
 				if ((result = rq_receive (hwt->resources[handle].ptr, msg, msg_size)) < 0)
 		  		{
 		    			RECONOS_DEBUG ("slot %d: rq_receive (0x%08X) receives error\n", 
@@ -525,7 +513,7 @@ void * delegate_thread_entry(void * arg)
 				{
 					fsl_write(hwt->slot, result);
 					// write data to hw thread
-					for(i=0; i<(result/sizeof(uint32));i++)
+					for(i=0; i<(result/sizeof(uint32_t));i++)
 					{
 						fsl_write(hwt->slot, msg[i]);
 					}
@@ -555,7 +543,7 @@ void * delegate_thread_entry(void * arg)
 				}
 
 				msg_size   = arg0; 
-				msg        = (uint32*) malloc(msg_size); 
+				msg        = (uint32_t *) malloc(msg_size); 
 
 				/*if (msg_size > (12*sizeof(uint32)))
 				{
@@ -567,7 +555,7 @@ void * delegate_thread_entry(void * arg)
 				}*/
 
 				// read message
-				for(i=0; i<(msg_size/sizeof(uint32));i++)
+				for(i=0; i<(msg_size/sizeof(uint32_t));i++)
 				{
 					msg[i] = fsl_read(hwt->slot);
 				}
@@ -580,7 +568,7 @@ void * delegate_thread_entry(void * arg)
 			case RECONOS_CMD_THREAD_GET_INIT_DATA:
 				RECONOS_DEBUG("slot %d: command is GET_INIT_DATA\n", hwt->slot);
 							
-				result = (uint32)hwt->init_data;
+				result = (uint32_t)hwt->init_data;
 				RECONOS_DEBUG("slot %d: init_data is 0x%08X\n", hwt->slot, result);
 				
 				fsl_write(hwt->slot, result);

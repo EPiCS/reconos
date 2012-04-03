@@ -64,8 +64,6 @@ struct reconos_process {
 	int fd_cache;
 };
 
-extern struct reconos_process reconos_proc;
-
 extern void cache_flush(void);
 extern void proc_control_selftest(void);
 

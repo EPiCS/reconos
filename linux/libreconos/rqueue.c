@@ -20,7 +20,7 @@ void rq_close(rqueue *rq)
 void rq_send(rqueue *rq, uint32_t *msg, size_t size)
 {
 	/* XXX: Can we also avoid allocation + copy?! ---DB */
-	uint32_t *clone = xmalloc_aligned((size + 1) * sizeof(*copy),
+	uint32_t *clone = xmalloc_aligned((size + 1) * sizeof(*clone),
 					  sizeof(void *) * 8);
 
 	clone[0] = (uint32_t) size;
@@ -35,12 +35,12 @@ ssize_t rq_receive(rqueue *rq, uint32_t *msg, size_t size)
 	ssize_t __size;
 
 	clone = (uint32_t *) mbox_get((struct mbox *) rq);
-	__size = copy[0];
+	__size = clone[0];
 
-	if (__size == 0 || __size > msg_size)
+	if (__size == 0 || __size > size)
 		return -ENOMEM;
 
-	__builtin_memcpy(msg, &copy[1], __size);
+	__builtin_memcpy(msg, &clone[1], __size);
 	free(clone);
 
 	return __size;
