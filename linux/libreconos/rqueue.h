@@ -7,6 +7,8 @@
 
 #include "mbox.h"
 
+/* XXX: Is this really a good idea?
+ *      If we change mbox we can break rq ... ---DB */
 typedef struct mbox rqueue;
 
 extern int rq_init(rqueue *rq, size_t size);
