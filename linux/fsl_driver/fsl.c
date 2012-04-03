@@ -217,9 +217,8 @@ static ssize_t fsl_read(struct file *filp, char __user *buf,
 				dev->irq_enabled = 1;
 				enable_irq(dev->irq);
 			}
-			if (wait_event_interruptible(dev->read_queue,
-					atomic_read(&dev->irq_count) > 0))
-				return -ERESTARTSYS;
+			wait_event_interruptible(dev->read_queue,
+				atomic_read(&dev->irq_count) > 0);
 			i--;
 			continue;
 		}
@@ -250,11 +249,8 @@ static ssize_t fsl_write(struct file *filp, const char __user *buf,
 				   sizeof(uint32_t)))
 			return -EFAULT;
 		ret = nputfsl(dev->fsl_num, data);
-		if (ret) {
-			printk(KERN_WARNING "[fsl%d] No space left in FSL!\n",
-			       dev->fsl_num);
+		if (ret)
 			return -ENOMEM;
-		}
 	}
 
 	return count;
