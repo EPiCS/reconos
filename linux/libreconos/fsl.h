@@ -1,7 +1,9 @@
 #ifndef FSL_H
 #define FSL_H
 
-void fsl_write(int n, uint32 value);
-uint32 fsl_read(int n);
+#include <stdint.h>
 
-#endif
+extern void fsl_write(int num, uint32_t value);
+extern uint32_t fsl_read(int num);
+
+#endif /* FSL_H */
