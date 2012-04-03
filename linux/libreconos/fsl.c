@@ -22,7 +22,7 @@ static inline int fsl_within_range(int num)
 
 static inline void fsl_within_range_assert(int num)
 {
-	assert(num >= 0 && num < array_size(fsl_fd));
+	assert(fsl_within_range(num));
 }
 
 static inline int fsl_already_open(int num)
