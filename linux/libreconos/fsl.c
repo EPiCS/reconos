@@ -8,9 +8,10 @@
 #include <unistd.h>
 
 #include "fsl.h"
+#include "reconos.h"
 #include "xutils.h"
 
-#define FSL_MAX		16
+#define FSL_MAX		SLOTS_MAX
 #define FSL_PATH_MAX	256
 
 static int fsl_fd[FSL_MAX] = {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1};
