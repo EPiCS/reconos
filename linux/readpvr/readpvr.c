@@ -264,7 +264,7 @@ int main(int argc, char **argv)
 
 	read_pvr_regs();
 
-	if (good < argc)
+	if (good < argc && argc > 1)
 		show_pvr_reg(argv[argc - 1], only_value);
 	else
 		show_pvr_regs();
