@@ -1,9 +1,10 @@
 #include <stdio.h>
+#include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
 #include <getopt.h>
 
-/* from Linux */
+/* from Linux kernel */
 #ifndef array_size
 # define array_size(x)		(sizeof(x) / sizeof((x)[0]) + __must_be_array(x))
 #endif
@@ -128,6 +129,27 @@ static inline void die(void)
 	exit(0);
 }
 
+/* from: Linux kernel */
+static int strnicmp(const char *s1, const char *s2, size_t len)
+{
+	unsigned char c1, c2;
+	if (!len)
+		return 0;
+	do {
+		c1 = *s1++;
+		c2 = *s2++;
+		if (!c1 || !c2)
+			break;
+		if (c1 == c2)
+			continue;
+		c1 = tolower(c1);
+		c2 = tolower(c2);
+		if (c1 != c2)
+			break;
+	} while (--len);
+	return (int)c1 - (int)c2;
+}
+
 static void read_pvr_regs(void)
 {
 	memset(pvr, 0, sizeof(pvr));
@@ -163,7 +185,7 @@ static void show_pvr_reg(char *name, int val)
 	unsigned int r;
 
 	for (i = 0; i < array_size(fields); ++i) {
-		if (!strcmp(name, fields[i].name)) {
+		if (!strnicmp(name, fields[i].name, sizeof(fields[i].name))) {
 			found = 1;
 			r = pvr[fields[i].reg];
 			r = r << fields[i].msb;
