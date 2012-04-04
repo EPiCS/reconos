@@ -312,7 +312,6 @@ static void fsl_setup_dev(struct fsl_dev *dev, int index)
 
 	init_waitqueue_head(&dev->read_queue);
 	atomic_set(&dev->irq_count, 0);
-	enable_irq(dev->irq);
 	dev->irq_enabled = 1;
 
 	printk(KERN_INFO "[fsl] registered fsl%d irq %d\n", index, dev->irq);
