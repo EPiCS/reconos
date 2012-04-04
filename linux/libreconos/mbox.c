@@ -1,3 +1,8 @@
+/*
+ * Copyright 2012 Andreas Agne <agne@upb.de>
+ * Copyright 2012 Daniel Borkmann <dborkma@tik.ee.ethz.ch>
+ */
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>

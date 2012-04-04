@@ -1,3 +1,9 @@
+/*
+ * Copyright 2012 Andreas Agne <agne@upb.de>
+ * Copyright 2012 Markus Happe <markus.happe@upb.de>
+ * Copyright 2012 Daniel Borkmann <dborkma@tik.ee.ethz.ch>
+ */
+
 #ifndef RECONOS_H
 #define RECONOS_H
 

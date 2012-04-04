@@ -1,3 +1,8 @@
+/*
+ * Copyright 2012 Andreas Agne <agne@upb.de>
+ * Copyright 2012 Daniel Borkmann <dborkma@tik.ee.ethz.ch>
+ */
+
 #include <linux/sched.h>
 #include <linux/wait.h>
 #include <linux/irq.h>

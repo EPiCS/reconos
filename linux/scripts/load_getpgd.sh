@@ -1,5 +1,8 @@
 #!/bin/sh
 
+# Copyright 2012 Andreas Agne <agne@upb.de>
+# Copyright 2012 Daniel Borkmann <dborkma@tik.ee.ethz.ch>
+
 mname="getpgd"
 cp ./$mname.ko /lib/modules/`uname -r`/
 rmmod $mname

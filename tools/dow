@@ -1,5 +1,8 @@
 #!/bin/sh
 
+# Copyright 2012 Markus Happe <markus.happe@upb.de>
+# Copyright 2012 Daniel Borkmann <daniel.borkmann@tik.ee.ethz.ch>
+
 # Downloads bitstreams or ELF files to XUP FPGA
 
 DOW_BIT=$RECONOS/tools/download_bitstream.sh

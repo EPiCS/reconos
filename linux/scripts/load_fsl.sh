@@ -1,5 +1,8 @@
 #!/bin/sh
 
+# Copyright 2012 Andreas Agne <agne@upb.de>
+# Copyright 2012 Daniel Borkmann <dborkma@tik.ee.ethz.ch>
+
 # Example for 16 FSLs: 
 #interrupt_list=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
 # Example for 4 FSLs:

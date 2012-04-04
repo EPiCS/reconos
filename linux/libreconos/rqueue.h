@@ -1,3 +1,8 @@
+/*
+ * Copyright 2012 Markus Happe <markus.happe@upb.de>
+ * Copyright 2012 Daniel Borkmann <dborkma@tik.ee.ethz.ch>
+ */
+
 #ifndef RQUEUE_H
 #define RQUEUE_H
 

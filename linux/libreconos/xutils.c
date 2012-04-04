@@ -1,3 +1,7 @@
+/*
+ * Copyright 2012 Daniel Borkmann <dborkma@tik.ee.ethz.ch>
+ */
+
 #define _GNU_SOURCE
 #include <string.h>
 #include <stdlib.h>
