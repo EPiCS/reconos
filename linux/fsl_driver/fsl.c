@@ -38,6 +38,7 @@ static int fsl_interrupts[FSL_MAX] = {
  -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 };
 module_param_array(fsl_interrupts, int, NULL, S_IRUGO | S_IWUSR);
 
+/* Returns: 0 - ok, 1 - no data available, 2 - error */
 static inline int __must_check nputfsl(int id, int val)
 {
 	int ret;
@@ -107,11 +108,12 @@ static inline int __must_check nputfsl(int id, int val)
 		asm volatile ("addic\t%0,r0,0"  : "=d" (ret));
 		break;
 	default:
-		return -EIO;
+		return 2;
 	}
 	return ret;
 }
 
+/* Returns: 0 - ok, 1 - no data available, 2 - error */
 static inline int __must_check ngetfsl(int id, int *val)
 {
 	int ret;
@@ -181,7 +183,7 @@ static inline int __must_check ngetfsl(int id, int *val)
 		asm volatile ("addic\t%0,r0,0"  : "=d" (ret));
 		break;
 	default:
-		return -EIO;
+		return 2;
 	}
 	return ret;
 }
@@ -310,6 +312,7 @@ static void fsl_setup_dev(struct fsl_dev *dev, int index)
 
 	init_waitqueue_head(&dev->read_queue);
 	atomic_set(&dev->irq_count, 0);
+	enable_irq(dev->irq);
 	dev->irq_enabled = 1;
 
 	printk(KERN_INFO "[fsl] registered fsl%d irq %d\n", index, dev->irq);
