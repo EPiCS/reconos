@@ -25,10 +25,10 @@ int mbox_init(struct mbox *mb, size_t size)
 	ret = sem_init(&mb->sem_write, 0, size);
 	if (ret)
 		goto out_err;
-	ret = pthread_mutex_init(&mb->mutex_read,NULL);
+	ret = pthread_mutex_init(&mb->mutex_read, NULL);
 	if (ret)
 		goto out_err;
-	ret = pthread_mutex_init(&mb->mutex_write,NULL);
+	ret = pthread_mutex_init(&mb->mutex_write, NULL);
 	if (ret)
 		goto out_err;
 
