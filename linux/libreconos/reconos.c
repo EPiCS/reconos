@@ -188,56 +188,173 @@ void reconos_hwt_setinitdata(struct reconos_hwt *hwt, void *init_data)
 	hwt->init_data = init_data;
 }
 
+static inline void reconos_assert_type_and_res(struct reconos_hwt *hwt,
+					       uint32_t handle, uint32_t type)
+{
+	if(handle >= hwt->num_resources)
+		panic("wtf ... slot %d: resource id %d out of range, "
+		      "must be lesser than %d\n", hwt->slot, handle,
+		      hwt->num_resources);
+
+	if (hwt->resources[handle].type != type)
+		panic("wtf ... slot %d: resource type 0x%08X expected, "
+		      "found 0x%08X\n", hwt->slot, type,
+		      hwt->resources[handle].type);
+}
+
 static void reconos_delegate_process_mbox_get(struct reconos_hwt *hwt)
 {
+	uint32_t handle = fsl_read(hwt->slot);
+
+	reconos_assert_type_and_res(hwt, handle, RECONOS_TYPE_MBOX);
+
+	fsl_write(hwt->slot, mbox_get(hwt->resources[handle].ptr));
 }
 
 static void reconos_delegate_process_mbox_put(struct reconos_hwt *hwt)
 {
+	uint32_t handle = fsl_read(hwt->slot);
+	uint32_t arg0 = fsl_read(hwt->slot);
+
+	reconos_assert_type_and_res(hwt, handle, RECONOS_TYPE_MBOX);
+
+	mbox_put(hwt->resources[handle].ptr, arg0);
+	fsl_write(hwt->slot, 0);
 }
 
 static void reconos_delegate_process_sem_wait(struct reconos_hwt *hwt)
 {
+	uint32_t handle = fsl_read(hwt->slot);
+
+	reconos_assert_type_and_res(hwt, handle, RECONOS_TYPE_SEM);
+
+	fsl_write(hwt->slot, sem_wait(hwt->resources[handle].ptr));
 }
 
 static void reconos_delegate_process_sem_post(struct reconos_hwt *hwt)
 {
+	uint32_t handle = fsl_read(hwt->slot);
+
+	reconos_assert_type_and_res(hwt, handle, RECONOS_TYPE_SEM);
+
+	sem_post(hwt->resources[handle].ptr);
+	fsl_write(hwt->slot, 0);
 }
 
 static void reconos_delegate_process_mutex_lock(struct reconos_hwt *hwt)
 {
+	uint32_t handle = fsl_read(hwt->slot);
+
+	reconos_assert_type_and_res(hwt, handle, RECONOS_TYPE_MUTEX);
+
+	fsl_write(hwt->slot, pthread_mutex_lock(hwt->resources[handle].ptr));
 }
 
 static void reconos_delegate_process_mutex_unlock(struct reconos_hwt *hwt)
 {
+	uint32_t handle = fsl_read(hwt->slot);
+
+	reconos_assert_type_and_res(hwt, handle, RECONOS_TYPE_MUTEX);
+
+	pthread_mutex_unlock(hwt->resources[handle].ptr);
+	fsl_write(hwt->slot, 0);
 }
 
 static void reconos_delegate_process_mutex_trylock(struct reconos_hwt *hwt)
 {
+	uint32_t handle = fsl_read(hwt->slot);
+
+	reconos_assert_type_and_res(hwt, handle, RECONOS_TYPE_MUTEX);
+
+	fsl_write(hwt->slot, pthread_mutex_trylock(hwt->resources[handle].ptr));
 }
 
 static void reconos_delegate_process_cond_wait(struct reconos_hwt *hwt)
 {
+	uint32_t handle = fsl_read(hwt->slot);
+	uint32_t handle2 = fsl_read(hwt->slot);
+
+	reconos_assert_type_and_res(hwt, handle, RECONOS_TYPE_COND);
+	reconos_assert_type_and_res(hwt, handle2, RECONOS_TYPE_MUTEX);
+
+	fsl_write(hwt->slot, pthread_cond_wait(hwt->resources[handle].ptr,
+					       hwt->resources[handle2].ptr));
 }
 
 static void reconos_delegate_process_cond_signal(struct reconos_hwt *hwt)
 {
+	uint32_t handle = fsl_read(hwt->slot);
+
+	reconos_assert_type_and_res(hwt, handle, RECONOS_TYPE_COND);
+
+	pthread_cond_signal(hwt->resources[handle].ptr);
+	fsl_write(hwt->slot, 0);
 }
 
 static void reconos_delegate_process_cond_broadcast(struct reconos_hwt *hwt)
 {
+	uint32_t handle = fsl_read(hwt->slot);
+
+	reconos_assert_type_and_res(hwt, handle, RECONOS_TYPE_COND);
+
+	pthread_cond_broadcast(hwt->resources[handle].ptr);
+	fsl_write(hwt->slot, 0);
 }
 
 static void reconos_delegate_process_rqueue_receive(struct reconos_hwt *hwt)
 {
+	int i;
+	ssize_t res;
+	uint32_t handle, arg0, msg_size, *msg;
+
+	handle = fsl_read(hwt->slot);
+	arg0 = fsl_read(hwt->slot);
+
+	reconos_assert_type_and_res(hwt, handle, RECONOS_TYPE_RQ);
+
+	msg_size = arg0;
+	msg = xmalloc_aligned(msg_size, sizeof(void *) * 8);
+
+	res = rq_receive(hwt->resources[handle].ptr, msg, msg_size);
+	if (res <= 0 || res > msg_size) {
+		whine("rq_receive screwed up: %zd\n", res);
+		fsl_write(hwt->slot, 0);
+		goto out;
+	}
+
+	fsl_write(hwt->slot, (uint32_t) res);
+	/* FIXME: write data to hw thread */
+	for (i = 0; i < res / sizeof(uint32_t); ++i)
+		fsl_write(hwt->slot, msg[i]);
+out:
+	free(msg);
 }
 
 static void reconos_delegate_process_rqueue_send(struct reconos_hwt *hwt)
 {
+	int i;
+	uint32_t handle, arg0, msg_size, *msg;
+
+	handle = fsl_read(hwt->slot);
+	arg0 = fsl_read(hwt->slot);
+
+	reconos_assert_type_and_res(hwt, handle, RECONOS_TYPE_RQ);
+
+	msg_size = arg0; 
+	msg = xmalloc_aligned(msg_size, sizeof(void *) * 8); 
+
+	/* FIXME: read data to hw thread */
+	for (i = 0; i < msg_size / sizeof(uint32_t); ++i)
+		msg[i] = fsl_read(hwt->slot);
+
+	rq_send(hwt->resources[handle].ptr, msg, msg_size);
+	fsl_write(hwt->slot, 0);
+	free(msg);
 }
 
 static void reconos_delegate_process_get_init_data(struct reconos_hwt *hwt)
 {
+	fsl_write(hwt->slot, (uint32_t) hwt->init_data);
 }
 
 static void *reconos_delegate_thread_entry(void *arg)
