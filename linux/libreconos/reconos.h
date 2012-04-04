@@ -46,6 +46,9 @@
 #define RECONOS_CMD_MBOX_TRYGET			0x000000F2 // ToDo
 #define RECONOS_CMD_MBOX_TRYPUT			0x000000F3 // ToDo
 
+/* XXX: only for compatibility reasons of demo apps */
+typedef uint32_t __deprecated uint32;
+
 struct reconos_resource {
 	void *ptr;
 	uint32_t type;
