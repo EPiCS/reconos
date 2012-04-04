@@ -61,17 +61,17 @@ static __init int getpgd_init(void)
 {
 	int ret = misc_register(&getpgd_misc_dev);
 	if (ret < 0 )
-		printk(KERN_INFO "[getpgd] registration failed with %d!\n",
+		printk(KERN_INFO "[getpgd] registration failed with %d\n",
 		       ret);
 	else
-		printk(KERN_INFO "[getpgd] registered!\n");
+		printk(KERN_INFO "[getpgd] registered\n");
 	return ret;
 }
 
 static __exit void getpgd_exit(void)
 {
 	misc_deregister(&getpgd_misc_dev);
-	printk(KERN_INFO "[getpgd] unregistered!\n");
+	printk(KERN_INFO "[getpgd] unregistered\n");
 }
 
 module_init(getpgd_init);

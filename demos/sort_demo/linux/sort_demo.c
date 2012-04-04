@@ -316,12 +316,12 @@ int main(int argc, char ** argv)
 	for (i=0; i<hw_threads; i++)
 	{
 	  pthread_join(hwt[i].delegate,NULL);
-	  printf(" h%d", i);fflush(stdout);
+	  printf(" %d", i);fflush(stdout);
 	}
 	for (i=0; i<sw_threads; i++)
 	{
 	  pthread_join(swt[i],NULL);
-	  printf(" s%d", i+hw_threads);fflush(stdout);
+	  printf(" %d", i+hw_threads);fflush(stdout);
 	}
 
 	printf("\n");
@@ -334,9 +334,7 @@ int main(int argc, char ** argv)
             "Total computation time (sort & merge): %lu ms\n",
 		TO_WORDS(buffer_size), hw_threads, sw_threads,
 		t_generate, t_sort, t_merge, t_check, t_sort + t_merge );
-	
 
 	free(data);
 	return 0;
 }
-
