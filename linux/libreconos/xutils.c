@@ -7,7 +7,6 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <ctype.h>
-#include <stdlib.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
