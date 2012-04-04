@@ -26,10 +26,6 @@
 # define build_bug_on_zero(e)	(sizeof(char[1 - 2 * !!(e)]) - 1)
 #endif
 
-#ifndef round_up
-# define round_up(x, alignment)	(((x) + (alignment) - 1) & ~((alignment) - 1))
-#endif
-
 extern size_t strlcpy(char *dest, const char *src, size_t size);
 extern int slprintf(char *dst, size_t size, const char *fmt, ...);
 extern int open_or_die(const char *file, int flags);

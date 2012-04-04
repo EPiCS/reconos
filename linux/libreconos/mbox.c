@@ -12,7 +12,7 @@ int mbox_init(struct mbox *mb, size_t size)
 
 	mb->read_idx = 0;
 	mb->write_idx = 0;
-	mb->size = round_up(size, sizeof(void *) * 8);
+	mb->size = size;
 
 	ret = sem_init(&mb->sem_read, 0, 0);
 	if (ret)
@@ -51,7 +51,7 @@ void mbox_put(struct mbox *mb, uint32_t msg)
 	sem_wait(&mb->sem_write);
 
 	mb->messages[mb->write_idx] = msg;
-	mb->write_idx = (mb->write_idx + 1) & (mb->size - 1);
+	mb->write_idx = (mb->write_idx + 1)  % mb->size;
 
 	sem_post(&mb->sem_read);
 	pthread_mutex_unlock(&mb->mutex_write);
@@ -65,7 +65,7 @@ uint32_t mbox_get(struct mbox *mb)
 	sem_wait(&mb->sem_read);
 
 	msg = mb->messages[mb->read_idx];
-	mb->read_idx = (mb->read_idx + 1) & (mb->size - 1);
+	mb->read_idx = (mb->read_idx + 1) % mb->size;
 
 	sem_post(&mb->sem_write);
 	pthread_mutex_unlock(&mb->mutex_read);
