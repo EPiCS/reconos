@@ -11,6 +11,7 @@
 #include <fcntl.h>
 #include <stdint.h>
 #include <unistd.h>
+#include <errno.h>
 
 #include "fsl.h"
 #include "xutils.h"
@@ -53,16 +54,21 @@ static void fsl_open(int num)
 
 void fsl_write(int num, uint32_t value)
 {
+	ssize_t ret;
+
 	fsl_within_range_assert(num);
 	if (!fsl_already_open(num))
 		fsl_open(num);
 
 	/* XXX: @aagne: what about checking return values? ---DB */
-	write(fsl_fd[num], &value, sizeof(value));
+	ret = write(fsl_fd[num], &value, sizeof(value));
+	if (ret < 0)
+		whine("fsl_write error: %s\n", strerror(errno));
 }
 
 uint32_t fsl_read(int num)
 {
+	ssize_t ret;
 	uint32_t value;
 
 	fsl_within_range_assert(num);
@@ -70,7 +76,9 @@ uint32_t fsl_read(int num)
 		fsl_open(num);
 
 	/* XXX: @aagne: what about checking return values? ---DB */
-	read(fsl_fd[num], &value, sizeof(value));
+	ret = read(fsl_fd[num], &value, sizeof(value));
+	if (ret < 0)
+		whine("fsl_read error: %s\n", strerror(errno));
 
 	return value;
 }
