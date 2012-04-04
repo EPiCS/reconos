@@ -5,6 +5,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#ifndef __deprecated
+# define __deprecated		/* unimplemented */
+#endif
+
 #ifndef likely
 # define likely(x)		__builtin_expect(!!(x), 1)
 #endif

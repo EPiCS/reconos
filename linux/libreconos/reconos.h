@@ -3,6 +3,7 @@
 
 #include <pthread.h>
 #include <stdint.h>
+#include "xutils.h"
 
 #define RECONOS_VERSION_STRING			"v3.0"
 
@@ -64,17 +65,17 @@ struct reconos_process {
 	int fd_cache;
 };
 
-extern void cache_flush(void);
-extern void proc_control_selftest(void);
+extern void reconos_cache_flush(void);
+extern void reconos_proc_control_selftest(void);
 
-static inline void reconos_cache_flush(void)
+static inline __deprecated void cache_flush(void)
 {
-	cache_flush();
+	reconos_cache_flush();
 }
 
-static inline void reconos_proc_control_selftest(void)
+static inline __deprecated void proc_control_selftest(void)
 {
-	proc_control_selftest();
+	reconos_proc_control_selftest();
 }
 
 extern int reconos_init(int proc_ctrl_fsl_a, int proc_control_fsl_b);
