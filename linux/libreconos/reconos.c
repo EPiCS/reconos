@@ -13,9 +13,6 @@
 #include "rqueue.h"
 #include "xutils.h"
 
-#define RECONOS_DEBUG(x, ...)
-#define RECONOS_ERROR(x, ...)
-
 static struct reconos_process reconos_proc;
 
 static void reconos_slot_reset(int num, int reset)
