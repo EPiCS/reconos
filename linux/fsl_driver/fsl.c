@@ -217,7 +217,7 @@ static ssize_t fsl_read(struct file *filp, char __user *buf,
 		if (ret) {
 			atomic_set(&dev->irq_count, 0);
 			if(filp->f_flags & O_NONBLOCK)
-				return /*-EAGAIN*/ i * sizeof(uint32_t); //FIXME
+				return i * sizeof(uint32_t);
 			if (!dev->irq_enabled) {
 				dev->irq_enabled = 1;
 				enable_irq(dev->irq);
@@ -257,7 +257,7 @@ static ssize_t fsl_write(struct file *filp, const char __user *buf,
 			return -EFAULT;
 		ret = nputfsl(dev->fsl_num, data);
 		if (ret)
-			return /* -ENOMEM */ i * sizeof(uint32_t); //FIXME
+			return i * sizeof(uint32_t);
 	}
 
 	return count;
