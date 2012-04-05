@@ -207,7 +207,7 @@ static ssize_t fsl_read(struct file *filp, char __user *buf,
 	int data, ret, num_words, i;
 	struct fsl_dev *dev = filp->private_data;
 
-	if ((count & (sizeof(uint32_t) - 1)) != 0)
+	if (count % sizeof(uint32_t) != 0)
 		return -EINVAL;
 
 	num_words = count / sizeof(uint32_t);
@@ -224,10 +224,8 @@ static ssize_t fsl_read(struct file *filp, char __user *buf,
 				dev->irq_enabled = 1;
 				enable_irq(dev->irq);
 			}
-			ret = wait_event_interruptible(dev->read_queue,
+			wait_event_interruptible(dev->read_queue,
 				atomic_read(&dev->irq_count) > 0);
-			if (ret < 0)
-				return ret;
 			i--;
 			continue;
 		}
@@ -246,7 +244,7 @@ static ssize_t fsl_write(struct file *filp, const char __user *buf,
 	int data, ret, num_words, i;
 	struct fsl_dev *dev = filp->private_data;
 
-	if ((count & (sizeof(uint32_t) - 1)) != 0)
+	if (count % sizeof(uint32_t) != 0)
 		return -EINVAL;
 
 	num_words = count / sizeof(uint32_t);
