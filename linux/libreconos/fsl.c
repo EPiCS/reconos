@@ -50,7 +50,7 @@ static void fsl_open(int num)
 	slprintf(path, sizeof(path), "/dev/fsl%d", num);
 	fsl_fd[num] = open_or_die(path, O_RDWR);
 
-	atexit(fsl_close_all);
+//	atexit(fsl_close_all);
 }
 
 void fsl_write(int num, uint32_t value)

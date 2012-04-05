@@ -1,11 +1,8 @@
-#define _GNU_SOURCE
-
 #include "reconos.h"
 #include "mbox.h"
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <malloc.h>
 #include <pthread.h>
 #include <assert.h>
 
@@ -15,7 +12,6 @@
 #include <unistd.h>
 #include <limits.h>
 #include <string.h>
-
 #include "config.h"
 #include "merge.h"
 #include "data.h"
@@ -52,27 +48,10 @@ struct mbox mb_stop;
 
 unsigned int* malloc_page_aligned(unsigned int pages)
 {
-	int ret;
-	void *ptr;
-
-	ret = posix_memalign(&ptr, PAGE_SIZE, (pages + 1) * PAGE_SIZE);
-	if (ret != 0) {
-		fprintf(stderr, "memalign fucked up!\n");
-		exit(1);
-	}
-
-	return ptr;
-}
-
-#if 0
-//// aahhhhhhhh!!!! ;-)
-unsigned int* malloc_page_aligned(unsigned int pages)
-{
 	unsigned int * temp = malloc ((pages+1)*PAGE_SIZE);
 	unsigned int * data = (unsigned int*)(((unsigned int)temp / PAGE_SIZE + 1) * PAGE_SIZE);
 	return data;
 }
-#endif
 
 // size is given in words, not bytes!
 void print_data(unsigned int* data, unsigned int size)
@@ -316,12 +295,10 @@ int main(int argc, char ** argv)
 	for (i=0; i<hw_threads; i++)
 	{
 	  pthread_join(hwt[i].delegate,NULL);
-	  printf(" %d", i);fflush(stdout);
 	}
 	for (i=0; i<sw_threads; i++)
 	{
 	  pthread_join(swt[i],NULL);
-	  printf(" %d", i+hw_threads);fflush(stdout);
 	}
 
 	printf("\n");
@@ -334,7 +311,11 @@ int main(int argc, char ** argv)
             "Total computation time (sort & merge): %lu ms\n",
 		TO_WORDS(buffer_size), hw_threads, sw_threads,
 		t_generate, t_sort, t_merge, t_check, t_sort + t_merge );
+	
 
-	free(data);
+	//free(data);
+	// Memory Leak on variable data!!!
+	
 	return 0;
 }
+

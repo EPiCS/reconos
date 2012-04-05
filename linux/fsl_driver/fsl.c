@@ -226,7 +226,7 @@ static ssize_t fsl_read(struct file *filp, char __user *buf,
 				enable_irq(dev->irq);
 			}
 			wait_event_interruptible(dev->read_queue,
-				/*atomic_read(&dev->irq_count)*/ dev->irq_count > 0);
+				/*atomic_read(&dev->irq_count)*/ (dev->irq_count > 0));
 			i--;
 			continue;
 		}
@@ -305,6 +305,7 @@ static void fsl_setup_dev(struct fsl_dev *dev, int index)
 	dev->mdev.name = kzalloc(nlen, GFP_KERNEL);
 	if (err)
 		goto out;
+
 	snprintf((char *) dev->mdev.name, nlen - 1, "fsl%d", index);
 	err = misc_register(&dev->mdev);
 	if (err)
@@ -312,6 +313,7 @@ static void fsl_setup_dev(struct fsl_dev *dev, int index)
 
 	init_waitqueue_head(&dev->read_queue);
 	//atomic_set(&dev->irq_count, 0);
+	dev->fsl_num = index;
 	dev->irq_count = 0;
 	dev->irq_enabled = 1;
 

@@ -149,8 +149,6 @@ int reconos_init(int proc_control_fsl_a, int proc_control_fsl_b)
 	fsl_write(proc_control_fsl_b, 0x02000000);
 	fsl_write(proc_control_fsl_b, pgd);
 
-	reconos_proc_control_selftest();
-
 	pthread_attr_init(&attr);	
 	pthread_create(&reconos_proc.proc_control_thread, NULL,
 		       reconos_control_thread_entry, NULL);
