@@ -220,8 +220,10 @@ static ssize_t fsl_read(struct file *filp, char __user *buf,
 				dev->irq_enabled = 1;
 				enable_irq(dev->irq);
 			}
-			wait_event_interruptible(dev->read_queue,
+			ret = wait_event_interruptible(dev->read_queue,
 				atomic_read(&dev->irq_count) > 0);
+			if (ret)
+				return ret;
 			i--;
 			continue;
 		}
