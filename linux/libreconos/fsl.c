@@ -12,6 +12,7 @@
 #include <stdint.h>
 #include <unistd.h>
 #include <errno.h>
+#include <string.h>
 
 #include "fsl.h"
 #include "xutils.h"

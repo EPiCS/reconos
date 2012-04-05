@@ -28,7 +28,7 @@ struct fsl_dev {
 	unsigned int fsl_num;
 	volatile int irq_enabled;
 	wait_queue_head_t read_queue;
-	atomic_t irq_count;
+	/*atomic_t*/ volatile int irq_count;
 	struct miscdevice mdev;
 };
 
@@ -217,7 +217,8 @@ static ssize_t fsl_read(struct file *filp, char __user *buf,
 	for (i = 0; i < num_words; i++) {
 		ret = ngetfsl(dev->fsl_num, &data);
 		if (ret) {
-			atomic_set(&dev->irq_count, 0);
+			//atomic_set(&dev->irq_count, 0);
+			dev->irq_count = 0;
 			if(filp->f_flags & O_NONBLOCK)
 				return i * sizeof(uint32_t);
 			if (!dev->irq_enabled) {
@@ -225,7 +226,7 @@ static ssize_t fsl_read(struct file *filp, char __user *buf,
 				enable_irq(dev->irq);
 			}
 			wait_event_interruptible(dev->read_queue,
-				atomic_read(&dev->irq_count) > 0);
+				/*atomic_read(&dev->irq_count)*/ dev->irq_count > 0);
 			i--;
 			continue;
 		}
@@ -267,7 +268,8 @@ static irqreturn_t fsl_interrupt(int irq, void *fsldev)
 {	
 	struct fsl_dev *dev = fsldev;
 
-	atomic_inc(&dev->irq_count);
+	//atomic_inc(&dev->irq_count);
+	dev->irq_count++;
 	wake_up_interruptible(&dev->read_queue);
 	disable_irq_nosync(irq);
 	dev->irq_enabled = 0;
@@ -309,7 +311,8 @@ static void fsl_setup_dev(struct fsl_dev *dev, int index)
 		goto out_free;
 
 	init_waitqueue_head(&dev->read_queue);
-	atomic_set(&dev->irq_count, 0);
+	//atomic_set(&dev->irq_count, 0);
+	dev->irq_count = 0;
 	dev->irq_enabled = 1;
 
 	printk(KERN_INFO "[fsl] registered fsl%d irq %d\n", index, dev->irq);

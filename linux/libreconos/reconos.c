@@ -82,9 +82,7 @@ void reconos_proc_control_selftest(void)
 	fsl_write(reconos_proc.proc_control_fsl_b, 0x06000000);
 
 	res = fsl_read(reconos_proc.proc_control_fsl_b);
-	if (res == expect)
-		whine("proc_control selftest part 1 success\n");
-	else
+	if (res != expect)
 		whine("proc_control selftest part 1 failed "
 		      "(read 0x%08X instead of 0x%08X)\n",
 		      res, expect);
@@ -150,6 +148,8 @@ int reconos_init(int proc_control_fsl_a, int proc_control_fsl_b)
 	pgd = reconos_getpgd();
 	fsl_write(proc_control_fsl_b, 0x02000000);
 	fsl_write(proc_control_fsl_b, pgd);
+
+	reconos_proc_control_selftest();
 
 	pthread_attr_init(&attr);	
 	pthread_create(&reconos_proc.proc_control_thread, NULL,
