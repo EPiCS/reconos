@@ -35,7 +35,7 @@ static int fsl_interrupts[FSL_MAX] = {
 module_param_array(fsl_interrupts, int, NULL, S_IRUGO | S_IWUSR);
 
 /* Returns: 0 - ok, 1 - no data available, 2 - error */
-int __must_check nputfsl(int id, int val)
+static int __must_check nputfsl(int id, int val)
 {
 	int ret;
 	switch (id) {
@@ -108,10 +108,9 @@ int __must_check nputfsl(int id, int val)
 	}
 	return ret;
 }
-EXPORT_SYMBOL(nputfsl);
 
 /* Returns: 0 - ok, 1 - no data available, 2 - error */
-int __must_check ngetfsl(int id, int *val)
+static int __must_check ngetfsl(int id, int *val)
 {
 	int ret;
 	switch (id) {
@@ -184,7 +183,6 @@ int __must_check ngetfsl(int id, int *val)
 	}
 	return ret;
 }
-EXPORT_SYMBOL(ngetfsl);
 
 static int fsl_open(struct inode *inode, struct file *filp)
 {
