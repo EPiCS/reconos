@@ -332,7 +332,7 @@ static void fsl_remove_dev(struct fsl_dev *dev)
 	kfree(dev->mdev.name);
 }
 
-static int __init fsl_init(void)
+static __init int fsl_init(void)
 {
 	int i;
 	for (i = 0; i < FSL_MAX; i++)
@@ -340,7 +340,7 @@ static int __init fsl_init(void)
 	return 0;
 }
 
-static void __exit fsl_cleanup(void)
+static __exit void fsl_cleanup(void)
 {
 	int i;
 	for (i = 0; i < FSL_MAX; i++)
