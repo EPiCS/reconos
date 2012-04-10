@@ -190,7 +190,7 @@ static int fsl_open(struct inode *inode, struct file *filp)
 {
 	int i, minor;
 	minor = iminor(inode);
-	for(i = 0; i < FSL_MAX; i++) {
+	for (i = 0; i < FSL_MAX; i++) {
 		if (minor == dev_array[i].mdev.minor) {
 			filp->private_data = &dev_array[i];
 			break;
@@ -199,13 +199,28 @@ static int fsl_open(struct inode *inode, struct file *filp)
 	return 0;
 }
 
-static ssize_t fsl_read(struct file *filp, char __user *buf,
-			size_t count, loff_t *pos)
+static struct fsl_dev *fsl_get_dev_by_num(int num)
+{
+	int i;
+	struct fsl_dev *ret = NULL;
+
+	for (i = 0; i < FSL_MAX; i++) {
+		if (num == dev_array[i].fsl_num) {
+			ret = &dev_array[i];
+			break;
+		}
+	}
+
+	return ret;
+}
+
+static ssize_t fsl_do_read(int devnum, char __user *ubuf, char *kbuf,
+			   size_t count, int nonblock)
 {
 	int data, ret, num_words, i;
-	struct fsl_dev *dev = filp->private_data;
+	struct fsl_dev *dev = fsl_get_dev_by_num(devnum);
 
-	if (count % sizeof(uint32_t) != 0)
+	if (count % sizeof(uint32_t) != 0 || !dev)
 		return -EINVAL;
 
 	num_words = count / sizeof(uint32_t);
@@ -216,7 +231,7 @@ static ssize_t fsl_read(struct file *filp, char __user *buf,
 		ret = ngetfsl(dev->fsl_num, &data);
 		if (ret) {
 			atomic_set(&dev->irq_count, 0);
-			if(filp->f_flags & O_NONBLOCK)
+			if (nonblock)
 				return i * sizeof(uint32_t);
 			if (!dev->irq_enabled) {
 				dev->irq_enabled = 1;
@@ -230,12 +245,39 @@ static ssize_t fsl_read(struct file *filp, char __user *buf,
 			continue;
 		}
 
-		if (copy_to_user(buf + sizeof(uint32_t) * i,
-				 &data, sizeof(uint32_t)))
-			return -EFAULT;
+		if (kbuf) {
+			memcpy(kbuf + sizeof(uint32_t) * i, &data,
+			       sizeof(uint32_t));
+		} else if (ubuf) {
+			if (copy_to_user(ubuf + sizeof(uint32_t) * i,
+					 &data, sizeof(uint32_t)))
+				return -EFAULT;
+		} else {
+			BUG();
+		}
 	}
 
 	return count;
+}
+
+static inline ssize_t fsl_do_read_to_user(int devnum, char __user *ubuf,
+					  size_t count, int nonblock)
+{
+	return fsl_do_read(devnum, ubuf, NULL, count, nonblock);
+}
+
+ssize_t fsl_do_read_to_kern(int devnum, char *kbuf, size_t count)
+{
+	return fsl_do_read(devnum, NULL, kbuf, count, 0);
+}
+EXPORT_SYMBOL(fsl_do_read_to_kern);
+
+static ssize_t fsl_read(struct file *filp, char __user *buf,
+			size_t count, loff_t *pos)
+{
+	struct fsl_dev *dev = filp->private_data;
+	return fsl_do_read_to_user(dev->fsl_num, buf, count,
+				   filp->f_flags & O_NONBLOCK);
 }
 
 static ssize_t fsl_write(struct file *filp, const char __user *buf,
