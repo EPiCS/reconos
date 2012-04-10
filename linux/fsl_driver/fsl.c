@@ -264,11 +264,27 @@ static inline ssize_t fsl_do_read_to_user(int devnum, char __user *ubuf,
 	return fsl_do_read(devnum, ubuf, NULL, count, nonblock);
 }
 
-ssize_t fsl_do_read_to_kern(int devnum, char *kbuf, size_t count)
+static inline ssize_t fsl_do_read_to_kern(int devnum, char *kbuf,
+					  size_t count)
 {
 	return fsl_do_read(devnum, NULL, kbuf, count, 0);
 }
-EXPORT_SYMBOL(fsl_do_read_to_kern);
+
+uint32_t fsl_read_word(int num)
+{
+	ssize_t ret;
+	uint32_t val;
+
+	/* Same API as from user space. */
+	ret = fsl_do_read_to_kern(num, (char *) &val, sizeof(val));
+	if (ret < 0) {
+		printk(KERN_WARNING "[fsl] could not read value: %d\n", ret);
+		val = 0;
+	}
+
+	return val;
+}
+EXPORT_SYMBOL(fsl_read_word);
 
 static ssize_t fsl_read(struct file *filp, char __user *buf,
 			size_t count, loff_t *pos)
@@ -318,11 +334,24 @@ static inline ssize_t fsl_do_write_from_user(int devnum,
 	return fsl_do_write(devnum, ubuf, NULL, count);
 }
 
-ssize_t fsl_do_write_from_kern(int devnum, const char *kbuf, size_t count)
+static inline ssize_t fsl_do_write_from_kern(int devnum, const char *kbuf,
+					     size_t count)
 {
 	return fsl_do_write(devnum, NULL, kbuf, count);
 }
-EXPORT_SYMBOL(fsl_do_write_from_kern);
+
+ssize_t fsl_write_word(int num, uint32_t val)
+{
+	ssize_t ret;
+
+	/* Same API as from user space. */
+	ret = fsl_do_write_from_kern(num, (char *) &val, sizeof(val));
+	if (ret < 0)
+		printk(KERN_WARNING "[fsl] could not write value: %d\n", ret);
+
+	return ret;
+}
+EXPORT_SYMBOL(fsl_write_word);
 
 static ssize_t fsl_write(struct file *filp, const char __user *buf,
 			 size_t count, loff_t *pos)
