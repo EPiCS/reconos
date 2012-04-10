@@ -13,7 +13,7 @@
 #include <asm/page.h>
 #include <asm/pgtable.h>
 
-static void flush_dcache(void)
+void getpgd_flush_dcache(void)
 {
 	int i;
 	int baseaddr, bytesize,linelen;
@@ -26,11 +26,18 @@ static void flush_dcache(void)
 	for (i = 0; i < bytesize; i += linelen)
 		asm volatile ("wdc.flush %0, %1;" :: "d" (baseaddr), "d" (i));
 }
+EXPORT_SYMBOL(getpgd_flush_dcache);
+
+unsigned long getpgd_fetch_pgd(void)
+{
+	return (unsigned long) current->mm->pgd - 0xC0000000;
+}
+EXPORT_SYMBOL(getpgd_fetch_pgd);
 
 static ssize_t getpgd_read(struct file *filp, char __user *buf, size_t len,
 			   loff_t *ignore)
 {
-	unsigned long data = (unsigned long) current->mm->pgd - 0xC0000000;
+	unsigned long data = getpgd_fetch_pgd();
 
 	if (len != sizeof(data))
 		return -EINVAL;
@@ -41,7 +48,7 @@ static ssize_t getpgd_read(struct file *filp, char __user *buf, size_t len,
 static ssize_t getpgd_write(struct file *filp, const char __user *buf,
 			    size_t len, loff_t *ignore)
 {
-	flush_dcache();
+	getpgd_flush_dcache();
 	return len;
 }
 
