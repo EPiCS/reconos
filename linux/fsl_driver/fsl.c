@@ -280,11 +280,11 @@ static ssize_t fsl_read(struct file *filp, char __user *buf,
 				   filp->f_flags & O_NONBLOCK);
 }
 
-static ssize_t fsl_write(struct file *filp, const char __user *buf,
-			 size_t count, loff_t *pos)
+static ssize_t fsl_do_write(int devnum, const char __user *ubuf,
+			    const char *kbuf, size_t count)
 {
 	int data, ret, num_words, i;
-	struct fsl_dev *dev = filp->private_data;
+	struct fsl_dev *dev = fsl_get_dev_by_num(devnum);
 
 	if (count % sizeof(uint32_t) != 0)
 		return -EINVAL;
@@ -294,15 +294,43 @@ static ssize_t fsl_write(struct file *filp, const char __user *buf,
 		return 0;
 
 	for (i = 0; i < num_words; i++) {
-		if (copy_from_user(&data, buf + sizeof(uint32_t) * i,
-				   sizeof(uint32_t)))
-			return -EFAULT;
+		if (kbuf) {
+			memcpy(&data, kbuf + sizeof(uint32_t) * i,
+			       sizeof(uint32_t));
+		} else if (ubuf) {
+			if (copy_from_user(&data, ubuf + sizeof(uint32_t) * i,
+					   sizeof(uint32_t)))
+				return -EFAULT;
+		} else {
+			BUG();
+		}
+
 		ret = nputfsl(dev->fsl_num, data);
 		if (ret)
 			return i * sizeof(uint32_t);
 	}
 
 	return count;
+}
+
+static inline ssize_t fsl_do_write_from_user(int devnum,
+					     const char __user *ubuf,
+					     size_t count)
+{
+	return fsl_do_write(devnum, ubuf, NULL, count);
+}
+
+ssize_t fsl_do_write_from_kern(int devnum, const char *kbuf, size_t count)
+{
+	return fsl_do_write(devnum, NULL, kbuf, count);
+}
+EXPORT_SYMBOL(fsl_do_write_from_kern);
+
+static ssize_t fsl_write(struct file *filp, const char __user *buf,
+			 size_t count, loff_t *pos)
+{
+	struct fsl_dev *dev = filp->private_data;
+	return fsl_do_write_from_user(dev->fsl_num, buf, count);
 }
 
 static irqreturn_t fsl_interrupt(int irq, void *fsldev)
