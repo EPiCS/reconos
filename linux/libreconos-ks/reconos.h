@@ -1,7 +1,14 @@
+/*
+ * Copyright 2012 Daniel Borkmann <dborkma@tik.ee.ethz.ch>
+ * Copyright 2012 Andreas Agne <agne@upb.de>
+ */
+
 #ifndef RECONOS_H
 #define RECONOS_H
 
 #include <linux/sched.h>
+
+#include "mbox.h"
 
 #define RECONOS_VERSION_STRING			"v3.0"
 
