@@ -6,7 +6,7 @@ APP_OBJS = bubblesort.o data.o merge.o timing.o
 all: sort_demo
 
 sort_demo: $(APP_OBJS)
-	$(CC) $(APP_OBJS) $(CFLAGS) -L ../../../linux/libreconos -I ../../../linux/libreconos sort_demo.c -o sort_demo -static -lreconos -lpthread -lm -lrt
+	$(CC) $(APP_OBJS) $(CFLAGS) -L ../../../linux/libreconos-us -I ../../../linux/libreconos-us sort_demo.c -o sort_demo -static -lreconos -lpthread -lm -lrt
 
 clean:
 	rm -f *.o sort_demo 

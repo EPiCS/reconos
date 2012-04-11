@@ -6,7 +6,7 @@ TARGET=memtest
 all: $(TARGET)
 
 $(TARGET): $(TARGET).c
-	$(CC) $(CFLAGS) -L ../../../linux/libreconos -I ../../../linux/libreconos $(TARGET).c -o $(TARGET) -static -lreconos -lpthread
+	$(CC) $(CFLAGS) -L ../../../linux/libreconos-us -I ../../../linux/libreconos-us $(TARGET).c -o $(TARGET) -static -lreconos -lpthread
 
 clean:
 	rm -f *.o $(TARGET)
