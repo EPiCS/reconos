@@ -35,15 +35,14 @@ static int __init init_reconos_test_module(void)
 		printk(KERN_INFO "[reconos-test] get_init_data: "
 		       "failure (%X!=%X)\n", init_data, ret);
 
-	kthread_stop(hwt.delegate);
-	reconos_cleanup();
-
 	printk("[reconos-test] loaded, test done\n");
 	return 0;
 }
 
 static void __exit cleanup_reconos_test_module(void)
 {
+	reconos_cleanup();
+
 	printk("[reconos-test] unloaded\n");
 }
 
