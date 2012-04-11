@@ -73,6 +73,7 @@ extern void reconos_cache_flush(void);
 extern void reconos_proc_control_selftest(void);
 extern int reconos_init(int proc_ctrl_fsl_a, int proc_control_fsl_b);
 extern int reconos_init_autodetect(void);
+extern void reconos_cleanup(void);
 extern void reconos_mmu_stats(uint32_t *tlb_hits, uint32_t *tlb_misses,
 			      uint32_t *page_faults);
 extern void reconos_hwt_setresources(struct reconos_hwt *hwt,

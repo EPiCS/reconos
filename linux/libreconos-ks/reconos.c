@@ -62,6 +62,7 @@ void reconos_mmu_stats(uint32_t *tlb_hits, uint32_t *tlb_misses,
 	if (tlb_hits)
 		*tlb_hits = hits;
 }
+EXPORT_SYMBOL_GPL(reconos_mmu_stats);
 
 void reconos_proc_control_selftest(void)
 {
@@ -77,11 +78,13 @@ void reconos_proc_control_selftest(void)
 	else
 		printk(KERN_INFO "proc_control selftest part 1 passed\n");
 }
+EXPORT_SYMBOL_GPL(reconos_proc_control_selftest);
 
 void reconos_cache_flush(void)
 {
 	getpgd_flush_dcache();
 }
+EXPORT_SYMBOL_GPL(reconos_cache_flush);
 
 static int reconos_control_thread_entry(void *arg)
 {
@@ -154,12 +157,20 @@ int reconos_init(int proc_control_fsl_a, int proc_control_fsl_b)
 	wake_up_process(reconos_proc.proc_control_thread);
 	return 0;
 }
+EXPORT_SYMBOL_GPL(reconos_init);
+
+void reconos_cleanup(void)
+{
+	kthread_stop(reconos_proc.proc_control_thread);
+}
+EXPORT_SYMBOL_GPL(reconos_cleanup);
 
 int reconos_init_autodetect(void)
 {
 	int num = reconos_get_numfsl();
 	return reconos_init(num - 2, num - 1);
 }
+EXPORT_SYMBOL_GPL(reconos_init_autodetect);
 
 static int reconos_delegate_thread_entry(void *arg);
 
@@ -176,6 +187,7 @@ int reconos_hwt_create(struct reconos_hwt *hwt, int slot, void *arg)
         wake_up_process(hwt->delegate);
 	return 0;
 }
+EXPORT_SYMBOL_GPL(reconos_hwt_create);
 
 void reconos_hwt_setresources(struct reconos_hwt *hwt,
 			      struct reconos_resource *res,
@@ -184,11 +196,13 @@ void reconos_hwt_setresources(struct reconos_hwt *hwt,
 	hwt->resources = res;
 	hwt->num_resources = num_resources;
 }
+EXPORT_SYMBOL_GPL(reconos_hwt_setresources);
 
 void reconos_hwt_setinitdata(struct reconos_hwt *hwt, void *init_data)
 {
 	hwt->init_data = init_data;
 }
+EXPORT_SYMBOL_GPL(reconos_hwt_setinitdata);
 
 static inline void reconos_assert_type_and_res(struct reconos_hwt *hwt,
 					       uint32_t handle, uint32_t type)
