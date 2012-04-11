@@ -1,10 +1,16 @@
-CFLAGS=-O -g -Wall
-CC=microblaze-unknown-linux-gnu-gcc
+ARCH		=	microblaze
+CROSS_COMPILE	=	microblaze-unknown-linux-gnu-
+KDIR		?=	~/linux-2.6-xlnx
+EXTRA_CFLAGS	+=	-I$(PWD)/../../../linux/libreconos-ks/
 
-all: init_exit_test
+export ARCH CROSS_COMPILE
 
-init_exit_test: init_exit_test.c
-	$(CC) $(CFLAGS) -L ../../../linux/libreconos-us -I ../../../linux/libreconos-us init_exit_test.c -o init_exit_test -static -lreconos -lpthread
+obj-m		:= init_exit_test.o
+
+modules:
+	@cp ../../../linux/libreconos-ks/Module.symvers .
+	$(MAKE) -C $(KDIR) M=$(PWD) modules
 
 clean:
-	rm -f *.o init_exit_test 
+	$(MAKE) -C $(KDIR) M=$(PWD) clean
+
