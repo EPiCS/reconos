@@ -284,7 +284,7 @@ uint32_t fsl_read_word(int num)
 
 	return val;
 }
-EXPORT_SYMBOL(fsl_read_word);
+EXPORT_SYMBOL_GPL(fsl_read_word);
 
 static ssize_t fsl_read(struct file *filp, char __user *buf,
 			size_t count, loff_t *pos)
@@ -351,7 +351,7 @@ ssize_t fsl_write_word(int num, uint32_t val)
 
 	return ret;
 }
-EXPORT_SYMBOL(fsl_write_word);
+EXPORT_SYMBOL_GPL(fsl_write_word);
 
 static ssize_t fsl_write(struct file *filp, const char __user *buf,
 			 size_t count, loff_t *pos)
