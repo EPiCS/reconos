@@ -166,7 +166,7 @@ int reconos_init_autodetect(void)
 
 static void *reconos_delegate_thread_entry(void *arg);
 
-int reconos_hwt_create(struct reconos_hwt * hwt, int slot, void *arg)
+int reconos_hwt_create(struct reconos_hwt *hwt, int slot, void *arg)
 {
 	hwt->slot = slot;
 	return pthread_create(&hwt->delegate, NULL,

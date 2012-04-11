@@ -51,10 +51,10 @@ struct reconos_resource {
 };
 
 struct reconos_hwt {
-	struct task_struct *thread;
-	int slot;
+	struct task_struct *delegate;
 	struct reconos_resource* resources;
 	size_t num_resources;
+	int slot;
 	void *init_data;
 } ____cacheline_aligned_in_smp;
 
@@ -62,12 +62,11 @@ struct reconos_hwt {
 #define SLOT_FLAG_RESET				0x00000001
 
 struct reconos_process {
-	uint32_t page_faults;
+	struct task_struct *proc_control_thread;
 	int proc_control_fsl_a; // proc_control initiates requests
 	int proc_control_fsl_b; // sw initiates requests
-	struct task_struct proc_control_thread;
 	int slot_flags[SLOTS_MAX];
-	int fd_cache;
+	uint32_t page_faults;
 } ____cacheline_aligned_in_smp;
 
 extern void reconos_cache_flush(void);
