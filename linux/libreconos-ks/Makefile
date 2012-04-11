@@ -4,7 +4,8 @@ KDIR		?=	~/linux-2.6-xlnx
 
 export ARCH CROSS_COMPILE
 
-obj-m := reconos.o mbox.o
+libreconos-y	:= reconos.o mbox.o
+obj-m		:= libreconos.o
 
 modules:
 	$(MAKE) -C $(KDIR) M=$(PWD) modules
