@@ -1,3 +1,7 @@
+#include <linux/module.h>
+
+#include "reconos.h"
+
 static int __init init_reconos_module(void)
 {
 	return 0;
