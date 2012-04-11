@@ -9,6 +9,8 @@
 #include <linux/semaphore.h>
 #include <linux/mutex.h>
 
+#include "reconos.h"
+
 struct mbox {
 	struct semaphore sem_read;
 	struct semaphore sem_write;
@@ -20,9 +22,9 @@ struct mbox {
 	size_t size;
 };
 
-extern int mbox_init(struct mbox *mb, size_t size);
+extern ____can_sleep int mbox_init(struct mbox *mb, size_t size);
 extern void mbox_destroy(struct mbox *mb);
-extern void mbox_put(struct mbox *mb, uint32_t msg);
-extern uint32_t mbox_get(struct mbox *mb);
+extern ____can_sleep void mbox_put(struct mbox *mb, uint32_t msg);
+extern ____can_sleep uint32_t mbox_get(struct mbox *mb);
 
 #endif /* MBOX_H */

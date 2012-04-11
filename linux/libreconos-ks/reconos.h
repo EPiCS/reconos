@@ -8,8 +8,6 @@
 
 #include <linux/sched.h>
 
-#include "mbox.h"
-
 #define RECONOS_VERSION_STRING			"v3.0"
 
 #define RECONOS_TYPE_MBOX			0x00000001
@@ -44,6 +42,8 @@
 #define RECONOS_CMD_MBOX_PUT			0x000000F1
 #define RECONOS_CMD_MBOX_TRYGET			0x000000F2 // ToDo
 #define RECONOS_CMD_MBOX_TRYPUT			0x000000F3 // ToDo
+
+#define ____can_sleep
 
 struct reconos_resource {
 	void *ptr;
