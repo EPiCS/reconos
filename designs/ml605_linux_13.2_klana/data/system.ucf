@@ -1,0 +1,334 @@
+#
+# pin constraints
+#
+NET CLK_N LOC = "H9"  |  DIFF_TERM = "TRUE"  |  IOSTANDARD = "LVDS_25";
+NET CLK_P LOC = "J9"  |  DIFF_TERM = "TRUE"  |  IOSTANDARD = "LVDS_25";
+NET ETHERNET_MDC LOC = "AP14"  |  IOSTANDARD = "LVCMOS25";
+NET ETHERNET_MDIO LOC = "AN14"  |  IOSTANDARD = "LVCMOS25";
+NET ETHERNET_MII_TX_CLK LOC = "AD12"  |  IOSTANDARD = "LVCMOS25";
+NET ETHERNET_PHY_RST_N LOC = "AH13"  |  IOSTANDARD = "LVCMOS25"  |  TIG;
+NET ETHERNET_RXD[0] LOC = "AN13"  |  IOSTANDARD = "LVCMOS25";
+NET ETHERNET_RXD[1] LOC = "AF14"  |  IOSTANDARD = "LVCMOS25";
+NET ETHERNET_RXD[2] LOC = "AE14"  |  IOSTANDARD = "LVCMOS25";
+NET ETHERNET_RXD[3] LOC = "AN12"  |  IOSTANDARD = "LVCMOS25";
+NET ETHERNET_RXD[4] LOC = "AM12"  |  IOSTANDARD = "LVCMOS25";
+NET ETHERNET_RXD[5] LOC = "AD11"  |  IOSTANDARD = "LVCMOS25";
+NET ETHERNET_RXD[6] LOC = "AC12"  |  IOSTANDARD = "LVCMOS25";
+NET ETHERNET_RXD[7] LOC = "AC13"  |  IOSTANDARD = "LVCMOS25";
+NET ETHERNET_RX_CLK LOC = "AP11"  |  IOSTANDARD = "LVCMOS25";
+NET ETHERNET_RX_DV LOC = "AM13"  |  IOSTANDARD = "LVCMOS25";
+NET ETHERNET_RX_ER LOC = "AG12"  |  IOSTANDARD = "LVCMOS25";
+NET ETHERNET_TXD[0] LOC = "AM11"  |  IOSTANDARD = "LVCMOS25";
+NET ETHERNET_TXD[1] LOC = "AL11"  |  IOSTANDARD = "LVCMOS25";
+NET ETHERNET_TXD[2] LOC = "AG10"  |  IOSTANDARD = "LVCMOS25";
+NET ETHERNET_TXD[3] LOC = "AG11"  |  IOSTANDARD = "LVCMOS25";
+NET ETHERNET_TXD[4] LOC = "AL10"  |  IOSTANDARD = "LVCMOS25";
+NET ETHERNET_TXD[5] LOC = "AM10"  |  IOSTANDARD = "LVCMOS25";
+NET ETHERNET_TXD[6] LOC = "AE11"  |  IOSTANDARD = "LVCMOS25";
+NET ETHERNET_TXD[7] LOC = "AF11"  |  IOSTANDARD = "LVCMOS25";
+NET ETHERNET_TX_CLK LOC = "AH12"  |  IOSTANDARD = "LVCMOS25";
+NET ETHERNET_TX_EN LOC = "AJ10"  |  IOSTANDARD = "LVCMOS25";
+NET ETHERNET_TX_ER LOC = "AH10"  |  IOSTANDARD = "LVCMOS25";
+NET IIC_DVI_SCL LOC = "AN10"  |  DRIVE = "6"  |  IOSTANDARD = "LVCMOS25"  |  SLEW = "SLOW";
+NET IIC_DVI_SDA LOC = "AP10"  |  DRIVE = "6"  |  IOSTANDARD = "LVCMOS25"  |  SLEW = "SLOW";
+NET IIC_EEPROM_SCL LOC = "AK9"  |  DRIVE = "6"  |  IOSTANDARD = "LVCMOS25"  |  SLEW = "SLOW";
+NET IIC_EEPROM_SDA LOC = "AE9"  |  DRIVE = "6"  |  IOSTANDARD = "LVCMOS25"  |  SLEW = "SLOW";
+NET IIC_FMC_SCL LOC = "AF13"  |  DRIVE = "6"  |  IOSTANDARD = "LVCMOS25"  |  SLEW = "SLOW";
+NET IIC_FMC_SDA LOC = "AG13"  |  DRIVE = "6"  |  IOSTANDARD = "LVCMOS25"  |  SLEW = "SLOW";
+NET IIC_SFP_SCL LOC = "AA34"  |  DRIVE = "6"  |  IOSTANDARD = "LVCMOS25"  |  SLEW = "SLOW";
+NET IIC_SFP_SDA LOC = "AA33"  |  DRIVE = "6"  |  IOSTANDARD = "LVCMOS25"  |  SLEW = "SLOW";
+NET Linear_Flash_address[0] LOC = "AA23"  |  IOSTANDARD = "LVCMOS25";
+NET Linear_Flash_address[10] LOC = "C10"  |  IOSTANDARD = "LVCMOS25";
+NET Linear_Flash_address[11] LOC = "D10"  |  IOSTANDARD = "LVCMOS25";
+NET Linear_Flash_address[12] LOC = "C9"  |  IOSTANDARD = "LVCMOS25";
+NET Linear_Flash_address[13] LOC = "D9"  |  IOSTANDARD = "LVCMOS25";
+NET Linear_Flash_address[14] LOC = "A9"  |  IOSTANDARD = "LVCMOS25";
+NET Linear_Flash_address[15] LOC = "A8"  |  IOSTANDARD = "LVCMOS25";
+NET Linear_Flash_address[16] LOC = "E8"  |  IOSTANDARD = "LVCMOS25";
+NET Linear_Flash_address[17] LOC = "E9"  |  IOSTANDARD = "LVCMOS25";
+NET Linear_Flash_address[18] LOC = "B8"  |  IOSTANDARD = "LVCMOS25";
+NET Linear_Flash_address[19] LOC = "C8"  |  IOSTANDARD = "LVCMOS25";
+NET Linear_Flash_address[1] LOC = "AL9"  |  IOSTANDARD = "LVCMOS25";
+NET Linear_Flash_address[20] LOC = "AD10"  |  IOSTANDARD = "LVCMOS25";
+NET Linear_Flash_address[21] LOC = "AC9"  |  IOSTANDARD = "LVCMOS25";
+NET Linear_Flash_address[22] LOC = "AK8"  |  IOSTANDARD = "LVCMOS25";
+NET Linear_Flash_address[23] LOC = "AL8"  |  IOSTANDARD = "LVCMOS25";
+NET Linear_Flash_address[2] LOC = "AF9"  |  IOSTANDARD = "LVCMOS25";
+NET Linear_Flash_address[3] LOC = "AF10"  |  IOSTANDARD = "LVCMOS25";
+NET Linear_Flash_address[4] LOC = "AN9"  |  IOSTANDARD = "LVCMOS25";
+NET Linear_Flash_address[5] LOC = "AP9"  |  IOSTANDARD = "LVCMOS25";
+NET Linear_Flash_address[6] LOC = "AG8"  |  IOSTANDARD = "LVCMOS25";
+NET Linear_Flash_address[7] LOC = "AH8"  |  IOSTANDARD = "LVCMOS25";
+NET Linear_Flash_address[8] LOC = "F9"  |  IOSTANDARD = "LVCMOS25";
+NET Linear_Flash_address[9] LOC = "F10"  |  IOSTANDARD = "LVCMOS25";
+NET Linear_Flash_ce_n LOC = "AJ12"  |  IOSTANDARD = "LVCMOS25";
+NET Linear_Flash_data[0] LOC = "M23"  |  IOSTANDARD = "LVCMOS25";
+NET Linear_Flash_data[10] LOC = "H25"  |  IOSTANDARD = "LVCMOS25";
+NET Linear_Flash_data[11] LOC = "H24"  |  IOSTANDARD = "LVCMOS25";
+NET Linear_Flash_data[12] LOC = "V24"  |  IOSTANDARD = "LVCMOS25";
+NET Linear_Flash_data[13] LOC = "W24"  |  IOSTANDARD = "LVCMOS25";
+NET Linear_Flash_data[14] LOC = "AF25"  |  IOSTANDARD = "LVCMOS25";
+NET Linear_Flash_data[15] LOC = "AF24"  |  IOSTANDARD = "LVCMOS25";
+NET Linear_Flash_data[1] LOC = "L24"  |  IOSTANDARD = "LVCMOS25";
+NET Linear_Flash_data[2] LOC = "F24"  |  IOSTANDARD = "LVCMOS25";
+NET Linear_Flash_data[3] LOC = "F23"  |  IOSTANDARD = "LVCMOS25";
+NET Linear_Flash_data[4] LOC = "N23"  |  IOSTANDARD = "LVCMOS25";
+NET Linear_Flash_data[5] LOC = "N24"  |  IOSTANDARD = "LVCMOS25";
+NET Linear_Flash_data[6] LOC = "H23"  |  IOSTANDARD = "LVCMOS25";
+NET Linear_Flash_data[7] LOC = "G23"  |  IOSTANDARD = "LVCMOS25";
+NET Linear_Flash_data[8] LOC = "R24"  |  IOSTANDARD = "LVCMOS25";
+NET Linear_Flash_data[9] LOC = "P24"  |  IOSTANDARD = "LVCMOS25";
+NET Linear_Flash_oe_n LOC = "AA24"  |  IOSTANDARD = "LVCMOS25";
+NET Linear_Flash_we_n LOC = "AF23"  |  IOSTANDARD = "LVCMOS25";
+NET RESET LOC = "H10"  |  IOSTANDARD = "SSTL15"  |  TIG;
+NET RS232_Uart_1_sin LOC = "J24"  |  IOSTANDARD = "LVCMOS25";
+NET RS232_Uart_1_sout LOC = "J25"  |  IOSTANDARD = "LVCMOS25";
+NET SysACE_CEN LOC = "AJ14"  |  IOSTANDARD = "LVCMOS25";
+NET SysACE_CLK LOC = "AE16"  |  IOSTANDARD = "LVCMOS25";
+NET SysACE_MPA[0] LOC = "AC15"  |  IOSTANDARD = "LVCMOS25";
+NET SysACE_MPA[1] LOC = "AP15"  |  IOSTANDARD = "LVCMOS25";
+NET SysACE_MPA[2] LOC = "AG17"  |  IOSTANDARD = "LVCMOS25";
+NET SysACE_MPA[3] LOC = "AH17"  |  IOSTANDARD = "LVCMOS25";
+NET SysACE_MPA[4] LOC = "AG15"  |  IOSTANDARD = "LVCMOS25";
+NET SysACE_MPA[5] LOC = "AF15"  |  IOSTANDARD = "LVCMOS25";
+NET SysACE_MPA[6] LOC = "AK14"  |  IOSTANDARD = "LVCMOS25";
+NET SysACE_MPD[0] LOC = "AM15"  |  IOSTANDARD = "LVCMOS25";
+NET SysACE_MPD[1] LOC = "AJ17"  |  IOSTANDARD = "LVCMOS25";
+NET SysACE_MPD[2] LOC = "AJ16"  |  IOSTANDARD = "LVCMOS25";
+NET SysACE_MPD[3] LOC = "AP16"  |  IOSTANDARD = "LVCMOS25";
+NET SysACE_MPD[4] LOC = "AG16"  |  IOSTANDARD = "LVCMOS25";
+NET SysACE_MPD[5] LOC = "AH15"  |  IOSTANDARD = "LVCMOS25";
+NET SysACE_MPD[6] LOC = "AF16"  |  IOSTANDARD = "LVCMOS25";
+NET SysACE_MPD[7] LOC = "AN15"  |  IOSTANDARD = "LVCMOS25";
+NET SysACE_MPIRQ LOC = "L9"  |  IOSTANDARD = "LVCMOS25"  |  TIG;
+NET SysACE_OEN LOC = "AL15"  |  IOSTANDARD = "LVCMOS25";
+NET SysACE_WEN LOC = "AL14"  |  IOSTANDARD = "LVCMOS25";
+#
+# additional constraints
+#
+
+NET "CLK" TNM_NET = sys_clk_pin;
+TIMESPEC TS_sys_clk_pin = PERIOD sys_clk_pin 200000 kHz;
+
+###### Hard Ethernet
+# This is a GMII system
+# AXI_STR_*_ACLK is not the same as S_AXI_ACLK (AXI-Lite) from clock generator
+# Rx/Tx Client clocks are Rx/Tx PHY clocks so CORE Gen PHY clock constraints propagate to Rx/Tx client clock periods
+# Time domain crossing constraints (DATAPATHONLY) are set for maximum bus frequency
+# allowed by IP which is the maximum option in BSB. For lower bus frequency choice in BSB,
+# the constraints are over constrained. Relaxing them for your system may reduce build time.
+
+NET "*ETHERNET*/S_AXI_ACLK" TNM_NET = "axi4lite_clk";  
+NET "*ETHERNET*/AXI_STR_TXD_ACLK" TNM_NET = "axistream_clk"; 
+NET "*ETHERNET*/AXI_STR_TXC_ACLK" TNM_NET = "axistream_clk"; 
+NET "*ETHERNET*/AXI_STR_RXD_ACLK" TNM_NET = "axistream_clk"; 
+NET "*ETHERNET*/AXI_STR_RXS_ACLK" TNM_NET = "axistream_clk"; 
+
+###############################################################################
+# CLOCK CONSTRAINTS
+# The following constraints are required. If you choose to not use the example
+# design level of wrapper hierarchy, the net names should be translated to
+# match your design.
+###############################################################################
+
+############################################################
+# RX Clock period Constraints                              #
+############################################################
+# Ethernet GMII PHY-side receive clock
+#                      __________
+#                     |          |
+# --- GMII_RX_CLK-----|   BUFR   |---Rx_Client_Clk
+#                     |__________|
+#
+# Changed NET name
+# NET "GMII_RX_CLK" TNM_NET = "phy_clk_rx";
+# NET "*/rx_client_clk" TNM_NET = "phy_clk_rx";
+TIMEGRP "v6_emac_v1_3_clk_phy_rx" = "phy_clk_rx";
+TIMESPEC "TS_v6_emac_v1_3_clk_phy_rx" = PERIOD "v6_emac_v1_3_clk_phy_rx" 7.5 ns HIGH 50 %;
+
+############################################################
+# TX Clock period Constraints                              #
+############################################################
+###############################################################################
+# The following two TimeSpecs are from CoreGen Ethernet Core Example Design UCF
+# file. In systems GTX_CLK is driven by clock generator core, then the derived
+# period constraint will override these TimeSpecs. 
+###############################################################################
+# Ethernet GTX_CLK high quality 125 MHz reference clock 
+#                      __________
+# -GTX_CLK------------|          |
+#                     | BUFGMUX  |---Tx_Client_Clk
+# -MII_TX_CLK---------|__________|
+#
+# Depending on system configuration, the analysis tool may use either gtx_clk 
+#  or tx_client_clk so both nets are used in defining PERIOD constraint and 
+#  TNM_NETS for subsequent constraints.
+# The PERIOD constraints may not be analyzed if inferred clock generator 
+#  constraints are generated for the system.
+
+# Transmitter clock period constraints: please do not relax
+# Changed NET
+# NET "GTX_CLK" TNM_NET = "ref_gtx_clk";
+NET "*/GTX_CLK"   TNM_NET = "clk_gtx"; #name of signal connected to ETHERNET GTX_CLK_0 input
+TIMEGRP "v6_emac_v1_3_clk_ref_gtx" = "clk_gtx";
+TIMESPEC "TS_v6_emac_v1_3_clk_ref_gtx" = PERIOD "v6_emac_v1_3_clk_ref_gtx" 8 ns HIGH 50 %;
+
+# Multiplexed 1 Gbps, 10/100 Mbps output inherits constraint from GTX_CLK 
+# Changed NET name
+# NET "tx_clk" TNM_NET = "ref_mux_clk";
+# Changed TMN_NET name for tx_clk to keep time domain crossing constraints consistent in EDK core UCF files
+# NET "*/tx_client_clk" TNM_NET = "phy_clk_tx";
+TIMEGRP "v6_emac_v1_3_clk_ref_mux" = "phy_clk_tx";
+TIMESPEC "TS_v6_emac_v1_3_clk_ref_mux" = PERIOD "v6_emac_v1_3_clk_ref_mux" TS_v6_emac_v1_3_clk_ref_gtx HIGH 50%;
+
+# IDELAYCTRL 200 MHz reference clock
+# Changed NET name
+# There are no clocked components on this clock so there will be no analyzed paths
+# NET "REFCLK" TNM_NET = "clk_ref_clk";
+NET "*/REF_CLK" TNM_NET = "clk_ref_clk";
+TIMEGRP "ref_clk" = "clk_ref_clk";
+TIMESPEC "TS_ref_clk" = PERIOD "ref_clk" 5 ns HIGH 50 %;
+
+############################################################
+# Host Clock period Constraint                             #
+############################################################
+# In systems using hard ETHERNET cores these TimeSpecs will not be analyzed
+# Constraint the host interface clock to an example frequency of 100 MHz
+# NET "HOSTCLK" TNM_NET = "host_clock";
+# TIMEGRP "clk_host" = "host_clock";
+# TIMESPEC "TS_clk_host" = PERIOD "clk_host" 10 ns HIGH 50 %;
+
+###############################################################################
+# PHYSICAL INTERFACE CONSTRAINTS
+# The following constraints are necessary for proper operation, and are tuned
+# for this example design. They should be modified to suit your design.
+###############################################################################
+
+# GMII physical interface constraints
+# -----------------------------------------------------------------------------
+
+# Set the IDELAY values on the PHY inputs, tuned for this example design.
+# These values should be modified to suit your design.
+# INST "*gmii*ideldv" IDELAY_VALUE = 30;
+# INST "*gmii*ideld0" IDELAY_VALUE = 25;
+# INST "*gmii*ideld1" IDELAY_VALUE = 31;
+# INST "*gmii*ideld2" IDELAY_VALUE = 31;
+# INST "*gmii*ideld3" IDELAY_VALUE = 27;
+# INST "*gmii*ideld4" IDELAY_VALUE = 29;
+# INST "*gmii*ideld5" IDELAY_VALUE = 31;
+# INST "*gmii*ideld6" IDELAY_VALUE = 31;
+# INST "*gmii*ideld7" IDELAY_VALUE = 31;
+# INST "*gmii*ideler" IDELAY_VALUE = 22;
+# INST "*gmii_rxc_delay" IDELAY_VALUE = 0;
+# INST "*gmii_rxc_delay" SIGNAL_PATTERN = CLOCK;
+
+# Signal trace properties for ML605 Board used in offset in constraints below
+
+# This signal trace is longer than the clock trace, and arrives at the FPGA pin ~65 ps after the clock
+# Therefore the offset in constraint must have less setup time than nominal
+NET ETHERNET_RXD[0] OFFSET = IN 2.435 ns VALID 3 ns BEFORE "ETHERNET_RX_CLK";
+
+# This signal trace is shorter than the clock trace, and arrives at the FPGA pin ~375 ps before the clock
+# Therefore the offset in constraint must have more setup time than nominal
+NET ETHERNET_RXD[1] OFFSET = IN 2.875 ns VALID 3 ns BEFORE "ETHERNET_RX_CLK";
+
+# This signal trace is shorter than the clock trace, and arrives at the FPGA pin ~372 ps before the clock
+# Therefore the offset in constraint must have more setup time than nominal
+NET ETHERNET_RXD[2] OFFSET = IN 2.872 ns VALID 3 ns BEFORE "ETHERNET_RX_CLK";
+
+# This signal trace is shorter than the clock trace, and arrives at the FPGA pin ~115 ps before the clock
+# Therefore the offset in constraint must have more setup time than nominal
+NET ETHERNET_RXD[3] OFFSET = IN 2.615 ns VALID 3 ns BEFORE "ETHERNET_RX_CLK";
+
+# This signal trace is shorter than the clock trace, and arrives at the FPGA pin ~244 ps before the clock
+# Therefore the offset in constraint must have more setup time than nominal
+NET ETHERNET_RXD[4] OFFSET = IN 2.744 ns VALID 3 ns BEFORE "ETHERNET_RX_CLK";
+
+# This signal trace is shorter than the clock trace, and arrives at the FPGA pin ~404 ps before the clock
+# Therefore the offset in constraint must have more setup time than nominal
+NET ETHERNET_RXD[5] OFFSET = IN 2.904 ns VALID 3 ns BEFORE "ETHERNET_RX_CLK";
+
+# This signal trace is shorter than the clock trace, and arrives at the FPGA pin ~498 ps before the clock
+# Therefore the offset in constraint must have more setup time than nominal
+NET ETHERNET_RXD[6] OFFSET = IN 2.998 ns VALID 3 ns BEFORE "ETHERNET_RX_CLK";
+
+# This signal trace is shorter than the clock trace, and arrives at the FPGA pin ~485 ps before the clock
+# Therefore the offset in constraint must have more setup time than nominal
+NET ETHERNET_RXD[7] OFFSET = IN 2.985 ns VALID 3 ns BEFORE "ETHERNET_RX_CLK";
+
+# This signal trace is shorter than the clock trace, and arrives at the FPGA pin ~291 ps before the clock
+# Therefore the offset in constraint must have more setup time than nominal
+NET ETHERNET_RX_DV  OFFSET = IN 2.791 ns VALID 3 ns BEFORE "ETHERNET_RX_CLK";
+
+# This signal trace is longer than the clock trace, and arrives at the FPGA pin ~308 ps after the clock
+# Therefore the offset in constraint must have less setup time than nominal
+NET ETHERNET_RX_ER  OFFSET = IN 2.192 ns VALID 3 ns BEFORE "ETHERNET_RX_CLK";
+
+# Constrain the GMII physical interface flip-flops to IOBs
+# Changed from 'true' to 'force'
+# INST "*gmii?RXD_TO_MAC*"  IOB = true;
+# INST "*gmii?RX_DV_TO_MAC" IOB = true;
+# INST "*gmii?RX_ER_TO_MAC" IOB = true;
+# INST "*gmii?GMII_TXD_?"   IOB = true;
+# INST "*gmii?GMII_TX_EN"   IOB = true;
+# INST "*gmii?GMII_TX_ER"   IOB = true;
+# INST "*gmii?RXD_TO_MAC*"  IOB = force;
+# INST "*gmii?RX_DV_TO_MAC" IOB = force;
+# INST "*gmii?RX_ER_TO_MAC" IOB = force;
+# INST "*gmii?GMII_TXD_?"   IOB = force;
+# INST "*gmii?GMII_TX_EN"   IOB = force;
+# INST "*gmii?GMII_TX_ER"   IOB = force;
+
+############################################################
+# Crossing of Clock Domain Constraints: please do not edit #
+#  In addition to CoreGen constraints                      #
+############################################################
+
+# The following TimeSpecs are required only when AXILite clock differs from AXI-Stream clock
+# Data path timing depends on the destination clock period
+TIMESPEC "TS_axistreamclks_2_axi4liteclks"  = FROM axistream_clk  TO axi4lite_clk 20000 ps  DATAPATHONLY;  #assumes axi4lite_clk <= 50 MHz
+TIMESPEC "TS_axi4liteclks_2_axistreamclks"  = FROM axi4lite_clk   TO axistream_clk 6667 ps  DATAPATHONLY;  #assumes axistream_clk <= 150 MHz
+
+# TNM_NET phy_clk_rx is rx_client_clk
+# TIMESPECs for AXI streaming clock crossing to/from rx_client_clk
+TIMESPEC "TS_axistreamclks_2_RX_CLIENT_CLK" = FROM axistream_clk  TO phy_clk_rx    8000  ps  DATAPATHONLY; #assumes phy_clk_rx <= 125 MHz
+TIMESPEC "TS_RX_CLIENT_CLK_2_axistreamclks" = FROM phy_clk_rx     TO axistream_clk 6667  ps  DATAPATHONLY; #assumes axistream_clk <= 150 MHz
+# TIMESPECs for AXI-Lite clock crossing to/from tx_client_clk
+TIMESPEC "TS_axi4liteclks_2_RX_CLIENT_CLK"  = FROM axi4lite_clk   TO phy_clk_rx    8000  ps  DATAPATHONLY; #assumes phy_clk_rx <= 125 MHz
+TIMESPEC "TS_RX_CLIENT_CLK_2_axi4liteclks"  = FROM phy_clk_rx     TO axi4lite_clk 20000  ps  DATAPATHONLY; #assumes axi4lite_clk <= 50 MHz
+
+# Depending on system configuration, the analysis tool may use either TNM_NET clk_gtx 
+#  or TNM_NET phy_clk_tx so only one set will be analyzed
+# TNM_NET phy_clk_tx is tx_client_clk
+# TIMESPECs for AXI streaming clock crossing to/from tx_client_clk
+TIMESPEC "TS_axistreamclks_2_TX_CLIENT_CLK" = FROM axistream_clk  TO phy_clk_tx    8000  ps  DATAPATHONLY; #assumes phy_clk_tx <= 125 MHz
+TIMESPEC "TS_TX_CLIENT_CLK_2_axistreamclks" = FROM phy_clk_tx     TO axistream_clk 6667  ps  DATAPATHONLY; #assumes axistream_clk <= 150 MHz
+# TIMESPECs for AXI-Lite clock crossing to/from tx_client_clk
+TIMESPEC "TS_axi4liteclks_2_TX_CLIENT_CLK"  = FROM axi4lite_clk   TO phy_clk_tx    8000  ps  DATAPATHONLY; #assumes phy_clk_tx <= 125 MHz
+TIMESPEC "TS_TX_CLIENT_CLK_2_axi4liteclks"  = FROM phy_clk_tx     TO axi4lite_clk 20000  ps  DATAPATHONLY; #assumes axi4lite_clk <= 50 MHz
+
+# TNM_NET clk_gtx is */GTX_CLK
+# TIMESPECs for AXI Streaming clock crossing to/from GTX_CLK
+TIMESPEC "TS_axistreamclks_2_GTX_CLK"	    = FROM axistream_clk  TO clk_gtx	   8000  ps  DATAPATHONLY; #assumes clk_gtx <= 125 MHz
+TIMESPEC "TS_GTX_CLK_2_axistreamclks"	    = FROM clk_gtx	  TO axistream_clk 6667  ps  DATAPATHONLY; #assumes axistream_clk <= 150 MHz
+# TIMESPECs for AXI-Lite clock crossing to/from GTX_CLK
+TIMESPEC "TS_axi4lite_clk_2_GTX_CLK"	    = FROM axi4lite_clk   TO clk_gtx	   8000  ps  DATAPATHONLY; #assumes clk_gtx <= 125 MHz
+TIMESPEC "TS_GTX_CLK_2_axi4lite_clk"	    = FROM clk_gtx	  TO axi4lite_clk 20000  ps  DATAPATHONLY; #assumes axi4lite_clk <= 50 MHz
+
+# Depending on system configuration, the analysis tool may use either TNM_NET clk_gtx 
+#  or TNM_NET phy_clk_tx so only one set will be analyzed
+# Rx Clock crossings - Some paths are analyzed by the TS_flow_rx_to_tx constraint also 
+# Needed since ts_resync_flops is commented out
+TIMESPEC "TS_RX_CLIENT_CLK_2_TX_CLIENT_CLK" = FROM phy_clk_rx     TO phy_clk_tx    8000  ps  DATAPATHONLY; #assumes phy_clk_tx <= 125 MHz
+TIMESPEC "TS_TX_CLIENT_CLK_2_RX_CLIENT_CLK" = FROM phy_clk_tx     TO phy_clk_rx    8000  ps  DATAPATHONLY; #assumes phy_clk_rx <= 125 MHz
+TIMESPEC "TS_RX_CLIENT_CLK_2_GTX_CLK"       = FROM phy_clk_rx     TO clk_gtx       8000  ps  DATAPATHONLY; #assumes phy_clk_tx <= 125 MHz
+TIMESPEC "TS_GTX_CLK_2_RX_CLIENT_CLK"       = FROM clk_gtx        TO phy_clk_rx    8000  ps  DATAPATHONLY; #assumes phy_clk_rx <= 125 MHz
+
+# TIMESPECs for AXI-Lite/AXI Streaming clock crossing to/from REF_CLK
+# These constraints are added so trace does not analyze an asynchronous reset to idelayctrls with a contrived clock relationship
+#  as a warning that a asynchronous signal exists
+TIMESPEC "TS_axistreamclks_2_REF_CLK"	    = FROM axistream_clk  TO clk_ref_clk   5000  ps  DATAPATHONLY; #assumes clk_ref_clk <= 200 MHz
+TIMESPEC "TS_REF_CLK_2_axistreamclks"	    = FROM clk_ref_clk	  TO axistream_clk 6667  ps  DATAPATHONLY; #assumes axistream_clk <= 150 MHz
+TIMESPEC "TS_axi4lite_clk_2_REF_CLK"	    = FROM axi4lite_clk   TO clk_ref_clk   5000  ps  DATAPATHONLY; #assumes clk_ref_clk <= 200 MHz
+TIMESPEC "TS_REF_CLK_2_axi4lite_clk"	    = FROM clk_ref_clk	  TO axi4lite_clk 20000  ps  DATAPATHONLY; #assumes axi4lite_clk <= 50 MHz
+
