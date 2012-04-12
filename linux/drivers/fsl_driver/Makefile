@@ -8,7 +8,7 @@ obj-m := fsl.o
 
 modules:
 	$(MAKE) -C $(KDIR) M=$(PWD) modules
-	@cat Module.symvers >> ../libreconos-ks/Module.symvers
+	@cat Module.symvers >> ../../reconos/libreconos-ks/Module.symvers
 
 clean:
 	$(MAKE) -C $(KDIR) M=$(PWD) clean
