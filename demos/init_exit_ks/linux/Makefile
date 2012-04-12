@@ -8,7 +8,7 @@ export ARCH CROSS_COMPILE
 obj-m		:= init_exit_test.o
 
 modules:
-	@cp ../../../linux/libreconos-ks/Module.symvers .
+	@cp ../../../linux/reconos/libreconos-ks/Module.symvers .
 	$(MAKE) -C $(KDIR) M=$(PWD) modules
 
 clean:
