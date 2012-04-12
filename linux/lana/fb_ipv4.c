@@ -1,3 +1,7 @@
+/*
+ * Copyright 2012 Daniel Borkmann <dborkma@tik.ee.ethz.ch>
+ */
+
 /* options: src-ip=1.1.1.1, dst-ip=1.1.1.1, proto=5 */
 
 #include <linux/kernel.h>

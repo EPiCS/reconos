@@ -1,3 +1,7 @@
+/*
+ * Copyright 2012 Daniel Borkmann <dborkma@tik.ee.ethz.ch>
+ */
+
 /* options: src-port=3333, dst-port=6666 */
 
 #include <linux/kernel.h>

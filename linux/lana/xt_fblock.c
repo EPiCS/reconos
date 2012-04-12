@@ -1,3 +1,7 @@
+/*
+ * Copyright 2012 Daniel Borkmann <dborkma@tik.ee.ethz.ch>
+ */
+
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/rcupdate.h>

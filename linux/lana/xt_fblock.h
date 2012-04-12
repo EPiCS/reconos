@@ -1,3 +1,7 @@
+/*
+ * Copyright 2012 Daniel Borkmann <dborkma@tik.ee.ethz.ch>
+ */
+
 #ifndef XT_FBLOCK_H
 #define XT_FBLOCK_H
 
