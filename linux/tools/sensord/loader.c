@@ -7,35 +7,53 @@
 #include <stdio.h>
 #include <dlfcn.h>
 #include <stdlib.h>
+#include <syslog.h>
+#include <errno.h>
+#include <string.h>
 
-int main(void)
+#include "loader.h"
+
+int load_plugin(struct plugin *p)
 {
+	int ret;
 	char *error;
-	int (*fn_init)(void);
-	void (*fn_exit)(void);
-	void *lfd;
 
-	lfd = dlopen("plugins/dummy.so.1.0", RTLD_LAZY);
-	if (!lfd) {
-		fprintf(stderr, "Failed to open lib!\n");
-		exit(1);
+	p->sym_fd = dlopen(p->so_path, RTLD_LAZY);
+	if (!p->sym_fd) {
+		syslog(LOG_ERR, "Failed to open shared lib %s!\n", p->so_path);
+		return -EIO;
 	}
 
-	fn_init = dlsym(lfd, "plugin_init_fn");
+	p->fn_init = dlsym(p->sym_fd, "plugin_init_fn");
 	if ((error = dlerror()) != NULL) {
-		fprintf(stderr, "%s\n", error);
-		exit(1);
+		syslog(LOG_ERR, "[%s] %s!\n", p->so_path, error);
+		goto err;
 	}
 
-	fn_exit = dlsym(lfd, "plugin_exit_fn");
+	p->fn_exit = dlsym(p->sym_fd, "plugin_exit_fn");
 	if ((error = dlerror()) != NULL) {
-		fprintf(stderr, "%s\n", error);
-		exit(1);
+		syslog(LOG_ERR, "[%s] %s\n", p->so_path, error);
+		goto err;
 	}
 
-	(*fn_init)();
-	(*fn_exit)();
+	ret = p->fn_init();
+	if (ret < 0) {
+		syslog(LOG_ERR, "[%s] %s\n", p->so_path, strerror(-ret));
+		goto err;
+	}
 
-	dlclose(lfd);
+	syslog(LOG_INFO, "[%s] loaded!\n", p->so_path);
 	return 0;
+err:
+	dlclose(p->sym_fd);
+	syslog(LOG_ERR, "[%s] not loaded!\n", p->so_path);
+	return -EIO;
+}
+
+void unload_plugin(struct plugin *p)
+{
+	p->fn_exit();
+	dlclose(p->sym_fd);
+
+	syslog(LOG_INFO, "[%s] unloaded!\n", p->so_path);
 }
