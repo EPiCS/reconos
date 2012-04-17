@@ -29,6 +29,7 @@ struct plugin_instance {
 	void *private_data;             /* plugin-private data */
 	unsigned long schedule_int;     /* scheduling interval in us */
 	struct timeval last;            /* last time instance called fetch */
+	int slot;			/* table slot */
 	/* TODO: rrd descriptor */
 };
 

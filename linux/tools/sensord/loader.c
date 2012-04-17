@@ -10,6 +10,7 @@
 #include <string.h>
 
 #include "loader.h"
+#include "plugin.h"
 #include "atomic.h"
 
 static struct plugin *table[MAX_PLUGINS] = {0};
