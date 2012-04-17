@@ -5,6 +5,9 @@
 #ifndef SENSORD_H
 #define SENSORD_H
 
+#include "loader.h"
+#include "plugin.h"
+
 #define __init			/* unimplemented */
 #define __exit			/* unimplemented */
 

@@ -2,8 +2,6 @@
  * Copyright 2012 Daniel Borkmann <dborkma@tik.ee.ethz.ch>
  */
 
-/* -ldl */
-
 #include <stdio.h>
 #include <dlfcn.h>
 #include <stdlib.h>

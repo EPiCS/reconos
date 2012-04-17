@@ -7,6 +7,7 @@
 
 struct plugin {
 	char *so_path;
+	char *basename;
 	void *sym_fd;
 	int (*fn_init)(void);
 	void (*fn_exit)(void);
