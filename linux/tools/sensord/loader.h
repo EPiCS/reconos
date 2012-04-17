@@ -12,6 +12,7 @@ struct plugin {
 	int (*fn_init)(void);
 	void (*fn_exit)(void);
 	unsigned int refcnt;
+	int slot;
 };
 
 extern int load_plugin(struct plugin *p);
