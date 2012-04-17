@@ -8,7 +8,8 @@
 #include <sys/time.h>
 
 enum plugin_type {
-	TYPE_SIGNED,
+	TYPE_INVALID = 0,
+	TYPE_SIGNED = 1,
 	TYPE_UNSIGNED,
 	TYPE_FLOAT,
 	TYPE_BOOL,
@@ -37,5 +38,7 @@ struct plugin_instance {
 
 extern int register_plugin_instance(struct plugin_instance *pi);
 extern void unregister_plugin_instance(struct plugin_instance *pi);
+
+#define MAX_PLUGINS		1024
 
 #endif /* PLUGIN_H */

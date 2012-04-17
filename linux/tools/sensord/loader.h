@@ -11,9 +11,12 @@ struct plugin {
 	void *sym_fd;
 	int (*fn_init)(void);
 	void (*fn_exit)(void);
+	unsigned int refcnt;
 };
 
 extern int load_plugin(struct plugin *p);
 extern void unload_plugin(struct plugin *p);
+extern void get_plugin(char *basename);
+extern void put_plugin(char *basename);
 
 #endif /* LOADER_H */

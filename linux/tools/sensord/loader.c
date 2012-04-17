@@ -10,6 +10,7 @@
 #include <string.h>
 
 #include "loader.h"
+#include "atomic.h"
 
 int load_plugin(struct plugin *p)
 {
@@ -40,6 +41,8 @@ int load_plugin(struct plugin *p)
 		goto err;
 	}
 
+	p->refcnt = 1;
+
 	syslog(LOG_INFO, "[%s] loaded!\n", p->so_path);
 	return 0;
 err:
@@ -50,8 +53,21 @@ err:
 
 void unload_plugin(struct plugin *p)
 {
+	if (p->refcnt != 1) {
+		syslog(LOG_INFO, "[%s] still in use!\n", p->so_path);
+		return;
+	}
+
 	p->fn_exit();
 	dlclose(p->sym_fd);
 
 	syslog(LOG_INFO, "[%s] unloaded!\n", p->so_path);
+}
+
+void get_plugin(char *basename)
+{
+}
+
+void put_plugin(char *basename)
+{
 }
