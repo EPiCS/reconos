@@ -1,3 +1,7 @@
+/*
+ * Copyright 2012 Daniel Borkmann <dborkma@tik.ee.ethz.ch>
+ */
+
 #include <stdio.h>
 #include <errno.h>
 #include <syslog.h>
