@@ -30,7 +30,7 @@ static void walk_dir(const char *dir, void (*fn)(const char *))
 	}
 
 	while ((dp = readdir(dfd)) != NULL) {
-		if (strcmp(dp->d_name, ".") == 0 || strcmp(dp->d_name, ".."))
+		if (!strcmp(dp->d_name, ".") || !strcmp(dp->d_name, ".."))
 			continue;
 
 		if (strlen(dir) + strlen(dp->d_name) + 2 > sizeof(name))
@@ -86,6 +86,7 @@ int main(void)
 	pthread_t twatch;
 
 	openlog("sensord", LOG_PID | LOG_CONS | LOG_NDELAY, LOG_DAEMON);
+	syslog(LOG_INFO, "sensord starting ...\n");
 
 	ret = pthread_create(&twatch, NULL, so_watch_task, NULL);
 	if (ret < 0) {
@@ -95,6 +96,7 @@ int main(void)
 
 	pthread_join(twatch, NULL);
 
+	syslog(LOG_INFO, "sensord halted!\n");
 	closelog();
 	return 0;
 }
