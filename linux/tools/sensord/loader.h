@@ -11,7 +11,7 @@ struct plugin {
 	void *sym_fd;
 	int (*fn_init)(void);
 	void (*fn_exit)(void);
-	unsigned int refcnt;
+	volatile unsigned int refcnt;
 	int slot;
 };
 
