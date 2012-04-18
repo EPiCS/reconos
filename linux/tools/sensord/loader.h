@@ -15,8 +15,10 @@ struct plugin {
 	int slot;
 };
 
+extern void init_loader(void);
 extern int load_plugin(struct plugin *p);
 extern void unload_plugin(struct plugin *p);
+extern int plugin_present(const char *so_path);
 extern void get_plugin(char *basename);
 extern void put_plugin(char *basename);
 

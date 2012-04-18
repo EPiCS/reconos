@@ -1,5 +1,5 @@
 LIBS		= -lpthread -ldl -rdynamic
-CFLAGS		+= -rdynamic -Wall -O2
+CFLAGS		+= -rdynamic -Wall -O2 -g
 
 core-objs	= sensord.o
 lib-objs	= loader.o plugin.o xutils.o

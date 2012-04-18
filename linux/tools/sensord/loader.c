@@ -13,17 +13,41 @@
 #include "plugin.h"
 #include "atomic.h"
 
-static struct plugin *table[MAX_PLUGINS] = {0};
+static struct plugin *table[MAX_PLUGINS];
 static int count = 0;
 
 static int get_free_slot(void)
 {
 	int i;
-	for (i = 0; i < count; ++i) {
+	for (i = 0; i < MAX_PLUGINS; ++i) {
 		if (table[i] == NULL)
 			return i;
 	}
 	return -ENOMEM;
+}
+
+void init_loader(void)
+{
+	int i;
+	for (i = 0; i < MAX_PLUGINS; ++i)
+		table[i] = NULL;
+	count = 0;
+}
+
+int plugin_present(const char *so_path)
+{
+	int i, ret = 0;
+
+	for (i = 0; i < MAX_PLUGINS; ++i) {
+		if (!table[i])
+			continue;
+		if (!strncmp(table[i]->so_path, so_path, strlen(so_path))) {
+			ret = 1;
+			break;
+		}
+	}
+
+	return ret;
 }
 
 int load_plugin(struct plugin *p)
@@ -66,7 +90,7 @@ int load_plugin(struct plugin *p)
 	table[p->slot] = p;
 	count++;
 
-	syslog(LOG_INFO, "[%s] loaded!\n", p->so_path);
+	syslog(LOG_INFO, "[%s] loaded on slot %d!\n", p->so_path, p->slot);
 	return 0;
 err:
 	dlclose(p->sym_fd);
@@ -93,7 +117,9 @@ void unload_plugin(struct plugin *p)
 void get_plugin(char *basename)
 {
 	int i;
-	for (i = 0; i < count; ++i) {
+	for (i = 0; i < MAX_PLUGINS; ++i) {
+		if (!table[i])
+			continue;
 		if (!strncmp(table[i]->basename, basename, strlen(basename))) {
 			atomic_preincrement_uint(table[i]->refcnt);
 			break;
@@ -104,7 +130,9 @@ void get_plugin(char *basename)
 void put_plugin(char *basename)
 {
 	int i;
-	for (i = 0; i < count; ++i) {
+	for (i = 0; i < MAX_PLUGINS; ++i) {
+		if (!table[i])
+			continue;
 		if (!strncmp(table[i]->basename, basename, strlen(basename))) {
 			atomic_predecrement_uint(table[i]->refcnt);
 			break;

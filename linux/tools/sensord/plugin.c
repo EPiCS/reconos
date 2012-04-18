@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <errno.h>
 #include <syslog.h>
+#include <string.h>
 
 #include "plugin.h"
 #include "loader.h"
@@ -15,11 +16,19 @@ static int count = 0;
 static int get_free_slot(void)
 {
 	int i;
-	for (i = 0; i < count; ++i) {
+	for (i = 0; i < MAX_PLUGINS; ++i) {
 		if (table[i] == NULL)
 			return i;
 	}
 	return -ENOMEM;
+}
+
+void init_plugin(void)
+{
+	int i;
+	for (i = 0; i < MAX_PLUGINS; ++i)
+		table[i] = NULL;
+	count = 0;
 }
 
 int register_plugin_instance(struct plugin_instance *pi)
@@ -48,6 +57,7 @@ void unregister_plugin_instance(struct plugin_instance *pi)
 	/* TODO: rm from scheduler */
 
 	table[pi->slot] = NULL;
+	count--;
 
 	put_plugin(pi->basename);
 

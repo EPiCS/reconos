@@ -11,6 +11,7 @@
 #include <libgen.h>
 
 #include "loader.h"
+#include "plugin.h"
 #include "sensord.h"
 #include "xutils.h"
 
@@ -38,7 +39,8 @@ static void walk_dir(const char *dir, void (*fn)(const char *))
 			       dp->d_name);
 		else {
 			memset(name, 0, sizeof(name));
-			snprintf(name, sizeof(name), "%s/%s", dir, dp->d_name);
+			snprintf(name, sizeof(name), "%s%s", dir, dp->d_name);
+
 			fn(name);
 		}
 	}
@@ -58,6 +60,9 @@ static void load_so_plugin(const char *file)
 {
 	int ret;
 	struct plugin *p;
+
+	if (plugin_present(file))
+		return;
 
 	p = xmalloc(sizeof(*p));
 	p->so_path = xstrdup(file);
@@ -84,6 +89,9 @@ int main(void)
 {
 	int ret;
 	pthread_t twatch;
+
+	init_loader();
+	init_plugin();
 
 	openlog("sensord", LOG_PID | LOG_CONS | LOG_NDELAY, LOG_DAEMON);
 	syslog(LOG_INFO, "sensord starting ...\n");
