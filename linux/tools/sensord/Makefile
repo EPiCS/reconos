@@ -1,4 +1,4 @@
-LIBS		= -lpthread -ldl
+LIBS		= -lpthread -ldl -rdynamic
 CFLAGS		+= -rdynamic -Wall -O2
 
 core-objs	= sensord.o
