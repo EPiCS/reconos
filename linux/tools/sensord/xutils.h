@@ -32,5 +32,4 @@ static inline void panic(char *msg, ...)
 	die();
 }
 
-
 #endif /* XUTILS_H */
