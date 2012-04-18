@@ -2,7 +2,7 @@ LIBS		= -lpthread -ldl
 CFLAGS		+= -rdynamic -Wall -O2
 
 core-objs	= sensord.o
-lib-objs	= loader.o plugin.o
+lib-objs	= loader.o plugin.o xutils.o
 
 target		= sensord
 

@@ -33,6 +33,8 @@ int load_plugin(struct plugin *p)
 
 	if (count + 1 > MAX_PLUGINS)
 		return -ENOMEM;
+	if (!p->basename || !p->so_path)
+		return -EINVAL;
 
 	p->sym_fd = dlopen(p->so_path, RTLD_LAZY);
 	if (!p->sym_fd) {
