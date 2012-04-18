@@ -31,6 +31,16 @@ void init_plugin(void)
 	count = 0;
 }
 
+void for_each_plugin(void (*fn)(struct plugin_instance *self))
+{
+	int i;
+	for (i = 0; i < MAX_PLUGINS; ++i) {
+		if (!table[i])
+			continue;
+		fn(table[i]);
+	}
+}
+
 int register_plugin_instance(struct plugin_instance *pi)
 {
 	if (!pi->name || !pi->basename || pi->type == TYPE_INVALID ||

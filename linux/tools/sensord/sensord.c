@@ -18,6 +18,8 @@
 #define MAX_PATH	1024
 #define PLUGIN_DIR	"/opt/sensord/plugins/"
 
+extern void sched_edf_main(void);
+
 static void walk_dir(const char *dir, void (*fn)(const char *))
 {
 	char name[MAX_PATH];
@@ -101,6 +103,8 @@ int main(void)
 		syslog(LOG_ERR, "Thread creation failed!\n");
 		die();
 	}
+
+	sched_edf_main();
 
 	pthread_join(twatch, NULL);
 

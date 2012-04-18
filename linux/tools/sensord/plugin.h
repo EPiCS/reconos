@@ -38,6 +38,7 @@ struct plugin_instance {
 #define TIME_IN_SEC(x)		((x) * 1000 * 1000)
 
 extern void init_plugin(void);
+extern void for_each_plugin(void (*fn)(struct plugin_instance *self));
 extern int register_plugin_instance(struct plugin_instance *pi);
 extern void unregister_plugin_instance(struct plugin_instance *pi);
 
