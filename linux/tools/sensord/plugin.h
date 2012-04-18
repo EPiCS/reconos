@@ -42,6 +42,6 @@ extern void for_each_plugin(void (*fn)(struct plugin_instance *self));
 extern int register_plugin_instance(struct plugin_instance *pi);
 extern void unregister_plugin_instance(struct plugin_instance *pi);
 
-#define MAX_PLUGINS		1024
+#define MAX_PLUGINS		4096
 
 #endif /* PLUGIN_H */

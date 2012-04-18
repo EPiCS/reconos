@@ -9,7 +9,7 @@
 
 #include "plugin.h"
 #include "loader.h"
-#include "sched_edf.h"
+#include "sched.h"
 
 static struct plugin_instance *table[MAX_PLUGINS] = {0};
 static int count = 0;
@@ -56,7 +56,7 @@ int register_plugin_instance(struct plugin_instance *pi)
 
 	get_plugin(pi->basename);
 
-	sched_edf_register_task(pi);
+	sched_register_task(pi);
 
 	syslog(LOG_INFO, "[%s] activated!\n", pi->name);
 	return 0;
@@ -64,7 +64,7 @@ int register_plugin_instance(struct plugin_instance *pi)
 
 void unregister_plugin_instance(struct plugin_instance *pi)
 {
-	sched_edf_unregister_task(pi);
+	sched_unregister_task(pi);
 
 	table[pi->slot] = NULL;
 	count--;

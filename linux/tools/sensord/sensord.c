@@ -14,7 +14,7 @@
 #include "plugin.h"
 #include "sensord.h"
 #include "xutils.h"
-#include "sched_edf.h"
+#include "sched.h"
 
 #define MAX_PATH	1024
 #define PLUGIN_DIR	"/opt/sensord/plugins/"
@@ -103,7 +103,7 @@ int main(void)
 		die();
 	}
 
-	sched_edf_main();
+	sched_main();
 
 	pthread_join(twatch, NULL);
 
