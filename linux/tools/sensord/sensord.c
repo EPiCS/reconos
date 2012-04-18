@@ -14,11 +14,10 @@
 #include "plugin.h"
 #include "sensord.h"
 #include "xutils.h"
+#include "sched_edf.h"
 
 #define MAX_PATH	1024
 #define PLUGIN_DIR	"/opt/sensord/plugins/"
-
-extern void sched_edf_main(void);
 
 static void walk_dir(const char *dir, void (*fn)(const char *))
 {
