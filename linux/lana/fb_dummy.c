@@ -18,6 +18,28 @@ struct fb_dummy_priv {
 	seqlock_t lock;
 } ____cacheline_aligned_in_smp;
 
+static ssize_t fb_dummy_linearize(struct fblock *fb, uint8_t *binary, size_t len)
+{
+	struct fb_dummy_priv *fb_priv;
+
+	if (len < sizeof(struct fb_dummy_priv))
+		return -ENOMEM;
+
+	/* mem is already flat */
+	fb_priv = rcu_dereference_raw(fb->private_data);
+	memcpy(binary, fb_priv, sizeof(struct fb_dummy_priv));
+
+	return sizeof(struct fb_dummy_priv);
+}
+
+static void fb_dummy_delinearize(struct fblock *fb, uint8_t *binary, size_t len)
+{
+	struct fb_dummy_priv *fb_priv;
+	/* mem is already flat */
+	fb_priv = rcu_dereference_raw(fb->private_data);
+	memcpy(fb_priv, binary, sizeof(struct fb_dummy_priv));
+}
+
 static int fb_dummy_netrx(const struct fblock * const fb,
 			  struct sk_buff * const skb,
 			  enum path_type * const dir)
@@ -101,6 +123,8 @@ static struct fblock *fb_dummy_ctor(char *name)
 		goto err2;
 	fb->netfb_rx = fb_dummy_netrx;
 	fb->event_rx = fb_dummy_event;
+	fb->linearize = fb_dummy_linearize;
+	fb->delinearize = fb_dummy_delinearize;
 	ret = register_fblock_namespace(fb);
 	if (ret)
 		goto err3;

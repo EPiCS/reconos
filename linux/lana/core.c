@@ -43,9 +43,15 @@ static int __init init_lana_core_module(void)
 	ret = init_engine();
 	if (ret)
 		goto err5;
+	ret = init_ei_conf();
+	if (ret)
+		goto err6;
 
 	printk(KERN_INFO "[lana] core up and running!\n");
 	return 0;
+
+err6:
+	cleanup_engine();
 err5:
 	cleanup_fblock_userctl_system();
 err4:
@@ -70,6 +76,7 @@ static void __exit cleanup_lana_core_module(void)
 	cleanup_fblock_builder();
 	cleanup_vlink_system();
 	cleanup_engine();
+	cleanup_ei_conf();
 	remove_proc_entry("fblock", lana_proc_dir);
 	remove_proc_entry("lana", init_net.proc_net);
 

@@ -103,6 +103,8 @@ struct fblock {
 			enum path_type * const dir);
 	int (*event_rx)(struct notifier_block *self, unsigned long cmd,
 			void *args);
+	ssize_t (*linearize)(struct fblock *fb, uint8_t *binary, size_t len);
+	void (*delinearize)(struct fblock *fb, uint8_t *binary, size_t len);
 	struct fblock_factory *factory;
 	struct fblock_notifier *notifiers;
 	struct fblock_subscrib *others;
@@ -381,5 +383,8 @@ struct lananlmsg {
 	uint32_t cmd;
 	uint8_t buff[USERCTL_BUF_LEN];
 };
+
+extern int init_ei_conf(void);
+extern void cleanup_ei_conf(void);
 
 #endif /* XT_FBLOCK_H */
