@@ -4,10 +4,10 @@
 
 #include <stdio.h>
 #include <errno.h>
-#include <syslog.h>
 #include <string.h>
 
 #include "plugin.h"
+#include "sensord.h"
 #include "loader.h"
 #include "sched.h"
 
@@ -58,7 +58,7 @@ int register_plugin_instance(struct plugin_instance *pi)
 
 	sched_register_task(pi);
 
-	syslog(LOG_INFO, "[%s] activated!\n", pi->name);
+	printd("[%s] activated!\n", pi->name);
 	return 0;
 }
 
@@ -71,5 +71,5 @@ void unregister_plugin_instance(struct plugin_instance *pi)
 
 	put_plugin(pi->basename);
 
-	syslog(LOG_INFO, "[%s] deactivated!\n", pi->name);
+	printd("[%s] deactivated!\n", pi->name);
 }

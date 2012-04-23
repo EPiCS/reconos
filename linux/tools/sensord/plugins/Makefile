@@ -7,7 +7,7 @@ all: $(lib-objs)
 	done
 
 %.o: %.c
-	gcc -g -Wall -O2 -fPIC -I../ -c $<
+	gcc -Wall -O3 -fPIC -I../ -c $<
 
 clean:
 	rm *.o *.so *.so.*

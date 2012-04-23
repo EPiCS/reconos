@@ -5,15 +5,17 @@
 #include <stdio.h>
 #include "sensord.h"
 
+#define MODULE	"dummy"
+
 static void dummy_fetch(struct plugin_instance *self)
 {
-	printf("Hello Fetch!\n");
+	printp("Hello Fetch!\n");
 	self->fetch_value.dval = 1.20;
 }
 
 struct plugin_instance dummy_plugin = {
-	.name		=	"dummy-1",
-	.basename	=	"dummy",
+	.name		=	MODULE "-1",
+	.basename	=	MODULE,
 	.fetch		=	dummy_fetch,
 	.type		=	TYPE_FLOAT,
 	.schedule_int	=	TIME_IN_SEC(1),
@@ -21,14 +23,14 @@ struct plugin_instance dummy_plugin = {
 
 static __init int dummy_init(void)
 {
-	printf("Hello World!\n");
+	printp("Hello World!\n");
 	return register_plugin_instance(&dummy_plugin);
 }
 
 static __exit void dummy_exit(void)
 {
 	unregister_plugin_instance(&dummy_plugin);
-	printf("Goodbye World!\n");
+	printp("Goodbye World!\n");
 }
 
 plugin_init(dummy_init);

@@ -8,6 +8,8 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
+#include <sys/types.h>
 
 extern void *xmalloc(size_t size);
 extern void *xzmalloc(size_t size);
@@ -30,6 +32,23 @@ static inline void panic(char *msg, ...)
 
 	fflush(stderr);
 	die();
+}
+
+static inline void whine(char *msg, ...)
+{
+	va_list vl;
+
+	va_start(vl, msg);
+	vfprintf(stderr, msg, vl);
+	va_end(vl);
+
+	fflush(stderr);
+}
+
+static inline void check_for_root_maybe_die(void)
+{
+	if (geteuid() != 0 || geteuid() != getuid())
+		panic("Uhhuh, not root?!\n");
 }
 
 #endif /* XUTILS_H */

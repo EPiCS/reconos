@@ -5,7 +5,6 @@
 #include <unistd.h>
 #include <signal.h>
 #include <string.h>
-#include <syslog.h>
 #include <sys/time.h>
 
 #include "plugin.h"
@@ -46,23 +45,26 @@ static inline struct timeval sched_tv_subtract(struct timeval time1,
 	/* time1 - time2 */
 	struct timeval result;
 
-	if ((time1.tv_sec < time2.tv_sec) ||
-	    ((time1.tv_sec == time2.tv_sec) &&
+	if ((time1.tv_sec < time2.tv_sec) || ((time1.tv_sec == time2.tv_sec) &&
 	    (time1.tv_usec <= time2.tv_usec))) {
 		result.tv_sec = result.tv_usec = 0;
 	} else {
 		result.tv_sec = time1.tv_sec - time2.tv_sec;
-
 		if (time1.tv_usec < time2.tv_usec) {
 			result.tv_usec = time1.tv_usec + 1000000L -
 					 time2.tv_usec;
 			result.tv_sec--;
 		} else {
-			result.tv_usec = time1.tv_usec - time2.tv_usec ;
+			result.tv_usec = time1.tv_usec - time2.tv_usec;
 		}
 	}
 
 	return result;
+}
+
+static inline void sched_timer_register_curr(void)
+{
+	gettimeofday(&t_last, NULL);
 }
 
 static inline void sched_timer_set_interval(unsigned long interval)
@@ -74,7 +76,7 @@ static inline void sched_timer_set_interval(unsigned long interval)
 	sched_set_timeout(&val.it_interval, 0);
 
 	setitimer(ITIMER_REAL, &val, NULL);
-	gettimeofday(&t_last, NULL);
+	sched_timer_register_curr();
 }
 
 static inline unsigned long sched_timer_get_interval(void)
@@ -105,8 +107,6 @@ static void __sched_timer_update_delta(long delta)
 
 static void sched_timer_interrupt(int signal)
 {
-	unsigned long curr_interval = sched_timer_get_interval();
-
 	if (signal != SIGALRM)
 		return;
 
@@ -117,17 +117,22 @@ static void sched_timer_interrupt(int signal)
 		goto out;
 	}
 
-	__sched_timer_update_delta(curr_interval);
+	__sched_timer_update_delta(sched_timer_get_interval());
 
 	while (list_head != NULL) {
 		struct task *t = list_head;
 
 		if (t->delta < 1) {
+			sched_timer_register_curr();
+
 			t->plugin->fetch(t->plugin);
 
 			list_head = t->next;
 			t->next = NULL;
 			__sched_delta_queue_insert_task(t, 1);
+
+			/* remove drift */
+			__sched_timer_update_delta(sched_timer_get_interval());
 		} else {
 			sched_timer_set_interval(t->delta);
 			break;
@@ -229,16 +234,15 @@ static void sched_register_signal_f(int signal, void (*handler)(int), int flags)
 	sigaction(signal, &saction, NULL);
 }
 
-void sched_main(void)
+void sched_init(void)
 {
 	mutexlock_init(&lock);
 	sched_register_signal_f(SIGALRM, sched_timer_interrupt, SA_SIGINFO);
 	sched_timer_set_interval(TIMER_SLEEP_INT);
+}
 
-	while (1) {
-		sleep(10);
-	}
-
+void sched_cleanup(void)
+{
 	sched_timer_set_interval(0);
 	mutexlock_destroy(&lock);
 }

@@ -4,20 +4,21 @@
 
 #include <pthread.h>
 #include <dirent.h>
+#include <sys/time.h>
+#include <sys/resource.h>
 #include <sys/types.h>
 #include <syslog.h>
 #include <string.h>
 #include <unistd.h>
+#include <errno.h>
 #include <libgen.h>
+#include <sched.h>
 
 #include "loader.h"
 #include "plugin.h"
 #include "sensord.h"
 #include "xutils.h"
 #include "sched.h"
-
-#define MAX_PATH	1024
-#define PLUGIN_DIR	"/opt/sensord/plugins/"
 
 static void walk_dir(const char *dir, void (*fn)(const char *))
 {
@@ -27,7 +28,7 @@ static void walk_dir(const char *dir, void (*fn)(const char *))
 
 	dfd = opendir(dir);
 	if (!dfd) {
-		syslog(LOG_ERR, "Cannot open %s!\n", dir);
+		printd("Cannot open %s!\n", dir);
 		return;
 	}
 
@@ -36,8 +37,7 @@ static void walk_dir(const char *dir, void (*fn)(const char *))
 			continue;
 
 		if (strlen(dir) + strlen(dp->d_name) + 2 > sizeof(name))
-			syslog(LOG_ERR, "Name %s %s too long\n", dir,
-			       dp->d_name);
+			printd("Name %s %s too long\n", dir, dp->d_name);
 		else {
 			memset(name, 0, sizeof(name));
 			snprintf(name, sizeof(name), "%s%s", dir, dp->d_name);
@@ -71,7 +71,7 @@ static void load_so_plugin(const char *file)
 
 	ret = load_plugin(p);
 	if (ret < 0) {
-		syslog(LOG_ERR, "Cannot load plugin: %s!\n", strerror(-ret));
+		printd("Cannot load plugin: %s!\n", strerror(-ret));
 		xfree(p);
 	}
 }
@@ -86,28 +86,93 @@ static void *so_watch_task(void *null)
 	pthread_exit(NULL);
 }
 
+static inline int get_default_sched_policy(void)
+{
+	return SCHED_FIFO;
+}
+
+static inline int get_default_sched_prio(void)
+{
+	return sched_get_priority_max(get_default_sched_policy());
+}
+
+static inline int get_default_proc_prio(void)
+{
+	return -20;
+}
+
+static int set_proc_prio(int priority)
+{
+	int ret = setpriority(PRIO_PROCESS, getpid(), priority);
+	if (ret)
+		panic("Can't set nice val to %i!\n", priority);
+
+	return 0;
+}
+
+static int set_sched_status(int policy, int priority)
+{
+	int ret, min_prio, max_prio;
+	struct sched_param sp;
+
+	max_prio = sched_get_priority_max(policy);
+	min_prio = sched_get_priority_min(policy);
+
+	if (max_prio == -1 || min_prio == -1)
+		whine("Cannot determine scheduler prio limits!\n");
+	else if (priority < min_prio)
+		priority = min_prio;
+	else if (priority > max_prio)
+		priority = max_prio;
+
+	memset(&sp, 0, sizeof(sp));
+	sp.sched_priority = priority;
+
+	ret = sched_setscheduler(getpid(), policy, &sp);
+	if (ret) {
+		whine("Cannot set scheduler policy!\n");
+		return -EINVAL;
+	}
+
+	ret = sched_setparam(getpid(), &sp);
+	if (ret) {
+		whine("Cannot set scheduler prio!\n");
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
 int main(void)
 {
 	int ret;
 	pthread_t twatch;
 
+	check_for_root_maybe_die();
+
+	set_proc_prio(get_default_proc_prio());
+	set_sched_status(get_default_sched_policy(), get_default_sched_prio());
+
 	init_loader();
 	init_plugin();
 
 	openlog("sensord", LOG_PID | LOG_CONS | LOG_NDELAY, LOG_DAEMON);
-	syslog(LOG_INFO, "sensord starting ...\n");
+	printd("sensord starting ...\n");
+
+	sched_init();
 
 	ret = pthread_create(&twatch, NULL, so_watch_task, NULL);
 	if (ret < 0) {
-		syslog(LOG_ERR, "Thread creation failed!\n");
+		printd("Thread creation failed!\n");
 		die();
 	}
 
-	sched_main();
-
 	pthread_join(twatch, NULL);
 
-	syslog(LOG_INFO, "sensord halted!\n");
+	sched_cleanup();
+
+	printd("sensord halted!\n");
 	closelog();
+
 	return 0;
 }
