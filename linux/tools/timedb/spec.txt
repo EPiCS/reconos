@@ -1,0 +1,65 @@
+
+                    Time series DB specification
+
+Why not RRD?
+============
+
+While its idea seems good, its realization heavily sucks, really! The maximum
+storage interval is 1s, the API is a nightmare (one needs to concatenate strings
+that contain the value for storing) and it does not seem suited for
+high-performance. The internal storage format has no concrete specification
+and is quite intransparent. Reverse-engineering the rrdtool might rather be
+a waste of time. Ideally, there is a specification that is easy, simple and
+independent from the actual implementation. Just like the Pcap file format.
+Then, this could also be used for lightweight implementations on embedded
+devices (without having library dependencies).
+
+Architecture:
+=============
+
+File Header:
+------------
+
+struct timedb_hdr {
+	uint32_t canary;
+	uint8_t version_major;
+	uint8_t version_minor;
+	uint64_t interval;
+	uint64_t start_tv_sec;
+	uint64_t start_tv_usec;
+	uint16_t cells_per_row;
+	uint16_t mode;
+	uint32_t mode_opt;
+};
+
+Field description:
+
+	- canary: is a field to identify the beginning of the file
+		(default:0xdeadbeef)
+	- version_major: as the name says, it's the major version number
+		(default:1)
+	- version_minor: as the name says, it's the minor version number
+		(default:0)
+	- interval: is the expected interval data arrives in us
+	- start_tv_sec: start time, taken from a timeval
+	- start_tv_usec: start time, taken from a timeval
+	- cells_per_row: number of columns per row
+	- mode:
+		val:0 -> inf: always append at the end
+		val:1 -> window: use a sliding window
+	- mode_opt:
+		mode:1 -> mode_opt is number of rows
+
+Data:
+-----
+
+Data is saved as array of floats. If cells_per_row is 3, then a data
+block looks like:
+
+struct my_block {
+	float cell[3];
+};
+
+This means that functionality is being left to the implementor, i.e. if he
+includes min, max, avg values, if he smoothes data instead of raw values and
+so on and so forth.
