@@ -30,25 +30,24 @@ struct timedb_hdr {
 	uint16_t cells_per_row;
 	uint16_t mode;
 	uint32_t mode_opt;
-};
+} __packed;
 
 Field description:
 
-	- canary: is a field to identify the beginning of the file
-		(default:0xdeadbeef)
-	- version_major: as the name says, it's the major version number
-		(default:1)
-	- version_minor: as the name says, it's the minor version number
-		(default:0)
+	- canary: is a field to identify the beginning of the file (default:0xdeadbeef)
+	- version_major: as the name says, it's the major version number (default:1)
+	- version_minor: as the name says, it's the minor version number (default:0)
 	- interval: is the expected interval data arrives in us
 	- start_tv_sec: start time, taken from a timeval
 	- start_tv_usec: start time, taken from a timeval
 	- cells_per_row: number of columns per row
-	- mode:
+	- mode: internal working mode of db
 		val:0 -> inf: always append at the end
 		val:1 -> window: use a sliding window
-	- mode_opt:
+		...
+	- mode_opt: additional options for selected working mode
 		mode:1 -> mode_opt is number of rows
+		...
 
 Data:
 -----
@@ -58,7 +57,7 @@ block looks like:
 
 struct my_block {
 	float cell[3];
-};
+} __packed;
 
 This means that functionality is being left to the implementor, i.e. if he
 includes min, max, avg values, if he smoothes data instead of raw values and
