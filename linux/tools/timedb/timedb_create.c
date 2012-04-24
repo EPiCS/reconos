@@ -47,7 +47,11 @@ int main(int argc, char **argv)
 		exit(1);
 	}
 
-	pipe(pfd);
+	ret = pipe(pfd);
+	if (ret < 0) {
+		printf("Cannot create pipe: %s!\n", strerror(errno));
+		exit(1);
+	}
 
 	ret = write(fd, &th, sizeof(th));
 	if (ret != sizeof(th)) {

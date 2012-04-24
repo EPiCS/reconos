@@ -100,3 +100,6 @@ Example:
 	$ timedb_get foo.tdb 1		# get block before that
 	$ timedb_get foo.tdb 0-5	# get last 5 blocks
 	$ timedb_get foo.tdb 0-5,7
+
+Note that it is not guaranteed that a timedb database is portable between
+architectures.

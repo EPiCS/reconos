@@ -1,4 +1,4 @@
-CFLAGS	=	-O2 -g -Wall
+CFLAGS	=	-O3 -g -Wall -fstack-protector -fpie -std=gnu99 -D_FORTIFY_SOURCE=2 -D_REENTRANT -march=native -mtune=native
 CC	=	gcc
 AR	=	ar
 
