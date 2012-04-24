@@ -21,13 +21,17 @@ Architecture:
 File Header:
 ------------
 
+struct timedb_timeval {
+	uint32_t tv_sec;
+	uint32_t tv_usec;
+} __packed;
+
 struct timedb_hdr {
 	uint32_t canary;
 	uint8_t version_major;
 	uint8_t version_minor;
+	struct timedb_timeval start;
 	uint64_t interval;
-	uint64_t start_tv_sec;
-	uint64_t start_tv_usec;
 	uint64_t block_entries;
 	uint16_t cells_per_block;
 } __packed;
@@ -38,8 +42,7 @@ Field description:
 	- version_major: as the name says, it's the major version number (default:1)
 	- version_minor: as the name says, it's the minor version number (default:0)
 	- interval: is the expected interval data arrives in us
-	- start_tv_sec: start time, taken from a timeval
-	- start_tv_usec: start time, taken from a timeval
+	- start: start time, taken from a timeval
 	- block_entries: number of current entries
 	- cells_per_block: number of columns per row
 
