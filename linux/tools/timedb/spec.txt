@@ -15,6 +15,16 @@ implementation. Just like the Pcap file format. Then, this could also be used
 for lightweight implementations on embedded devices (without having library
 dependencies).
 
+Benefits of timedb:
+===================
+
+	* High-precision (in data and time)
+	* High-performance
+	* Static database size over time (round robin)
+	* Transparent database layout
+	* Implementation possible without libraries
+	* Standard format for all timedbs
+
 Architecture:
 =============
 
@@ -43,20 +53,35 @@ Field description:
 	- canary: is a field to identify the beginning of the file (default:0xdeadbeef)
 	- version_major: as the name says, it's the major version number (default:1)
 	- version_minor: as the name says, it's the minor version number (default:0)
-	- interval: is the expected interval data arrives in us
 	- start: start time, taken from a timeval
+	- interval: is the expected interval data arrives in us
 	- block_entries: number of total entries to allocate (before wrap around)
-	- cells_per_block: number of columns per row, excluding seq field
+	- cells_per_block: number of columns per row, including seq field
 	- offset_next: next file offset to write data to
 	- seq_next: next sequence number
 
 Data:
 -----
 
-Data is saved as array of 64-Bit floats. If cells_per_row is 3, then a data
+Data is saved as array of 64-Bit floats. If cells_per_row is 4, then a data
 block looks like:
 
 struct my_block {
 	uint64_t seq;
-	float64_t cell[3];
+	float64_t cells[3];
 } __packed;
+
+Have a look at the reference implementation in within this directory. After
+<block_entries> have been written into the database, there is a turnaround
+and the next block overwrites the oldest one. So the sequence number defines
+the distance in <interval> * <block.seq> from <start> assuming that data has
+been written in accordance to timing constraints.
+
+Example:
+========
+
+	$ timedb_create foo.tdb 1000 10 2
+	$ timedb_dump foo.tdb
+	$ timedb_update foo.tdb 3.0 5.0
+	$ ...
+	$ timedb_dump foo.tdb
