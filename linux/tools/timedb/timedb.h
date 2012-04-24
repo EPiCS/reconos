@@ -1,3 +1,7 @@
+/*
+ * Copyright 2012 Daniel Borkmann <dborkma@tik.ee.ethz.ch>
+ */
+
 #ifndef TIMEDB_H
 #define TIMEDB_H
 

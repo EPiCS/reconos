@@ -77,6 +77,17 @@ and the next block overwrites the oldest one. So the sequence number defines
 the distance in <interval> * <block.seq> from <start> assuming that data has
 been written in accordance to timing constraints.
 
+Reference implementation:
+=========================
+timedb_create.c
+timedb_dump.c
+timedb_get.c
+timedb_update.c
+timedb.h
+
+Written by Daniel Borkmann <dborkma@tik.ee.ethz.ch>. Subject to the GPL,
+version 2.0.
+
 Example:
 ========
 
@@ -88,3 +99,4 @@ Example:
 	$ timedb_get foo.tdb 0		# in O(1); get latest block
 	$ timedb_get foo.tdb 1		# get block before that
 	$ timedb_get foo.tdb 0-5	# get last 5 blocks
+	$ timedb_get foo.tdb 0-5,7
