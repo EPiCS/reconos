@@ -27,9 +27,14 @@ struct timedb_hdr {
 	uint64_t interval;		/* in us */
 	uint64_t block_entries;		/* num of max blocks */
 	uint16_t cells_per_block;	/* cells per block + seq */
-	uint64_t offset_next;		/* next write offset */
+	uint64_t offset_next;		/* next write offset from file beginning */
 	seq64_t seq_next;		/* next seq num */
 } __packed;
+
+struct timedb_block {
+	seq64_t seqnr;
+	float64_t cells[];
+};
 
 #define TIMEDB_VERSION_MAJOR	1
 #define TIMEDB_VERSION_MINOR	0
@@ -56,8 +61,8 @@ static inline void timedb_fill_hdr(struct timedb_hdr *th, uint64_t interval,
 	th->interval = interval;
 	th->block_entries = block_entries;
 	th->cells_per_block = cells_per_block + 1 /* seq64_t */;
-	th->offset_next = 0;
-	th->seq_next = 0;
+	th->offset_next = sizeof(struct timedb_hdr);
+	th->seq_next = 1;
 }
 
 #define block_to_seq(x)		(*((seq64_t *) (x)))

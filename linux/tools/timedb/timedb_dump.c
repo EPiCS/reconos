@@ -7,6 +7,7 @@
 #include <string.h>
 #include <errno.h>
 #include <stdlib.h>
+#include <assert.h>
 
 #include "timedb.h"
 
@@ -64,12 +65,11 @@ int main(int argc, char **argv)
 
 	block_len = th.cells_per_block * sizeof(uint64_t);
 	block = malloc(block_len);
+	assert(block);
 
-	for (idx = 0;; idx++) {
+	for (idx = 0; idx < th.block_entries; idx++) {
 		ret = read(fd, block, block_len);
 		if (ret != block_len)
-			break;
-		if (block_to_seq(block) == th.seq_next)
 			break;
 		printf("%zu: seq:%lu ", idx, block_to_seq(block));
 		for (j = 0; j < th.cells_per_block - 1; ++j) {
@@ -79,7 +79,6 @@ int main(int argc, char **argv)
 	}
 
 	free(block);
-
 	close(fd);
 
 	return 0;
