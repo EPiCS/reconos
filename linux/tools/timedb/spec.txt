@@ -80,8 +80,11 @@ been written in accordance to timing constraints.
 Example:
 ========
 
-	$ timedb_create foo.tdb 1000 10 2
+	$ timedb_create foo.tdb 1000 10 2  # interval:1000us, blocks:10, cells:2
 	$ timedb_dump foo.tdb
 	$ timedb_update foo.tdb 3.0 5.0
 	$ ...
 	$ timedb_dump foo.tdb
+	$ timedb_get foo.tdb 0		# get latest value
+	$ timedb_get foo.tdb 1		# get value before that
+	$ timedb_get foo.tdb 0-5	# get last 5 values
