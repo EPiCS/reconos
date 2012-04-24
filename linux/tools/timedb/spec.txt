@@ -82,9 +82,9 @@ Example:
 
 	$ timedb_create foo.tdb 1000 10 2  # interval:1000us, blocks:10, cells:2
 	$ timedb_dump foo.tdb
-	$ timedb_update foo.tdb 3.0 5.0
+	$ timedb_update foo.tdb 3.0 5.0	# in O(1)
 	$ ...
 	$ timedb_dump foo.tdb
-	$ timedb_get foo.tdb 0		# get latest block
+	$ timedb_get foo.tdb 0		# in O(1); get latest block
 	$ timedb_get foo.tdb 1		# get block before that
 	$ timedb_get foo.tdb 0-5	# get last 5 blocks
