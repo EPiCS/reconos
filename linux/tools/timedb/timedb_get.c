@@ -113,7 +113,7 @@ int main(int argc, char **argv)
 	fetch_len = th->block_entries;
 	fetch = malloc(fetch_len * sizeof(*fetch));
 	assert(fetch);
-	memset(fetch, 0, fetch_len * sizeof(fetch));
+	memset(fetch, 0, fetch_len * sizeof(*fetch));
 
 	q = argv[2];
 	while (p = q, q = next_token(q, ','), p) {
@@ -166,6 +166,7 @@ int main(int argc, char **argv)
 	}
 
 	munmap(binary, sb.st_size);
+	free(fetch);
 	close(fd);
 
 	return 0;

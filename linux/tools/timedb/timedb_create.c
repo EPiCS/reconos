@@ -16,7 +16,7 @@
 
 int main(int argc, char **argv)
 {
-	int fd, fdn, pfd[2], dummy = 0;
+	int fd, dummy = 0;
 	ssize_t ret;
 	struct timedb_hdr th;
 	uint64_t interval, tot_blocks;
@@ -40,18 +40,6 @@ int main(int argc, char **argv)
 		exit(1);
 	}
 
-	fdn = open("/dev/zero", O_RDONLY);
-	if (fdn < 0) {
-		printf("Cannot open file: %s!\n", strerror(errno));
-		exit(1);
-	}
-
-	ret = pipe(pfd);
-	if (ret < 0) {
-		printf("Cannot create pipe: %s!\n", strerror(errno));
-		exit(1);
-	}
-
 	ret = write(fd, &th, sizeof(th));
 	if (ret != sizeof(th)) {
 		printf("Cannot write to file: %s!\n", strerror(errno));
@@ -67,7 +55,6 @@ int main(int argc, char **argv)
 		exit(1);
 	}
 
-	close(fdn);
 	close(fd);
 
 	return 0;
