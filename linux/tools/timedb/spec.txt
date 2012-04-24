@@ -34,6 +34,8 @@ struct timedb_hdr {
 	uint64_t interval;
 	uint64_t block_entries;
 	uint16_t cells_per_block;
+	uint64_t offset_next;
+	uint64_t seq_next;
 } __packed;
 
 Field description:
@@ -43,8 +45,10 @@ Field description:
 	- version_minor: as the name says, it's the minor version number (default:0)
 	- interval: is the expected interval data arrives in us
 	- start: start time, taken from a timeval
-	- block_entries: number of current entries
-	- cells_per_block: number of columns per row
+	- block_entries: number of total entries to allocate (before wrap around)
+	- cells_per_block: number of columns per row, excluding seq field
+	- offset_next: next file offset to write data to
+	- seq_next: next sequence number
 
 Data:
 -----
@@ -53,21 +57,6 @@ Data is saved as array of 64-Bit floats. If cells_per_row is 3, then a data
 block looks like:
 
 struct my_block {
+	uint64_t seq;
 	float64_t cell[3];
 } __packed;
-
-This means that functionality is being left to the implementor, i.e. if he
-includes min, max, avg values, if he smoothes data instead of raw values and
-so on and so forth. New data is always appended at the end of the file, just
-like log files. If a certain number of entries have been reached, then there
-could exist a mechanism, that compresses the whole database and creates a new
-one. However, portability across architectures is not guaranteed.
-
-Writing new sensor data to the timedb is fairly easy: One needs to open the
-timedb in append mode and simply writes a new block to the database file.
-
-Accessing a certain value is no big deal either: after having the timedb_hdr
-read, the file descriptor offset points to the first data block. The right
-offset can be calculated with off <- i * blocksize, where
-blocksize <- cells_per_block * sizeof(float64_t). Performing an lseek to that
-position is reasonable fast.
