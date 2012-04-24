@@ -16,9 +16,8 @@
 
 int main(int argc, char **argv)
 {
-	int fd, fdn, pfd[2], done = 0;
+	int fd, fdn, pfd[2], dummy = 0;
 	ssize_t ret;
-	size_t len;
 	struct timedb_hdr th;
 	uint64_t interval, tot_blocks;
 	uint16_t cells;
@@ -59,16 +58,13 @@ int main(int argc, char **argv)
 		exit(1);
 	}
 
-	for (len = th.block_entries * th.cells_per_block; done == 0;) {
-		ret = splice(fdn, NULL, pfd[1], NULL, len,
-			     SPLICE_F_MORE | SPLICE_F_MOVE);
-		if (ret == 0)
-			break;
-		if (ret == len)
-			done = 1;
-		splice(pfd[0], NULL, fd, NULL, ret,
-		       SPLICE_F_MORE | SPLICE_F_MOVE);
-		len -= ret;
+	lseek(fd, th.block_entries * th.cells_per_block * sizeof(uint64_t) - 1,
+	      SEEK_CUR);
+
+	ret = write(fd, &dummy, 1);
+	if (ret != 1) {
+		printf("Cannot write to file: %s!\n", strerror(errno));
+		exit(1);
 	}
 
 	close(fdn);
