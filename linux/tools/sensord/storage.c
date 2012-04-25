@@ -10,12 +10,47 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <unistd.h>
+#include <sys/syscall.h>
+#include <asm/unistd.h>
 
 #include "timedb.h"
 #include "xutils.h"
 #include "storage.h"
 #include "plugin.h"
 #include "sensord.h"
+
+#define IOPRIO_CLASS_SHIFT      13
+
+enum {
+	ioprio_class_none,
+	ioprio_class_rt,
+	ioprio_class_be,
+	ioprio_class_idle,
+};
+
+enum {
+	ioprio_who_process = 1,
+	ioprio_who_pgrp,
+	ioprio_who_user,
+};
+
+static const char *const to_prio[] = {
+	"none", "realtime", "best-effort", "idle", };
+
+static inline int ioprio_set(int which, int who, int ioprio)
+{
+	return syscall(SYS_ioprio_set, which, who, ioprio);
+}
+
+static void ioprio_setpid(pid_t pid, int ioprio, int ioclass)
+{
+	int ret = ioprio_set(ioprio_who_process, pid,
+			     ioprio | ioclass << IOPRIO_CLASS_SHIFT);
+	if (ret < 0)
+		panic("Failed to set io prio for pid!\n");
+}
+
+static int ioprio_set_flag = 0;
 
 static int storage_create_db(char *path, uint64_t interval, uint64_t tot_blocks,
 			     uint16_t cells)
@@ -73,6 +108,11 @@ void storage_register_task(struct plugin_instance *p)
 	}
 
 	p->timedb_fd = fd;
+
+	if (!ioprio_set_flag) {
+		ioprio_setpid(getpid(), 4, ioprio_class_rt);
+		ioprio_set_flag = 1;
+	}
 }
 
 void storage_unregister_task(struct plugin_instance *p)
