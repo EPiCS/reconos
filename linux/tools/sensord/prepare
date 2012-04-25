@@ -1,0 +1,5 @@
+#!/bin/sh
+
+mkdir -p /opt/sensord/
+mkdir -p /opt/sensord/plugins
+mkdir -p /opt/sensord/database
