@@ -13,13 +13,11 @@
 static void dummy_fetch(struct plugin_instance *self)
 {
 	int i;
-	double *cells = self->private_data;
-	size_t len = self->cells_per_block;
 
 	printp("Hello Fetch!\n");
 
-	for (i = 0; i < len; ++i) {
-		cells[i] = 1.0;
+	for (i = 0; i < self->cells_per_block; ++i) {
+		self->cells[i] = 1.0;
 	}
 }
 
@@ -31,7 +29,7 @@ struct plugin_instance dummy_plugin = {
 	/* schedule_int and block_entries describe your window size, so
 	   one of the two should at least be large enough */
 	.schedule_int		=	TIME_IN_SEC(1),
-	.block_entries		=	10,
+	.block_entries		=	100000,
 	.cells_per_block	=	2,
 };
 
@@ -41,8 +39,8 @@ static __init int dummy_init(void)
 
 	printp("Hello World!\n");
 
-	pi->private_data = malloc(pi->cells_per_block * sizeof(double));
-	assert(pi->private_data);
+	pi->cells = malloc(pi->cells_per_block * sizeof(double));
+	assert(pi->cells);
 
 	return register_plugin_instance(pi);
 }
@@ -51,8 +49,7 @@ static __exit void dummy_exit(void)
 {
 	struct plugin_instance *pi = &dummy_plugin;
 
-	free(pi->private_data);
-
+	free(pi->cells);
 	unregister_plugin_instance(pi);
 
 	printp("Goodbye World!\n");

@@ -31,7 +31,7 @@ static int storage_create_db(char *path, uint64_t interval, uint64_t tot_blocks,
 
 	timedb_fill_hdr(&th, interval, tot_blocks, cells);
 
-	fd = open(path, O_CREAT | O_WRONLY | O_TRUNC, S_IRUSR | S_IWUSR);
+	fd = open(path, O_CREAT | O_RDWR | O_TRUNC, S_IRUSR | S_IWUSR);
 	if (fd < 0) {
 		printf("Cannot open file: %s!\n", strerror(errno));
 		return -EINVAL;
@@ -63,7 +63,7 @@ void storage_register_task(struct plugin_instance *p)
 	memset(name, 0, sizeof(name));
 	snprintf(name, sizeof(name), "%s%s", DATABASE_DIR, p->name);
 
-	fd = open(name, O_RDONLY);
+	fd = open(name, O_RDWR);
 	if (fd < 0) {
 		fd = storage_create_db(name, p->schedule_int, p->block_entries,
 				       p->cells_per_block);
@@ -82,5 +82,59 @@ void storage_unregister_task(struct plugin_instance *p)
 
 void storage_update_task(struct plugin_instance *p, double *cells, size_t len)
 {
-	/* stub */
+	int i;
+	uint8_t *block;
+	ssize_t ret;
+	size_t block_len;
+	struct timedb_hdr th;
+	struct timedb_block *tb;
+	uint64_t off_curr, bnum;
+
+	lseek(p->timedb_fd, 0, SEEK_SET);
+
+	ret = read(p->timedb_fd, &th, sizeof(th));
+	if (ret != sizeof(th)) {
+		printd("Cannot read from file: %s!\n", strerror(errno));
+		return;
+	}
+
+	if (th.cells_per_block - 1 != len) {
+		printd("Invalid argument: wrong number of cells!\n");
+		return;
+	}
+
+	block_len = th.cells_per_block * sizeof(uint64_t);
+	block = xmalloc(block_len);
+
+	tb = (struct timedb_block *) block;
+	tb->seqnr = th.seq_next;
+	for (i = 0; i < th.cells_per_block - 1; ++i)
+		tb->cells[i] = cells[i];
+
+	lseek(p->timedb_fd, th.offset_next, SEEK_SET);
+
+	ret = write(p->timedb_fd, block, block_len);
+	if (ret != block_len) {
+		printd("Error while writing data set: %s\n", strerror(errno));
+		goto out;
+	}
+
+	off_curr = lseek(p->timedb_fd, 0, SEEK_CUR);
+	bnum = (off_curr - sizeof(th)) / block_len;
+
+	if (bnum == th.block_entries)
+		th.offset_next = sizeof(th);
+	else
+		th.offset_next = off_curr;
+	th.seq_next++;
+
+	lseek(p->timedb_fd, 0, SEEK_SET);
+
+	ret = write(p->timedb_fd, &th, sizeof(th));
+	if (ret != sizeof(th)) {
+		printd("Error writing block head: %s\n", strerror(errno));
+		goto out;
+	}
+out:
+	xfree(block);
 }
