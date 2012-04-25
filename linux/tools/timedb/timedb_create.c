@@ -32,6 +32,11 @@ int main(int argc, char **argv)
 	tot_blocks = atol(argv[3]);
 	cells = atoi(argv[4]);
 
+	if (interval == 0 || tot_blocks == 0 || cells == 0) {
+		printf("Invalid argument!\n");
+		exit(1);
+	}
+
 	timedb_fill_hdr(&th, interval, tot_blocks, cells);
 
 	fd = open(argv[1], O_CREAT | O_WRONLY | O_TRUNC, S_IRUSR | S_IWUSR);

@@ -20,7 +20,7 @@ static int *fetch;
 static size_t fetch_len;
 static size_t fetch_num = 0;
 
-static void fetch_block(struct timedb_hdr *th, uint8_t *binary, off_t offset,
+static void fetch_block(struct timedb_hdr *th, uint8_t *binary, uint64_t offset,
 			uint64_t i)
 {
 	int j;
@@ -29,21 +29,21 @@ static void fetch_block(struct timedb_hdr *th, uint8_t *binary, off_t offset,
 
 	if (s >= th->seq_next || s == 0) {
 		s = 0;
-		printf("%zu: seq:%lu ", i, s);
+		printf("%zu %lu ", i, s);
 		for (j = 0; j < th->cells_per_block - 1; ++j)
-			printf("%lf ", 0.0);
+			printf("%.16lf ", 0.0);
 	} else {
-		printf("%zu: seq:%lu ", i, s);
+		printf("%zu %lu ", i, s);
 		for (j = 0; j < th->cells_per_block - 1; ++j)
-			printf("%lf ", block_to_data_off(block, j));
+			printf("%.16lf ", block_to_data_off(block, j));
 	}
 	printf("\n");
 }
 
-static off_t prev_block(struct timedb_hdr *th, uint8_t *binary, size_t max,
-			off_t curr)
+static uint64_t prev_block(struct timedb_hdr *th, uint8_t *binary, size_t max,
+			   uint64_t curr)
 {
-	off_t before;
+	uint64_t before;
 
 	if (curr == sizeof(*th)) {
 		before = max - sizeof(uint64_t) * th->cells_per_block;
@@ -77,9 +77,9 @@ int main(int argc, char **argv)
 	struct stat sb;
 	uint8_t *binary;
 	struct timedb_hdr *th;
-	off_t last;
+	uint64_t last;
 
-	if (argc < 3) {
+	if (argc != 3) {
 		printf("Usage: timedb_get <file> <block(s)>\n");
 		exit(1);
 	}

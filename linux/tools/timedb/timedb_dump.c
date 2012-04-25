@@ -15,6 +15,9 @@
 
 #include "timedb.h"
 
+#define US_TO_MIN(x)	(1.0 * (((x) / (1000 * 1000)) / 60))
+#define US_TO_DAY(x)	(1.0 * ((((x) / (1000 * 1000)) / 60) / 1440))
+
 int main(int argc, char **argv)
 {
 	int fd;
@@ -26,7 +29,7 @@ int main(int argc, char **argv)
 	char tmbuf[128], buf[256];
 	uint8_t *block;
 
-	if (argc < 2) {
+	if (argc != 2) {
 		printf("Usage: timedb_dump <file>\n");
 		exit(1);
 	}
@@ -60,6 +63,10 @@ int main(int argc, char **argv)
 	printf("start.tv_usec: %u\n", th.start.tv_usec);
 	printf("start: %s\n", buf);
 	printf("interval: %lu us\n", th.interval);
+	printf("storage window: %lu us [%lf min] [%lf days]\n",
+	       th.interval * th.block_entries,
+	       US_TO_MIN(th.interval * th.block_entries),
+	       US_TO_DAY(th.interval * th.block_entries));
 	printf("block_entries: %lu\n", th.block_entries);
 	printf("cells_per_block: %u\n", th.cells_per_block);
 	printf("data_cells_per_block: %u\n", th.cells_per_block - 1);
