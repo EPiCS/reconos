@@ -89,11 +89,28 @@ static void *so_watch_task(void *null)
 	pthread_exit(NULL);
 }
 
+enum threshold_type {
+	upper_threshold,
+	lower_threshold,
+};
+
+static void af_unix_task_do_set_thres(uint8_t *request, size_t len,
+				      enum threshold_type type)
+{
+	/* stub */
+}
+
+static void af_unix_task_do_get_value(int sock, uint8_t *request, size_t len)
+{
+	/* stub */
+}
+
 static void *af_unix_task(void *null)
 {
 	int sock, ret;
 	struct sockaddr_un saddr;
 	socklen_t slen;
+	uint8_t buff[4096];
 
 	unlink(SOCK_ADDR);
 	sock = socket(AF_UNIX, SOCK_STREAM, 0);
@@ -119,19 +136,43 @@ static void *af_unix_task(void *null)
 		goto out;
 	}
 
+	/* XXX: add client multiplexing? */
 	while (1) {
 		int csock;
 		struct sockaddr_un caddr;
+		struct notfct_hdr *hdr;
 		socklen_t clen;
+		ssize_t ret;
 
 		memset(&caddr, 0, sizeof(caddr));
 		clen = sizeof(caddr);
 
 		csock = accept(sock, (struct sockaddr *) &caddr, &clen);
-		printd("New client request!\n");
+		if (csock < 0) {
+			printd("Cannot accept client: %s\n", strerror(errno));
+			continue;
+		}
 
-		while (1) {
-			sleep(5);
+		ret = read(csock, buff, sizeof(buff));
+		if (ret <= 0) {
+			close(csock);
+			continue;
+		}
+
+		hdr = (struct notfct_hdr *) buff;
+		switch (hdr->cmd) {
+		case CMD_SET_UPPER_THRES:
+			af_unix_task_do_set_thres(buff, ret, upper_threshold);
+			break;
+		case CMD_SET_LOWER_THRES:
+			af_unix_task_do_set_thres(buff, ret, lower_threshold);
+			break;
+		case CMD_GET_VALUE:
+			af_unix_task_do_get_value(csock, buff, ret);
+			break;
+		default:
+			close(csock);
+			continue;
 		}
 
 		close(csock);
@@ -229,7 +270,6 @@ int main(void)
 		printd("Thread creation failed!\n");
 		die();
 	}
-
 
 	pthread_join(tserve, NULL);
 	pthread_join(twatch, NULL);
