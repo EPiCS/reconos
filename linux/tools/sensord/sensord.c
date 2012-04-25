@@ -20,9 +20,8 @@
 #include "plugin.h"
 #include "sensord.h"
 #include "xutils.h"
+#include "notification.h"
 #include "sched.h"
-
-#define SOCK_ADDR	"sensordsock"
 
 static void walk_dir(const char *dir, void (*fn)(const char *))
 {
