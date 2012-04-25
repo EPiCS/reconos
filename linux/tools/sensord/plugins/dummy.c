@@ -25,11 +25,8 @@ struct plugin_instance dummy_plugin = {
 	.name			=	MODULE "-1",
 	.basename		=	MODULE,
 	.fetch			=	dummy_fetch,
-	.type			=	TYPE_FLOAT,
-	/* schedule_int and block_entries describe your window size, so
-	   one of the two should at least be large enough */
 	.schedule_int		=	TIME_IN_SEC(1),
-	.block_entries		=	100000,
+	.block_entries		=	1000000,
 	.cells_per_block	=	2,
 };
 

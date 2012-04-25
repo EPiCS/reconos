@@ -8,25 +8,15 @@
 #include <sys/time.h>
 #include <stdint.h>
 
-enum plugin_type {
-	TYPE_INVALID = 0,
-	TYPE_SIGNED = 1,
-	TYPE_UNSIGNED,
-	TYPE_FLOAT,
-	TYPE_BOOL,
-};
-
 struct plugin_instance {
 	char *name;			/* unique instance name */
 	char *basename;			/* basename of plugin */
-	enum plugin_type type;		/* plugin data type */
 	void (*fetch)(struct plugin_instance *self);	/* callback function */
 	double *cells;			/* fetch values */
 	void *private_data;		/* plugin-private data */
 	uint64_t schedule_int;		/* scheduling interval in us */
 	uint64_t block_entries;		/* blocks in database */
 	uint16_t cells_per_block;	/* cells per block in database */
-	struct timeval last;		/* last time instance called fetch */
 	int slot;			/* table slot */
 	int timedb_fd;			/* fd to backend storage */
 };

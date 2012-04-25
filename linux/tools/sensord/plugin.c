@@ -45,8 +45,9 @@ void for_each_plugin(void (*fn)(struct plugin_instance *self))
 
 int register_plugin_instance(struct plugin_instance *pi)
 {
-	if (!pi->name || !pi->basename || pi->type == TYPE_INVALID ||
-	    !pi->fetch || pi->schedule_int == 0)
+	if (!pi->name || !pi->basename || !pi->fetch ||
+	    pi->schedule_int == 0 || pi->block_entries == 0 ||
+	    pi->cells_per_block == 0)
 		return -EINVAL;
 	if (count + 1 > MAX_PLUGINS)
 		return -ENOMEM;
