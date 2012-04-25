@@ -41,6 +41,6 @@ static inline void printd(const char *format, ...)
 #define MAX_PATH		1024
 
 #define PLUGIN_DIR		"/opt/sensord/plugins/"
-#define RRD_DIR			"/opt/sensord/rrds/"
+#define DATABASE_DIR		"/opt/sensord/database/"
 
 #endif /* SENSORD_H */
