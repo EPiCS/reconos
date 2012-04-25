@@ -128,8 +128,11 @@ static void *af_unix_task(void *null)
 		clen = sizeof(caddr);
 
 		csock = accept(sock, (struct sockaddr *) &caddr, &clen);
+		printd("New client request!\n");
 
-		sleep(5);
+		while (1) {
+			sleep(5);
+		}
 
 		close(csock);
 	}

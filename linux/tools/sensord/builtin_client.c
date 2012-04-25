@@ -96,6 +96,10 @@ int main(void)
 
 	printf("Threshold registered!\n");
 
+	while (1) {
+		sleep(5);
+	}
+
 	close(sock);
 	return 0;
 }

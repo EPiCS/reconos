@@ -13,9 +13,6 @@
 static void dummy_fetch(struct plugin_instance *self)
 {
 	int i;
-
-	printp("Hello Fetch!\n");
-
 	for (i = 0; i < self->cells_per_block; ++i) {
 		self->cells[i] = 1.0;
 	}
