@@ -11,6 +11,7 @@
 #include "locking.h"
 #include "xutils.h"
 #include "sched.h"
+#include "storage.h"
 
 struct task {
 	long delta;			/* in us */
@@ -126,6 +127,8 @@ static void sched_timer_interrupt(int signal)
 			sched_timer_register_curr();
 
 			t->plugin->fetch(t->plugin);
+			storage_update_task(t->plugin, t->plugin->cells,
+					    t->plugin->cells_per_block);
 
 			list_head = t->next;
 			t->next = NULL;

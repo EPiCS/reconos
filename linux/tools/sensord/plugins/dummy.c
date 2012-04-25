@@ -3,33 +3,56 @@
  */
 
 #include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <assert.h>
 #include "sensord.h"
 
 #define MODULE	"dummy"
 
 static void dummy_fetch(struct plugin_instance *self)
 {
+	int i;
+	double *cells = self->private_data;
+	size_t len = self->cells_per_block;
+
 	printp("Hello Fetch!\n");
-	self->fetch_value.dval = 1.20;
+
+	for (i = 0; i < len; ++i) {
+		cells[i] = 1.0;
+	}
 }
 
 struct plugin_instance dummy_plugin = {
-	.name		=	MODULE "-1",
-	.basename	=	MODULE,
-	.fetch		=	dummy_fetch,
-	.type		=	TYPE_FLOAT,
-	.schedule_int	=	TIME_IN_SEC(1),
+	.name			=	MODULE "-1",
+	.basename		=	MODULE,
+	.fetch			=	dummy_fetch,
+	.type			=	TYPE_FLOAT,
+	.schedule_int		=	TIME_IN_SEC(1),
+	.block_entries		=	10,
+	.cells_per_block	=	2,
 };
 
 static __init int dummy_init(void)
 {
+	struct plugin_instance *pi = &dummy_plugin;
+
 	printp("Hello World!\n");
-	return register_plugin_instance(&dummy_plugin);
+
+	pi->private_data = malloc(pi->cells_per_block * sizeof(double));
+	assert(pi->private_data);
+
+	return register_plugin_instance(pi);
 }
 
 static __exit void dummy_exit(void)
 {
-	unregister_plugin_instance(&dummy_plugin);
+	struct plugin_instance *pi = &dummy_plugin;
+
+	free(pi->private_data);
+
+	unregister_plugin_instance(pi);
+
 	printp("Goodbye World!\n");
 }
 

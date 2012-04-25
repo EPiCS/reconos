@@ -10,6 +10,7 @@
 #include "sensord.h"
 #include "loader.h"
 #include "sched.h"
+#include "storage.h"
 
 static struct plugin_instance *table[MAX_PLUGINS] = {0};
 static int count = 0;
@@ -56,6 +57,7 @@ int register_plugin_instance(struct plugin_instance *pi)
 
 	get_plugin(pi->basename);
 
+	storage_register_task(pi);
 	sched_register_task(pi);
 
 	printd("[%s] activated!\n", pi->name);
@@ -65,6 +67,7 @@ int register_plugin_instance(struct plugin_instance *pi)
 void unregister_plugin_instance(struct plugin_instance *pi)
 {
 	sched_unregister_task(pi);
+	storage_unregister_task(pi);
 
 	table[pi->slot] = NULL;
 	count--;
