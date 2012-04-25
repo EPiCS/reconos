@@ -17,4 +17,4 @@ all: $(lib-objs) $(core-objs) builtin_client
 builtin_client:
 
 clean:
-	rm -f *.o sensord
+	rm -f *.o sensord builtin_client
