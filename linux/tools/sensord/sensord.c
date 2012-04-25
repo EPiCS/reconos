@@ -7,6 +7,8 @@
 #include <sys/time.h>
 #include <sys/resource.h>
 #include <sys/types.h>
+#include <sys/socket.h>
+#include <sys/un.h>
 #include <syslog.h>
 #include <string.h>
 #include <unistd.h>
@@ -19,6 +21,8 @@
 #include "sensord.h"
 #include "xutils.h"
 #include "sched.h"
+
+#define SOCK_ADDR	"sensordsock"
 
 static void walk_dir(const char *dir, void (*fn)(const char *))
 {
@@ -86,6 +90,56 @@ static void *so_watch_task(void *null)
 	pthread_exit(NULL);
 }
 
+static void *af_unix_task(void *null)
+{
+	int sock, ret;
+	struct sockaddr_un saddr;
+	socklen_t slen;
+
+	unlink(SOCK_ADDR);
+	sock = socket(AF_UNIX, SOCK_STREAM, 0);
+	if (sock < 0) {
+		printd("Cannot create af_unix socket: %s\n", strerror(errno));
+		pthread_exit(NULL);
+	}
+
+	memset(&saddr, 0, sizeof(saddr));
+	saddr.sun_family = AF_UNIX;
+	strncpy(saddr.sun_path, SOCK_ADDR, sizeof(saddr.sun_path));
+
+	slen = sizeof(saddr);
+	ret = bind(sock, (struct sockaddr *) &saddr, slen);
+	if (ret < 0) {
+		printd("Cannot bind af_unix socket: %s\n", strerror(errno));
+		goto out;
+	}
+
+	ret = listen(sock, 10);
+	if (ret < 0) {
+		printd("Cannot listen af_unix socket: %s\n", strerror(errno));
+		goto out;
+	}
+
+	while (1) {
+		int csock;
+		struct sockaddr_un caddr;
+		socklen_t clen;
+
+		memset(&caddr, 0, sizeof(caddr));
+		clen = sizeof(caddr);
+
+		csock = accept(sock, (struct sockaddr *) &caddr, &clen);
+
+		sleep(5);
+
+		close(csock);
+	}
+
+out:
+	close(sock);
+	pthread_exit(NULL);
+}
+
 static inline int get_default_sched_policy(void)
 {
 	return SCHED_FIFO;
@@ -147,6 +201,7 @@ int main(void)
 {
 	int ret;
 	pthread_t twatch;
+	pthread_t tserve;
 
 	check_for_root_maybe_die();
 
@@ -167,6 +222,14 @@ int main(void)
 		die();
 	}
 
+	ret = pthread_create(&tserve, NULL, af_unix_task, NULL);
+	if (ret < 0) {
+		printd("Thread creation failed!\n");
+		die();
+	}
+
+
+	pthread_join(tserve, NULL);
 	pthread_join(twatch, NULL);
 
 	sched_cleanup();
