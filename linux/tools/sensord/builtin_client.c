@@ -56,12 +56,38 @@ static int register_threshold(int sock, enum threshold_type type,
 		     sizeof(cells_active));
 }
 
+static void ask_for_block(int sock, uint64_t seqnum, double cells[2])
+{
+	/* same 'index' syntax as in timedb_get */
+	char buff[4096];
+	struct notfct_hdr *hdr;
+	ssize_t ret;
+
+	memset(buff, 0, sizeof(buff));
+	hdr = (struct notfct_hdr *) buff;
+	hdr->cmd = CMD_GET_VALUE;
+	hdr->proc = getpid();
+	strncpy(hdr->plugin_inst, PLUGIN_TO_TEST, sizeof(hdr->plugin_inst));
+	memcpy(buff + sizeof(*hdr), &seqnum, sizeof(seqnum));
+
+	ret = write(sock, buff, sizeof(*hdr) + sizeof(seqnum));
+	if (ret <= 0)
+		panic("Cannot write to sock!\n");
+
+	memset(buff, 0, sizeof(buff));
+	ret = read(sock, buff, sizeof(buff));
+	if (ret <= 0)
+		panic("Cannot read from sock!\n");
+
+	memcpy(cells, buff + sizeof(*hdr), sizeof(cells));
+}
+
 int main(void)
 {
 	int sock, ret;
 	struct sockaddr_un saddr;
 	socklen_t slen;
-	double cells_thres[2];
+	double cells_thres[2], cells[2];
 	uint8_t cells_active[2];
 
 	signal(SIGUSR1, upper_threshold_triggered);
@@ -98,6 +124,8 @@ int main(void)
 
 	while (1) {
 		sleep(5);
+		ask_for_block(sock, 0, cells);
+		printf("Got %lf, %lf\n", cells[0], cells[1]);
 	}
 
 	close(sock);
