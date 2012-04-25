@@ -15,8 +15,8 @@
 
 #include "timedb.h"
 
-#define US_TO_MIN(x)	(1.0 * (((x) / (1000 * 1000)) / 60))
-#define US_TO_DAY(x)	(1.0 * ((((x) / (1000 * 1000)) / 60) / 1440))
+#define US_TO_MIN(x)	(1.0 * ((x) / 60000000.0))
+#define US_TO_DAY(x)	(1.0 * ((x) / 86400000000.0))
 
 int main(int argc, char **argv)
 {
@@ -34,7 +34,7 @@ int main(int argc, char **argv)
 		exit(1);
 	}
 
-	fd = open(argv[1], O_RDWR);
+	fd = open(argv[1], O_RDONLY);
 	if (fd < 0) {
 		printf("Cannot open file: %s!\n", strerror(errno));
 		exit(1);
