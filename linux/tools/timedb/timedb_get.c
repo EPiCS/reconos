@@ -29,11 +29,11 @@ static void fetch_block(struct timedb_hdr *th, uint8_t *binary, uint64_t offset,
 
 	if (s >= th->seq_next || s == 0) {
 		s = 0;
-		printf("%zu %lu ", i, s);
+		printf("%llu %llu ", i, s);
 		for (j = 0; j < th->cells_per_block - 1; ++j)
 			printf("%.16lf ", 0.0);
 	} else {
-		printf("%zu %lu ", i, s);
+		printf("%llu %llu ", i, s);
 		for (j = 0; j < th->cells_per_block - 1; ++j)
 			printf("%.16lf ", block_to_data_off(block, j));
 	}

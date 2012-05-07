@@ -62,16 +62,16 @@ int main(int argc, char **argv)
 	printf("start.tv_sec: %u\n", th.start.tv_sec);
 	printf("start.tv_usec: %u\n", th.start.tv_usec);
 	printf("start: %s\n", buf);
-	printf("interval: %lu us\n", th.interval);
-	printf("storage window: %lu us [%lf min] [%lf days]\n",
+	printf("interval: %llu us\n", th.interval);
+	printf("storage window: %llu us [%lf min] [%lf days]\n",
 	       th.interval * th.block_entries,
 	       US_TO_MIN(th.interval * th.block_entries),
 	       US_TO_DAY(th.interval * th.block_entries));
-	printf("block_entries: %lu\n", th.block_entries);
+	printf("block_entries: %llu\n", th.block_entries);
 	printf("cells_per_block: %u\n", th.cells_per_block);
 	printf("data_cells_per_block: %u\n", th.cells_per_block - 1);
-	printf("offset_next: %lu\n", th.offset_next);
-	printf("seq_next: %lu\n", th.seq_next);
+	printf("offset_next: %llu\n", th.offset_next);
+	printf("seq_next: %llu\n", th.seq_next);
 	printf("payload:\n");
 
 	block_len = th.cells_per_block * sizeof(uint64_t);
@@ -82,7 +82,7 @@ int main(int argc, char **argv)
 		ret = read(fd, block, block_len);
 		if (ret != block_len)
 			break;
-		printf("%zu: seq:%lu ", idx, block_to_seq(block));
+		printf("%zu: seq:%llu ", idx, block_to_seq(block));
 		for (j = 0; j < th.cells_per_block - 1; ++j) {
 			printf("%lf ", block_to_data_off(block, j));
 		}
