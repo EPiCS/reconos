@@ -13,7 +13,7 @@
 #include "notification.h"
 #include "storage.h"
 
-static struct plugin_instance *table[MAX_PLUGINS] = {0};
+static struct plugin_instance *table[MAX_PLUGINS];
 static int count = 0;
 
 static int get_free_slot(void)
@@ -44,6 +44,23 @@ void for_each_plugin(void (*fn)(struct plugin_instance *self))
 	}
 }
 
+struct plugin_instance *get_plugin_by_name(char *name)
+{
+	int i;
+	struct plugin_instance *ret = NULL;
+
+	for (i = 0; i < MAX_PLUGINS; ++i) {
+		if (!table[i])
+			continue;
+		if (!strncmp(name, table[i]->name, PLUGIN_INST_SIZ)) {
+			ret = table[i];
+			break;
+		}
+	}
+
+	return ret;
+}
+
 int register_plugin_instance(struct plugin_instance *pi)
 {
 	if (!pi->name || !pi->basename || !pi->fetch ||
@@ -59,7 +76,7 @@ int register_plugin_instance(struct plugin_instance *pi)
 	table[pi->slot] = pi;
 	count++;
 
-	get_plugin(pi->basename);
+	init_event_head(&pi->pid_notifier);
 
 	storage_register_task(pi);
 	sched_register_task(pi);
@@ -75,8 +92,6 @@ void unregister_plugin_instance(struct plugin_instance *pi)
 
 	table[pi->slot] = NULL;
 	count--;
-
-	put_plugin(pi->basename);
 
 	printd("[%s] deactivated!\n", pi->name);
 }

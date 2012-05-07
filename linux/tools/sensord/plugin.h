@@ -8,6 +8,8 @@
 #include <sys/time.h>
 #include <stdint.h>
 
+#include "notifier.h"
+
 struct plugin_instance {
 	char *name;			/* unique instance name */
 	char *basename;			/* basename of plugin */
@@ -19,7 +21,10 @@ struct plugin_instance {
 	uint16_t cells_per_block;	/* cells per block in database */
 	int slot;			/* table slot */
 	int timedb_fd;			/* fd to backend storage */
+	struct event_head pid_notifier;	/* threshold notifier */
 };
+
+#define MAX_PLUGINS		4096
 
 #define TIME_IN_USEC(x)		(x)
 #define TIME_IN_MSEC(x)		((x) * 1000)
@@ -29,7 +34,6 @@ extern void init_plugin(void);
 extern void for_each_plugin(void (*fn)(struct plugin_instance *self));
 extern int register_plugin_instance(struct plugin_instance *pi);
 extern void unregister_plugin_instance(struct plugin_instance *pi);
-
-#define MAX_PLUGINS		4096
+extern struct plugin_instance *get_plugin_by_name(char *name);
 
 #endif /* PLUGIN_H */

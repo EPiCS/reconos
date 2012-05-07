@@ -1,10 +1,10 @@
 LIBS		= -lpthread -ldl -rdynamic
 CFLAGS		+= -rdynamic -Wall -O3 -D_FORTIFY_SOURCE=2 -fPIE -D_REENTRANT
-CC		= gcc
-AR		= ar
+CC		= microblaze-unknown-linux-gnu-gcc
+AR		= microblaze-unknown-linux-gnu-ar
 
 core-objs	= sensord.o
-lib-objs	= loader.o plugin.o xutils.o sched.o storage.o
+lib-objs	= loader.o plugin.o xutils.o sched.o storage.o notifier.o
 
 target		= sensord
 

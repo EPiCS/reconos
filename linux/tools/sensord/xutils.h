@@ -17,6 +17,11 @@ extern void xfree(void *ptr);
 extern size_t strlcpy(char *dest, const char *src, size_t size);
 extern char *xstrdup(const char *str);
 
+static inline void *xmemdup(const void *data, size_t len)
+{
+	return memcpy(xmalloc(len), data, len);
+}
+
 static inline void die(void)
 {
 	exit(EXIT_FAILURE);
@@ -50,5 +55,13 @@ static inline void check_for_root_maybe_die(void)
 	if (geteuid() != 0 || geteuid() != getuid())
 		panic("Uhhuh, not root?!\n");
 }
+
+#ifndef likely
+# define likely(x)		__builtin_expect(!!(x), 1)
+#endif
+
+#ifndef unlikely
+# define unlikely(x)		__builtin_expect(!!(x), 0)
+#endif
 
 #endif /* XUTILS_H */

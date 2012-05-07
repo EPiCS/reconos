@@ -5,7 +5,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <string.h>
 #include <assert.h>
+#include <time.h>
+
 #include "sensord.h"
 
 #define MODULE	"dummy"
@@ -14,7 +17,7 @@ static void dummy_fetch(struct plugin_instance *self)
 {
 	int i;
 	for (i = 0; i < self->cells_per_block; ++i) {
-		self->cells[i] = 1.0;
+		self->cells[i] = ((double) rand() / (double) RAND_MAX);
 	}
 }
 
@@ -32,6 +35,8 @@ static __init int dummy_init(void)
 	struct plugin_instance *pi = &dummy_plugin;
 
 	printp("Hello World!\n");
+
+	srand(time(NULL));
 
 	pi->cells = malloc(pi->cells_per_block * sizeof(double));
 	assert(pi->cells);

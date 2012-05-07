@@ -11,7 +11,7 @@
 #include "loader.h"
 #include "plugin.h"
 #include "sensord.h"
-#include "atomic.h"
+#include "xutils.h"
 
 static struct plugin *table[MAX_PLUGINS];
 static int count = 0;
@@ -84,27 +84,23 @@ int load_plugin(struct plugin *p)
 		goto err;
 	}
 
-	p->refcnt = 1;
-
 	p->slot = get_free_slot();
 	table[p->slot] = p;
 	count++;
 
 	printd("[%s] loaded on slot %d!\n", p->so_path, p->slot);
+
 	return 0;
 err:
 	dlclose(p->sym_fd);
 	printd("[%s] not loaded!\n", p->so_path);
+	xfree(p);
+
 	return -EIO;
 }
 
 void unload_plugin(struct plugin *p)
 {
-	if (p->refcnt != 1) {
-		printd("[%s] still in use!\n", p->so_path);
-		return;
-	}
-
 	table[p->slot] = NULL;
 	count--;
 
@@ -112,30 +108,18 @@ void unload_plugin(struct plugin *p)
 	dlclose(p->sym_fd);
 
 	printd("[%s] unloaded!\n", p->so_path);
+
+	xfree(p->so_path);
+	xfree(p->basename);
+	xfree(p);
 }
 
-void get_plugin(char *basename)
+void unload_all_plugins(void)
 {
 	int i;
 	for (i = 0; i < MAX_PLUGINS; ++i) {
 		if (!table[i])
 			continue;
-		if (!strncmp(table[i]->basename, basename, strlen(basename))) {
-			atomic_preincrement_uint(table[i]->refcnt);
-			break;
-		}
-	}
-}
-
-void put_plugin(char *basename)
-{
-	int i;
-	for (i = 0; i < MAX_PLUGINS; ++i) {
-		if (!table[i])
-			continue;
-		if (!strncmp(table[i]->basename, basename, strlen(basename))) {
-			atomic_predecrement_uint(table[i]->refcnt);
-			break;
-		}
+		unload_plugin(table[i]);
 	}
 }

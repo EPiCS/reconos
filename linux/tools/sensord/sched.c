@@ -11,6 +11,7 @@
 #include "locking.h"
 #include "xutils.h"
 #include "sched.h"
+#include "notifier.h"
 #include "storage.h"
 
 struct task {
@@ -129,6 +130,10 @@ static void sched_timer_interrupt(int signal)
 			t->plugin->fetch(t->plugin);
 			storage_update_task(t->plugin, t->plugin->cells,
 					    t->plugin->cells_per_block);
+			notifiy_procs_event(&t->plugin->pid_notifier.head,
+					    t->plugin->cells,
+					    t->plugin->cells_per_block - 1,
+					    t->plugin->name);
 
 			list_head = t->next;
 			t->next = NULL;
@@ -196,16 +201,22 @@ static void __sched_delta_queue_insert_task(struct task *t, int in_irq)
 	t->next = NULL;
 }
 
+static void __sched_delta_queue_remove_all_tasks(void)
+{
+	struct task *t;
+
+	while ((t = list_head) != NULL) {
+		list_head = list_head->next;
+		t->next = NULL;
+		xfree(t);
+	}
+}
+
 static void sched_delta_queue_insert_task(struct task *t, int in_irq)
 {
 	mutexlock_lock(&lock);
 	__sched_delta_queue_insert_task(t, in_irq);
 	mutexlock_unlock(&lock);
-}
-
-static void sched_delta_queue_remove_task(struct task *t)
-{
-	/* stub */
 }
 
 void sched_register_task(struct plugin_instance *p)
@@ -221,7 +232,13 @@ void sched_register_task(struct plugin_instance *p)
 
 void sched_unregister_task(struct plugin_instance *p)
 {
-	/* stub */
+}
+
+void sched_remove_all_tasks(void)
+{
+	mutexlock_lock(&lock);
+	__sched_delta_queue_remove_all_tasks();
+	mutexlock_unlock(&lock);
 }
 
 static void sched_register_signal_f(int signal, void (*handler)(int), int flags)

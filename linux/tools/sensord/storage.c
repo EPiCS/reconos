@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/mman.h>
 #include <fcntl.h>
 #include <errno.h>
 #include <unistd.h>
@@ -117,7 +118,60 @@ void storage_register_task(struct plugin_instance *p)
 
 void storage_unregister_task(struct plugin_instance *p)
 {
+	fsync(p->timedb_fd);
 	close(p->timedb_fd);
+}
+
+static uint64_t prev_block(struct timedb_hdr *th, uint8_t *binary, size_t max,
+			   uint64_t curr)
+{
+	uint64_t before;
+
+	if (curr == sizeof(*th)) {
+		before = max - sizeof(uint64_t) * th->cells_per_block;
+	} else {
+		before = curr - sizeof(uint64_t) * th->cells_per_block;
+	}
+
+	return before;
+}
+
+void storage_get_block(struct plugin_instance *p, int64_t off,
+		       float64_t *cells, size_t len)
+{
+	int i, j;
+	ssize_t ret;
+	struct stat sb;
+	struct timedb_hdr *th;
+	uint8_t *binary;
+	uint64_t last;
+
+	ret = fstat(p->timedb_fd, &sb);
+	if (ret < 0) {
+		printd("Cannot fstat the database!\n");
+		return;
+	}
+
+	binary = mmap(0, sb.st_size, PROT_READ, MAP_SHARED, p->timedb_fd, 0);
+	if (binary == MAP_FAILED) {
+		printd("Error mmaping db: %s\n", strerror(errno));
+		return;
+	}
+
+	th = (struct timedb_hdr *) binary;
+
+	last = th->offset_next;
+	for (i = 0; i < th->block_entries; ++i) {
+		//FIXME: do it more efficient
+		last = prev_block(th, binary, sb.st_size, last);
+		if (i == off) {
+			for (j = 0; j < len; ++j)
+				cells[j] = block_to_data_off(binary +last, j);
+			break;
+		}
+	}
+
+	munmap(binary, sb.st_size);
 }
 
 void storage_update_task(struct plugin_instance *p, double *cells, size_t len)
