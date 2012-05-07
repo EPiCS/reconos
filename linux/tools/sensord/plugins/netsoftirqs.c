@@ -1,6 +1,5 @@
 /*
  * Copyright 2012 Daniel Borkmann <dborkma@tik.ee.ethz.ch>
- * Subject to the GNU GPL, version 2.0.
  */
 
 #include <stdio.h>
