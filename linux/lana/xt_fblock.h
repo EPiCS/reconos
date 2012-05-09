@@ -15,9 +15,14 @@
 #include <linux/skbuff.h>
 #include <linux/notifier.h>
 #include <linux/radix-tree.h>
+#include <linux/rcupdate.h>
 #include <linux/types.h>
 
 #include "xt_vlink.h"
+
+#define FBLOCK_FLAGS_NONE	0
+#define FBLOCK_FLAGS_TRANS_IB	1	/* Inbound transistion ('loop'
+					   incoming), forward outgoing */
 
 typedef /* volatile */ __u32   idp32_t;
 typedef idp32_t idp_t;
@@ -111,6 +116,7 @@ struct fblock {
 	struct rcu_head rcu;
 	atomic_t refcnt;
 	idp_t idp;
+	volatile int flags;
 	spinlock_t lock; /* Used in notifiers */
 } ____cacheline_aligned;
 
@@ -214,6 +220,21 @@ static inline void init_fblock_subscriber(struct fblock *fb,
 	nb->priority = 0;
 	nb->notifier_call = fb->event_rx;
 	nb->next = NULL;
+}
+
+static inline void set_fblock_transition_inbound(struct fblock *fb)
+{
+	rcu_dereference_raw(fb)->flags |= FBLOCK_FLAGS_TRANS_IB;
+}
+
+static inline void unset_fblock_transition_inbound(struct fblock *fb)
+{
+	rcu_dereference_raw(fb)->flags &= ~FBLOCK_FLAGS_TRANS_IB;
+}
+
+static inline int fblock_transition_inbound_isset(struct fblock *fb)
+{
+	return rcu_dereference_raw(fb)->flags & FBLOCK_FLAGS_TRANS_IB;
 }
 
 static inline int

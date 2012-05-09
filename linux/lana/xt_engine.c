@@ -120,6 +120,10 @@ pkt:
 			ret = PPE_ERROR;
 			break;
 		}
+		if (fblock_transition_inbound_isset(fb)) {
+			engine_backlog_tail(skb, dir);
+			goto out;
+		}
 		ret = fb->netfb_rx(fb, skb, &dir);
 		put_fblock(fb);
 		engine_inc_fblock_stats();
