@@ -104,15 +104,18 @@ int process_packet(struct sk_buff *skb, enum path_type dir)
 	struct fblock *fb;
 
 	BUG_ON(!rcu_read_lock_held());
+
 	if (engine_this_cpu_is_active()) {
 		engine_backlog_tail(skb, dir);
 		return 0;
 	}
 pkt:
 	ret = PPE_ERROR;
+
 	engine_this_cpu_set_active();
 	engine_inc_pkts_stats();
 	engine_add_bytes_stats(skb->len);
+
 	while ((cont = read_next_idp_from_skb(skb))) {
 		fb = __search_fblock(cont);
 		if (unlikely(!fb)) {
@@ -120,18 +123,31 @@ pkt:
 			ret = PPE_ERROR;
 			break;
 		}
+
 		if (fblock_transition_inbound_isset(fb)) {
 			engine_backlog_tail(skb, dir);
+			put_fblock(fb);
 			goto out;
 		}
+
+		if (fblock_offload_isset(fb)) {
+			enqueue_for_hw_fblock(skb, dir);
+			put_fblock(fb);
+			goto out_next;
+		}
+
 		ret = fb->netfb_rx(fb, skb, &dir);
+
 		put_fblock(fb);
+
 		engine_inc_fblock_stats();
+
 		if (ret == PPE_DROPPED)
 			break;
 		if (ret == PPE_HALT_NO_REDUCE)
 			goto out;
 	}
+out_next:
 	if ((skb = engine_backlog_test_reduce(&dir)))
 		goto pkt;
 out:
@@ -153,20 +169,25 @@ static enum hrtimer_restart engine_timer_handler(struct hrtimer *self)
 		goto out;
 	if (disc->cpu != smp_processor_id())
 		engine_inc_timer_cpu_miss_stats();
+
 	rcu_read_lock();
+
 	skb = engine_backlog_queue_test_reduce(&dir, &disc->ppe_backlog_queue);
 	if (unlikely(!skb)) {
 		rcu_read_unlock();
 		goto out;
 	}
 	process_packet(skb, dir);
+
 	rcu_read_unlock();
 out:
 	engine_inc_timer_stats();
+
 	if (!skb_queue_empty(&disc->ppe_backlog_queue))
 		tasklet_hrtimer_start(thr, ktime_set(0, 1), HRTIMER_MODE_REL);
 	else
 		tasklet_hrtimer_start(thr, ktime_set(0, 100000000), HRTIMER_MODE_REL);
+
 	return HRTIMER_NORESTART;
 }
 
@@ -179,6 +200,7 @@ static int engine_procfs(char *page, char **start, off_t offset,
 	len += sprintf(page + len, "     \tpkts\tbytes\tfblocks\ttimer-call"
 		       "\ttimer-cpu-miss\tbacklog-q\n");
 	get_online_cpus();
+
 	for_each_online_cpu(cpu) {
 		struct engine_iostats *iostats_cpu;
 		struct engine_disc *emdisc_cpu;
@@ -190,8 +212,10 @@ static int engine_procfs(char *page, char **start, off_t offset,
 			       iostats_cpu->timer_cpu_miss,
 			       skb_queue_len(&emdisc_cpu->ppe_backlog_queue));
 	}
+
 	put_online_cpus();
         /* FIXME: fits in page? */
+
         *eof = 1;
         return len;
 }
@@ -199,12 +223,16 @@ static int engine_procfs(char *page, char **start, off_t offset,
 int init_engine(void)
 {
 	unsigned int cpu;
+
 	iostats = alloc_percpu(struct engine_iostats);
 	if (!iostats)
 		return -ENOMEM;
+
 	get_online_cpus();
+
 	for_each_online_cpu(cpu) {
 		struct engine_iostats *iostats_cpu;
+
 		iostats_cpu = per_cpu_ptr(iostats, cpu);
 		iostats_cpu->bytes = 0;
 		iostats_cpu->pkts = 0;
@@ -212,16 +240,22 @@ int init_engine(void)
 		iostats_cpu->timer = 0;
 		iostats_cpu->timer_cpu_miss = 0;
 	}
+
 	put_online_cpus();
+
 	emdiscs = alloc_percpu(struct engine_disc);
 	if (!emdiscs)
 		goto err;
+
 	get_online_cpus();
+
 	for_each_online_cpu(cpu) {
 		struct engine_disc *emdisc_cpu;
+
 		emdisc_cpu = per_cpu_ptr(emdiscs, cpu);
 		emdisc_cpu->active = 0;
 		emdisc_cpu->cpu = cpu;
+
 		skb_queue_head_init(&emdisc_cpu->ppe_backlog_queue);
 		tasklet_hrtimer_init(&emdisc_cpu->htimer,
 				     engine_timer_handler,
@@ -230,7 +264,9 @@ int init_engine(void)
 				      ktime_set(0, 100000000),
 				      HRTIMER_MODE_REL);
 	}
+
 	put_online_cpus();
+
 	engine_proc = create_proc_read_entry("ppe", 0400, lana_proc_dir,
 					     engine_procfs, NULL);
 	if (!engine_proc)
@@ -251,15 +287,20 @@ void cleanup_engine(void)
 		free_percpu(iostats);
 	if (emdiscs) {
 		get_online_cpus();
+
 		for_each_online_cpu(cpu) {
 			struct engine_disc *emdisc_cpu;
+
 			emdisc_cpu = per_cpu_ptr(emdiscs, cpu);
 			tasklet_hrtimer_cancel(&emdisc_cpu->htimer);
 			skb_queue_purge(&emdisc_cpu->ppe_backlog_queue);
 		}
+
 		put_online_cpus();
+
 		free_percpu(emdiscs);
 	}
+
 	remove_proc_entry("ppe", lana_proc_dir);
 }
 EXPORT_SYMBOL_GPL(cleanup_engine);

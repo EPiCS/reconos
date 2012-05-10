@@ -23,6 +23,7 @@
 #define FBLOCK_FLAGS_NONE	0
 #define FBLOCK_FLAGS_TRANS_IB	1	/* Inbound transistion ('loop'
 					   incoming), forward outgoing */
+#define FBLOCK_FLAGS_TO_HW	2	/* Send down to HW fblock */
 
 typedef /* volatile */ __u32   idp32_t;
 typedef idp32_t idp_t;
@@ -116,7 +117,7 @@ struct fblock {
 	struct rcu_head rcu;
 	atomic_t refcnt;
 	idp_t idp;
-	volatile int flags;
+	volatile unsigned int flags;
 	spinlock_t lock; /* Used in notifiers */
 } ____cacheline_aligned;
 
@@ -222,19 +223,49 @@ static inline void init_fblock_subscriber(struct fblock *fb,
 	nb->next = NULL;
 }
 
+static inline void set_fblock_flag(struct fblock *fb, unsigned int flag)
+{
+	rcu_dereference_raw(fb)->flags |= flag;
+}
+
+static inline void unset_fblock_flag(struct fblock *fb, unsigned int flag)
+{
+	rcu_dereference_raw(fb)->flags &= ~flag;
+}
+
+static inline int test_fblock_flag(struct fblock *fb, unsigned int flag)
+{
+	return rcu_dereference_raw(fb)->flags & flag;
+}
+
 static inline void set_fblock_transition_inbound(struct fblock *fb)
 {
-	rcu_dereference_raw(fb)->flags |= FBLOCK_FLAGS_TRANS_IB;
+	set_fblock_flag(fb, FBLOCK_FLAGS_TRANS_IB);
 }
 
 static inline void unset_fblock_transition_inbound(struct fblock *fb)
 {
-	rcu_dereference_raw(fb)->flags &= ~FBLOCK_FLAGS_TRANS_IB;
+	unset_fblock_flag(fb, FBLOCK_FLAGS_TRANS_IB);
 }
 
 static inline int fblock_transition_inbound_isset(struct fblock *fb)
 {
-	return rcu_dereference_raw(fb)->flags & FBLOCK_FLAGS_TRANS_IB;
+	return test_fblock_flag(fb, FBLOCK_FLAGS_TRANS_IB);
+}
+
+static inline void set_fblock_offload(struct fblock *fb)
+{
+	set_fblock_flag(fb, FBLOCK_FLAGS_TO_HW);
+}
+
+static inline void unset_fblock_offload(struct fblock *fb)
+{
+	unset_fblock_flag(fb, FBLOCK_FLAGS_TO_HW);
+}
+
+static inline int fblock_offload_isset(struct fblock *fb)
+{
+	return test_fblock_flag(fb, FBLOCK_FLAGS_TO_HW);
 }
 
 static inline int
