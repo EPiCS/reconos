@@ -1,0 +1,5 @@
+Debugging tools for LANA regarding networking are maintained by ETH Zurich in a
+separate repository:
+
+	- Web: http://netsniff-ng.org/
+	- Github: https://github.com/gnumaniacs/netsniff-ng
