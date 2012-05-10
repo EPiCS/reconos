@@ -46,10 +46,15 @@ static int __init init_lana_core_module(void)
 	ret = init_ei_conf();
 	if (ret)
 		goto err6;
+	ret = init_hwif();
+	if (ret)
+		goto err7;
 
 	printk(KERN_INFO "[lana] core up and running!\n");
 	return 0;
 
+err7:
+	cleanup_ei_conf();
 err6:
 	cleanup_engine();
 err5:
@@ -77,6 +82,8 @@ static void __exit cleanup_lana_core_module(void)
 	cleanup_vlink_system();
 	cleanup_engine();
 	cleanup_ei_conf();
+	cleanup_hwif();
+
 	remove_proc_entry("fblock", lana_proc_dir);
 	remove_proc_entry("lana", init_net.proc_net);
 
@@ -89,4 +96,3 @@ module_exit(cleanup_lana_core_module);
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Daniel Borkmann <dborkma@tik.ee.ethz.ch>");
 MODULE_DESCRIPTION("LANA core driver");
-

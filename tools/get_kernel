@@ -1,8 +1,12 @@
 #!/bin/sh
 
-repo_name=linux-2.6-xlnx
-commit=f5f537684e5914782e16b00de168c7cebb4a6fcb
-rem_location=git://git.xilinx.com/$repo_name.git
+#repo_name=linux-2.6-xlnx
+#commit=f5f537684e5914782e16b00de168c7cebb4a6fcb
+#rem_location=git://git.xilinx.com/$repo_name.git
+
+repo_name=linux
+commit=HEAD
+rem_location=git://git.kernel.org/pub/scm/linux/kernel/git/torvalds/$repo_name.git
 own_location=~
 cur_location=`pwd`
 

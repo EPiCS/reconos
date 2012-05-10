@@ -1,10 +1,16 @@
-ARCH		=	microblaze
-CROSS_COMPILE	=	microblaze-unknown-linux-gnu-
-KDIR		?=	~/linux-2.6-xlnx
+# For cross compilation
+#ARCH		=	microblaze
+#CROSS_COMPILE	=	microblaze-unknown-linux-gnu-
+#KDIR		?=	~/linux-2.6-xlnx
+#
+#export ARCH CROSS_COMPILE
 
-export ARCH CROSS_COMPILE
+# For non-cross compilation
+MDIR     := /lib/modules/$(shell uname -r)
+KDIR     := $(MDIR)/build
 
-lana-y   := core.o xt_vlink.o xt_engine.o xt_fblock.o xt_critbit.o xt_conf.o
+lana-y   := core.o xt_vlink.o xt_engine.o xt_fblock.o xt_critbit.o xt_conf.o xt_hwif.o
+
 obj-m    += lana.o
 obj-m    += fb_dummy.o
 obj-m    += fb_eth.o
@@ -22,4 +28,3 @@ modules:
 
 clean:
 	$(MAKE) -C $(KDIR) M=$(PWD) clean
-
