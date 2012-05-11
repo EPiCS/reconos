@@ -17,6 +17,8 @@
 #include <linux/radix-tree.h>
 #include <linux/rcupdate.h>
 #include <linux/types.h>
+#include <linux/percpu.h>
+#include <linux/u64_stats_sync.h>
 
 #include "xt_vlink.h"
 
@@ -101,6 +103,14 @@ struct fblock_subscrib {
 	struct atomic_notifier_head subscribers;
 };
 
+struct fblock_stats {
+	u64 packets;
+	u64 bytes;
+	struct u64_stats_sync syncp;
+	u32 dropped;
+	u32 time;
+};
+
 struct fblock {
 	char name[FBNAMSIZ];
 	void *private_data;
@@ -118,7 +128,8 @@ struct fblock {
 	atomic_t refcnt;
 	idp_t idp;
 	volatile unsigned int flags;
-	spinlock_t lock; /* Used in notifiers */
+	spinlock_t lock;
+	struct fblock_stats __percpu *stats;
 } ____cacheline_aligned;
 
 extern void free_fblock_rcu(struct rcu_head *rp);

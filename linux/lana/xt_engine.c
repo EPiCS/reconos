@@ -117,6 +117,9 @@ pkt:
 	engine_add_bytes_stats(skb->len);
 
 	while ((cont = read_next_idp_from_skb(skb))) {
+		struct fblock_stats *stats;
+		u64 before, after;
+
 		fb = __search_fblock(cont);
 		if (unlikely(!fb)) {
 			kfree_skb(skb);
@@ -136,14 +139,28 @@ pkt:
 			goto out_next;
 		}
 
-		ret = fb->netfb_rx(fb, skb, &dir);
+		stats = this_cpu_ptr(fb->stats);
 
-		put_fblock(fb);
+		before = get_jiffies_64();
+		ret = fb->netfb_rx(fb, skb, &dir);
+		after = get_jiffies_64();
+
+		u64_stats_update_begin(&stats->syncp);
+		stats->packets++;
+		stats->bytes += skb->len;
+		u64_stats_update_end(&stats->syncp);
+		stats->time = after - before;;
 
 		engine_inc_fblock_stats();
 
-		if (ret == PPE_DROPPED)
+		if (ret == PPE_DROPPED) {
+			stats->dropped++;
+			put_fblock(fb);
 			break;
+		}
+
+		put_fblock(fb);
+
 		if (ret == PPE_HALT_NO_REDUCE)
 			goto out;
 	}

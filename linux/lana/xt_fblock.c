@@ -552,6 +552,7 @@ struct fblock *alloc_fblock(gfp_t flags)
 		__module_get(THIS_MODULE);
 	}
 #endif
+	memset(fb, 0, sizeof(*fb));
 	return fb;
 }
 EXPORT_SYMBOL_GPL(alloc_fblock);
@@ -567,6 +568,11 @@ int init_fblock(struct fblock *fb, char *name, void *priv)
 	ATOMIC_INIT_NOTIFIER_HEAD(&fb->others->subscribers);
 	spin_unlock(&fb->lock);
 	atomic_set(&fb->refcnt, 1);
+	fb->stats= alloc_percpu(struct fblock_stats);
+	if (!fb->stats) {
+		kfree(fb->others);
+		return -ENOMEM;
+	}
 	return 0;
 }
 EXPORT_SYMBOL_GPL(init_fblock);
@@ -588,6 +594,7 @@ void cleanup_fblock(struct fblock *fb)
 	if (fb->factory)
 		fb->factory->dtor(fb);
 	kfree(rcu_dereference_raw(fb->others));
+	free_percpu(fb->stats);
 }
 EXPORT_SYMBOL_GPL(cleanup_fblock);
 
@@ -605,6 +612,7 @@ static int procfs_fblocks(char *page, char **start, off_t offset,
 	struct fblock *fb;
 	struct fblock_notifier *fn;
 	long long max = atomic64_read(&idp_counter);
+	u64 tpkts = 0, tbytes = 0, tdropped = 0, jiff = 0;
 
 	rcu_read_lock();
 	for (i = 0; i <= max; ++i) {
@@ -612,6 +620,7 @@ static int procfs_fblocks(char *page, char **start, off_t offset,
 		if (!fb)
 			continue;
 		has_sub = 0;
+		tpkts = tbytes = tdropped = jiff = 0;
 		len += sprintf(page + len, "%s %s %p %u %d [",
 			       fb->name, fb->factory ? fb->factory->type : "vlink",
 			       fb, fb->idp,
@@ -622,7 +631,30 @@ static int procfs_fblocks(char *page, char **start, off_t offset,
 			rcu_assign_pointer(fn, fn->next);
 			has_sub = 1;
 		}
-		len += sprintf(page + len - has_sub, "]\n");
+		len -= has_sub; /* remove last space */
+		for_each_possible_cpu(i) {
+			u64 bytes, packets;
+			u32 dropped;
+			unsigned int start;
+			const struct fblock_stats *stats;
+
+			stats = per_cpu_ptr(fb->stats, i);
+			do {
+				start = u64_stats_fetch_begin(&stats->syncp);
+				bytes = stats->bytes;
+				packets = stats->packets;
+			} while (u64_stats_fetch_retry(&stats->syncp, start));
+
+			dropped = stats->dropped;
+			if (stats->time > 0)
+				jiff = stats->time;
+
+			tpkts += packets;
+			tbytes += bytes;
+			tdropped += dropped;
+		}
+		len += sprintf(page + len, "] %llu %llu %llu %llujf\n",
+			       tpkts, tbytes, tdropped, jiff);
 	}
 	rcu_read_unlock();
 
