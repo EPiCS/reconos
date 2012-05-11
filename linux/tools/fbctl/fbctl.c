@@ -102,23 +102,14 @@ static void usage(void)
 	printf("  add <name> <type>            - add fblock instance\n");
 	printf("  set <name> <key=val>         - set option for fblock\n");
 	printf("  rm <name>                    - remove fblock from stack if unbound\n");
+	printf("  flag <name> <hw|trans>       - set fblock flags\n");
+	printf("  unflag <name> <hw|trans>     - unset fblock flags\n");
 	printf("  bind <name1> <name2>         - bind two fblocks\n");
 	printf("  unbind <name1> <name2>       - unbind two fblocks\n");
 	printf("  replace <name1> <name2>      - exchange fb1 with fb2 (*)\n");
 	printf("  replace_drop <name1> <name2> - exchange fb1 with fb2 (*)\n");
 	printf("  subscribe <name1> <name2>    - subscribe fb2 to fb1 (+)\n");
 	printf("  unsubscribe <name1> <name2>  - unsubscribe fb2 from fb1 (+)\n");
-	printf("\n");
-	printf("Note (*):\n");
-	printf("  (*) 'replace' drops functional block <name1> and replaces\n");
-	printf("      it with functional block <name2> where <name1>\n");
-	printf("      now points to the new functional block and <name2>\n");
-	printf("      will be dropped in the namespace.\n");
-	printf("      If both are of the same type, private data will be\n");
-	printf("      transferred to <name2>. If this is unwanted, use\n");
-	printf("      'replace_drop' instead.\n");
-	printf("  (+) 'subscribe' is used to receive events from other\n");
-	printf("      functional blocks.\n");
 	printf("\n");
 	printf("Please report bugs to <dborkma@tik.ee.ethz.ch>\n");
 	printf("Copyright (C) 2011 Daniel Borkmann\n");
@@ -292,6 +283,50 @@ static void do_rm(int argc, char **argv)
 	send_netlink(&lmsg);
 }
 
+static void do_flag(int argc, char **argv)
+{
+	struct lananlmsg lmsg;
+	struct lananlmsg_flags *msg;
+
+	if (argc != 2)
+		usage();
+
+	memset(&lmsg, 0, sizeof(lmsg));
+
+	if (!strncmp("trans", argv[1], strlen("trans")))
+		lmsg.cmd = NETLINK_USERCTL_CMD_SET_TRANS;
+	else if (!strncmp("hw", argv[1], strlen("hw")))
+		lmsg.cmd = NETLINK_USERCTL_CMD_SET_HW;
+	else
+		usage();
+
+	msg = (struct lananlmsg_flags *) lmsg.buff;
+	strlcpy(msg->name, argv[0], sizeof(msg->name));
+	send_netlink(&lmsg);
+}
+
+static void do_unflag(int argc, char **argv)
+{
+	struct lananlmsg lmsg;
+	struct lananlmsg_flags *msg;
+
+	if (argc != 2)
+		usage();
+
+	memset(&lmsg, 0, sizeof(lmsg));
+
+	if (!strncmp("trans", argv[1], strlen("trans")))
+		lmsg.cmd = NETLINK_USERCTL_CMD_UNSET_TRANS;
+	else if (!strncmp("hw", argv[1], strlen("hw")))
+		lmsg.cmd = NETLINK_USERCTL_CMD_UNSET_HW;
+	else
+		usage();
+
+	msg = (struct lananlmsg_flags *) lmsg.buff;
+	strlcpy(msg->name, argv[0], sizeof(msg->name));
+	send_netlink(&lmsg);
+}
+
 static void do_bind(int argc, char **argv)
 {
 	struct lananlmsg lmsg;
@@ -392,6 +427,10 @@ int main(int argc, char **argv)
 		do_set(--argc, ++argv);
 	else if (!strncmp("rm", argv[0], strlen("rm")))
 		do_rm(--argc, ++argv);
+	else if (!strncmp("flag", argv[0], strlen("flag")))
+		do_flag(--argc, ++argv);
+	else if (!strncmp("unflag", argv[0], strlen("unflag")))
+		do_unflag(--argc, ++argv);
 	else if (!strncmp("bind", argv[0], strlen("bind")))
 		do_bind(--argc, ++argv);
 	else if (!strncmp("unbind", argv[0], strlen("unbind")))

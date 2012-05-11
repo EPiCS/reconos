@@ -653,7 +653,9 @@ static int procfs_fblocks(char *page, char **start, off_t offset,
 			tbytes += bytes;
 			tdropped += dropped;
 		}
-		len += sprintf(page + len, "] %llu %llu %llu %llujf\n",
+		len += sprintf(page + len, "] %s %s %llu %llu %llu %llujf\n",
+			       fblock_transition_inbound_isset(fb) ? "trans" : "norm",
+			       fblock_offload_isset(fb) ? "hw" : "sw",
 			       tpkts, tbytes, tdropped, jiff);
 	}
 	rcu_read_unlock();
