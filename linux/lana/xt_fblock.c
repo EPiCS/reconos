@@ -767,6 +767,30 @@ static int fblock_userctl_set(struct lananlmsg *lmsg)
 	return ret;
 }
 
+static int fblock_userctl_set_flags(struct lananlmsg *lmsg, unsigned int flags)
+{
+	struct fblock *fb;
+	struct lananlmsg_flags *msg = (struct lananlmsg_flags *) lmsg->buff;
+	fb = search_fblock_n(msg->name);
+	if (!fb)
+		return -EINVAL;
+	set_fblock_flag(fb, flags);
+	put_fblock(fb);
+	return 0;
+}
+
+static int fblock_userctl_unset_flags(struct lananlmsg *lmsg, unsigned int flags)
+{
+	struct fblock *fb;
+	struct lananlmsg_flags *msg = (struct lananlmsg_flags *) lmsg->buff;
+	fb = search_fblock_n(msg->name);
+	if (!fb)
+		return -EINVAL;
+	unset_fblock_flag(fb, flags);
+	put_fblock(fb);
+	return 0;
+}
+
 static int fblock_userctl_replace(struct lananlmsg *lmsg)
 {
 	int ret;
@@ -939,6 +963,18 @@ static int __fblock_userctl_rcv(struct sk_buff *skb, struct nlmsghdr *nlh)
 		break;
 	case NETLINK_USERCTL_CMD_UNBIND:
 		ret = fblock_userctl_unbind(lmsg);
+		break;
+	case NETLINK_USERCTL_CMD_SET_TRANS:
+		ret = fblock_userctl_set_flags(lmsg, FBLOCK_FLAGS_TRANS_IB);
+		break;
+	case NETLINK_USERCTL_CMD_UNSET_TRANS:
+		ret = fblock_userctl_unset_flags(lmsg, FBLOCK_FLAGS_TRANS_IB);
+		break;
+	case NETLINK_USERCTL_CMD_SET_HW:
+		ret = fblock_userctl_set_flags(lmsg, FBLOCK_FLAGS_TO_HW);
+		break;
+	case NETLINK_USERCTL_CMD_UNSET_HW:
+		ret = fblock_userctl_unset_flags(lmsg, FBLOCK_FLAGS_TO_HW);
 		break;
 	default:
 		printk(KERN_INFO "[lana] Unknown command!\n");
