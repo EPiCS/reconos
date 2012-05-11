@@ -607,7 +607,7 @@ EXPORT_SYMBOL_GPL(cleanup_fblock_ctor);
 static int procfs_fblocks(char *page, char **start, off_t offset,
 			  int count, int *eof, void *data)
 {
-	int i, has_sub;
+	int i, j, has_sub;
 	off_t len = 0;
 	struct fblock *fb;
 	struct fblock_notifier *fn;
@@ -632,7 +632,7 @@ static int procfs_fblocks(char *page, char **start, off_t offset,
 			has_sub = 1;
 		}
 		len -= has_sub; /* remove last space */
-		for_each_possible_cpu(i) {
+		for_each_possible_cpu(j) {
 			u64 bytes, packets;
 			u32 dropped;
 			unsigned int start;
@@ -945,6 +945,9 @@ static int __fblock_userctl_rcv(struct sk_buff *skb, struct nlmsghdr *nlh)
 		ret = -ENOENT;
 		break;
 	}
+
+	if (ret < 0)
+		printk(KERN_ERR "[lana] netlink returned with %d!\n", ret);
 	return ret;
 }
 
