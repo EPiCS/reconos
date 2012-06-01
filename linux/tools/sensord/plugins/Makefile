@@ -1,4 +1,4 @@
-lib-objs = dummy.o netsoftirqs.o
+lib-objs = dummy.o netsoftirqs.o wifi_snr.o
 
 all: $(lib-objs)
 	for object in $(lib-objs) ; do \
