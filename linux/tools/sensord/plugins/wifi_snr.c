@@ -21,11 +21,12 @@
 
 #define MODULE	"wireless_snr"
 
-static inline int adjust_dbm_level(int dbm_val)
+int adjust_dbm_level(int in_dbm, int dbm_val)
 {
-	if (dbm_val >= 64)
-		dbm_val -= 0x100;
-	return dbm_val;
+	if (!in_dbm)
+		return dbm_val;
+
+	return dbm_val - 0x100;
 }
 
 static int wireless_sigqual(const char *ifname, struct iw_statistics *stats)
@@ -63,8 +64,11 @@ static void wireless_snr_fetch(struct plugin_instance *self)
 	if (ret != 0)
 		return;
 
-	signal_level = adjust_dbm_level(ws.qual.level);
-	noise_level = adjust_dbm_level(ws.qual.noise);
+	signal_level = adjust_dbm_level(ws.qual.updated & IW_QUAL_DBM,
+					ws.qual.level);
+
+	noise_level = adjust_dbm_level(ws.qual.updated & IW_QUAL_DBM,
+				       ws.qual.noise);
 
 	self->cells[0] = (float64_t) (signal_level - noise_level);
 }
