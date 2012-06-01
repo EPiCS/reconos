@@ -55,7 +55,7 @@ static void wireless_snr_fetch(struct plugin_instance *self)
 {
 	int ret;
 	struct iw_statistics ws;
-	uint16_t signal_level, noise_level;
+	int signal_level, noise_level;
 
 	memset(&ws, 0, sizeof(ws));
 
@@ -66,7 +66,7 @@ static void wireless_snr_fetch(struct plugin_instance *self)
 	signal_level = adjust_dbm_level(ws.qual.level);
 	noise_level = adjust_dbm_level(ws.qual.noise);
 
-	self->cells[0] = (float64_t) (signal_level / noise_level);
+	self->cells[0] = (float64_t) (signal_level - noise_level);
 }
 
 struct plugin_instance wireless_snr_plugin = {
