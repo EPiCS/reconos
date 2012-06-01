@@ -19,9 +19,11 @@
 #include "xutils.h"
 #include "notification.h"
 
-#define PLUGIN_TO_TEST	"dummy-1"
+#define PLUGIN_TO_TEST	"wireless_snr"
 
 static void *buffshared = NULL;
+
+static sig_atomic_t need_reliability = 0;
 
 static void upper_threshold_triggered(int num)
 {
@@ -86,51 +88,6 @@ static void register_threshold(enum threshold_type type, double *cells_thres,
 	close(sock);
 }
 
-static void ask_for_block(int64_t offset, double *cells, size_t num)
-{
-	int sock, i;
-	char buff[4096];
-	double *ptr;
-	struct notfct_hdr *hdr;
-	ssize_t ret;
-	struct sockaddr_un saddr;
-	socklen_t slen;
-
-	sock = socket(AF_UNIX, SOCK_STREAM, 0);
-	if (sock < 0)
-		panic("Cannot create socket!\n");
-
-	memset(&saddr, 0, sizeof(saddr));
-	saddr.sun_family = AF_UNIX;
-	strncpy(saddr.sun_path, SOCK_ADDR, sizeof(saddr.sun_path));
-
-	slen = sizeof(saddr);
-	ret = connect(sock, (struct sockaddr *) &saddr, slen);
-	if (ret < 0)
-		panic("Cannot connect to server!\n");
-
-	memset(buff, 0, sizeof(buff));
-	hdr = (struct notfct_hdr *) buff;
-	hdr->cmd = CMD_GET_VALUE;
-	hdr->proc = getpid();
-	strncpy(hdr->plugin_inst, PLUGIN_TO_TEST, sizeof(hdr->plugin_inst));
-	memcpy(buff + sizeof(*hdr), &offset, sizeof(offset));
-
-	ret = write(sock, buff, sizeof(*hdr) + sizeof(offset));
-	if (ret <= 0)
-		panic("Cannot write to sock!\n");
-
-	memset(buff, 0, sizeof(buff));
-	ret = read(sock, buff, sizeof(buff));
-	if (ret <= 0)
-		panic("Cannot read from sock!\n");
-
-	for (i = 0, ptr = (double *) buff; i < num; ++i)
-		cells[i] = ptr[i];
-
-	close(sock);
-}
-
 int main(void)
 {
 	key_t key;
@@ -173,8 +130,6 @@ int main(void)
 
 	while (1) {
 		sleep(5);
-		ask_for_block(0, cells, 2);
-		printf("Got %lf, %lf\n", cells[0], cells[1]);
 	}
 
 	shmdt(buffshared);
