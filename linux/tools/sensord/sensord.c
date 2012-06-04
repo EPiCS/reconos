@@ -164,8 +164,8 @@ static void af_unix_task_do_set_thres(uint8_t *request, size_t len,
 		return;
 	}
 
-	cells_len = (pi->cells_per_block - 1) * sizeof(uint64_t);
-	cells_alen = (pi->cells_per_block - 1) * sizeof(uint8_t);
+	cells_len = pi->cells_per_block * sizeof(uint64_t);
+	cells_alen = pi->cells_per_block * sizeof(uint8_t);
 
 	block = xmalloc(sizeof(*block));
 	memset(block, 0, sizeof(*block));

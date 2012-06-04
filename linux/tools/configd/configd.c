@@ -92,21 +92,21 @@ int main(void)
 {
 	key_t key;
 	int shmid;
-	double cells_thres;
-	uint8_t cells_active;
+	double cells_thres[1];
+	uint8_t cells_active[1];
 	char buff[256];
 	struct timeval timeout;
 
 	signal(SIG_THRES_UPPER, upper_threshold_triggered);
 	signal(SIG_THRES_LOWER, lower_threshold_triggered);
 
-	cells_thres = 0.65;
-	cells_active = 1;
-	register_threshold(upper_threshold, &cells_thres, &cells_active, 1);
+	cells_thres[0] = 0.5;
+	cells_active[0] = 1;
+	register_threshold(upper_threshold, cells_thres, cells_active, 1);
 
-	cells_thres = 0.60;
-	cells_active = 1;
-	register_threshold(lower_threshold, &cells_thres, &cells_active, 1);
+	cells_thres[0] = 0.40;
+	cells_active[0] = 1;
+	register_threshold(lower_threshold, cells_thres, cells_active, 1);
 
 	memset(buff, 0, sizeof(buff));
 	snprintf(buff, sizeof(buff), "/tmp/%u", (unsigned int) getpid());

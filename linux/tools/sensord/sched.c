@@ -132,7 +132,7 @@ static void sched_timer_interrupt(int signal)
 					    t->plugin->cells_per_block);
 			notifiy_procs_event(&t->plugin->pid_notifier.head,
 					    t->plugin->cells,
-					    t->plugin->cells_per_block - 1,
+					    t->plugin->cells_per_block,
 					    t->plugin->name);
 
 			list_head = t->next;
