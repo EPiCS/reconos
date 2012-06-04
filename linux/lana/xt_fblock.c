@@ -615,6 +615,7 @@ static int procfs_fblocks_props(char *page, char **start, off_t offset,
 	off_t len = 0;
 	struct fblock_factory *f;
 
+	len += sprintf(page + len, "type\tproperties\n");
 	rcu_read_lock();
 	list_for_each_entry_rcu(f, &fb_props_list, e_list) {
 		has_prop = 0;
@@ -645,6 +646,11 @@ static int procfs_fblocks(char *page, char **start, off_t offset,
 	struct fblock_notifier *fn;
 	long long max = atomic64_read(&idp_counter);
 	u64 tpkts = 0, tbytes = 0, tdropped = 0, jiff = 0;
+
+	len += sprintf(page + len,
+		       "name\ttype\taddress\tidp\trefcnt\tbindings\t"
+		       "transition\tmapping\tpkts\tbytes\tdropped\t"
+		       "duration (jiffies)\tproperties\n");
 
 	rcu_read_lock();
 	for (i = 0; i <= max; ++i) {
@@ -686,7 +692,7 @@ static int procfs_fblocks(char *page, char **start, off_t offset,
 			tbytes += bytes;
 			tdropped += dropped;
 		}
-		len += sprintf(page + len, "] %s %s %llu %llu %llu %llujf props [",
+		len += sprintf(page + len, "] %s %s %llu %llu %llu %llujf [",
 			       fblock_transition_inbound_isset(fb) ? "trans" : "norm",
 			       fblock_offload_isset(fb) ? "hw" : "sw",
 			       tpkts, tbytes, tdropped, jiff);

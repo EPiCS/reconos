@@ -214,7 +214,7 @@ static int engine_procfs(char *page, char **start, off_t offset,
 	unsigned int cpu;
 	off_t len = 0;
 
-	len += sprintf(page + len, "     \tpkts\tbytes\tfblocks\ttimer-call"
+	len += sprintf(page + len, "cpu\tpkts\tbytes\tfblocks\ttimer-call"
 		       "\ttimer-cpu-miss\tbacklog-q\n");
 	get_online_cpus();
 
