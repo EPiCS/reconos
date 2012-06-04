@@ -19,32 +19,32 @@
 #include "xutils.h"
 #include "notification.h"
 
-#define PLUGIN_TO_TEST	"wireless_snr"
+#define PLUGIN_TO_TEST	"linkqual"
 
 static void *buffshared = NULL;
 
 static sig_atomic_t need_reliability = 0;
 
+static void reconfig_reliability(void)
+{
+	if (need_reliability)
+		printf("Need reliability!\n");
+	else
+		printf("Don't need reliability!\n");
+}
+
 static void upper_threshold_triggered(int num)
 {
-	struct shmnot_hdr *s = buffshared;
-
 	if (num != SIGUSR1)
 		return;
-
-	printf("ALERT: upper threshold triggered on %s (%lf, %d)!\n",
-	       s->plugin_inst, s->val, s->cell_num);
+	need_reliability = 0;
 }
 
 static void lower_threshold_triggered(int num)
 {
-	struct shmnot_hdr *s = buffshared;
-
 	if (num != SIGUSR2)
 		return;
-
-	printf("ALERT: lower threshold triggered on %s (%lf, %d)!\n",
-	       s->plugin_inst, s->val, s->cell_num);
+	need_reliability = 1;
 }
 
 static void register_threshold(enum threshold_type type, double *cells_thres,
@@ -92,24 +92,21 @@ int main(void)
 {
 	key_t key;
 	int shmid;
-	double cells_thres[2], cells[2];
-	uint8_t cells_active[2];
+	double cells_thres;
+	uint8_t cells_active;
 	char buff[256];
+	struct timeval timeout;
 
 	signal(SIG_THRES_UPPER, upper_threshold_triggered);
 	signal(SIG_THRES_LOWER, lower_threshold_triggered);
 
-	cells_thres[0] = 0.95;
-	cells_thres[1] = 0.95;
-	cells_active[0] = 1;
-	cells_active[1] = 1;
-	register_threshold(upper_threshold, cells_thres, cells_active, 2);
+	cells_thres = 0.65;
+	cells_active = 1;
+	register_threshold(upper_threshold, &cells_thres, &cells_active, 1);
 
-	cells_thres[0] = 0.05;
-	cells_thres[1] = 0.05;
-	cells_active[0] = 1;
-	cells_active[1] = 1;
-	register_threshold(lower_threshold, cells_thres, cells_active, 2);
+	cells_thres = 0.60;
+	cells_active = 1;
+	register_threshold(lower_threshold, &cells_thres, &cells_active, 1);
 
 	memset(buff, 0, sizeof(buff));
 	snprintf(buff, sizeof(buff), "/tmp/%u", (unsigned int) getpid());
@@ -129,7 +126,11 @@ int main(void)
 		panic("Cannot attach to segment!");
 
 	while (1) {
-		sleep(5);
+		timeout.tv_sec = 0;
+		timeout.tv_usec = 100000;
+
+		select(0, NULL, NULL, NULL, &timeout);
+		reconfig_reliability();
 	}
 
 	shmdt(buffshared);
