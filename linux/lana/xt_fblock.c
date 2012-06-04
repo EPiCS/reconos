@@ -41,7 +41,7 @@ static struct kmem_cache *fblock_cache = NULL;
 
 extern struct proc_dir_entry *lana_proc_dir;
 
-static struct proc_dir_entry *fblocks_proc;
+static struct proc_dir_entry *fblocks_proc, *fblocks_props_proc;
 
 const char *path_names[] = {
         "ingress",
@@ -50,6 +50,10 @@ const char *path_names[] = {
 EXPORT_SYMBOL(path_names);
 
 static struct sock *fblock_userctl_sock = NULL;
+
+static LIST_HEAD(fb_props_list);
+
+static DEFINE_SPINLOCK(fb_props_list_lock);
 
 static inline idp_t provide_new_fblock_idp(void)
 {
@@ -604,6 +608,34 @@ void cleanup_fblock_ctor(struct fblock *fb)
 }
 EXPORT_SYMBOL_GPL(cleanup_fblock_ctor);
 
+static int procfs_fblocks_props(char *page, char **start, off_t offset,
+				int count, int *eof, void *data)
+{
+	int i, has_prop;
+	off_t len = 0;
+	struct fblock_factory *f;
+
+	rcu_read_lock();
+	list_for_each_entry_rcu(f, &fb_props_list, e_list) {
+		has_prop = 0;
+		len += sprintf(page + len, "%s [", f->type);
+		for (i = 0; i < ARRAY_SIZE(f->properties); ++i) {
+				if (f->properties[i] != 0) {
+					len += sprintf(page + len, "%u ",
+						       f->properties[i]);
+					has_prop = 1;
+				}
+		}
+		len -= has_prop;
+		len += sprintf(page + len, "]\n");
+	}
+	rcu_read_unlock();
+
+	/* FIXME: fits in page? */
+	*eof = 1;
+	return len;
+}
+
 static int procfs_fblocks(char *page, char **start, off_t offset,
 			  int count, int *eof, void *data)
 {
@@ -661,7 +693,8 @@ static int procfs_fblocks(char *page, char **start, off_t offset,
 		if (fb->factory) {
 			for (j = 0; j < ARRAY_SIZE(fb->factory->properties); ++j) {
 				if (fb->factory->properties[j] != 0) {
-					len += sprintf(page + len, "%u ", fb->factory->properties[j]);
+					len += sprintf(page + len, "%u ",
+						       fb->factory->properties[j]);
 					has_prop = 1;
 				}
 			}		
@@ -713,12 +746,28 @@ EXPORT_SYMBOL_GPL(cleanup_fblock_tables);
 
 int register_fblock_type(struct fblock_factory *fops)
 {
-	return critbit_insert(&fbmap, fops->type);
+	int ret;
+	unsigned long flags;
+
+	spin_lock_irqsave(&fb_props_list_lock, flags);
+	list_add_rcu(&fops->e_list, &fb_props_list);
+	ret = critbit_insert(&fbmap, fops->type);
+	if (ret)
+		list_del_rcu(&fops->e_list);
+	spin_unlock_irqrestore(&fb_props_list_lock, flags);
+
+	return ret;
 }
 EXPORT_SYMBOL_GPL(register_fblock_type);
 
 void unregister_fblock_type(struct fblock_factory *fops)
 {
+	unsigned long flags;
+
+	spin_lock_irqsave(&fb_props_list_lock, flags);
+	list_del_rcu(&fops->e_list);
+	spin_unlock_irqrestore(&fb_props_list_lock, flags);
+
 	critbit_delete(&fbmap, fops->type);
 }
 EXPORT_SYMBOL_GPL(unregister_fblock_type);
@@ -742,8 +791,15 @@ EXPORT_SYMBOL(build_fblock_object);
 
 int init_fblock_builder(void)
 {
+	fblocks_props_proc =
+		create_proc_read_entry("properties", 0400, lana_proc_dir,
+				       procfs_fblocks_props, NULL);
+	if (!fblocks_props_proc)
+		return -ENOMEM;
+
 	get_critbit_cache();
 	critbit_init_tree(&fbmap);
+
 	return 0;
 }
 EXPORT_SYMBOL_GPL(init_fblock_builder);
@@ -751,6 +807,7 @@ EXPORT_SYMBOL_GPL(init_fblock_builder);
 void cleanup_fblock_builder(void)
 {
 	put_critbit_cache();
+	remove_proc_entry("properties", lana_proc_dir);
 }
 EXPORT_SYMBOL_GPL(cleanup_fblock_builder);
 
