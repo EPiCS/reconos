@@ -1,5 +1,5 @@
 LIBS		= -lpthread -ldl -rdynamic
-CFLAGS		+= -rdynamic -Wall -O3 -D_FORTIFY_SOURCE=2 -fPIE -D_REENTRANT
+CFLAGS		+= -rdynamic -Wall -O3 -D_FORTIFY_SOURCE=2 -fPIE -D_REENTRANT -I../../lana/
 #CC		= microblaze-unknown-linux-gnu-gcc
 #AR		= microblaze-unknown-linux-gnu-ar
 
