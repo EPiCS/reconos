@@ -85,7 +85,7 @@ static void wireless_linkqual_fetch(struct plugin_instance *self)
 	wifi_link_qual = ws.qual.qual;
 	wifi_link_qual_max = wireless_rangemax_sigqual(ifname);
 
-	self->cells[0] = (float64_t) (wifi_link_qual / wifi_link_qual_max);
+	self->cells[0] = (float64_t) wifi_link_qual / wifi_link_qual_max;
 }
 
 struct plugin_instance wireless_linkqual_plugin = {
