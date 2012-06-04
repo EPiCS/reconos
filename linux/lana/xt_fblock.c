@@ -607,7 +607,7 @@ EXPORT_SYMBOL_GPL(cleanup_fblock_ctor);
 static int procfs_fblocks(char *page, char **start, off_t offset,
 			  int count, int *eof, void *data)
 {
-	int i, j, has_sub;
+	int i, j, has_sub, has_prop;
 	off_t len = 0;
 	struct fblock *fb;
 	struct fblock_notifier *fn;
@@ -620,6 +620,7 @@ static int procfs_fblocks(char *page, char **start, off_t offset,
 		if (!fb)
 			continue;
 		has_sub = 0;
+		has_prop = 0;
 		tpkts = tbytes = tdropped = jiff = 0;
 		len += sprintf(page + len, "%s %s %p %u %d [",
 			       fb->name, fb->factory ? fb->factory->type : "vlink",
@@ -653,10 +654,20 @@ static int procfs_fblocks(char *page, char **start, off_t offset,
 			tbytes += bytes;
 			tdropped += dropped;
 		}
-		len += sprintf(page + len, "] %s %s %llu %llu %llu %llujf\n",
+		len += sprintf(page + len, "] %s %s %llu %llu %llu %llujf props [",
 			       fblock_transition_inbound_isset(fb) ? "trans" : "norm",
 			       fblock_offload_isset(fb) ? "hw" : "sw",
 			       tpkts, tbytes, tdropped, jiff);
+		if (fb->factory) {
+			for (j = 0; j < ARRAY_SIZE(fb->factory->properties); ++j) {
+				if (fb->factory->properties[j] != 0) {
+					len += sprintf(page + len, "%u ", fb->factory->properties[j]);
+					has_prop = 1;
+				}
+			}		
+		}
+		len -= has_prop;
+		len += sprintf(page + len, "]\n");
 	}
 	rcu_read_unlock();
 
@@ -1008,4 +1019,3 @@ void cleanup_fblock_userctl_system(void)
 	netlink_kernel_release(fblock_userctl_sock);
 }
 EXPORT_SYMBOL_GPL(cleanup_fblock_userctl_system);
-

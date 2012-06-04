@@ -52,6 +52,12 @@ enum fblock_mode {
 #define MODE_DUAL		MODE_DUAL
 };
 
+enum fblock_props {
+	NONE = 0,
+	RELIABLE,
+	DUMMY,
+};
+
 #define NUM_TYPES		_TYPE_MAX
 
 #define FBLOCK_BIND_IDP		0x0001
@@ -90,6 +96,7 @@ struct fblock_factory {
 	struct fblock *(*ctor)(char *name);
 	void (*dtor)(struct fblock *fb);
 	void (*dtor_outside_rcu)(struct fblock *fb);
+	enum fblock_props properties[16];
 } ____cacheline_aligned;
 
 struct fblock_notifier {

@@ -110,4 +110,3 @@ extern int vlink_rm_callback(struct vlink_subsys *n,
 
 #endif /* __KERNEL__ */
 #endif /* XT_VLINK_H */
-

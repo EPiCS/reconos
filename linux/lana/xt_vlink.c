@@ -332,4 +332,3 @@ void cleanup_vlink_system(void)
 	netlink_kernel_release(vlink_sock);
 	kfree(vlink_subsystem_table);
 }
-
