@@ -284,6 +284,8 @@ static int vlink_procfs(char *page, char **start, off_t offset,
 	int i;
 	off_t len = 0;
 
+	len += sprintf(page + len, "name|type|id\n");
+
 	vlink_lock();
 	for (i = 0; i < MAX_VLINK_SUBSYSTEMS; ++i) {
 		if (vlink_subsystem_table[i])
