@@ -29,7 +29,7 @@
 #define VERSNAME "0.9"
 
 /* Copyright 1991, 1992 Linus Torvalds <torvalds@linux-foundation.org> */
-size_t strlcpy(char *dest, const char *src, size_t size)
+static size_t strlcpy(char *dest, const char *src, size_t size)
 {
 	size_t ret = strlen(src);
 
@@ -88,7 +88,7 @@ static void xfree(void *ptr)
 	free(ptr);
 }
 
-void check_for_root_maybe_die(void)
+static void check_for_root_maybe_die(void)
 {
 	if (geteuid() != 0 || geteuid() != getuid())
 		panic("Uhhuh, not root?! \n");
@@ -129,7 +129,7 @@ static void version(void)
 	die();
 }
 
-void do_ethernet(int argc, char **argv)
+static void do_ethernet(int argc, char **argv)
 {
 	int sock, ret;
 	uint8_t cmd = 0;
