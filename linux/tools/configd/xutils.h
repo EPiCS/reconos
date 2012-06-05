@@ -9,14 +9,23 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdint.h>
 #include <unistd.h>
 #include <sys/types.h>
+#include <sys/socket.h>
+#include <linux/netlink.h>
+#include <linux/types.h>
+#include <linux/if.h>
+
+#include "xt_vlink.h"
+#include "xt_fblock.h"
 
 extern void *xmalloc(size_t size);
 extern void *xzmalloc(size_t size);
 extern void xfree(void *ptr);
 extern size_t strlcpy(char *dest, const char *src, size_t size);
 extern char *xstrdup(const char *str);
+extern void send_netlink(struct lananlmsg *lmsg);
 
 static inline void *xmemdup(const void *data, size_t len)
 {

@@ -6,15 +6,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
-#include <sys/socket.h>
-#include <sys/types.h>
-#include <linux/netlink.h>
-#include <linux/types.h>
-#include <linux/if.h>
 
 #include "xutils.h"
-#include "xt_vlink.h"
-#include "xt_fblock.h"
 
 void *xmalloc(size_t size)
 {
