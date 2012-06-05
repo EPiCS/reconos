@@ -24,10 +24,6 @@
 #include "xutils.h"
 #include "notification.h"
 
-struct fblock_types {
-	
-};
-
 #define PLUGIN_TO_TEST	"linkqual"
 
 static void *buffshared = NULL;

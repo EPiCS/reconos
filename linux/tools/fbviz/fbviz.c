@@ -68,7 +68,7 @@ int main(void)
 {
 	int first = 1, i, j;
 	FILE *fp;
-	char bindings[MAX_STR_LEN], name[MAX_STR_LEN], type[MAX_STR_LEN];
+	char name[MAX_STR_LEN], type[MAX_STR_LEN];
 	char buff[1024], *ptr, *nptr;
 	unsigned int idp;
 
@@ -91,12 +91,10 @@ int main(void)
 		if (elems + 1 >= MAX_ELEMS)
 			panic("Too many fblock instances!\n");
 
-		memset(bindings, 0, sizeof(bindings));
 		memset(name, 0, sizeof(name));
 		memset(type, 0, sizeof(type));
 
-		if (sscanf(buff, "%s %s %*x %u %*u [%s] ", name, type,
-			   &idp, bindings) != 4)
+		if (sscanf(buff, "%s %s %*x %u %*u [", name, type, &idp) != 3)
 			continue;
 
 		strlcpy(table[elems].name, name, sizeof(table[elems].name));
@@ -104,14 +102,15 @@ int main(void)
 		table[elems].idp = idp;
 
 		i = 0;
-		bindings[strlen(bindings) - 1] = 0;
-		ptr = bindings;
-		while ((j = strtoul(ptr, &nptr, 10))) {
+		ptr = strstr(buff, "[");
+		ptr++;
+		while (*ptr != ']' && (j = strtoul(ptr, &nptr, 10))) {
 			if (!nptr)
 				break;
 			if (i + 1 >= MAX_BINDING)
 				panic("Too many bindings!\n");
 			table[elems].bindings[i++] = j;
+			nptr++;
 			ptr = nptr;
 		}
 
