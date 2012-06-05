@@ -109,6 +109,8 @@ int main(void)
 		while ((j = strtoul(ptr, &nptr, 10))) {
 			if (!nptr)
 				break;
+			if (i + 1 >= MAX_BINDING)
+				panic("Too many bindings!\n");
 			table[elems].bindings[i++] = j;
 			ptr = nptr;
 		}
