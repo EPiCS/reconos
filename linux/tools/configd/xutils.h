@@ -11,6 +11,7 @@
 #include <string.h>
 #include <stdint.h>
 #include <unistd.h>
+#include <syslog.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <linux/netlink.h>
@@ -73,5 +74,14 @@ static inline void check_for_root_maybe_die(void)
 #ifndef unlikely
 # define unlikely(x)		__builtin_expect(!!(x), 0)
 #endif
+
+static inline void printd(const char *format, ...)
+{
+	va_list vl;
+
+	va_start(vl, format);
+	vsyslog(LOG_INFO, format, vl);
+	va_end(vl);
+}
 
 #endif /* XUTILS_H */

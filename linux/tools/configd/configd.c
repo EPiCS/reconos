@@ -17,6 +17,7 @@
 #include <linux/netlink.h>
 #include <linux/types.h>
 #include <linux/if.h>
+#include <syslog.h>
 
 #include "xt_vlink.h"
 #include "xt_fblock.h"
@@ -35,7 +36,7 @@ static sig_atomic_t sigint = 0;
 static void sighandler(int num)
 {
 	sigint = 1;
-	printf("SIGINT catched!\n");
+	printd("SIGINT catched!\n");
 }
 
 static void upper_threshold_triggered(int num)
@@ -110,6 +111,8 @@ int main(void)
 	signal(SIG_THRES_LOWER, lower_threshold_triggered);
 	signal(SIGINT, sighandler);
 
+	openlog("configd", LOG_PID | LOG_CONS | LOG_NDELAY, LOG_DAEMON);
+
 	cells_thres[0] = 0.5;
 	cells_active[0] = 1;
 	register_threshold(upper_threshold, cells_thres, cells_active, 1);
@@ -154,6 +157,8 @@ int main(void)
 	cleanup_stack();
 
 	shmdt(buffshared);
+
+	closelog();
 
 	return 0;
 }

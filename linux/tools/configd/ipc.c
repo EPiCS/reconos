@@ -7,10 +7,10 @@
 
 void start_ipc_server(void)
 {
-	printf("IPC server started!\n");
+	printd("IPC server started!\n");
 }
 
 void stop_ipc_server(void)
 {
-	printf("IPC server stopped!\n");
+	printd("IPC server stopped!\n");
 }

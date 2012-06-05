@@ -12,12 +12,12 @@
 
 void setup_initial_stack(void)
 {
-	printf("Initial stack set up!\n");
+	printd("Initial stack set up!\n");
 }
 
 void cleanup_stack(void)
 {
-	printf("Stack cleaned up!\n");
+	printd("Stack cleaned up!\n");
 }
 
 static sig_atomic_t need_reliability = 0, need_reliability_switched = 0;
@@ -48,10 +48,10 @@ void reconfig_notify_reliability(int type)
 void reconfig_reliability(void)
 {
 	if (need_reliability == 1 && need_reliability_switched == 1) {
-		printf("Need reliability!\n");
+		printd("Need reliability!\n");
 		__reconfig_reliability_check_for_inclusion();
 	} else if (need_reliability == 0 && need_reliability_switched == 1) {
-		printf("Don't need reliability!\n");
+		printd("Don't need reliability!\n");
 		__reconfig_reliability_check_for_exclusion();
 	}
 
