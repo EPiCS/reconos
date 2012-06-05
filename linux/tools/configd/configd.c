@@ -22,6 +22,7 @@
 #include "xt_fblock.h"
 #include "xutils.h"
 #include "ipc.h"
+#include "props.h"
 #include "reconfig.h"
 #include "notification.h"
 
@@ -135,6 +136,7 @@ int main(void)
 		panic("Cannot attach to segment!");
 
 	setup_initial_stack();
+	start_property_fetcher();
 	start_ipc_server();
 
 	while (!sigint) {
@@ -147,6 +149,7 @@ int main(void)
 		/* ... */
 	}
 
+	stop_property_fetcher();
 	stop_ipc_server();
 	cleanup_stack();
 

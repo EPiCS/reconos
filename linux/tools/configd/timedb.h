@@ -8,6 +8,7 @@
 #include <sys/time.h>
 #include <time.h>
 #include <stdint.h>
+#include <string.h>
 
 #ifndef __packed
 # define __packed		__attribute__((packed))
