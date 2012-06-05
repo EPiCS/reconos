@@ -8,6 +8,7 @@
 #include "reconfig.h"
 #include "notification.h"
 #include "xutils.h"
+#include "stack.h"
 
 void setup_initial_stack(void)
 {
