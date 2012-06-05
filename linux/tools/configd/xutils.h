@@ -26,7 +26,8 @@ extern void *xzmalloc(size_t size);
 extern void xfree(void *ptr);
 extern size_t strlcpy(char *dest, const char *src, size_t size);
 extern char *xstrdup(const char *str);
-extern void send_netlink(struct lananlmsg *lmsg);
+extern void send_netlink_fbctl(struct lananlmsg *lmsg);
+extern void send_netlink_vlink(struct vlinknlmsg *vmsg);
 
 static inline void *xmemdup(const void *data, size_t len)
 {
