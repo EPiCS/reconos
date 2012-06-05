@@ -62,6 +62,12 @@ enum fblock_mode {
 #define FBLOCK_WAIT		0x0006	/* Must wait for other, busy fblock */
 #define FBLOCK_MEM_PRESSURE	0x0007	/* Socket under memory pressure */
 
+#else
+static const char *fblock_props_to_str[] = {
+	"none",
+	"reliable",
+	"dummy",
+};
 #endif /* __KERNEL__ */
 
 #define FBNAMSIZ		(IFNAMSIZ*2)
@@ -71,6 +77,7 @@ enum fblock_props {
 	NONE = 0,
 	RELIABLE,
 	DUMMY,
+	__MAX_PROP,
 };
 
 #ifdef __KERNEL__
