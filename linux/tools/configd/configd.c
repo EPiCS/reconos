@@ -2,7 +2,6 @@
  * Copyright 2012 Daniel Borkmann <dborkma@tik.ee.ethz.ch>
  */
 
-#include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <sys/types.h>
@@ -22,100 +21,38 @@
 #include "xt_vlink.h"
 #include "xt_fblock.h"
 #include "xutils.h"
+#include "ipc.h"
+#include "reconfig.h"
 #include "notification.h"
 
 #define PLUGIN_TO_TEST	"linkqual"
 
 static void *buffshared = NULL;
 
-static sig_atomic_t need_reliability = 0, need_reliability_switched = 0;
+static sig_atomic_t sigint = 0;
 
-static void send_netlink(struct lananlmsg *lmsg)
+static void sighandler(int num)
 {
-	int sock, ret;
-	struct sockaddr_nl src_addr, dest_addr;
-	struct nlmsghdr *nlh;
-	struct iovec iov;
-	struct msghdr msg;
-
-	if (unlikely(!lmsg))
-		return;
-
-	sock = socket(PF_NETLINK, SOCK_RAW, NETLINK_USERCTL);
-	if (unlikely(sock < 0))
-		panic("Cannot get NETLINK_USERCTL socket from kernel! "
-		      "Modules not loaded?!\n");
-
-	memset(&src_addr, 0, sizeof(src_addr));
-	src_addr.nl_family = AF_NETLINK;
-	src_addr.nl_pad = 0;
-	src_addr.nl_pid = getpid();
-	src_addr.nl_groups = 0;
-
-	ret = bind(sock, (struct sockaddr *) &src_addr, sizeof(src_addr));
-	if (unlikely(ret))
-		panic("Cannot bind socket!\n");
-
-	memset(&dest_addr, 0, sizeof(dest_addr));
-	dest_addr.nl_family = AF_NETLINK;
-	dest_addr.nl_pad = 0;
-	dest_addr.nl_pid = 0;
-	dest_addr.nl_groups = 0;
-
-	nlh = xzmalloc(NLMSG_SPACE(sizeof(*lmsg)));
-	nlh->nlmsg_len = NLMSG_SPACE(sizeof(*lmsg));
-	nlh->nlmsg_pid = getpid();
-	nlh->nlmsg_type = USERCTLGRP_CONF;
-	nlh->nlmsg_flags = NLM_F_REQUEST;
-
-	memcpy(NLMSG_DATA(nlh), lmsg, sizeof(*lmsg));
-
-	iov.iov_base = nlh;
-	iov.iov_len = nlh->nlmsg_len;
-
-	memset(&msg, 0, sizeof(msg));
-	msg.msg_name = &dest_addr;
-	msg.msg_namelen = sizeof(dest_addr);
-	msg.msg_iov = &iov;
-	msg.msg_iovlen = 1;
-
-	ret = sendmsg(sock, &msg, 0);
-	if (unlikely(ret < 0))
-		panic("Cannot send NETLINK message to the kernel!\n");
-
-	close(sock);
-	xfree(nlh);
-}
-
-static void reconfig_reliability(void)
-{
-	if (need_reliability == 1 && need_reliability_switched == 1) {
-		printf("Need reliability!\n");
-		/* ... include reliability */
-	} else if (need_reliability == 0 && need_reliability_switched == 1) {
-		printf("Don't need reliability!\n");
-		/* ... exclude reliability */
-	}
-
-	need_reliability_switched = 0;
+	sigint = 1;
+	printf("SIGINT catched!\n");
 }
 
 static void upper_threshold_triggered(int num)
 {
 	if (num != SIGUSR1)
 		return;
-	if (need_reliability == 1)
-		need_reliability_switched = 1;
-	need_reliability = 0;
+
+	reconfig_notify_reliability(SIG_THRES_UPPER);
+	/* ... */
 }
 
 static void lower_threshold_triggered(int num)
 {
 	if (num != SIGUSR2)
 		return;
-	if (need_reliability == 0)
-		need_reliability_switched = 1;
-	need_reliability = 1;
+
+	reconfig_notify_reliability(SIG_THRES_LOWER);
+	/* ... */
 }
 
 static void register_threshold(enum threshold_type type, double *cells_thres,
@@ -170,6 +107,7 @@ int main(void)
 
 	signal(SIG_THRES_UPPER, upper_threshold_triggered);
 	signal(SIG_THRES_LOWER, lower_threshold_triggered);
+	signal(SIGINT, sighandler);
 
 	cells_thres[0] = 0.5;
 	cells_active[0] = 1;
@@ -196,13 +134,21 @@ int main(void)
 	if (buffshared == (int *) (-1))
 		panic("Cannot attach to segment!");
 
-	while (1) {
+	setup_initial_stack();
+	start_ipc_server();
+
+	while (!sigint) {
 		timeout.tv_sec = 0;
 		timeout.tv_usec = 100000;
 
 		select(0, NULL, NULL, NULL, &timeout);
+
 		reconfig_reliability();
+		/* ... */
 	}
+
+	stop_ipc_server();
+	cleanup_stack();
 
 	shmdt(buffshared);
 
