@@ -8,7 +8,7 @@ lib-objs	= xutils.o reconfig.o ipc.o props.o stack.o
 
 target		= configd
 
-all: $(lib-objs) $(core-objs)
+all: $(lib-objs) $(core-objs) builtin_client
 	gcc $(core-objs) $(lib-objs) -o $(target) $(LIBS)
 
 %.o: %.c
@@ -17,4 +17,4 @@ all: $(lib-objs) $(core-objs)
 builtin_client:
 
 clean:
-	rm -f *.o configd
+	rm -f *.o configd builtin_client

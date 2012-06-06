@@ -19,14 +19,16 @@
 #include "xt_fblock.h"
 #include "xt_engine.h"
 
-#define AF_LANA		27      /* For now.. */
-#define PF_LANA		AF_LANA
+#define AF_LANA			27      /* For now.. */
+#define PF_LANA			AF_LANA
 
-#define LANA_PROTO_AUTO 0	/* Auto-select if none is given */
-#define LANA_PROTO_RAW  1	/* LANA raw proto, currently the only one */
+#define LANA_PROTO_AUTO 	0	/* Auto-select if none is given */
+#define LANA_PROTO_RAW  	1	/* LANA raw proto */
 
-#define LANA_NPROTO     2
+#define LANA_NPROTO     	2
 #define MEM_PRESSURE_THRES	(130*1024)
+
+#define SIOCLANAGETFBLOCK	(SIOCPROTOPRIVATE + 0)
 
 struct lana_protocol {
 	int protocol;
@@ -396,6 +398,21 @@ static int lana_proto_get_port(struct sock *sk, unsigned short sport)
 	return 0;
 }
 
+static int lana_raw_ioctl(struct socket *sock, unsigned int cmd,
+			  unsigned long arg)
+{
+	struct sock *sk = sock->sk;
+	struct lana_sock *lana = to_lana_sk(sk);
+	void __user *argp = (void __user *) arg;
+	struct fblock *fb = lana->fb;
+
+	if (cmd == SIOCLANAGETFBLOCK)
+		return copy_to_user(argp, fb->name,
+				    sizeof(fb->name)) ? -EFAULT : 0;
+
+	return sk->sk_prot->ioctl(sk, cmd, arg);
+}
+
 static struct lana_protocol *pflana_proto_get(int proto)
 {
 	struct lana_protocol *ret = NULL;
@@ -469,7 +486,7 @@ static const struct proto_ops lana_raw_ops = {
 	.socketpair  = sock_no_socketpair,
 	.accept      = sock_no_accept,
 	.getname     = sock_no_getname,
-	.ioctl       = sock_no_ioctl,
+	.ioctl       = lana_raw_ioctl,
 	.listen      = sock_no_listen,
 	.shutdown    = sock_no_shutdown,
 	.mmap	     = sock_no_mmap,
@@ -551,6 +568,7 @@ static int init_fb_pflana(void)
 		pflana_proto_unregister(&lana_proto_raw);
 		return ret;
 	}
+	printk("PF_LANA %u loaded!\n", SIOCLANAGETFBLOCK);
 	return 0;
 }
 

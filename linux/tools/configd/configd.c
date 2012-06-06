@@ -31,7 +31,7 @@
 
 static void *buffshared = NULL;
 
-static sig_atomic_t sigint = 0;
+sig_atomic_t sigint = 0;
 
 static void sighandler(int num)
 {
