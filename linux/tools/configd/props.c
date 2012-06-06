@@ -63,10 +63,11 @@ int find_type_by_properties(char name[FBNAMSIZ],
 			}
 		}
 	}
-	mutexlock_unlock(&lock);
 
-	if (idx_max < 0)
+	if (idx_max < 0) {
+		mutexlock_unlock(&lock);
 		return -ENOENT;
+	}
 
 	for (j = 0; j < MAX_PROPS; ++j) {
 		if (table[idx_max].props[j] == 0)
@@ -80,6 +81,8 @@ int find_type_by_properties(char name[FBNAMSIZ],
 	}
 
 	strlcpy(name, table[idx_max].name, sizeof(table[idx_max].name));
+
+	mutexlock_unlock(&lock);
 
 	return 0;
 }
