@@ -16,17 +16,22 @@
 #include "xutils.h"
 
 #define SOCK_ADDR	"/tmp/configdsock"
+#define MAX_PROPS	32
 
 static pthread_t thread;
 
 extern sig_atomic_t sigint;
+
+struct bind_msg {
+	char name[FBNAMSIZ];
+	enum fblock_props props[MAX_PROPS];
+};
 
 static void *ipc_server(void *null)
 {
 	int sock, ret;
 	struct sockaddr_un saddr;
 	socklen_t slen;
-	uint8_t buff[4096];
 
 	unlink(SOCK_ADDR);
 	sock = socket(AF_UNIX, SOCK_STREAM, 0);
@@ -53,12 +58,13 @@ static void *ipc_server(void *null)
 	}
 
 	while (!sigint) {
-		int csock;
+		int csock, i;
 		struct sockaddr_un caddr;
 		socklen_t clen;
 		fd_set socks;
 		ssize_t ret;
 		struct timeval timeout;
+		struct bind_msg bmsg;
 
 		memset(&caddr, 0, sizeof(caddr));
 		clen = sizeof(caddr);
@@ -81,12 +87,21 @@ static void *ipc_server(void *null)
 			continue;
 		}
 
-		ret = read(csock, buff, sizeof(buff));
-		if (ret <= 0) {
+		ret = read(csock, &bmsg, sizeof(bmsg));
+		if (ret != sizeof(bmsg)) {
 			printd("Read returned with %s\n", strerror(errno));
 			close(csock);
 			continue;
 		}
+
+		printd("%s wants to have:", bmsg.name);
+		for (i = 0; i < MAX_PROPS; ++i) {
+			if (bmsg.props[i] != 0)
+				printd(" property %u\n", bmsg.props[i]);
+		}
+
+		// reconfig bind bmsg.name to iface via setopt
+		// select protos from properties, init, and bind
 
 		close(csock);
 	}

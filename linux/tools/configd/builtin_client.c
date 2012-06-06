@@ -88,9 +88,7 @@ int main(void)
 	memset(buff, 0xff, sizeof(buff));
 
 	while (1) {
-		ret = sendto(sock, buff, 64, 0, NULL, 0);
-		if (ret < 0)
-			panic("cannot send to socket");
+		sendto(sock, buff, 64, 0, NULL, 0);
 		sleep(1);
 	}
 
