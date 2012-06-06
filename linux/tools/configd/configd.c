@@ -107,6 +107,8 @@ int main(void)
 	char buff[256];
 	struct timeval timeout;
 
+	check_for_root_maybe_die();
+
 	signal(SIG_THRES_UPPER, upper_threshold_triggered);
 	signal(SIG_THRES_LOWER, lower_threshold_triggered);
 	signal(SIGINT, sighandler);

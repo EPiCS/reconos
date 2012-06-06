@@ -15,6 +15,7 @@
 #include "xt_vlink.h"
 #include "xt_fblock.h"
 #include "props.h"
+#include "locking.h"
 #include "xutils.h"
 
 static pthread_t thread;
@@ -30,13 +31,71 @@ struct prop_type {
 
 static struct prop_type table[MAX_ELEMS];
 static size_t elems;
+static struct mutexlock lock;
 
 static void *property_fetcher(void *null)
 {
+	int first = 1, i, j;
+	FILE *fp;
+	char buff[1024], *ptr, *nptr;
+	char type[128];
+
+	mutexlock_init(&lock);
+
 	while (!sigint) {
-		sleep(1);
+		/* FIXME: HACK: lame, do it better later on */
+
+		mutexlock_lock(&lock);
+
+		memset(table, 0, sizeof(table));
+		elems = 0;
+		first = 1;
+
+		fp = fopen("/proc/net/lana/properties", "r");
+		if (!fp)
+			panic("LANA not running?\n");
+
+		memset(buff, 0, sizeof(buff));
+		while (fgets(buff, sizeof(buff), fp) != NULL) {
+			buff[sizeof(buff) - 1] = 0;
+			if (first) {
+				first = 0;
+				continue;
+			}
+
+			if (elems + 1 >= MAX_ELEMS)
+				panic("Too many fblock instances!\n");
+
+			memset(type, 0, sizeof(type));
+			if (sscanf(buff, "%s [", type) != 1)
+				continue;
+
+			strlcpy(table[elems].name, type, sizeof(table[elems].name));
+
+			i = 0;
+			ptr = strstr(buff, "[");
+			ptr++;
+			while (*ptr != ']' && (j = strtoul(ptr, &nptr, 10))) {
+				if (!nptr)
+					break;
+				if (i + 1 >= MAX_PROPS)
+					panic("Too many properties!\n");
+				table[elems].props[i++] = j;
+				nptr++;
+				ptr = nptr;
+			}
+
+			memset(buff, 0, sizeof(buff));
+			elems++;
+		}
+
+		fclose(fp);
+
+		mutexlock_unlock(&lock);
+		sleep(10);
 	}
 
+	mutexlock_destroy(&lock);
 	pthread_exit(NULL);
 }
 
