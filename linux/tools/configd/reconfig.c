@@ -11,7 +11,6 @@
 #include "reconfig.h"
 #include "notification.h"
 #include "xutils.h"
-#include "stack.h"
 
 static void setup_cleanup_vlink(int cmd)
 {
