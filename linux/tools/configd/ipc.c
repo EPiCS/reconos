@@ -8,15 +8,21 @@
 #include <pthread.h>
 #include <signal.h>
 #include <errno.h>
-#include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/un.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <linux/types.h>
+#include <linux/netlink.h>
+#include <linux/if.h>
 
+#include "xt_vlink.h"
+#include "xt_fblock.h"
 #include "ipc.h"
 #include "xutils.h"
+#include "props.h"
 
 #define SOCK_ADDR	"/tmp/configdsock"
-#define MAX_PROPS	32
 
 static pthread_t thread;
 
@@ -26,6 +32,36 @@ struct bind_msg {
 	char name[FBNAMSIZ];
 	enum fblock_props props[MAX_PROPS];
 };
+
+static void ipc_do_configure_client(struct bind_msg *bmsg)
+{
+	int ret, i;
+	char type[FBNAMSIZ];
+	size_t num = 0, orig;
+
+	for (i = 0; i < MAX_PROPS; ++i) {
+		if (bmsg->props[i] != 0)
+			num++;
+	}
+
+	orig = num;
+	while ((ret = find_type_by_properties(type, bmsg->props,
+					      &num)) >= 0) {
+		printd("Found match for %s: %s (satisfied %zu of %zu)\n",
+		       bmsg->name, type, orig - num, orig);
+
+		// add fb(s), bind in chain
+	}
+
+	if (num > 0) {
+		printd("Cannot match requirements! "
+		       "Unable to connect socket!\n");
+		return;
+	}
+
+	// set opt to eth0 / wlan0 / ...?
+	// connect to end point
+}
 
 static void *ipc_server(void *null)
 {
@@ -58,7 +94,7 @@ static void *ipc_server(void *null)
 	}
 
 	while (!sigint) {
-		int csock, i;
+		int csock;
 		struct sockaddr_un caddr;
 		socklen_t clen;
 		fd_set socks;
@@ -94,14 +130,7 @@ static void *ipc_server(void *null)
 			continue;
 		}
 
-		printd("%s wants to have:", bmsg.name);
-		for (i = 0; i < MAX_PROPS; ++i) {
-			if (bmsg.props[i] != 0)
-				printd(" property %u\n", bmsg.props[i]);
-		}
-
-		// reconfig bind bmsg.name to iface via setopt
-		// select protos from properties, init, and bind
+		ipc_do_configure_client(&bmsg);
 
 		close(csock);
 	}

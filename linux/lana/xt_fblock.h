@@ -67,6 +67,7 @@ static const char *fblock_props_to_str[] = {
 	"none",
 	"reliable",
 	"dummy",
+	"dummy",
 };
 #endif /* __KERNEL__ */
 
@@ -79,6 +80,7 @@ enum fblock_props {
 	NONE = 0,
 	RELIABLE,
 	DUMMY,
+	DUMMY2,
 	__MAX_PROP,
 };
 

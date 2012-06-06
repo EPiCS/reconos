@@ -6,6 +6,7 @@
 #include <pthread.h>
 #include <stdint.h>
 #include <signal.h>
+#include <errno.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <linux/types.h>
@@ -32,6 +33,56 @@ struct prop_type {
 static struct prop_type table[MAX_ELEMS];
 static size_t elems;
 static struct mutexlock lock;
+
+int find_type_by_properties(char name[FBNAMSIZ],
+			    enum fblock_props needed[MAX_PROPS],
+			    size_t *num)
+{
+	size_t sat, sat_max = 0;
+	int idx_max = -1, i, j, l;
+
+	if (*num <= 0)
+		return -EINVAL;
+
+	mutexlock_lock(&lock);
+	for (i = 0; i < elems; ++i) {
+		sat = 0;
+		for (j = 0; j < MAX_PROPS; ++j) {
+			if (table[i].props[j] == 0)
+				continue;
+			for (l = 0; l < MAX_PROPS; ++l) {
+				if (needed[l] == 0)
+					continue;
+				if (needed[l] == table[i].props[j]) {
+					sat++;
+					if (sat > sat_max) {
+						sat_max = sat;
+						idx_max = i;
+					}
+				}
+			}
+		}
+	}
+	mutexlock_unlock(&lock);
+
+	if (idx_max < 0)
+		return -ENOENT;
+
+	for (j = 0; j < MAX_PROPS; ++j) {
+		if (table[idx_max].props[j] == 0)
+			continue;
+		for (l = 0; l < MAX_PROPS; ++l) {
+			if (needed[l] == table[idx_max].props[j]) {
+				needed[l] = 0;
+				(*num)--;
+			}
+		}
+	}
+
+	strlcpy(name, table[idx_max].name, sizeof(table[idx_max].name));
+
+	return 0;
+}
 
 static void *property_fetcher(void *null)
 {

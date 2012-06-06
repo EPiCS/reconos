@@ -69,6 +69,7 @@ int main(void)
 	bmsg = (struct bind_msg *) buff;
 	bmsg->props[0] = RELIABLE;
 	bmsg->props[1] = DUMMY;
+	bmsg->props[2] = DUMMY2;
 
 	ret = ioctl(sock, 35296, bmsg->name);
 	if (ret < 0)
