@@ -1,23 +1,12 @@
-# TODO: refactorize
+objs	= configd fbctl fbprop fbviz readpvr sensord sensord/plugins timedb vlink
+curr	= $(PWD)
 
-all:
-	cd configd && make
-	cd fbctl && make
-	cd fbprop && make
-	cd fbviz && make
-	cd readpvr && make
-	cd sensord && make
-	cd sensord/plugins && make
-	cd timedb && make
-	cd vlink && make
+all: $(objs)
+	for object in $(objs) ; do \
+	    cd $(curr)/$$object && $(MAKE); \
+	done
 
 clean:
-	cd configd && make clean
-	cd fbctl && make clean
-	cd fbprop && make clean
-	cd fbviz && make clean
-	cd readpvr && make clean
-	cd sensord && make clean
-	cd sensord/plugins && make clean
-	cd timedb && make clean
-	cd vlink && make clean
+	for object in $(objs) ; do \
+	    cd $(curr)/$$object && $(MAKE) clean; \
+	done

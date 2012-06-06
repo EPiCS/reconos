@@ -1,17 +1,12 @@
-# TODO: refactorize
+objs	= drivers/fsl_driver drivers/getpgd lana reconos/libreconos-us reconos/libreconos-ks tools
+curr	= $(PWD)
 
-all:
-	cd drivers/fsl_driver && make
-	cd drivers/getpgd && make
-	cd lana && make
-	cd reconos/libreconos-us && make
-	cd reconos/libreconos-ks && make
-	cd tools && make
+all: $(objs)
+	for object in $(objs) ; do \
+	    cd $(curr)/$$object && $(MAKE); \
+	done
 
 clean:
-	cd drivers/fsl_driver && make clean
-	cd drivers/getpgd && make clean
-	cd lana && make clean
-	cd reconos/libreconos-us && make clean
-	cd reconos/libreconos-ks && make clean
-	cd tools && make clean
+	for object in $(objs) ; do \
+	    cd $(curr)/$$object && $(MAKE) clean; \
+	done
