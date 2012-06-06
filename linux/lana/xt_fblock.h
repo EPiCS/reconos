@@ -73,6 +73,8 @@ static const char *fblock_props_to_str[] = {
 #define FBNAMSIZ		(IFNAMSIZ*2)
 #define TYPNAMSIZ		(FBNAMSIZ*2)
 
+#define MAX_PROPS	32
+
 enum fblock_props {
 	NONE = 0,
 	RELIABLE,
@@ -103,7 +105,7 @@ struct fblock_factory {
 	struct fblock *(*ctor)(char *name);
 	void (*dtor)(struct fblock *fb);
 	void (*dtor_outside_rcu)(struct fblock *fb);
-	enum fblock_props properties[16];
+	enum fblock_props properties[MAX_PROPS];
 	struct list_head e_list;
 } ____cacheline_aligned;
 

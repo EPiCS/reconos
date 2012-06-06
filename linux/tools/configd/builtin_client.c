@@ -20,7 +20,6 @@
 #include "xt_fblock.h"
 #include "xutils.h"
 
-#define MAX_PROPS	32
 #define SOCK_ADDR	"/tmp/configdsock"
 
 struct bind_msg {
