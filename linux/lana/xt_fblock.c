@@ -615,7 +615,7 @@ static int procfs_fblocks_props(char *page, char **start, off_t offset,
 	off_t len = 0;
 	struct fblock_factory *f;
 
-	len += sprintf(page + len, "type|properties\n");
+	len += sprintf(page + len, "type|properties|sprio\n");
 	rcu_read_lock();
 	list_for_each_entry_rcu(f, &fb_props_list, e_list) {
 		has_prop = 0;
@@ -628,7 +628,7 @@ static int procfs_fblocks_props(char *page, char **start, off_t offset,
 				}
 		}
 		len -= has_prop;
-		len += sprintf(page + len, "]\n");
+		len += sprintf(page + len, "] %d\n", f->prio);
 	}
 	rcu_read_unlock();
 
@@ -650,7 +650,7 @@ static int procfs_fblocks(char *page, char **start, off_t offset,
 	len += sprintf(page + len,
 		       "name|type|address|idp|refcnt|bindings|"
 		       "transition|mapping|pkts|bytes|dropped|"
-		       "duration (jiffies)|properties\n");
+		       "duration (jiffies)|properties|sprio\n");
 
 	rcu_read_lock();
 	for (i = 0; i <= max; ++i) {
@@ -706,7 +706,7 @@ static int procfs_fblocks(char *page, char **start, off_t offset,
 			}		
 		}
 		len -= has_prop;
-		len += sprintf(page + len, "]\n");
+		len += sprintf(page + len, "] %d\n", fb->prio);
 	}
 	rcu_read_unlock();
 

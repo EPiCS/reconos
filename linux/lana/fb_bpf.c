@@ -343,6 +343,7 @@ static struct fblock *fb_bpf_ctor(char *name)
 		goto err2;
 	fb->netfb_rx = fb_bpf_netrx;
 	fb->event_rx = fb_bpf_event;
+	fb->prio = 3;//FIXME fb->factory->prio;
 	fb_proc = proc_create_data(fb->name, 0444, fblock_proc_dir,
 				   &fb_bpf_proc_fops, (void *)(long) fb);
 	if (!fb_proc)
@@ -383,6 +384,7 @@ static struct fblock_factory fb_bpf_factory = {
 	.dtor_outside_rcu = fb_bpf_dtor_outside_rcu,
 	.owner = THIS_MODULE,
 	.properties = { DUMMY2 },
+	.prio = 3, //XXX
 };
 
 static int __init init_fb_bpf_module(void)

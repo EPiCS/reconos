@@ -46,9 +46,9 @@ static void ipc_do_configure_client(struct bind_msg *bmsg)
 
 	orig = num;
 	while ((ret = find_type_by_properties(type, bmsg->props,
-					      &num)) >= 0) {
-		printd("Found match for %s: %s (satisfied %zu of %zu)\n",
-		       bmsg->name, type, orig - num, orig);
+					      &num)) >= -32) {
+		printd("Found match for %s: %s,%d (satisfied %zu of %zu)\n",
+		       bmsg->name, type, ret, orig - num, orig);
 
 		// add fb(s), bind in chain
 	}

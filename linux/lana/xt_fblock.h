@@ -109,6 +109,7 @@ struct fblock_factory {
 	void (*dtor_outside_rcu)(struct fblock *fb);
 	enum fblock_props properties[MAX_PROPS];
 	struct list_head e_list;
+	int prio;	/* XXX: replace with something better */
 } ____cacheline_aligned;
 
 struct fblock_notifier {
@@ -147,6 +148,7 @@ struct fblock {
 	atomic_t refcnt;
 	idp_t idp;
 	volatile unsigned int flags;
+	int prio;	/* XXX: replace with something better */
 	spinlock_t lock;
 	struct fblock_stats __percpu *stats;
 } ____cacheline_aligned;

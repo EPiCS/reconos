@@ -26,6 +26,7 @@ extern sig_atomic_t sigint;
 struct prop_type {
 	char name[FBNAMSIZ];
 	enum fblock_props props[MAX_PROPS];
+	int prio;
 };
 
 #define MAX_ELEMS	1024
@@ -39,10 +40,10 @@ int find_type_by_properties(char name[FBNAMSIZ],
 			    size_t *num)
 {
 	size_t sat, sat_max = 0;
-	int idx_max = -1, i, j, l;
+	int idx_max = -1, i, j, l, ret;
 
 	if (*num <= 0)
-		return -EINVAL;
+		return -64;
 
 	mutexlock_lock(&lock);
 	for (i = 0; i < elems; ++i) {
@@ -66,7 +67,7 @@ int find_type_by_properties(char name[FBNAMSIZ],
 
 	if (idx_max < 0) {
 		mutexlock_unlock(&lock);
-		return -ENOENT;
+		return -64;
 	}
 
 	for (j = 0; j < MAX_PROPS; ++j) {
@@ -81,15 +82,16 @@ int find_type_by_properties(char name[FBNAMSIZ],
 	}
 
 	strlcpy(name, table[idx_max].name, sizeof(table[idx_max].name));
+	ret = table[idx_max].prio;
 
 	mutexlock_unlock(&lock);
 
-	return 0;
+	return ret;
 }
 
 static void *property_fetcher(void *null)
 {
-	int first = 1, i, j;
+	int first = 1, i, j, stop;
 	FILE *fp;
 	char buff[1024], *ptr, *nptr;
 	char type[128];
@@ -97,7 +99,7 @@ static void *property_fetcher(void *null)
 	mutexlock_init(&lock);
 
 	while (!sigint) {
-		/* FIXME: HACK: lame, do it better later on */
+		/* FIXME: HACK: extremly lame, do it better later on */
 
 		mutexlock_lock(&lock);
 
@@ -126,19 +128,22 @@ static void *property_fetcher(void *null)
 
 			strlcpy(table[elems].name, type, sizeof(table[elems].name));
 
-			i = 0;
+			i = stop = 0;
 			ptr = strstr(buff, "[");
 			ptr++;
-			while (*ptr != ']' && (j = strtoul(ptr, &nptr, 10))) {
+			while (!stop && (j = strtoul(ptr, &nptr, 10))) {
 				if (!nptr)
 					break;
 				if (i + 1 >= MAX_PROPS)
 					panic("Too many properties!\n");
 				table[elems].props[i++] = j;
+				if (*nptr == ']')
+					stop = 1;
 				nptr++;
 				ptr = nptr;
 			}
 
+			table[elems].prio = strtol(ptr, &nptr, 10);
 			memset(buff, 0, sizeof(buff));
 			elems++;
 		}
