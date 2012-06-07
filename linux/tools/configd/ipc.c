@@ -21,6 +21,7 @@
 #include "ipc.h"
 #include "xutils.h"
 #include "props.h"
+#include "reconfig.h"
 
 #define SOCK_ADDR	"/tmp/configdsock"
 
@@ -32,6 +33,14 @@ struct bind_msg {
 	char name[FBNAMSIZ];
 	enum fblock_props props[MAX_PROPS];
 };
+
+/*
+extern void insert_elem_to_stack(char *type, char *name, size_t len);
+extern void remove_elem_from_stack(char *name);
+extern void bind_elems_in_stack(char *name1, char *name2);
+extern void unbind_elems_in_stack(char *name1, char *name2);
+extern void setopt_of_elem_in_stack(char *name, char *opt, size_t len);
+*/
 
 static void ipc_do_configure_client(struct bind_msg *bmsg)
 {
@@ -45,20 +54,21 @@ static void ipc_do_configure_client(struct bind_msg *bmsg)
 	}
 
 	orig = num;
-	while ((ret = find_type_by_properties(type, bmsg->props,
-					      &num)) >= -32) {
+	while ((ret = find_type_by_properties(type, bmsg->props, &num)) >= -32) {
+		char name[FBNAMSIZ];
+
 		printd("Found match for %s: %s,%d (satisfied %zu of %zu)\n",
 		       bmsg->name, type, ret, orig - num, orig);
 
-		// add fb(s), bind in chain
+		insert_elem_to_stack(type, name, sizeof(name));
 	}
 
 	if (num > 0) {
-		printd("Cannot match requirements! "
-		       "Unable to connect socket!\n");
+		printd("Cannot match requirements! Unable to connect socket!\n");
 		return;
 	}
 
+	// bind fbs in chain
 	// set opt to eth0 / wlan0 / ...?
 	// connect to end point
 }
