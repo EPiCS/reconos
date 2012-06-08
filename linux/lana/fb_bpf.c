@@ -366,7 +366,7 @@ err:
 
 static void fb_bpf_dtor(struct fblock *fb)
 {
-	free_percpu(rcu_dereference_raw(fb->private_data));
+	kfree(rcu_dereference_raw(fb->private_data));
 	remove_proc_entry(fb->name, fblock_proc_dir);
 	module_put(THIS_MODULE);
 }
