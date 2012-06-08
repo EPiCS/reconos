@@ -51,6 +51,8 @@ static void setup_cleanup_vlink(int cmd)
 		if (!strncmp(item->ifr_name, "lo", strlen(item->ifr_name)))
 			continue;
 
+		printd("seting up lana for %s\n", item->ifr_name);
+
 		memset(&vmsg, 0, sizeof(vmsg));
 		vmsg.cmd = cmd;
 		vmsg.flags = 0;

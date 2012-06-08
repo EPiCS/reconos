@@ -1,0 +1,5 @@
+We are very happy for improvements. For contributing, please fork this
+repository on Github and open a pull request, or send your patches via
+mail, so that they can be applied smoothly via 'git apply'. Only patches
+that comply with the Linux Kernel coding guidelines will be applied, see
+http://lingrok.org/xref/linux-linus/Documentation/CodingStyle . Thanks.

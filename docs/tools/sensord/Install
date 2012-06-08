@@ -1,0 +1,26 @@
+What libraries / tools are required?
+
+ - libc
+ - libdl
+ - libpthread
+
+How to install and run sensord?
+
+ # mkdir -p /opt/sensord/
+ # mkdir -p /opt/sensord/plugins
+ # mkdir -p /opt/sensord/database
+ # cd src/
+ # make
+ # cd plugins/
+ # make
+
+Copy 'src/sensord' into /usr/bin/ and all plugins from 'src/plugins/*.so' into
+/opt/sensord/plugins/.
+
+Then, run sensord with:
+
+ # sensord &
+
+All logging will be placed into /var/log/syslog. All plugin instances create
+a timedb database that is placed under /opt/sensord/database/ and can be read
+with timedb tools (https://github.com/gnumaniacs/timedb).

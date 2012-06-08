@@ -1,0 +1,9 @@
+What libraries / tools are required?
+
+ - libc
+
+How to install timedb tools?
+
+ # cd src/
+ # make
+ # make install
