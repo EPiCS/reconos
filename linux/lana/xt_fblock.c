@@ -677,7 +677,7 @@ static int procfs_fblocks(char *page, char **start, off_t offset,
 			unsigned int start;
 			const struct fblock_stats *stats;
 
-			stats = per_cpu_ptr(fb->stats, i);
+			stats = per_cpu_ptr(fb->stats, j);
 			do {
 				start = u64_stats_fetch_begin(&stats->syncp);
 				bytes = stats->bytes;
