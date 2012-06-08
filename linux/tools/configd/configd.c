@@ -113,6 +113,8 @@ int main(void)
 	signal(SIG_THRES_LOWER, lower_threshold_triggered);
 	signal(SIGINT, sighandler);
 
+	printf("Beware, this is a huge hack! :-(\n");
+
 	openlog("configd", LOG_PID | LOG_CONS | LOG_NDELAY, LOG_DAEMON);
 
 	cells_thres[0] = 0.5;

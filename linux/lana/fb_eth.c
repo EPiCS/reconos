@@ -204,7 +204,7 @@ static struct fblock *fb_eth_build_fblock(struct net_device *dev)
 	fb->netfb_rx = fb_eth_netrx;
 	fb->event_rx = fb_eth_event;
 	fb->factory = NULL;
-	fb->prio = -32; //XXX
+	fb->prio = 0; //XXX
 	ret = register_fblock_namespace(fb);
 	if (ret)
 		goto err3;

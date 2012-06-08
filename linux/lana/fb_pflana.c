@@ -604,7 +604,7 @@ static struct fblock *fb_pflana_build_fblock(char *name)
 	fb->netfb_rx = fb_pflana_netrx;
 	fb->event_rx = fb_pflana_event;
 	fb->factory = NULL;
-	fb->prio = 32; //XXX
+	fb->prio = 63; //XXX
 	ret = register_fblock_namespace(fb);
 	if (ret)
 		goto err3;

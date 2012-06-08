@@ -2,6 +2,8 @@
  * Copyright 2012 Daniel Borkmann <dborkma@tik.ee.ethz.ch>
  */
 
+//XXX everything here is a rough hack!
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -34,14 +36,6 @@ struct bind_msg {
 	enum fblock_props props[MAX_PROPS];
 };
 
-/*
-extern void insert_elem_to_stack(char *type, char *name, size_t len);
-extern void remove_elem_from_stack(char *name);
-extern void bind_elems_in_stack(char *name1, char *name2);
-extern void unbind_elems_in_stack(char *name1, char *name2);
-extern void setopt_of_elem_in_stack(char *name, char *opt, size_t len);
-*/
-
 static void ipc_do_configure_client(struct bind_msg *bmsg)
 {
 	int ret, i;
@@ -53,24 +47,24 @@ static void ipc_do_configure_client(struct bind_msg *bmsg)
 			num++;
 	}
 
+	bind_elems_in_stack("eth0", bmsg->name); //XXX
+
 	orig = num;
 	while ((ret = find_type_by_properties(type, bmsg->props, &num)) >= -32) {
 		char name[FBNAMSIZ];
-
 		printd("Found match for %s: %s,%d (satisfied %zu of %zu)\n",
 		       bmsg->name, type, ret, orig - num, orig);
 
-		insert_elem_to_stack(type, name, sizeof(name));
+		insert_and_bind_elem_to_stack(type, ret, name, sizeof(name));
 	}
 
 	if (num > 0) {
 		printd("Cannot match requirements! Unable to connect socket!\n");
+		//XXX cleanup!
 		return;
 	}
 
-	// bind fbs in chain
-	// set opt to eth0 / wlan0 / ...?
-	// connect to end point
+	setopt_of_elem_in_stack(bmsg->name, "iface=eth0", strlen("iface=eth0")); //XXX
 }
 
 static void *ipc_server(void *null)

@@ -125,7 +125,7 @@ static struct fblock *fb_dummy_ctor(char *name)
 	fb->event_rx = fb_dummy_event;
 	fb->linearize = fb_dummy_linearize;
 	fb->delinearize = fb_dummy_delinearize;
-	fb->prio = 0;//FIXME fb->factory->prio;
+	fb->prio = 10;//FIXME fb->factory->prio;
 	ret = register_fblock_namespace(fb);
 	if (ret)
 		goto err3;
@@ -154,7 +154,7 @@ static struct fblock_factory fb_dummy_factory = {
 	.dtor = fb_dummy_dtor,
 	.owner = THIS_MODULE,
 	.properties = { RELIABLE, DUMMY },
-	.prio = 0, //XXX
+	.prio = 10, //XXX
 };
 
 static int __init init_fb_dummy_module(void)
