@@ -23,4 +23,4 @@ parser.tab.c:
 builtin_client:
 
 clean:
-	rm -f *.o configd builtin_client lex.yy.c parser.tab.c
+	rm -f *.o configd builtin_client lex.yy.c parser.tab.c parser.tab.h

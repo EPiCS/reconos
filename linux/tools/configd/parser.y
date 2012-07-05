@@ -28,7 +28,13 @@ extern char *yytext;
 
 %}
 
-%token K_FOO K_COMMENT
+%union {
+	char *val;
+	int foo;
+}
+
+%token K_TYPE K_TYPE_NAME K_VAR_NAME
+%type <val> K_TYPE_NAME K_VAR_NAME
 
 %%
 
@@ -38,7 +44,7 @@ prog
 	;
 
 line
-	: K_FOO { printf("Hello Foo!\n"); }
+	: K_VAR_NAME K_TYPE K_TYPE_NAME { printf("%s declared from %s\n", $1, $3); }
 	;
 
 %%

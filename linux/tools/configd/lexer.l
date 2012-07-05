@@ -25,12 +25,23 @@ extern void yyerror(const char *);
 %option noinput
 %option nodefault
 
+type_0		[a-z]
+type_1		[a-z0-9.-]
+type		{type_0}+[.]{type_1}+
+
 %%
 
-"foo"			{ return K_FOO; }
-"/*"([^\*]|\*[^/])*"*/" { return K_COMMENT; }
-
+"::"		{ return K_TYPE; }
+"/*"([^\*]|\*[^/])*"*/" { /* NOP */ }
 ";"[^\n]*	{/* NOP */}
+"#"[^\n]*	{/* NOP */}
+
+{type}		{ yylval.val = xstrdup(yytext);
+		  return K_TYPE_NAME; }
+
+[a-z]+		{ yylval.val = xstrdup(yytext);
+		  return K_VAR_NAME; }
+
 "\n"		{ yylineno++; }
 [ \t]+		{/* NOP */ }
 .		{ printf("Unknown character '%s'", yytext);

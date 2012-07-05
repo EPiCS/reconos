@@ -33,6 +33,8 @@ static void *buffshared = NULL;
 
 sig_atomic_t sigint = 0;
 
+extern int compile_source(char *file, int verbose);
+
 static void sighandler(int num)
 {
 	sigint = 1;
@@ -98,7 +100,7 @@ static void register_threshold(enum threshold_type type, double *cells_thres,
 	close(sock);
 }
 
-int main(void)
+int main(int argc, char **argv)
 {
 	key_t key;
 	int shmid;
@@ -107,6 +109,10 @@ int main(void)
 	char buff[256];
 	struct timeval timeout;
 
+
+	compile_source(argv[argc - 1], 1);
+
+#if 0
 	check_for_root_maybe_die();
 
 	signal(SIG_THRES_UPPER, upper_threshold_triggered);
@@ -164,5 +170,6 @@ int main(void)
 
 	closelog();
 
+#endif
 	return 0;
 }
