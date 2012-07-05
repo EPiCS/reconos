@@ -33,7 +33,7 @@ extern char *yytext;
 	int foo;
 }
 
-%token K_TYPE K_TYPE_NAME K_VAR_NAME
+%token K_TYPE K_TYPE_NAME K_VAR_NAME '^' '{' '}' ' '
 %type <val> K_TYPE_NAME K_VAR_NAME
 
 %%
@@ -44,7 +44,20 @@ prog
 	;
 
 line
-	: K_VAR_NAME K_TYPE K_TYPE_NAME { printf("%s declared from %s\n", $1, $3); }
+	: K_VAR_NAME white K_TYPE white K_TYPE_NAME
+		{ printf("%s declared from %s\n", $1, $5); }
+	| K_VAR_NAME white '^' white '{' white dependencies white '}'
+		{ printf("blubb\n"); }
+	;
+
+white
+	: {}
+	| ' ' {}
+	;
+
+dependencies
+	: {}
+	| dependencies white K_VAR_NAME {}
 	;
 
 %%

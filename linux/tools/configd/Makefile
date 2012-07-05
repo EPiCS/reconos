@@ -8,13 +8,11 @@ lib-objs	= xutils.o reconfig.o ipc.o props.o lex.yy.o parser.tab.o
 
 target		= configd
 
-all: $(lib-objs) $(core-objs) builtin_client
+all: pre $(lib-objs) $(core-objs) builtin_client
 	gcc $(core-objs) $(lib-objs) -o $(target) $(LIBS)
 
-lex.yy.c:
+pre:
 	flex lexer.l
-
-parser.tab.c:
 	bison -d parser.y
 
 %.o: %.c
