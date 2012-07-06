@@ -88,7 +88,7 @@ line
 
 			used++;
 		}
-	| K_VAR_NAME white '^' white '{' white dependencies white '}' ';'
+	| K_VAR_NAME white '^' white '{' dependencies white '}' ';'
 		{
 			int curr = get_table_index($1);
 			if (curr < 0)
@@ -101,8 +101,7 @@ line
 	;
 
 white
-	: {}
-	| ' ' {}
+	: ' ' {}
 	;
 
 dependencies
