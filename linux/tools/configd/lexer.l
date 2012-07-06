@@ -32,6 +32,7 @@ type		{type_0}+[.]{type_1}+
 %%
 
 "^"		{ return '^'; }
+";"		{ return ';'; }
 "{"		{ return '{'; }
 "}"		{ return '}'; }
 " "		{ return ' '; }

@@ -23,6 +23,7 @@
 
 extern void *xmalloc(size_t size);
 extern void *xzmalloc(size_t size);
+extern void *xrealloc(void *ptr, size_t nmemb, size_t size);
 extern void xfree(void *ptr);
 extern size_t strlcpy(char *dest, const char *src, size_t size);
 extern char *xstrdup(const char *str);
@@ -74,6 +75,20 @@ static inline void check_for_root_maybe_die(void)
 
 #ifndef unlikely
 # define unlikely(x)		__builtin_expect(!!(x), 0)
+#endif
+
+#ifndef array_size
+# define array_size(x)	(sizeof(x) / sizeof((x)[0]) + __must_be_array(x))
+#endif
+
+#ifndef __must_be_array
+# define __must_be_array(x)						\
+	build_bug_on_zero(__builtin_types_compatible_p(typeof(x),	\
+						       typeof(&x[0])))
+#endif
+
+#ifndef build_bug_on_zero
+# define build_bug_on_zero(e)	(sizeof(char[1 - 2 * !!(e)]) - 1)
 #endif
 
 static inline void printd(const char *format, ...)

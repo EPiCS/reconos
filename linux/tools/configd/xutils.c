@@ -39,6 +39,28 @@ void *xzmalloc(size_t size)
 	return ptr;
 }
 
+void *xrealloc(void *ptr, size_t nmemb, size_t size)
+{
+	void *new_ptr;
+	size_t new_size = nmemb * size;
+
+	if (unlikely(new_size == 0))
+		panic("xrealloc: zero size\n");
+	if (unlikely(((size_t) ~0) / nmemb < size))
+		panic("xrealloc: nmemb * size > SIZE_T_MAX\n");
+
+	if (ptr == NULL)
+		new_ptr = malloc(new_size);
+	else
+		new_ptr = realloc(ptr, new_size);
+
+	if (unlikely(new_ptr == NULL))
+		panic("xrealloc: out of memory (new_size %zu bytes)\n",
+		      new_size);
+
+	return new_ptr;
+}
+
 void xfree(void *ptr)
 {
 	if (ptr == NULL)
