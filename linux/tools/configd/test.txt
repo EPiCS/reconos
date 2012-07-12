@@ -1,6 +1,12 @@
 /* declare bla */
 
-x :: ch.ethz.csg.pf_lana;l :: ch.ethz.csg.eth;
-z :: ch.ethz.csg.bpf;
+x :: ch.ethz.csg.pf_lana;
+l :: ch.ethz.csg.eth;
+a :: ch.ethz.csg.x1;
+b :: ch.ethz.csg.x2;
+c :: ch.ethz.csg.x3;
+d :: ch.ethz.csg.x4;
 
-l ^ { x z };
+x ^ { a };
+a ^ { b c d };
+b ^ { l };

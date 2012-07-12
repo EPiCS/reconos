@@ -41,11 +41,9 @@ type		{type_0}+\x2e{type_1}+
 "#"[^\n]*	{/* NOP */}
 
 {type}		{ yylval.val = xstrdup(yytext);
-		  printf("Got type '%s'\n", yytext);
 		  return K_TYPE_NAME; }
 
 [a-z]+		{ yylval.val = xstrdup(yytext);
-		  printf("Got var '%s'\n", yytext);
 		  return K_VAR_NAME; }
 
 "\n"		{ yylineno++; }

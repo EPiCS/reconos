@@ -100,6 +100,8 @@ static void register_threshold(enum threshold_type type, double *cells_thres,
 	close(sock);
 }
 
+extern get_dependencies(char *from_upper, char *to_lower, char **stack, size_t len);
+
 int main(int argc, char **argv)
 {
 	key_t key;
@@ -112,7 +114,9 @@ int main(int argc, char **argv)
 	if (argc != 2)
 		panic("No config file given!\n");
 
-	compile_source(argv[argc - 1], 1);
+	compile_source(argv[argc - 1], 0);
+
+	get_dependencies("ch.ethz.csg.pf_lana", "ch.ethz.csg.eth", NULL, 0);
 
 #if 0
 	check_for_root_maybe_die();
