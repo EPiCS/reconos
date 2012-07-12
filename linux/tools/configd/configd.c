@@ -109,6 +109,8 @@ int main(int argc, char **argv)
 	char buff[256];
 	struct timeval timeout;
 
+	if (argc != 2)
+		panic("No config file given!\n");
 
 	compile_source(argv[argc - 1], 1);
 
