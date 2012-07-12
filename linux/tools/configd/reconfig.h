@@ -5,8 +5,6 @@
 #ifndef RECONFIG_H
 #define RECONFIG_H
 
-extern int get_dependencies(char *from, char *to, char **stack, size_t len);
-
 extern void setup_initial_stack(void);
 extern void cleanup_stack(void);
 

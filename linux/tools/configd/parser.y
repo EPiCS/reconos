@@ -141,9 +141,24 @@ done:
 	}
 }
 
-int get_dependencies(char *from_upper, char *to_lower, char **stack, size_t len)
+static void __copy_dependencies(struct entry *estack[SLEN], char ***stack,
+				size_t *len)
 {
-	int idx_from, idx_to, i;
+	int i;
+
+	if (*len >= SLEN)
+		panic("Sth went wrong!\n");
+
+	*stack = xzmalloc(sizeof(**stack) * (*len));
+	for (i = (*len)-1; i >= 0; --i) {
+		(*stack)[i] = xstrdup(estack[i]->type);
+	}
+}
+
+int get_dependencies(char *from_upper, char *to_lower, char ***stack,
+		     size_t *len)
+{
+	int idx_from, idx_to;
 	struct entry *estack[SLEN];
 
 	idx_from = get_table_type_index(from_upper);
@@ -151,18 +166,11 @@ int get_dependencies(char *from_upper, char *to_lower, char **stack, size_t len)
 
 	if (idx_from < 0 || idx_to < 0)
 		panic("Not in dependency list present!\n");
-	if (len != 0)
-		panic("Wrong len parameter!\n");
 
-	printf("Looking for: %s to %s\n", from_upper, to_lower);
-
-	__get_dependencies(idx_from, idx_to, estack, &len);
-	for (i = 0; i < len; ++i) {
-		printf("-- %s :: %s\n", estack[i]->variable, estack[i]->type);
-	}
-
-//	__copy_dependencies(idx_stack, stack, len);
-	return len;
+	*len = 0;
+	__get_dependencies(idx_from, idx_to, estack, len);
+	__copy_dependencies(estack, stack, len);
+	return *len;
 }
 
 %}
