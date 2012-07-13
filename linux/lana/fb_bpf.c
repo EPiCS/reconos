@@ -384,7 +384,6 @@ static struct fblock_factory fb_bpf_factory = {
 	.dtor_outside_rcu = fb_bpf_dtor_outside_rcu,
 	.owner = THIS_MODULE,
 	.properties = { DUMMY2 },
-	.prio = 5, //XXX
 };
 
 static int __init init_fb_bpf_module(void)

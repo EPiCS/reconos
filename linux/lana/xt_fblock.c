@@ -628,7 +628,7 @@ static int procfs_fblocks_props(char *page, char **start, off_t offset,
 				}
 		}
 		len -= has_prop;
-		len += sprintf(page + len, "] %d\n", f->prio);
+		len += sprintf(page + len, "]\n");
 	}
 	rcu_read_unlock();
 

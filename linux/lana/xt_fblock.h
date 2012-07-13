@@ -109,7 +109,6 @@ struct fblock_factory {
 	void (*dtor_outside_rcu)(struct fblock *fb);
 	enum fblock_props properties[MAX_PROPS];
 	struct list_head e_list;
-	int prio;	/* XXX: replace with something better */
 } ____cacheline_aligned;
 
 struct fblock_notifier {
