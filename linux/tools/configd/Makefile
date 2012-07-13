@@ -4,7 +4,8 @@ CFLAGS		+= -rdynamic -Wall -O3 -D_FORTIFY_SOURCE=2 -fPIE -D_REENTRANT -I../../la
 #AR		= microblaze-unknown-linux-gnu-ar
 
 core-objs	= configd.o
-lib-objs	= xutils.o reconfig.o ipc.o props.o lex.yy.o parser.tab.o
+lib-objs	= xutils.o reconfig.o ipc.o props.o lex.yy.o parser.tab.o \
+		  reconfig_simple.o reconfig_reliable.o reconfig_initial.o
 
 target		= configd
 
