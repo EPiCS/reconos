@@ -648,4 +648,3 @@ module_exit(cleanup_fb_pflana_module);
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Daniel Borkmann <dborkma@tik.ee.ethz.ch>");
 MODULE_DESCRIPTION("LANA PF_LANA module");
-

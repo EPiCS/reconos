@@ -37,7 +37,7 @@ static void __reconfig_reliability_check_for_inclusion(void)
 
 	orig = num = 1;
 	while ((ret = find_type_by_properties(type, needed, &num)) >= -32) {
-		insert_and_bind_elem_to_stack(type, ret, name_reliability,
+		insert_and_bind_elem_to_stack(type, name_reliability,
 					      sizeof(name_reliability));
 		printd("Added %s as reliability!\n", name_reliability);
 		break;

@@ -14,7 +14,7 @@
 
 struct entry {
 	char variable[64];
-	char type[64];
+	char type[128];
 	struct entry **children; // elements, we can be on top of
 	size_t len;
 	struct entry *tmp_parent;
@@ -164,12 +164,15 @@ int get_dependencies(char *from_upper, char *to_lower, char ***stack,
 	idx_from = get_table_type_index(from_upper);
 	idx_to = get_table_type_index(to_lower);
 
-	if (idx_from < 0 || idx_to < 0)
-		panic("Not in dependency list present!\n");
+	if (idx_from < 0)
+		panic("Not in dependency list present: '%s'!\n", from_upper);
+	if (idx_to < 0)
+		panic("Not in dependency list present: '%s'!\n", to_lower);
 
 	*len = 0;
 	__get_dependencies(idx_from, idx_to, estack, len);
 	__copy_dependencies(estack, stack, len);
+
 	return *len;
 }
 

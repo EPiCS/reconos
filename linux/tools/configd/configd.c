@@ -100,9 +100,6 @@ static void register_threshold(enum threshold_type type, double *cells_thres,
 	close(sock);
 }
 
-extern get_dependencies(char *from_upper, char *to_lower,
-			char ***stack, size_t *len);
-
 int main(int argc, char **argv)
 {
 	key_t key;
@@ -112,23 +109,11 @@ int main(int argc, char **argv)
 	char buff[256];
 	struct timeval timeout;
 
-	char **blubber;
-	size_t len;
-	int i;
-
 	if (argc != 2)
 		panic("No config file given!\n");
 
 	compile_source(argv[argc - 1], 0);
 
-	get_dependencies("ch.ethz.csg.pf_lana", "ch.ethz.csg.eth",
-			 &blubber, &len);
-
-	for (i = 0; i < len; ++i) {
-		printf("-- %s\n", blubber[i]);
-	}
-
-#if 0
 	check_for_root_maybe_die();
 
 	signal(SIG_THRES_UPPER, upper_threshold_triggered);
@@ -174,7 +159,7 @@ int main(int argc, char **argv)
 
 		select(0, NULL, NULL, NULL, &timeout);
 
-		reconfig_reliability();
+//		reconfig_reliability();
 		/* ... */
 	}
 
@@ -185,7 +170,5 @@ int main(int argc, char **argv)
 	shmdt(buffshared);
 
 	closelog();
-
-#endif
 	return 0;
 }

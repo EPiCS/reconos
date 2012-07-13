@@ -36,10 +36,12 @@ struct bind_msg {
 	enum fblock_props props[MAX_PROPS];
 };
 
+#define lower_fb_name	"eth0"	//XXX
+
 static void ipc_do_configure_client(struct bind_msg *bmsg)
 {
 	int ret, i;
-	char type[FBNAMSIZ];
+	char type[TYPNAMSIZ];
 	size_t num = 0, orig;
 
 	for (i = 0; i < MAX_PROPS; ++i) {
@@ -47,7 +49,9 @@ static void ipc_do_configure_client(struct bind_msg *bmsg)
 			num++;
 	}
 
-	bind_elems_in_stack("eth0", bmsg->name); //XXX
+	bind_elems_in_stack(lower_fb_name, bmsg->name);
+	init_reconfig(bmsg->name, "ch.ethz.csg.pf_lana",
+		      lower_fb_name, "ch.ethz.csg.eth");
 
 	orig = num;
 	while ((ret = find_type_by_properties(type, bmsg->props, &num)) >= -32) {
@@ -55,7 +59,9 @@ static void ipc_do_configure_client(struct bind_msg *bmsg)
 		printd("Found match for %s: %s,%d (satisfied %zu of %zu)\n",
 		       bmsg->name, type, ret, orig - num, orig);
 
-		insert_and_bind_elem_to_stack(type, ret, name, sizeof(name));
+		insert_and_bind_elem_to_stack(type, name, sizeof(name));
+		memset(type, 0, sizeof(type));
+		memset(name, 0, sizeof(name));
 	}
 
 	if (num > 0) {

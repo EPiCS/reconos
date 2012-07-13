@@ -2,11 +2,9 @@
 
 x :: ch.ethz.csg.pf_lana;
 l :: ch.ethz.csg.eth;
-a :: ch.ethz.csg.x1;
-b :: ch.ethz.csg.x2;
-c :: ch.ethz.csg.x3;
-d :: ch.ethz.csg.x4;
+a :: ch.ethz.csg.bpf;
+b :: ch.ethz.csg.dummy;
 
-x ^ { a };
-a ^ { b c d };
+x ^ { l a b };
+a ^ { l b };
 b ^ { l };
