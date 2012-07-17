@@ -1,9 +1,3 @@
-/*
- * Copyright 2012 Daniel Borkmann <dborkma@tik.ee.ethz.ch>
- */
-
-//XXX everything here is a rough hack!
-
 #include <stdio.h>
 #include <pthread.h>
 #include <stdint.h>

@@ -1,7 +1,3 @@
-/*
- * Copyright 2012 Daniel Borkmann <dborkma@tik.ee.ethz.ch>
- */
-
 #ifndef NOTIFICATION_H
 #define NOTIFICATION_H
 

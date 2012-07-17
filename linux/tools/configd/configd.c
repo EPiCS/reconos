@@ -1,7 +1,3 @@
-/*
- * Copyright 2012 Daniel Borkmann <dborkma@tik.ee.ethz.ch>
- */
-
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <sys/types.h>
