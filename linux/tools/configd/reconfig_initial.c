@@ -76,6 +76,7 @@ void setup_initial_stack(void)
 
 void cleanup_stack(void)
 {
+	cleanup_pipeline();
 	setup_cleanup_vlink(VLINKNLCMD_STOP_HOOK_DEVICE);
 
 	printd("Stack cleaned up!\n");

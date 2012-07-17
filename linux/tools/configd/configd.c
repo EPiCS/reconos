@@ -120,7 +120,7 @@ int main(int argc, char **argv)
 	signal(SIG_THRES_LOWER, lower_threshold_triggered);
 	signal(SIGINT, sighandler);
 
-	printf("Beware, this is a huge hack! :-(\n");
+	printf("Beware, this is a huge fucked up hack! :-(\n");
 
 	openlog("configd", LOG_PID | LOG_CONS | LOG_NDELAY, LOG_DAEMON);
 

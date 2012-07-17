@@ -99,11 +99,40 @@ void insert_and_bind_elem_to_stack(char *type, char *name, size_t len)
 
 void remove_and_unbind_elem_from_stack(char *name, size_t len)
 {
-#if 0
-	unbind_elems_in_stack(fb_pipeline[lower_idx], name);
-	unbind_elems_in_stack(name, fb_pipeline[upper_idx]);
-	bind_elems_in_stack(fb_pipeline[lower_idx], fb_pipeline[upper_idx]);
+	int i, found=0;
+	struct fb pipetmp[MAXP];
 
-	remove_elem_from_stack(name);
-#endif
+	for (i = 0; i < curr; ++i) {
+		if (!strncmp(pipeline[i].name, name, len)) {
+			assert(i>0);
+
+			if (i!=curr-1) {
+				unbind_elems_in_stack(pipeline[i-1].name, name);
+				unbind_elems_in_stack(name, pipeline[i+1].name);
+				bind_elems_in_stack(pipeline[i-1].name,
+						    pipeline[i+1].name);
+			} else {
+				unbind_elems_in_stack(pipeline[i-1].name, name);
+			}
+
+			remove_elem_from_stack(name);
+			found=1;
+			break;
+		}
+	}
+
+	if (found) {
+		memcpy(pipetmp, &pipeline[i+1], (MAXP-curr)*sizeof(struct fb));
+		memcpy(&pipeline[i], pipetmp, (MAXP-curr)*sizeof(struct fb));
+		curr--;
+		dumpstack();
+	}
+}
+
+void cleanup_pipeline(void)
+{
+	while (curr > 1) {
+		printf("Removing %s!\n", pipeline[1].name);
+		remove_and_unbind_elem_from_stack(pipeline[1].name, sizeof(pipeline[1].name));
+	}
 }

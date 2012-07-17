@@ -8,6 +8,8 @@
 extern void init_reconfig(char *upper_name, char *upper_type,
 			  char *lower_name, char *lower_type);
 
+extern void cleanup_pipeline(void);
+
 extern void setup_initial_stack(void);
 extern void cleanup_stack(void);
 
