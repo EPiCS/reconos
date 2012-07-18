@@ -28,16 +28,16 @@ void getpgd_flush_dcache(void)
 }
 EXPORT_SYMBOL(getpgd_flush_dcache);
 
-unsigned long getpgd_fetch_pgd(void)
+unsigned long getpgd_fetch_pgd(int high)
 {
-	return (unsigned long) current->mm->pgd - 0xC0000000;
+	return (unsigned long) current->mm->pgd - (high * 0xC0000000);
 }
 EXPORT_SYMBOL(getpgd_fetch_pgd);
 
 static ssize_t getpgd_read(struct file *filp, char __user *buf, size_t len,
 			   loff_t *ignore)
 {
-	unsigned long data = getpgd_fetch_pgd();
+	unsigned long data = getpgd_fetch_pgd(1);
 
 	if (len != sizeof(data))
 		return -EINVAL;

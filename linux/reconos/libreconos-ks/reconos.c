@@ -15,7 +15,7 @@ extern uint32_t fsl_read_word(int num);
 extern ssize_t fsl_write_word(int num, uint32_t val);
 
 extern void getpgd_flush_dcache(void);
-extern unsigned long getpgd_fetch_pgd(void);
+extern unsigned long getpgd_fetch_pgd(int high);
 
 static struct reconos_process reconos_proc;
 
@@ -41,7 +41,7 @@ static void reconos_slot_reset(int num, int reset)
 
 static inline uint32_t reconos_getpgd(void)
 {
-	return (uint32_t) getpgd_fetch_pgd();
+	return (uint32_t) getpgd_fetch_pgd(0);
 }
 
 void reconos_mmu_stats(uint32_t *tlb_hits, uint32_t *tlb_misses,
