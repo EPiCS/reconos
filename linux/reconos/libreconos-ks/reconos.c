@@ -15,7 +15,7 @@ extern uint32_t fsl_read_word(int num);
 extern ssize_t fsl_write_word(int num, uint32_t val);
 
 extern void getpgd_flush_dcache(void);
-extern unsigned long getpgd_fetch_pgd(int high);
+extern unsigned long getpgd_fetch_pgd(int userland);
 
 static struct reconos_process reconos_proc;
 

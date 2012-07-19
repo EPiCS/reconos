@@ -28,9 +28,12 @@ void getpgd_flush_dcache(void)
 }
 EXPORT_SYMBOL(getpgd_flush_dcache);
 
-unsigned long getpgd_fetch_pgd(int high)
+unsigned long getpgd_fetch_pgd(int userland)
 {
-	return (unsigned long) current->mm->pgd - (high * 0xC0000000);
+	if (userland)
+		return (unsigned long) current->mm->pgd - 0xC0000000;
+	else
+		return 0; //FIXME kernel pgd
 }
 EXPORT_SYMBOL(getpgd_fetch_pgd);
 
