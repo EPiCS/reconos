@@ -9,6 +9,7 @@ obj-m		:= libreconos.o
 
 modules:
 	$(MAKE) -C $(KDIR) M=$(PWD) modules
+	@cat Module.symvers >> ../../lana/Module.symvers
 
 clean:
 	$(MAKE) -C $(KDIR) M=$(PWD) clean
