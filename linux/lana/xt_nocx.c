@@ -74,7 +74,11 @@ static struct sk_buff *noc_pkt_to_skb(struct noc_pkt *npkt)
 
 static int noc_sendpkt(struct noc_pkt *npkt)
 {
-	/* stub */
+	u32 pkt_len = npkt->payload_len;
+
+//	copy_packet(packet_len, shared_mem_s2h);
+
+	mbox_put(&noc[SW_TO_HW_SLOT].mb_put, pkt_len);
 	return 0;
 }
 
