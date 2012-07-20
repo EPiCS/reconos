@@ -1,5 +1,6 @@
 /*
  * Copyright 2012 Daniel Borkmann <dborkma@tik.ee.ethz.ch>
+ * Copyright 2012 Ariane Keller <ariane.keller@tik.ee.ethz.ch>
  */
 
 #include <linux/init.h>
@@ -11,6 +12,21 @@
 #include <linux/kthread.h>
 
 #include "xt_engine.h"
+#include "reconos.h"
+#include "mbox.h"
+
+enum noc_hw_slots {
+	C_HWT_SLOT_NR = 0,
+#define C_HWT_SLOT_NR		0
+	B_HWT_SLOT_NR,
+#define B_HWT_SLOT_NR		1
+	A_HWT_SLOT_NR,
+#define A_HWT_SLOT_NR		2
+	E_HWT_SLOT_NR,
+#define E_HWT_SLOT_NR		3
+	__MAX_HWT_SLOT_NR
+#define __MAX_HWT_SLOT_NR	4
+};
 
 struct noc_if {
 	int blaaa;
@@ -35,7 +51,7 @@ static struct noc_if noc;
 
 static int reconos_noc_init(struct noc_if *noc)
 {
-	/* stub */
+
 	return 0;
 }
 

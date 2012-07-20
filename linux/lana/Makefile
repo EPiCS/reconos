@@ -2,6 +2,7 @@
 ARCH		=	microblaze
 CROSS_COMPILE	=	microblaze-unknown-linux-gnu-
 KDIR		?=	~/linux-2.6-xlnx
+EXTRA_CFLAGS	+=	-I$(PWD)/../reconos/libreconos-ks/
 
 export ARCH CROSS_COMPILE
 
@@ -9,7 +10,8 @@ export ARCH CROSS_COMPILE
 #MDIR     := /lib/modules/$(shell uname -r)
 #KDIR     := $(MDIR)/build
 
-lana-y   := core.o xt_vlink.o xt_engine.o xt_fblock.o xt_critbit.o xt_conf.o xt_hwif.o
+lana-y   := core.o xt_vlink.o xt_engine.o xt_fblock.o xt_critbit.o xt_conf.o \
+	    xt_nocx.o
 
 obj-m    += lana.o
 obj-m    += fb_dummy.o
