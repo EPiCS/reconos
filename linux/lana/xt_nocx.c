@@ -51,13 +51,17 @@ struct noc_pkt {
 	u8* payload;		/* pointer to the actual payload */
 };
 
-static struct task_struct *thread;
+static struct task_struct *thread_hw2sw, *thread_sw2hw;
+static wait_queue_head_t wait_queue;
+static struct sk_buff_head queue_to_hw;
 static u8 *shared_mem_h2s, *shared_mem_s2h;
 static int order = 0;
 
 static struct noc_pkt *skb_to_noc_pkt(struct sk_buff *skb)
 {
-	struct noc_pkt *npkt;
+	struct noc_pkt *npkt = NULL;
+
+//	npkt = kzalloc();
 
 	return npkt;
 }
@@ -68,7 +72,7 @@ static struct sk_buff *noc_pkt_to_skb(struct noc_pkt *npkt)
 	return NULL;
 }
 
-static int reconos_noc_sendpkt(struct noc_pkt *npkt)
+static int noc_sendpkt(struct noc_pkt *npkt)
 {
 	/* stub */
 	return 0;
@@ -76,12 +80,9 @@ static int reconos_noc_sendpkt(struct noc_pkt *npkt)
 
 void packet_sw_to_hw(struct sk_buff *skb, enum path_type dir)
 {
-	struct noc_pkt *npkt;
-
-	npkt = skb_to_noc_pkt(skb);
-	if (npkt) {
-		reconos_noc_sendpkt(npkt);
-	}
+	write_path_to_skb(skb, dir);
+	skb_queue_tail(&queue_to_hw, skb);
+	wake_up_interruptible(&wait_queue);
 }
 
 static void packet_hw_to_sw(struct noc_pkt *npkt)
@@ -96,7 +97,7 @@ static void packet_hw_to_sw(struct noc_pkt *npkt)
 	}
 }
 
-static int hwif_worker_thread(void *arg)
+static int hwif_hw_to_sw_worker_thread(void *arg)
 {
 	u32 pkt_len;
 	struct noc_pkt npkt;
@@ -118,6 +119,31 @@ static int hwif_worker_thread(void *arg)
 		npkt.payload = shared_mem_h2s + sizeof(u32);
 
 		packet_hw_to_sw(&npkt);
+	}
+
+	return 0;
+}
+
+static int hwif_sw_to_hw_worker_thread(void *arg)
+{
+	struct noc_pkt *npkt;
+	struct sk_buff *skb;
+
+	skb_queue_head_init(&queue_to_hw);
+	init_waitqueue_head(&wait_queue);
+
+	/* we need threads here, because mbox can lay itself to sleep */
+	while (likely(!kthread_should_stop())) {
+		wait_event_interruptible(wait_queue,
+					 !skb_queue_empty(&queue_to_hw));
+		skb = skb_dequeue(&queue_to_hw);
+		if (skb == NULL)
+			continue;
+
+		npkt = skb_to_noc_pkt(skb);
+		if (npkt) {
+			noc_sendpkt(npkt);
+		}
 	}
 
 	return 0;
@@ -181,24 +207,38 @@ int init_hwif(void)
 {
 	int ret;
 
-	thread = kthread_create(hwif_worker_thread, NULL, "lana_hwif");
-	if (IS_ERR(thread)) {
-		printk(KERN_ERR "Cannot create hwif thread!\n");
+	thread_hw2sw = kthread_create(hwif_hw_to_sw_worker_thread, NULL,
+				      "lana_hwif_hw2sw");
+	if (IS_ERR(thread_hw2sw)) {
+		printk(KERN_ERR "Cannot create hwif thread1!\n");
 		return -EIO;
+	}
+
+	thread_sw2hw = kthread_create(hwif_sw_to_hw_worker_thread, NULL,
+				      "lana_hwif_sw2hw");
+	if (IS_ERR(thread_sw2hw)) {
+		printk(KERN_ERR "Cannot create hwif thread2!\n");
+		goto out_t2;
 	}
 
 	ret = reconos_noc_init();
 	if (ret) {
 		printk(KERN_ERR "Cannot init reconos noc!\n");
-		kthread_stop(thread);
-		return -EIO;
+		goto out_rec;
 	}
 
 	return 0;
+out_rec:
+	kthread_stop(thread_sw2hw);
+out_t2:
+	kthread_stop(thread_hw2sw);
+	return -EIO;
 }
 
 void cleanup_hwif(void)
 {
-	kthread_stop(thread);
+	kthread_stop(thread_hw2sw);
+	kthread_stop(thread_sw2hw);
+
 	reconos_noc_cleanup();
 }
