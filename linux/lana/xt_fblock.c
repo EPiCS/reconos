@@ -35,7 +35,7 @@ static struct critbit_tree fbmap;
 
 RADIX_TREE(fblmap, GFP_ATOMIC);
 
-static atomic64_t idp_counter;
+static atomic_t idp_counter;
 
 static struct kmem_cache *fblock_cache = NULL;
 
@@ -57,7 +57,7 @@ static DEFINE_SPINLOCK(fb_props_list_lock);
 
 static inline idp_t provide_new_fblock_idp(void)
 {
-	return (idp_t) atomic64_inc_return(&idp_counter);
+	return (idp_t) atomic_inc_return(&idp_counter);
 }
 
 static int register_to_fblock_namespace(char *name, idp_t val)
@@ -644,7 +644,7 @@ static int procfs_fblocks(char *page, char **start, off_t offset,
 	off_t len = 0;
 	struct fblock *fb;
 	struct fblock_notifier *fn;
-	long long max = atomic64_read(&idp_counter);
+	long long max = atomic_read(&idp_counter);
 	u64 tpkts = 0, tbytes = 0, tdropped = 0, jiff = 0;
 
 	len += sprintf(page + len,
@@ -727,7 +727,7 @@ int init_fblock_tables(void)
 					 ctor_fblock);
 	if (!fblock_cache)
 		goto err;
-	atomic64_set(&idp_counter, 0);
+	atomic_set(&idp_counter, 0);
 	fblocks_proc = create_proc_read_entry("fblocks", 0400, lana_proc_dir,
 					      procfs_fblocks, NULL);
 	if (!fblocks_proc)

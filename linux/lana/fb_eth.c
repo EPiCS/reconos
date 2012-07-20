@@ -55,22 +55,26 @@ static inline void fb_eth_make_dev_unbridged(struct net_device *dev)
 	dev->priv_flags &= ~IFF_IS_BRIDGED;
 }
 
-static rx_handler_result_t fb_eth_handle_frame(struct sk_buff **pskb)
+//XXX: for newer kernels
+//static rx_handler_result_t fb_eth_handle_frame(struct sk_buff **pskb)
+struct sk_buff *fb_eth_handle_frame(struct sk_buff *skb)
 {
 	unsigned int seq;
-	struct sk_buff *skb = *pskb;
+//	struct sk_buff *skb = *pskb;
 	struct fb_eth_dev_node *node;
 	struct fblock *fb = NULL;
 	struct fb_eth_priv *fb_priv;
 	struct ethhdr *ethhdr = NULL;
 
 	if (unlikely(skb->pkt_type == PACKET_LOOPBACK))
-		return RX_HANDLER_PASS;
+		return skb;
+//		return RX_HANDLER_PASS;
 	if (unlikely(!is_valid_ether_addr(eth_hdr(skb)->h_source)))
 		goto drop;
 	skb = skb_share_check(skb, GFP_ATOMIC);
 	if (unlikely(!skb))
-		return RX_HANDLER_CONSUMED;
+		return NULL;
+//		return RX_HANDLER_CONSUMED;
 	list_for_each_entry_rcu(node, &fb_eth_devs, list)
 		if (skb->dev == node->dev)
 			fb = node->fb;
@@ -90,10 +94,12 @@ static rx_handler_result_t fb_eth_handle_frame(struct sk_buff **pskb)
 				      fb_priv->port[TYPE_INGRESS]);
 	} while (read_seqretry(&fb_priv->lock, seq));
 	process_packet(skb, TYPE_INGRESS);
-	return RX_HANDLER_CONSUMED;
+//	return RX_HANDLER_CONSUMED;
+	return NULL;
 drop:
 	kfree_skb(skb);
-	return RX_HANDLER_CONSUMED;
+	return NULL;
+//	return RX_HANDLER_CONSUMED;
 }
 
 static int fb_eth_netrx(const struct fblock * const fb,
