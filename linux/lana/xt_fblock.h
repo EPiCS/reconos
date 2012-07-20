@@ -373,6 +373,11 @@ static inline idp_t read_next_idp_from_skb(struct sk_buff *skb)
 	return SKB_LANA_INF(skb)->idp_dst;
 }
 
+static inline idp_t read_last_idp_from_skb(struct sk_buff *skb)
+{
+	return SKB_LANA_INF(skb)->idp_src;
+}
+
 static inline void write_path_to_skb(struct sk_buff *skb, enum path_type dir)
 {
 	struct sock_lana_inf *sli;

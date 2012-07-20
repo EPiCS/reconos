@@ -10,8 +10,11 @@
 #include <linux/wait.h>
 #include <linux/kernel.h>
 #include <linux/kthread.h>
+#include <linux/skbuff.h>
+#include <linux/netdevice.h>
 
 #include "xt_engine.h"
+#include "xt_fblock.h"
 #include "reconos.h"
 #include "mbox.h"
 
@@ -40,15 +43,16 @@ struct noc_slot {
 static struct noc_slot noc[__MAX_HWT_SLOT_NR];
 
 struct noc_pkt {
-	u8 hw_addr_block;	/* local hardware address */
-	u8 hw_addr_switch;	/* global hardware address */
-	u8 priority:2,		/* range [0..3] */
-	   direction:1,		/* 1 for ingress, 0 for egress */
-	   latency_critical:1;	/* 1 lat. critical, 0 not latency critical */
-	u32 src_idp;		/* src IDP of the packet */
-	u32 dst_idp;		/* dst IDP of the packet */
-	u32 payload_len;	/* payload length in bytes */
-	u8* payload;		/* pointer to the actual payload */
+	u8 hw_addr_switch:4,
+	   hw_addr_block:2,
+	   priority:2;
+	u8 direction:1,
+	   latency_critical:1,
+	   reserved:6;
+	u32 src_idp;
+	u32 dst_idp;
+	u32 payload_len;
+	u8* payload;
 };
 
 static struct task_struct *thread_hw2sw, *thread_sw2hw;
@@ -57,28 +61,90 @@ static struct sk_buff_head queue_to_hw;
 static u8 *shared_mem_h2s, *shared_mem_s2h;
 static int order = 0;
 
+static inline struct noc_pkt *alloc_npkt(unsigned int size, gfp_t priority)
+{
+	struct noc_pkt *npkt;
+
+	if (size == 0)
+		return NULL;
+
+	npkt = kzalloc(sizeof(*npkt), priority);
+	if (!npkt)
+		return NULL;
+	npkt->payload = kzalloc(size, priority);
+	if (!npkt->payload) {
+		kfree(npkt);
+		return NULL;
+	}
+
+	return npkt;
+}
+
+static inline void kfree_npkt(struct noc_pkt *npkt)
+{
+	if (!npkt)
+		return;
+
+	kfree(npkt->payload);
+	kfree(npkt);
+}
+
 static struct noc_pkt *skb_to_noc_pkt(struct sk_buff *skb)
 {
 	struct noc_pkt *npkt = NULL;
 
-//	npkt = kzalloc();
+	npkt = alloc_npkt(skb->len, GFP_KERNEL);
+	if (npkt) {
+		npkt->hw_addr_switch = 1;
+		npkt->hw_addr_block = 0;
+		npkt->priority = 0;
+		npkt->direction = read_path_from_skb(skb);
+		npkt->latency_critical = 0;
+		npkt->reserved = 0;
+		npkt->src_idp = read_last_idp_from_skb(skb);
+		npkt->dst_idp = read_next_idp_from_skb(skb);
+		npkt->payload_len = skb->len;
+		//FIXME: skb->data
+		memcpy(npkt->payload, skb->data, npkt->payload_len);
+	}
 
 	return npkt;
 }
 
 static struct sk_buff *noc_pkt_to_skb(struct noc_pkt *npkt)
 {
-	/* stub */
-	return NULL;
+	struct sk_buff *skb = NULL;
+	struct net_device *dev = NULL;
+
+	dev = dev_get_by_name(&init_net, "eth0"); //FIXME
+	if (!dev)
+		return NULL;
+
+	skb = alloc_skb(npkt->payload_len + LL_ALLOCATED_SPACE(dev),
+			GFP_KERNEL);
+	if (skb) {
+		skb_reserve(skb, LL_RESERVED_SPACE(dev));
+		skb_reserve(skb, npkt->payload_len);
+		memcpy(skb_push(skb, npkt->payload_len), npkt->payload,
+		       npkt->payload_len);
+
+		write_path_to_skb(skb, npkt->direction);
+		write_next_idp_to_skb(skb, npkt->src_idp, npkt->dst_idp);
+	}
+
+	return skb;
 }
 
 static int noc_sendpkt(struct noc_pkt *npkt)
 {
 	u32 pkt_len = npkt->payload_len;
+	size_t off = sizeof(*npkt) - sizeof(npkt->payload);
 
-//	copy_packet(packet_len, shared_mem_s2h);
+	memcpy(shared_mem_s2h, npkt, off);
+	memcpy(shared_mem_s2h + off, npkt->payload, pkt_len);
 
 	mbox_put(&noc[SW_TO_HW_SLOT].mb_put, pkt_len);
+
 	return 0;
 }
 
@@ -103,26 +169,17 @@ static void packet_hw_to_sw(struct noc_pkt *npkt)
 
 static int hwif_hw_to_sw_worker_thread(void *arg)
 {
-	u32 pkt_len;
-	struct noc_pkt npkt;
+	struct noc_pkt *npkt;
+	size_t off = sizeof(*npkt) - sizeof(npkt->payload);
 
 	while (likely(!kthread_should_stop())) {
-		memset(&npkt, 0, sizeof(npkt));
-
 		/* sleeps here */
 		mbox_get(&noc[HW_TO_SW_SLOT].mb_get);
-		pkt_len = *(u32 *) shared_mem_h2s;
 
-		/* FIXME: fill this out */
-		npkt.priority = 0;
-		npkt.direction = 0;
-		npkt.latency_critical = 0;
-		npkt.src_idp = 0;
-		npkt.dst_idp = 0;
-		npkt.payload_len = pkt_len;
-		npkt.payload = shared_mem_h2s + sizeof(u32);
+		npkt = (struct noc_pkt *) shared_mem_h2s;
+		npkt->payload = shared_mem_h2s + off;
 
-		packet_hw_to_sw(&npkt);
+		packet_hw_to_sw(npkt);
 	}
 
 	return 0;
@@ -147,6 +204,7 @@ static int hwif_sw_to_hw_worker_thread(void *arg)
 		npkt = skb_to_noc_pkt(skb);
 		if (npkt) {
 			noc_sendpkt(npkt);
+			kfree_npkt(npkt);
 		}
 	}
 
