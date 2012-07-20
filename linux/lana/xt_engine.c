@@ -134,7 +134,7 @@ pkt:
 		}
 
 		if (fblock_offload_isset(fb)) {
-			enqueue_for_hw_fblock(skb, dir);
+			packet_sw_to_hw(skb, dir);
 			put_fblock(fb);
 			goto out_next;
 		}

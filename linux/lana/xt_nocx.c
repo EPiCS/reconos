@@ -15,20 +15,6 @@
 #include "reconos.h"
 #include "mbox.h"
 
-#ifndef array_size
-# define array_size(x)  (sizeof(x) / sizeof((x)[0]) + __must_be_array(x))
-#endif
-
-#ifndef __must_be_array
-# define __must_be_array(x)                                             \
-        build_bug_on_zero(__builtin_types_compatible_p(typeof(x),       \
-                                                       typeof(&x[0])))
-#endif
-
-#ifndef build_bug_on_zero
-# define build_bug_on_zero(e)   (sizeof(char[1 - 2 * !!(e)]) - 1)
-#endif
-
 enum noc_hw_slots {
 	C_HWT_SLOT_NR = 0,
 #define C_HWT_SLOT_NR		0
@@ -66,10 +52,76 @@ struct noc_pkt {
 };
 
 static struct task_struct *thread;
-static wait_queue_head_t wait_queue;
-
 static u8 *shared_mem_h2s, *shared_mem_s2h;
 static int order = 0;
+
+static struct noc_pkt *skb_to_noc_pkt(struct sk_buff *skb)
+{
+	struct noc_pkt *npkt;
+
+	return npkt;
+}
+
+static struct sk_buff *noc_pkt_to_skb(struct noc_pkt *npkt)
+{
+	/* stub */
+	return NULL;
+}
+
+static int reconos_noc_sendpkt(struct noc_pkt *npkt)
+{
+	/* stub */
+	return 0;
+}
+
+void packet_sw_to_hw(struct sk_buff *skb, enum path_type dir)
+{
+	struct noc_pkt *npkt;
+
+	npkt = skb_to_noc_pkt(skb);
+	if (npkt) {
+		reconos_noc_sendpkt(npkt);
+	}
+}
+
+static void packet_hw_to_sw(struct noc_pkt *npkt)
+{
+	struct sk_buff *skb;
+	enum path_type dir;
+
+	skb = noc_pkt_to_skb(npkt);
+	if (skb) {
+		dir = read_path_from_skb(skb);
+		engine_backlog_tail(skb, dir);
+	}
+}
+
+static int hwif_worker_thread(void *arg)
+{
+	u32 pkt_len;
+	struct noc_pkt npkt;
+
+	while (likely(!kthread_should_stop())) {
+		memset(&npkt, 0, sizeof(npkt));
+
+		/* sleeps here */
+		mbox_get(&noc[HW_TO_SW_SLOT].mb_get);
+		pkt_len = *(u32 *) shared_mem_h2s;
+
+		/* FIXME: fill this out */
+		npkt.priority = 0;
+		npkt.direction = 0;
+		npkt.latency_critical = 0;
+		npkt.src_idp = 0;
+		npkt.dst_idp = 0;
+		npkt.payload_len = pkt_len;
+		npkt.payload = shared_mem_h2s + sizeof(u32);
+
+		packet_hw_to_sw(&npkt);
+	}
+
+	return 0;
+}
 
 static int reconos_noc_init(void)
 {
@@ -83,7 +135,7 @@ static int reconos_noc_init(void)
 
 	reconos_proc_control_selftest();
 
-	for (i = 0; i < array_size(noc); ++i) {
+	for (i = 0; i < ARRAY_SIZE(noc); ++i) {
 		mbox_init(&noc[i].mb_put, 2);
 		mbox_init(&noc[i].mb_get, 2);
 
@@ -93,7 +145,7 @@ static int reconos_noc_init(void)
 		noc[i].res[1].ptr  = &noc[i].mb_get;
 
 		reconos_hwt_setresources(&noc[i].hwt, noc[i].res,
-					 array_size(noc[i].res));
+					 ARRAY_SIZE(noc[i].res));
 		reconos_hwt_create(&noc[i].hwt, i, NULL);
 
 		printk(KERN_INFO "[lana] noc hwt slot%d up and running!\n", i);
@@ -125,93 +177,28 @@ static void reconos_noc_cleanup(void)
 	printk(KERN_INFO "[lana] noc halted!\n");
 }
 
-static int reconos_noc_sendpkt(struct noc_pkt *npkt)
-{
-	/* stub */
-	return 0;
-}
-
-static void reconos_noc_register_rcv_handler(void (*fcnt)(struct noc_pkt *npkt))
-{
-	/* stub */
-}
-
-static struct noc_pkt *skb_to_noc_pkt(struct sk_buff *skb)
-{
-	/* stub */
-	return NULL;
-}
-
-static struct sk_buff *noc_pkt_to_skb(struct noc_pkt *npkt)
-{
-	/* stub */
-	return NULL;
-}
-
-void enqueue_for_hw_fblock(struct sk_buff *skb, enum path_type dir)
-{
-	/* stub */
-}
-
-void noc_new_packet_callback(struct noc_pkt *npkt)
-{
-#if 0
-	struct sk_buff *skb;
-	enum path_type dir;
-
-	skb = noc_pkt_to_skb(npkt);
-	if (skb) {
-		dir = read_path_from_skb(skb);
-		engine_backlog_tail(skb, dir);
-	}
-#endif
-}
-
-static int hwif_worker_thread(void *arg)
-{
-#if 0
-	struct noc_pkt *npkt;
-	struct sk_buff *skb;
-
-	while (likely(!kthread_should_stop())) {
-		wait_event_interruptible(wait_queue,
-					 !skb_queue_empty(&queue_to_hw));
-
-		skb = skb_dequeue(&queue_to_hw);
-		if (skb == NULL)
-			continue;
-
-		npkt = skb_to_noc_pkt(skb);
-		if (npkt)
-			reconos_noc_sendpkt(&noc, npkt);
-	}
-#endif
-	return 0;
-}
-
 int init_hwif(void)
 {
 	int ret;
 
-//	thread = kthread_create(hwif_worker_thread, NULL, "lana_hwif");
-//	if (IS_ERR(thread)) {
-//		printk(KERN_ERR "Cannot create hwif thread!\n");
-//		return -EIO;
-//	}
+	thread = kthread_create(hwif_worker_thread, NULL, "lana_hwif");
+	if (IS_ERR(thread)) {
+		printk(KERN_ERR "Cannot create hwif thread!\n");
+		return -EIO;
+	}
 
 	ret = reconos_noc_init();
 	if (ret) {
 		printk(KERN_ERR "Cannot init reconos noc!\n");
-//		kthread_stop(thread);
+		kthread_stop(thread);
 		return -EIO;
 	}
 
-//	reconos_noc_register_rcv_handler(&noc, noc_new_packet_callback);
 	return 0;
 }
 
 void cleanup_hwif(void)
 {
-//	kthread_stop(thread);
+	kthread_stop(thread);
 	reconos_noc_cleanup();
 }

@@ -20,7 +20,7 @@ extern void engine_backlog_tail(struct sk_buff *skb, enum path_type dir);
 extern int init_engine(void);
 extern void cleanup_engine(void);
 
-extern void enqueue_for_hw_fblock(struct sk_buff *skb, enum path_type dir);
+extern void packet_sw_to_hw(struct sk_buff *skb, enum path_type dir);
 
 extern int init_hwif(void);
 extern void cleanup_hwif(void);
