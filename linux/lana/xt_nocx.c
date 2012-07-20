@@ -34,6 +34,8 @@ enum noc_hw_slots {
 #define HW_TO_SW_SLOT		B_HWT_SLOT_NR
 #define SW_TO_HW_SLOT		C_HWT_SLOT_NR
 
+#define DEBUG(fnt)		(fnt)
+
 struct noc_slot {
 	struct reconos_hwt hwt;
 	struct reconos_resource res[2];
@@ -60,6 +62,23 @@ static wait_queue_head_t wait_queue;
 static struct sk_buff_head queue_to_hw;
 static u8 *shared_mem_h2s, *shared_mem_s2h;
 static int order = 0;
+
+void dump_npkt(struct noc_pkt *npkt)
+{
+	int i;
+	printk(KERN_INFO "npkt packet dump ---->\n");
+	printk(KERN_INFO " hw_addr_switch:%d\n", npkt->hw_addr_switch);
+	printk(KERN_INFO " hw_addr_block:%d\n", npkt->hw_addr_block);
+	printk(KERN_INFO " priority:%d\n", npkt->priority);
+	printk(KERN_INFO " direction:%d\n", npkt->direction);
+	printk(KERN_INFO " latency_critical:%d\n", npkt->latency_critical);
+	printk(KERN_INFO " src_idp:%u\n", npkt->src_idp);
+	printk(KERN_INFO " dst_idp:%u\n", npkt->dst_idp);
+	printk(KERN_INFO " payload_len:%u\n", npkt->payload_len);
+	for (i = 0; i < npkt->payload_len; ++i)
+		printk(KERN_INFO " byte%d: 0x%x\n", i, (u8) npkt->payload[i]);
+	printk(KERN_INFO "<---- end dump\n");
+}
 
 static inline struct noc_pkt *alloc_npkt(unsigned int size, gfp_t priority)
 {
@@ -140,6 +159,9 @@ static int noc_sendpkt(struct noc_pkt *npkt)
 	u32 pkt_len = npkt->payload_len;
 	size_t off = sizeof(*npkt) - sizeof(npkt->payload);
 
+	DEBUG(printk(KERN_INFO "XXX: send npkt to hw:\n"));
+	DEBUG(dump_npkt(npkt));
+
 	memcpy(shared_mem_s2h, npkt, off);
 	memcpy(shared_mem_s2h + off, npkt->payload, pkt_len);
 
@@ -178,6 +200,9 @@ static int hwif_hw_to_sw_worker_thread(void *arg)
 
 		npkt = (struct noc_pkt *) shared_mem_h2s;
 		npkt->payload = shared_mem_h2s + off;
+
+		DEBUG(printk(KERN_INFO "XXX: got npkt from hw:\n"));
+		DEBUG(dump_npkt(npkt));
 
 		packet_hw_to_sw(npkt);
 	}
