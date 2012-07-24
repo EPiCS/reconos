@@ -47,18 +47,19 @@ static void printbuff(char buff[BUFFSIZ], int in)
 	printf("\n");
 }
 
-static void preparebuff(char buff[BUFFSIZ])
+static void preparebuff(char buff[BUFFSIZ], int run)
 {
-	int i;
-	for (i = 0; i < BUFFSIZ; ++i) {
-		buff[i] = (uint8_t) i;
+	int i = BUFFSIZ, j = run % BUFFSIZ, l;
+	for (l = 0; i-- > 0; ++l) {
+		buff[l] = (uint8_t) j;
+		j = (j + 1) % BUFFSIZ;
 	}
 }
 
 int main(void)
 {
-	int sock, ret;
-	char buff[BUFFSIZ];
+	int sock, ret, run = 0;
+	char buff[BUFFSIZ], orig[BUFFSIZ];
 	char name[FBNAMSIZ];
 
 	sock = socket(27, SOCK_RAW, 0);
@@ -72,12 +73,21 @@ int main(void)
 	printf("our instance: %s\n", name);
 
 	while (1) {
-		preparebuff(buff);
+		preparebuff(buff, run++);
+		memcpy(orig, buff, sizeof(buff));
 
 		printbuff(buff, 0);
 		sendto(sock, buff, sizeof(buff), 0, NULL, 0);
 		recvfrom(sock, buff, sizeof(buff), 0, NULL, 0);
 		printbuff(buff, 1);
+
+		if (memcmp(orig, buff, sizeof(orig)))
+			printf(" ... is NOT OK!\n");
+		else
+			printf(" ... is OK!\n");
+
+		memset(buff, 0, sizeof(buff));
+		memset(orig, 0, sizeof(orig));
 		sleep(1);
 	}
 
