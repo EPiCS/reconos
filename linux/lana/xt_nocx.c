@@ -122,8 +122,7 @@ static struct noc_pkt *skb_to_noc_pkt(struct sk_buff *skb)
 		npkt->reserved = 0;
 		npkt->src_idp = read_last_idp_from_skb(skb);
 		npkt->dst_idp = read_next_idp_from_skb(skb);
-		npkt->payload_len = skb->len;
-		//FIXME: skb->data
+		npkt->payload_len = skb_headlen(skb); //was: skb->len
 		memcpy(npkt->payload, skb->data, npkt->payload_len);
 	}
 
