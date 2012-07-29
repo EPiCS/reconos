@@ -32,8 +32,10 @@ unsigned long getpgd_fetch_pgd(int userland)
 {
 	if (userland)
 		return (unsigned long) current->mm->pgd - 0xC0000000;
-	else
+	else{
+		printk(KERN_INFO "[reconos] pgd addr: %p\n", init_mm.pgd);
 		return (unsigned long) init_mm.pgd - 0xC0000000;
+	}
 }
 EXPORT_SYMBOL(getpgd_fetch_pgd);
 

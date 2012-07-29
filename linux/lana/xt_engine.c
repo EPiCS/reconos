@@ -62,6 +62,7 @@ void engine_backlog_tail(struct sk_buff *skb, enum path_type dir)
 {
 	write_path_to_skb(skb, dir);
 	skb_queue_tail(&(this_cpu_ptr(emdiscs)->ppe_backlog_queue), skb);
+	
 }
 EXPORT_SYMBOL(engine_backlog_tail);
 
@@ -102,6 +103,7 @@ int process_packet(struct sk_buff *skb, enum path_type dir)
 	int ret;
 	idp_t cont;
 	struct fblock *fb;
+//	printk(KERN_INFO "[engine] process packet called\n");	
 
 	BUG_ON(!rcu_read_lock_held());
 
@@ -115,30 +117,38 @@ pkt:
 	engine_this_cpu_set_active();
 	engine_inc_pkts_stats();
 	engine_add_bytes_stats(skb->len);
-
+	
+//	printk(KERN_INFO "[engine] before while\n");	
 	while ((cont = read_next_idp_from_skb(skb))) {
 		struct fblock_stats *stats;
 		u64 before, after;
+		DEBUG(printk(KERN_INFO "[engine] foward packet to idp %d\n", cont));	
 
 		fb = __search_fblock(cont);
 		if (unlikely(!fb)) {
 			kfree_skb(skb);
 			ret = PPE_ERROR;
+			printk(KERN_INFO "[engine] idp %d not found, dropping packet\n", cont);	
+
 			break;
 		}
 
 		if (fblock_transition_inbound_isset(fb)) {
+			DEBUG(printk(KERN_INFO "[engine] transision inbound\n"));	
 			engine_backlog_tail(skb, dir);
 			put_fblock(fb);
 			goto out;
 		}
 
 		if (fblock_offload_isset(fb)) {
+			DEBUG(printk(KERN_INFO "[engine] put packet to hw\n"));	
 			packet_sw_to_hw(skb, dir);
+		//	printk(KERN_INFO "[engine] put packet to hw done\n");				
 			put_fblock(fb);
+		//	printk(KERN_INFO "[engine] put fblock done\n");							
 			goto out_next;
 		}
-
+		
 		stats = this_cpu_ptr(fb->stats);
 
 		before = get_jiffies_64();
@@ -164,22 +174,25 @@ pkt:
 		if (ret == PPE_HALT_NO_REDUCE)
 			goto out;
 	}
+
 out_next:
 	if ((skb = engine_backlog_test_reduce(&dir)))
 		goto pkt;
 out:
 	engine_this_cpu_set_inactive();
+
 	return ret;
 }
 EXPORT_SYMBOL_GPL(process_packet);
 
 static enum hrtimer_restart engine_timer_handler(struct hrtimer *self)
 {
-	enum path_type dir;
+	enum path_type dir = TYPE_EGRESS;
 	struct sk_buff *skb;
 	struct tasklet_hrtimer *thr = container_of(self, struct tasklet_hrtimer, timer);
 	struct engine_disc *disc = container_of(thr, struct engine_disc, htimer);
-
+//	printk(KERN_INFO "[engine] engine_timer_handler\n");	
+	
 	if (likely(ACCESS_ONCE(disc->active)))
 		goto out;
 	if (skb_queue_empty(&disc->ppe_backlog_queue))
@@ -195,15 +208,20 @@ static enum hrtimer_restart engine_timer_handler(struct hrtimer *self)
 		goto out;
 	}
 	process_packet(skb, dir);
+//	printk(KERN_INFO "[engine] 1\n");
 
 	rcu_read_unlock();
+//	printk(KERN_INFO "[engine] 2\n");
+
 out:
 	engine_inc_timer_stats();
+//	printk(KERN_INFO "[engine] 3\n");
 
 	if (!skb_queue_empty(&disc->ppe_backlog_queue))
 		tasklet_hrtimer_start(thr, ktime_set(0, 1), HRTIMER_MODE_REL);
 	else
 		tasklet_hrtimer_start(thr, ktime_set(0, 100000000), HRTIMER_MODE_REL);
+//	printk(KERN_INFO "[engine] 4\n");
 
 	return HRTIMER_NORESTART;
 }

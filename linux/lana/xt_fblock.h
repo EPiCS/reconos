@@ -71,6 +71,9 @@ static const char *fblock_props_to_str[] = {
 };
 #endif /* __KERNEL__ */
 
+#define DEBUG(fnt)
+//#define DEBUG(fnt)		(fnt)
+	
 #define FBNAMSIZ		(IFNAMSIZ*2)
 #define TYPNAMSIZ		(FBNAMSIZ*2)
 
@@ -383,6 +386,7 @@ static inline void write_path_to_skb(struct sk_buff *skb, enum path_type dir)
 	struct sock_lana_inf *sli;
 	sli = SKB_LANA_INF(skb);
 	sli->dir = dir;
+	
 }
 
 static inline enum path_type read_path_from_skb(struct sk_buff *skb)

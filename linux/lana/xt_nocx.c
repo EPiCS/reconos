@@ -34,7 +34,8 @@ enum noc_hw_slots {
 #define HW_TO_SW_SLOT		B_HWT_SLOT_NR
 #define SW_TO_HW_SLOT		C_HWT_SLOT_NR
 
-#define DEBUG(fnt)		(fnt)
+//#define DEBUG(fnt)		(fnt)
+//#define DEBUG(fnt)		
 
 struct noc_slot {
 	struct reconos_hwt hwt;
@@ -51,9 +52,10 @@ struct noc_pkt {
 	u8 direction:1,
 	   latency_critical:1,
 	   reserved:6;
+	u16 payload_len;
 	u32 src_idp;
 	u32 dst_idp;
-	u32 payload_len;
+//	u32 payload_len;
 	u8* payload;
 };
 
@@ -65,7 +67,7 @@ static int order = 0;
 
 void dump_npkt(struct noc_pkt *npkt)
 {
-	int i;
+	//int i;
 	printk(KERN_INFO "npkt packet dump ---->\n");
 	printk(KERN_INFO " hw_addr_switch:%d\n", npkt->hw_addr_switch);
 	printk(KERN_INFO " hw_addr_block:%d\n", npkt->hw_addr_block);
@@ -75,8 +77,8 @@ void dump_npkt(struct noc_pkt *npkt)
 	printk(KERN_INFO " src_idp:%u\n", npkt->src_idp);
 	printk(KERN_INFO " dst_idp:%u\n", npkt->dst_idp);
 	printk(KERN_INFO " payload_len:%u\n", npkt->payload_len);
-	for (i = 0; i < npkt->payload_len; ++i)
-		printk(KERN_INFO " byte%d: 0x%x\n", i, (u8) npkt->payload[i]);
+	//for (i = 0; i < npkt->payload_len; ++i)
+	//	printk(KERN_INFO " byte%d: 0x%x\n", i, (u8) npkt->payload[i]);
 	printk(KERN_INFO "<---- end dump\n");
 }
 
@@ -103,7 +105,6 @@ static inline void kfree_npkt(struct noc_pkt *npkt)
 {
 	if (!npkt)
 		return;
-
 	kfree(npkt->payload);
 	kfree(npkt);
 }
@@ -111,11 +112,21 @@ static inline void kfree_npkt(struct noc_pkt *npkt)
 static struct noc_pkt *skb_to_noc_pkt(struct sk_buff *skb)
 {
 	struct noc_pkt *npkt = NULL;
-
+	u32 dst_idp = read_next_idp_from_skb(skb);
+	//TODO: Build system that mapps IDPs to locations. From the user side I imagine setting another attribute
+	//./fbctl set fb1 hw_addr=5 where 5 = "0001" (global addr (switch)) concatenated with "01" (local addr(block)).
+	//here, we would read this mapping and fill the noc pkt correspondingly
+	//for now, we assume eth1 = IDP1 = "0001" "00" = 4 and 
+	//fb1 = IDP2 = "0000" "01" = 1
 	npkt = alloc_npkt(skb->len, GFP_KERNEL);
 	if (npkt) {
-		npkt->hw_addr_switch = 1;
-		npkt->hw_addr_block = 0;
+		if (dst_idp = 2){ //fb1
+			npkt->hw_addr_switch = 0;
+			npkt->hw_addr_block = 1;
+		} else{ //default, send it to ethernet
+			npkt->hw_addr_switch = 1;
+			npkt->hw_addr_block = 0;
+		}
 		npkt->priority = 0;
 		npkt->direction = read_path_from_skb(skb);
 		npkt->latency_critical = 0;
@@ -135,10 +146,9 @@ static struct sk_buff *noc_pkt_to_skb(struct noc_pkt *npkt)
 	struct sk_buff *skb = NULL;
 	struct net_device *dev = NULL;
 
-	dev = dev_get_by_name(&init_net, "eth0"); //FIXME
+	dev = dev_get_by_name(&init_net, "lo"); //we don't have eth0... "eth0"); //FIXME
 	if (!dev)
 		return NULL;
-
 	skb = alloc_skb(npkt->payload_len + LL_ALLOCATED_SPACE(dev),
 			GFP_KERNEL);
 	if (skb) {
@@ -147,8 +157,14 @@ static struct sk_buff *noc_pkt_to_skb(struct noc_pkt *npkt)
 		memcpy(skb_push(skb, npkt->payload_len), npkt->payload,
 		       npkt->payload_len);
 
-		write_path_to_skb(skb, npkt->direction);
-		write_next_idp_to_skb(skb, npkt->src_idp, npkt->dst_idp);
+		//just inverse direction of original packet
+	//	write_path_to_skb(skb, npkt->direction);
+	//	write_next_idp_to_skb(skb, npkt->src_idp, npkt->dst_idp);
+	//	write_path_to_skb(skb, !npkt->direction);
+	//	write_next_idp_to_skb(skb, npkt->dst_idp, npkt->src_idp);
+		write_path_to_skb(skb, TYPE_INGRESS);
+		write_next_idp_to_skb(skb, 1, 2);
+
 	}
 
 	return skb;
@@ -157,16 +173,25 @@ static struct sk_buff *noc_pkt_to_skb(struct noc_pkt *npkt)
 static int noc_sendpkt(struct noc_pkt *npkt)
 {
 	u32 pkt_len = npkt->payload_len;
+	u32 tmp_len = 104;
+	//u32 i;
 	size_t off = sizeof(*npkt) - sizeof(npkt->payload);
 
-	DEBUG(printk(KERN_INFO "XXX: send npkt to hw:\n"));
+	DEBUG(printk(KERN_INFO "[xt_nocx] send npkt to hw:\n"));
 	DEBUG(dump_npkt(npkt));
-
+	//memcpy(shared_mem_s2h, &tmp_len, 4);
 	memcpy(shared_mem_s2h, npkt, off);
 	memcpy(shared_mem_s2h + off, npkt->payload, pkt_len);
 
-	mbox_put(&noc[SW_TO_HW_SLOT].mb_put, pkt_len);
+/*	for(i = 0; i < tmp_len; i++){
+		unsigned char val = shared_mem_s2h[i];
+		printk(KERN_INFO "%x ", val);
+	}
+*/
+	mbox_put(&noc[SW_TO_HW_SLOT].mb_put, tmp_len); //pkt_len);
+	//wait until hw has read the buffer!
 
+	tmp_len = mbox_get(&noc[SW_TO_HW_SLOT].mb_get);
 	return 0;
 }
 
@@ -175,6 +200,7 @@ void packet_sw_to_hw(struct sk_buff *skb, enum path_type dir)
 	write_path_to_skb(skb, dir);
 	skb_queue_tail(&queue_to_hw, skb);
 	wake_up_interruptible(&wait_queue);
+
 }
 
 static void packet_hw_to_sw(struct noc_pkt *npkt)
@@ -187,6 +213,7 @@ static void packet_hw_to_sw(struct noc_pkt *npkt)
 		dir = read_path_from_skb(skb);
 		engine_backlog_tail(skb, dir);
 	}
+
 }
 
 static int hwif_hw_to_sw_worker_thread(void *arg)
@@ -196,15 +223,23 @@ static int hwif_hw_to_sw_worker_thread(void *arg)
 
 	while (likely(!kthread_should_stop())) {
 		/* sleeps here */
-		mbox_get(&noc[HW_TO_SW_SLOT].mb_get);
-
-		npkt = (struct noc_pkt *) shared_mem_h2s;
-		npkt->payload = shared_mem_h2s + off;
-
-		DEBUG(printk(KERN_INFO "XXX: got npkt from hw:\n"));
+		u8 * pkt_start;
+		int ret = 0;
+		DEBUG(printk(KERN_INFO "[xt_nocx] waiting for hw packet \n"));	
+		ret = mbox_get(&noc[HW_TO_SW_SLOT].mb_get);
+		DEBUG(printk(KERN_INFO "[xt_nocx] received packet with len %d \n", ret));
+	
+		pkt_start = shared_mem_h2s;
+		npkt = (struct noc_pkt *) pkt_start;
+		
+		npkt->payload = pkt_start + off;
+		//for now, as long as the hw uses a different pkt format...
+		DEBUG(printk(KERN_INFO "[xt_nocx]: got npkt from hw:\n"));
 		DEBUG(dump_npkt(npkt));
 
 		packet_hw_to_sw(npkt);
+		//notify hw that we read the data
+		mbox_put(&noc[HW_TO_SW_SLOT].mb_put, shared_mem_h2s);
 	}
 
 	return 0;
@@ -214,14 +249,16 @@ static int hwif_sw_to_hw_worker_thread(void *arg)
 {
 	struct noc_pkt *npkt;
 	struct sk_buff *skb;
-
 	skb_queue_head_init(&queue_to_hw);
 	init_waitqueue_head(&wait_queue);
 
 	/* we need threads here, because mbox can lay itself to sleep */
 	while (likely(!kthread_should_stop())) {
+		DEBUG(printk(KERN_INFO "[xt_nocx] waiting for sw packet\n"));
+
 		wait_event_interruptible(wait_queue,
 					 !skb_queue_empty(&queue_to_hw));
+		DEBUG(printk(KERN_INFO "[xt_nocx] received sw to hw packet\n"));
 		skb = skb_dequeue(&queue_to_hw);
 		if (skb == NULL)
 			continue;
@@ -246,7 +283,7 @@ static int reconos_noc_init(void)
 	reconos_init_autodetect();
 	memset(noc, 0, sizeof(noc));
 
-	reconos_proc_control_selftest();
+//	reconos_proc_control_selftest();
 
 	for (i = 0; i < ARRAY_SIZE(noc); ++i) {
 		mbox_init(&noc[i].mb_put, 2);
@@ -293,30 +330,29 @@ static void reconos_noc_cleanup(void)
 int init_hwif(void)
 {
 	int ret;
-
-	thread_hw2sw = kthread_create(hwif_hw_to_sw_worker_thread, NULL,
-				      "lana_hwif_hw2sw");
-	if (IS_ERR(thread_hw2sw)) {
-		printk(KERN_ERR "Cannot create hwif thread1!\n");
+	ret = reconos_noc_init();
+	if (ret) {
+		printk(KERN_ERR "Cannot init reconos noc!\n");
 		return -EIO;
 	}
 
-	thread_sw2hw = kthread_create(hwif_sw_to_hw_worker_thread, NULL,
+	thread_hw2sw = kthread_run(hwif_hw_to_sw_worker_thread, NULL,
+				      "lana_hwif_hw2sw");
+	if (IS_ERR(thread_hw2sw)) {
+		printk(KERN_ERR "Cannot create hwif thread1!\n");
+		goto out_rec;
+	}
+
+	thread_sw2hw = kthread_run(hwif_sw_to_hw_worker_thread, NULL,
 				      "lana_hwif_sw2hw");
 	if (IS_ERR(thread_sw2hw)) {
 		printk(KERN_ERR "Cannot create hwif thread2!\n");
 		goto out_t2;
 	}
 
-	ret = reconos_noc_init();
-	if (ret) {
-		printk(KERN_ERR "Cannot init reconos noc!\n");
-		goto out_rec;
-	}
-
 	return 0;
 out_rec:
-	kthread_stop(thread_sw2hw);
+	reconos_noc_cleanup();
 out_t2:
 	kthread_stop(thread_hw2sw);
 	return -EIO;
@@ -324,6 +360,7 @@ out_t2:
 
 void cleanup_hwif(void)
 {
+	printk(KERN_INFO "[lana] cleanup_hwif!\n");
 	kthread_stop(thread_hw2sw);
 	kthread_stop(thread_sw2hw);
 

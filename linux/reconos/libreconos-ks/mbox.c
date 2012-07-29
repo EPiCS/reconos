@@ -49,6 +49,7 @@ void mbox_put(struct mbox *mb, uint32_t msg)
 
 	up(&mb->sem_read);
 	mutex_unlock(&mb->mutex_write);
+
 }
 EXPORT_SYMBOL_GPL(mbox_put);
 

@@ -45,17 +45,24 @@ static int fb_dummy_netrx(const struct fblock * const fb,
 			  enum path_type * const dir)
 {
 	int drop = 0;
+	u8 mask = 1;
 	unsigned int seq;
 	struct fb_dummy_priv *fb_priv;
-
+	int i = 0;
+	DEBUG(printk(KERN_INFO "[fb_dummy] received packet\n"));
 	fb_priv = rcu_dereference_raw(fb->private_data);
 	do {
 		seq = read_seqbegin(&fb_priv->lock);
 		write_next_idp_to_skb(skb, fb->idp, fb_priv->port[*dir]);
 		if (fb_priv->port[*dir] == IDP_UNKNOWN)
 			drop = 1;
+		//TODO: loop through payload (skb->data, skb->len) and set last bit of every byte to 1
+		for (i = 0; i < skb->len; i++){
+			skb->data[i] = skb->data[i] | mask;
+		}
 	} while (read_seqretry(&fb_priv->lock, seq));
 	if (drop) {
+		printk(KERN_INFO "[fb_dummy] drop packet\n");
 		kfree_skb(skb);
 		return PPE_DROPPED;
 	}

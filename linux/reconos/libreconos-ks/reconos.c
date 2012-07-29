@@ -227,7 +227,6 @@ static void reconos_delegate_process_mbox_get(struct reconos_hwt *hwt)
 	uint32_t handle = fsl_read_word(hwt->slot);
 
 	reconos_assert_type_and_res(hwt, handle, RECONOS_TYPE_MBOX);
-
 	fsl_write_word(hwt->slot, mbox_get(hwt->resources[handle].ptr));
 }
 
@@ -239,7 +238,9 @@ static void reconos_delegate_process_mbox_put(struct reconos_hwt *hwt)
 	reconos_assert_type_and_res(hwt, handle, RECONOS_TYPE_MBOX);
 
 	mbox_put(hwt->resources[handle].ptr, arg0);
+
 	fsl_write_word(hwt->slot, 0);
+
 }
 
 static void reconos_delegate_process_sem_wait(struct reconos_hwt *hwt)

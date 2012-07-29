@@ -66,6 +66,7 @@ static int fb_pflana_netrx(const struct fblock * const fb,
 	int skb_len = skb->len, inuse;
 	struct sock *sk;
 	struct fb_pflana_priv *fb_priv;
+	printk(KERN_INFO "[fb_pflana] netrx called, fb->idp = %x\n", fb->idp);
 
 	fb_priv = rcu_dereference_raw(fb->private_data);
 	sk = &fb_priv->sock_self->sk;
@@ -123,6 +124,7 @@ static int fb_pflana_event(struct notifier_block *self, unsigned long cmd,
 		break; }
 	case FBLOCK_BIND_IDP: {
 		struct fblock_bind_msg *msg = args;
+		printk(KERN_INFO "[fb_pflana] bind IDP in direction %d to value %d\n", msg->dir, msg->idp);
 		if (fb_priv->port[msg->dir] == IDP_UNKNOWN) {
 			write_seqlock(&fb_priv->lock);
 			fb_priv->port[msg->dir] = msg->idp;
@@ -237,6 +239,7 @@ static unsigned int lana_raw_poll(struct file *file, struct socket *sock,
 	struct lana_sock *lana = to_lana_sk(sk);
 	struct fblock *fb = lana->fb;
 	struct fb_pflana_priv *fb_priv;
+	printk(KERN_INFO "[fb_pflana] lana raw poll\n");
 
 	rcu_read_lock();
 	fb_priv = rcu_dereference(fb->private_data);
@@ -259,7 +262,7 @@ static int lana_raw_sendmsg(struct kiocb *iocb, struct socket *sock,
 static int lana_proto_sendmsg(struct kiocb *iocb, struct sock *sk,
 			      struct msghdr *msg, size_t len)
 {
-	int err;
+	int err, ret;
 	unsigned int seq;
 	struct net *net = sock_net(sk);
 	struct net_device *dev = NULL;
@@ -267,9 +270,12 @@ static int lana_proto_sendmsg(struct kiocb *iocb, struct sock *sk,
 	struct lana_sock *lana = to_lana_sk(sk);
 	struct fblock *fb = lana->fb;
 	struct fb_pflana_priv *fb_priv;
+//	printk(KERN_INFO "[fb_pflana] lana_proto_sendmsg\n");
 
-	if (lana->bound == 0)
+	if (lana->bound == 0){
+//		printk(KERN_INFO "[fb_pflana] not bound, returning -EINVAL\n");
 		return -EINVAL;
+	}
 	rcu_read_lock();
 	fb_priv = rcu_dereference(fb->private_data);
 	rcu_read_unlock();
@@ -282,6 +288,7 @@ static int lana_proto_sendmsg(struct kiocb *iocb, struct sock *sk,
 	if (!dev || !(dev->flags & IFF_UP) || unlikely(len > dev->mtu) ||
 	    fb_priv->overload) {
 		err = fb_priv->overload ? -EBUSY : -EIO;
+		printk(KERN_INFO "[fb_pflana] no device found\n");		
 		goto drop_put;
 	}
 	/* This is a big LANA fuckup! We allocate more space than we
@@ -289,8 +296,10 @@ static int lana_proto_sendmsg(struct kiocb *iocb, struct sock *sk,
 	 * the fb_eth. Actual len is in 'len' instead of dev->mtu */
 	skb = sock_alloc_send_skb(sk, LL_ALLOCATED_SPACE(dev) + dev->mtu,
 				  msg->msg_flags & MSG_DONTWAIT, &err);
-	if (!skb)
+	if (!skb){
+		printk(KERN_INFO "[fb_pflana] no skb\n");			
 		goto drop_put;
+	}
 
 	skb_reserve(skb, LL_RESERVED_SPACE(dev));
 	skb_reserve(skb, dev->mtu);
@@ -299,8 +308,10 @@ static int lana_proto_sendmsg(struct kiocb *iocb, struct sock *sk,
 	skb_reset_network_header(skb);
 
 	err = memcpy_fromiovec((void *) skb_push(skb, len), msg->msg_iov, len);
-	if (err < 0)
+	if (err < 0){
+		printk(KERN_INFO "[fb_pflana] memcpy error\n");					
 		goto drop;
+	}
 
 	skb->dev = dev;
 	skb->sk = sk;
@@ -312,10 +323,12 @@ static int lana_proto_sendmsg(struct kiocb *iocb, struct sock *sk,
 	rcu_read_lock();
 	do {
 		seq = read_seqbegin(&fb_priv->lock);
+		DEBUG(printk(KERN_INFO "[fb_pflana] next idp: %d\n", fb_priv->port[TYPE_EGRESS]));		
 		write_next_idp_to_skb(skb, fb->idp,
 				      fb_priv->port[TYPE_EGRESS]);
         } while (read_seqretry(&fb_priv->lock, seq));
-        process_packet(skb, TYPE_EGRESS);
+        ret = process_packet(skb, TYPE_EGRESS);
+
 	rcu_read_unlock();
 
 	return (err >= 0) ? len : err;
@@ -336,14 +349,18 @@ static int lana_proto_recvmsg(struct kiocb *iocb, struct sock *sk,
 	struct lana_sock *lana = to_lana_sk(sk);
 	struct fblock *fb = lana->fb;
 	struct fb_pflana_priv *fb_priv;
+	//printk(KERN_INFO "[fb_pflana] lana_proto_recvmsg\n");
 
 	rcu_read_lock();
 	fb_priv = rcu_dereference(fb->private_data);
 	rcu_read_unlock();
-
-	skb = skb_dequeue(&fb_priv->backlog);
-	if (!skb)
+//	do {
+		skb = skb_dequeue(&fb_priv->backlog);
+//	} while (!skb);
+	if (!skb){
+	//	printk(KERN_INFO "[fb_pflana] dequeue failed\n");
 		return -EAGAIN;
+	}
 	atomic_sub(skb->len, &fb_priv->backlog_used);
 
 	msg->msg_namelen = 0;

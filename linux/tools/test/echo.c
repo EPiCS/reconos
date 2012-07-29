@@ -16,7 +16,7 @@
 #include "xt_vlink.h"
 #include "xt_fblock.h"
 
-#define BUFFSIZ	48
+#define BUFFSIZE	1500
 
 static inline void die(void)
 {
@@ -35,31 +35,57 @@ static inline void panic(char *msg, ...)
 	die();
 }
 
-static void printbuff(char buff[BUFFSIZ], int in)
+
+static void printbuff(char buff[BUFFSIZE], int len)
 {
 	int i;
-	if (!!in)
-		printf("Got: ");
-	else
-		printf("Put: ");
-	for (i = 0; i < BUFFSIZ; ++i)
-		printf("%02x ", buff[i]);
-	printf("\n");
+//	if (!!in)
+//		printf("Got: ");
+//	else
+//		printf("Put: ");
+	for (i = 0; i < len; i++){
+		fprintf(stderr, "%02x ", buff[i]);
+		if ((i + 1) % 8 == 0){
+			fprintf(stderr, "   ");
+		}
+		if ((i + 1) % 16 == 0){
+			fprintf(stderr, "\n");
+		}
+	}
+//	printf("\n");
 }
 
-static void preparebuff(char buff[BUFFSIZ], int run)
+
+/*static void compare_buffer(char send[BUFFSIZE], char recv[BUFFSIZE]){
+	int j;
+	for (j = 0; j < BUFFSIZE; j++){ 
+		unsigned char written_val = send[j];
+		unsigned char read_val = recv[j];
+		fprintf(stderr, "%x %x", written_val, read_val);
+		if ((j + 1) % 8 == 0){
+			fprintf(stderr,  "    ");
+		}
+		if ((j + 1) % 16 == 0){
+			fprintf(stderr,  "\n");
+		}
+	}
+	fprintf(stderr, "\n");
+}
+*/
+
+static void preparebuff(char buff[BUFFSIZE], int run)
 {
-	int i = BUFFSIZ, j = run % BUFFSIZ, l;
+	int i = BUFFSIZE, j = run % BUFFSIZE, l;
 	for (l = 0; i-- > 0; ++l) {
 		buff[l] = (uint8_t) j;
-		j = (j + 1) % BUFFSIZ;
+		j = (j + 1) % BUFFSIZE;
 	}
 }
 
 int main(void)
 {
 	int sock, ret, run = 0;
-	char buff[BUFFSIZ], orig[BUFFSIZ];
+	char buff_sender[BUFFSIZE],  buff_receiver[BUFFSIZE], orig[BUFFSIZE];
 	char name[FBNAMSIZ];
 
 	sock = socket(27, SOCK_RAW, 0);
@@ -70,25 +96,45 @@ int main(void)
 	if (ret < 0)
 		panic("Cannot do ioctl!\n");
 
+	fprintf(stderr, "our instance: %s\n", name);
 	printf("our instance: %s\n", name);
 
 	while (1) {
-		preparebuff(buff, run++);
-		memcpy(orig, buff, sizeof(buff));
 
-		printbuff(buff, 0);
-		sendto(sock, buff, sizeof(buff), 0, NULL, 0);
-		recvfrom(sock, buff, sizeof(buff), 0, NULL, 0);
-		printbuff(buff, 1);
+		fprintf(stderr,"-%d ", run);
 
-		if (memcmp(orig, buff, sizeof(orig)))
-			printf(" ... is NOT OK!\n");
+		preparebuff(buff_sender, run++);
+		memcpy(orig, buff_sender, sizeof(buff_sender));
+
+	//	printbuff(buff_sender, 0);
+		ret = sendto(sock, buff_sender, sizeof(buff_sender), 0, NULL, 0);
+		if (ret == -1){
+			fprintf(stderr, "sendto failed");
+			sleep(5);
+			continue;
+		}
+	/*	ret = recvfrom(sock, buff_receiver, sizeof(buff_receiver), 0, NULL, 0);
+		if (ret == -1){
+		//	perror("recvfrom");
+		//	fprintf(stderr, "recvfrom failed");
+		//	sleep(5);
+			continue;
+		}
+
+	//	printbuff(buff_receiver, 1);
+		fprintf(stderr, "received new message with len %d: \n", ret);
+		printbuff(buff_receiver, ret);
+
+	//	compare_buffer(buff_sender, buff_receiver);
+		
+		if (memcmp(buff_sender, buff_receiver, sizeof(buff_sender)))
+			fprintf(stderr, " ... is NOT OK!\n");
 		else
-			printf(" ... is OK!\n");
-
-		memset(buff, 0, sizeof(buff));
-		memset(orig, 0, sizeof(orig));
-		sleep(1);
+			fprintf(stderr, " ... is OK!\n");
+*/
+		memset(buff_sender, 0, sizeof(buff_sender));
+		memset(buff_receiver, 0, sizeof(buff_receiver));
+	//	sleep(5);
 	}
 
 	close(sock);
