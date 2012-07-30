@@ -1,0 +1,3 @@
+[submodule "linux/tools/netsniff-ng"]
+	path = linux/tools/netsniff-ng
+	url = git://github.com/gnumaniacs/netsniff-ng.git
