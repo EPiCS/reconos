@@ -1,0 +1,36 @@
+ReconOS in a Nutshell
+/////////////////////
+
+ReconOS is a programming model, an execution environment, an operating system
+extension, a hardware architecture, a research project, and a development
+playground.
+
+Originally developed within the context of a university research project and a
+PhD thesis, ReconOS is a way to bring some of the convenience of a software-like
+programming model to the detail-ridden world of dynamically reconfigurable
+hardware design. With ReconOS, you can model a concurrent application for
+reconfigurable systems-on-chip (rSoC) using both software and hardware threads.
+The interactions between all threads are handled through common POSIX-like
+abstractions such as mailboxes, semaphores, or shared memory, hiding the
+complexities of bus access protocols, memory spaces, register files and
+interrupt handling.
+
+Getting Started: ReconOS is under continuous development and is being used in
+several research projects with both academic and industrial partners. We welcome
+all forms of contribution and are actively seeking users and developers
+interested in integrating reconfigurable logic and software-based operating
+systems.
+
+For guides and other resources pertaining to the use and/or development of
+ReconOS and instructions on how to download ReconOS and participate in its
+development, please refer to our development mailing list [1]. An archive is
+also available under [2].
+
+The latest development version of ReconOS can be retrieved through Git via
+
+  git://github.com/EPiCS/reconos.git
+
+Happy hacking!
+
+[1] http://reconos-devel.lists.reconos.de/
+[2] http://www.mail-archive.com/reconos-devel@lists.reconos.de/
