@@ -268,6 +268,8 @@ static int hwif_sw_to_hw_worker_thread(void *arg)
 			noc_sendpkt(npkt);
 			kfree_npkt(npkt);
 		}
+
+		kfree_skb(skb);
 	}
 
 	return 0;
