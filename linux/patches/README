@@ -1,6 +1,7 @@
 The following patch improvements on the Linux kernel were submitted and accepted
 to the Linux mainline kernel during our work on ReconOS:
 
+* http://git.kernel.org/?p=linux/kernel/git/torvalds/linux.git;a=commitdiff;h=7f5c3e3a80e6654cf48dfba7cf94f88c6b505467
 * http://git.kernel.org/?p=linux/kernel/git/torvalds/linux.git;a=commitdiff;h=de74e92aa8a44d0b80a53601dc4f6dd6afcb8453
 * http://git.kernel.org/?p=linux/kernel/git/torvalds/linux.git;a=commitdiff;h=1790625feb3904f54c82e469a2e5997c3a01f4fa
 * http://git.kernel.org/?p=linux/kernel/git/torvalds/linux.git;a=commitdiff;h=73eb94a094e54cb81c41c64e59eb5d6a05ecb045
