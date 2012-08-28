@@ -9,6 +9,8 @@
 #include <unistd.h>
 #include <string.h>
 #include <stdlib.h>
+#include <errno.h>
+#include <time.h>
 
 #include "common.h"
 
@@ -63,34 +65,72 @@ static enum server_state_num server_swait1(int sock)
 
 	return STATE_SCOMPOSE;
 out_purge:
-	/* Purge buffer if we can */
 	recvfrom(sock, buff, sizeof(buff), 0, NULL, NULL);
 	return STATE_SWAIT1;
 }
 
+static int process_proposals(uint8_t *str, size_t len)
+{
+	int i, max, num = 0, pick;
+	uint8_t *tmp = str;
+
+	for (i = 0; i < len; ++i) {
+		if (tmp[i] == 0)
+			num++;
+	}
+	if (num < 1)
+		return -EINVAL;
+	max = num;
+
+	printf("Got %d proposals:\n", num);
+	do {
+		printf("  %s\n", tmp);
+		if (--num <= 0)
+			break;
+		while (*tmp != 0)
+			tmp++;
+		tmp++;
+	} while (tmp < (str + len));
+
+	/* pick a random one */
+	srand(time(NULL));
+	pick = random() % max;
+
+	return pick;
+}
+
 static enum server_state_num server_scompose(int sock)
 {
+	int ret;
 	char buff[MAXMSG];
-	ssize_t ret;
+	ssize_t len;
 	struct pn_hdr *hdr;
+	struct pn_hdr_compose *chdr;
 
 	sacurrlen = sizeof(sacurrent);
 	ret = recvfrom(sock, buff, sizeof(buff), 0,
 		       (struct sockaddr *) &sacurrent, &sacurrlen);
-	if (ret <= 0)
+	if (ret <= 0 || ret < sizeof(*hdr))
 		return STATE_SWAIT1;
 
+	len = ret;
 	hdr = (struct pn_hdr *) buff;
-	last_seq_on_server_from_remote = hdr->seq;
-	last_seq_on_server_from_us = hdr->seq + 1; //or random
+	chdr = (struct pn_hdr_compose *) buff + sizeof(*hdr);
 
-	/* do sth with composition */
+	last_seq_on_server_from_remote = hdr->seq;
+	last_seq_on_server_from_us = hdr->seq + 1;
+
+	ret = process_proposals((uint8_t *) buff + sizeof(*hdr),
+				len - sizeof(*hdr));
+	if (ret < 0)
+		return STATE_SWAIT1;
 
 	hdr->ack = last_seq_on_server_from_remote;
 	hdr->seq = last_seq_on_server_from_us;
 	hdr->type = TYPE_COMPOSE;
+	chdr->which = ret;
 
-	ret = sendto(sock, buff, sizeof(buff), 0,
+	ret = sendto(sock, buff, sizeof(*hdr) + sizeof(*chdr), 0,
 		     (struct sockaddr *) &sacurrent, sacurrlen);
 	if (ret <= 0)
 		return STATE_SWAIT1;
@@ -110,7 +150,6 @@ static enum server_state_num server_swait2(int sock)
 	fds.fd = sock;
 	fds.events = POLLIN;
 
-	/* 10 sec timeout */
 	poll(&fds, 1, 1000 * 10);
 	if ((fds.revents & POLLIN) != POLLIN)
 		return STATE_SWAIT1;
@@ -131,7 +170,6 @@ static enum server_state_num server_swait2(int sock)
 
 	return STATE_SDONE;
 out_purge:
-	/* Purge buffer if we can */
 	recvfrom(sock, buff, sizeof(buff), 0, NULL, NULL);
 	return STATE_SWAIT1;
 }

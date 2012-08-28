@@ -14,6 +14,10 @@ struct pn_hdr {
 	uint8_t type;
 };
 
+struct pn_hdr_compose {
+	uint8_t which;
+};
+
 #define STATE_MAP_SET(s, f)  {	\
 	.num  = (s),		\
 	.func = (f)		\
