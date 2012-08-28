@@ -8,7 +8,7 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
-#include "common.h"
+#include "xutils.h"
 
 #define BUFLEN 512
 #define NPACK 10
@@ -26,13 +26,7 @@ struct client_state {
 	enum state_num (*func)(int sock);
 };
 
-void die(char *s)
-{
-	perror(s);
-	exit(1);
-}
-
-int main(void)
+int nego_client(void)
 {
 	int sock, ret, ack, seq;
 	struct sockaddr_in si_other;
@@ -45,7 +39,7 @@ int main(void)
 
 	sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
 	if (sock < 0)
-		die("socket");
+		panic("socket");
 
 	memset((char *) &si_other, 0, sizeof(si_other));
 	si_other.sin_family = AF_INET;
@@ -75,7 +69,7 @@ int main(void)
 retry:
 	ret = sendto(sock, buf, len, 0, (struct sockaddr *) &si_other, slen);
 	if (ret < 0)
-		die("sendto()");
+		panic("sendto()");
 
 	fds.fd = sock;
 	fds.events = POLLIN;
@@ -88,12 +82,12 @@ retry:
 
 	ret = recvfrom(sock, buf, BUFLEN, 0, NULL, NULL);
 	if (ret < sizeof(*hdr) + sizeof(*chdr))
-		die("recvfrom()");
+		panic("recvfrom()");
 
 	hdr = (struct pn_hdr *) buf;
 	chdr = (struct pn_hdr_compose *) buf + sizeof(*hdr);
 	if (ack != hdr->ack)
-		die("Wrong ack number!\n");
+		panic("Wrong ack number!\n");
 	seq = hdr->seq;
 
 	printf("Take %d!\n", chdr->which);
@@ -104,7 +98,7 @@ retry:
 
 	ret = sendto(sock, buf, sizeof(*hdr), 0, (struct sockaddr *) &si_other, slen);
 	if (ret < 0)
-		die("sendto()");
+		panic("sendto()");
 
 	close(sock);
 	return 0;

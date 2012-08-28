@@ -12,7 +12,7 @@
 #include <errno.h>
 #include <time.h>
 
-#include "common.h"
+#include "xutils.h"
 
 #define PORT 9930
 
@@ -33,12 +33,6 @@ static uint16_t last_seq_on_server_from_remote = 0;
 static uint16_t last_seq_on_server_from_us = 0;
 static struct sockaddr_in sacurrent;
 static socklen_t sacurrlen;
-
-void die(char *s)
-{
-	perror(s);
-	exit(1);
-}
 
 static enum server_state_num server_swait1(int sock)
 {
@@ -220,14 +214,14 @@ static void server_state_machine(int sock)
 	}
 }
 
-int main(void)
+int nego_server(void)
 {
 	int sock, ret;
 	struct sockaddr_in same;
 
 	sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
 	if (sock < 0)
-		die("socket");
+		panic("socket");
 
 	memset(&same, 0, sizeof(same));
 	same.sin_family = AF_INET;
@@ -236,7 +230,7 @@ int main(void)
 
 	ret = bind(sock, (struct sockaddr *) &same, sizeof(same));
 	if (ret < 0)
-		die("bind");
+		panic("bind");
 
 	server_state_machine(sock);
 

@@ -17,6 +17,28 @@
 #include "xt_vlink.h"
 #include "xt_fblock.h"
 
+#define TYPE_SUGGEST	1
+#define TYPE_COMPOSE	2
+#define TYPE_ACK	3
+#define TYPE_NACK	4
+
+#define MAXMSG		256
+
+struct pn_hdr {
+	uint16_t seq;
+	uint16_t ack;
+	uint8_t type;
+};
+
+struct pn_hdr_compose {
+	uint8_t which;
+};
+
+#define STATE_MAP_SET(s, f)  {	\
+	.num  = (s),		\
+	.func = (f)		\
+}
+
 extern void *xmalloc(size_t size);
 extern void *xzmalloc(size_t size);
 extern void *xrealloc(void *ptr, size_t nmemb, size_t size);
