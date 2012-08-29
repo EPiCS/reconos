@@ -24,4 +24,7 @@ extern void reconfig_reliability(void);
 extern void get_dependencies(char *from_upper, char *to_lower, char ***stack,
 			     size_t *len);
 
+extern void start_negotiation_server(void);
+extern void stop_negotiation_server(void);
+
 #endif /* RECONFIG_H */

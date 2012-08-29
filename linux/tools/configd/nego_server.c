@@ -6,6 +6,8 @@
 #include <sys/socket.h>
 #include <fcntl.h>
 #include <stdio.h>
+#include <pthread.h>
+#include <signal.h>
 #include <unistd.h>
 #include <string.h>
 #include <stdlib.h>
@@ -13,6 +15,7 @@
 #include <time.h>
 
 #include "xutils.h"
+#include "reconfig.h"
 
 #define PORT 9930
 
@@ -30,9 +33,16 @@ struct server_state {
 };
 
 static uint16_t last_seq_on_server_from_remote = 0;
+
 static uint16_t last_seq_on_server_from_us = 0;
+
 static struct sockaddr_in sacurrent;
+
 static socklen_t sacurrlen;
+
+static pthread_t thread;
+
+extern sig_atomic_t sigint;
 
 static enum server_state_num server_swait1(int sock)
 {
@@ -54,7 +64,7 @@ static enum server_state_num server_swait1(int sock)
 	hdr = (struct pn_hdr *) buff;
 	if (hdr->type != TYPE_SUGGEST)
 		goto out_purge;
-	if (hdr->ack != 0 || hdr->seq == 0)
+	if (ntohs(hdr->ack) != 0 || hdr->seq == 0)
 		goto out_purge;
 
 	return STATE_SCOMPOSE;
@@ -76,9 +86,9 @@ static int process_proposals(uint8_t *str, size_t len)
 		return -EINVAL;
 	max = num;
 
-	printf("Got %d proposals:\n", num);
+	printd("Got %d proposals:\n", num);
 	do {
-		printf("  %s\n", tmp);
+		printd("  %s\n", tmp);
 		if (--num <= 0)
 			break;
 		while (*tmp != 0)
@@ -111,16 +121,16 @@ static enum server_state_num server_scompose(int sock)
 	hdr = (struct pn_hdr *) buff;
 	chdr = (struct pn_hdr_compose *) buff + sizeof(*hdr);
 
-	last_seq_on_server_from_remote = hdr->seq;
-	last_seq_on_server_from_us = hdr->seq + 1;
+	last_seq_on_server_from_remote = ntohs(hdr->seq);
+	last_seq_on_server_from_us = ntohs(hdr->seq) + 1;
 
 	ret = process_proposals((uint8_t *) buff + sizeof(*hdr),
 				len - sizeof(*hdr));
 	if (ret < 0)
 		return STATE_SWAIT1;
 
-	hdr->ack = last_seq_on_server_from_remote;
-	hdr->seq = last_seq_on_server_from_us;
+	hdr->ack = htons(last_seq_on_server_from_remote);
+	hdr->seq = htons(last_seq_on_server_from_us);
 	hdr->type = TYPE_COMPOSE;
 	chdr->which = ret;
 
@@ -155,7 +165,7 @@ static enum server_state_num server_swait2(int sock)
 	hdr = (struct pn_hdr *) buff;
 	if (hdr->type != TYPE_ACK && hdr->type != TYPE_NACK)
 		goto out_purge;
-	if (hdr->ack != last_seq_on_server_from_us || hdr->seq == 0)
+	if (ntohs(hdr->ack) != last_seq_on_server_from_us || hdr->seq == 0)
 		goto out_purge;
 	if (sacurrlen != slen)
 		goto out_purge;
@@ -186,9 +196,18 @@ static enum server_state_num server_sdone(int sock)
 	if (hdr->type == TYPE_NACK)
 		return STATE_SWAIT1;
 
-	/* callback for data */
+	/* Established! */
 
-	return STATE_SWAIT1;
+	while (!sigint) {
+		ret = recvfrom(sock, buff, sizeof(buff), MSG_PEEK, NULL, NULL);
+		if (ret <= 0)
+			return STATE_SDONE;
+		hdr = (struct pn_hdr *) buff;
+		if (hdr->type == TYPE_SUGGEST)
+			return STATE_SWAIT1;
+	}
+
+	return STATE_SDONE;
 }
 
 static struct server_state state_machine[__STATE_MAX] = {
@@ -208,13 +227,13 @@ static char *state_name[__STATE_MAX] = {
 static void server_state_machine(int sock)
 {
 	enum server_state_num cstate = STATE_SWAIT1;
-	while (1) {
-		printf("In state: %s\n", state_name[cstate]);
+	while (!sigint) {
+		printd("In state: %s\n", state_name[cstate]);
 		cstate = state_machine[cstate].func(sock);
 	}
 }
 
-int nego_server(void)
+static void *nego_server(void *arg)
 {
 	int sock, ret;
 	struct sockaddr_in same;
@@ -235,5 +254,21 @@ int nego_server(void)
 	server_state_machine(sock);
 
 	close(sock);
-	return 0;
+	pthread_exit(0);
+}
+
+void start_negotiation_server(void)
+{
+	int ret = pthread_create(&thread, NULL, nego_server, NULL);
+	if (ret < 0)
+		panic("Cannot create thread!\n");
+
+	printd("Negotiation server started!\n");
+}
+
+void stop_negotiation_server(void)
+{
+	pthread_join(thread, NULL);
+
+	printd("Negotiation server stopped!\n");
 }
