@@ -18,6 +18,8 @@
 #include "reconos.h"
 #include "mbox.h"
 
+#ifdef WITH_RECONOS
+
 enum noc_hw_slots {
 	C_HWT_SLOT_NR = 0,
 #define C_HWT_SLOT_NR		0
@@ -368,3 +370,4 @@ void cleanup_hwif(void)
 
 	reconos_noc_cleanup();
 }
+#endif /* WITH_RECONOS */
