@@ -28,7 +28,7 @@ also available under [2].
 
 The latest development version of ReconOS can be retrieved through Git via
 
-  git://github.com/EPiCS/reconos.git
+  git clone --recursive git://github.com/EPiCS/reconos.git
 
 Happy hacking!
 
