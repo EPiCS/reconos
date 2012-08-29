@@ -9,26 +9,15 @@
 #include <unistd.h>
 
 #include "xutils.h"
+#include "reconfig.h"
 
 #define BUFLEN 512
-#define NPACK 10
 #define PORT 9930
-#define SRV_IP "127.0.0.1"
+#define SRV_IP "255.255.255.255"
 
-enum client_state_num {
-	STATE_CSUGGEST,
-	STATE_CWAIT,
-	STATE_CDONE,
-};
-
-struct client_state {
-	volatile enum client_state_num num;
-	enum state_num (*func)(int sock);
-};
-
-int nego_client(void)
+int negotiation_client(char sugg[MAXS][256], size_t used)
 {
-	int sock, ret, ack, seq;
+	int sock, ret, ack, seq, i;
 	struct sockaddr_in si_other;
 	char buf[BUFLEN];
 	socklen_t slen = sizeof(si_other);
@@ -36,6 +25,9 @@ int nego_client(void)
 	struct pn_hdr_compose *chdr;
 	size_t len;
 	struct pollfd fds;
+
+	if (used < 1)
+		panic("No suggestions available!\n");
 
 	sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
 	if (sock < 0)
@@ -52,19 +44,18 @@ int nego_client(void)
 	}
 
 	hdr = (struct pn_hdr *) buf;
-	hdr->seq = (uint16_t) random();
-	hdr->ack = 0;
+	hdr->seq = htons((uint16_t) random());
+	hdr->ack = htons(0);
 	hdr->type = TYPE_SUGGEST;
 	len = sizeof(*hdr);
-	strcpy(buf + sizeof(*hdr), "ch.ethz.csg.dummy,ch.ethz.csg.dummy");
-	len += strlen("ch.ethz.csg.dummy,ch.ethz.csg.dummy");
-	buf[len] = 0;
-	len++;
-	strcpy(buf + len, "ch.ethz.csg.blubber,ch.ethz.csg.blubber");
-	len += strlen("ch.ethz.csg.blubber,ch.ethz.csg.blubber");
-	buf[len] = 0;
-	len++;
-	ack = hdr->seq;
+
+	for (i = 0; i < used; ++i) {
+		strcpy(buf + len, sugg[i]);
+		len += strlen(sugg[i]);
+		buf[len] = 0;
+		len++;
+	}
+	ack = ntohs(hdr->seq);
 
 retry:
 	ret = sendto(sock, buf, len, 0, (struct sockaddr *) &si_other, slen);
@@ -86,20 +77,20 @@ retry:
 
 	hdr = (struct pn_hdr *) buf;
 	chdr = (struct pn_hdr_compose *) buf + sizeof(*hdr);
-	if (ack != hdr->ack)
+	if (ack != ntohs(hdr->ack))
 		panic("Wrong ack number!\n");
-	seq = hdr->seq;
+	seq = ntohs(hdr->seq);
 
 	printf("Take %d!\n", chdr->which);
 
 	hdr->type = TYPE_ACK;
-	hdr->ack = seq;
-	hdr->seq = ack + 1;
+	hdr->ack = htons(seq);
+	hdr->seq = htons(ack + 1);
 
 	ret = sendto(sock, buf, sizeof(*hdr), 0, (struct sockaddr *) &si_other, slen);
 	if (ret < 0)
 		panic("sendto()");
 
 	close(sock);
-	return 0;
+	return chdr->which;
 }
