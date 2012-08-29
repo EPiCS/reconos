@@ -75,8 +75,11 @@ static void register_threshold(enum threshold_type type, double *cells_thres,
 
 	slen = sizeof(saddr);
 	ret = connect(sock, (struct sockaddr *) &saddr, slen);
-	if (ret < 0)
-		panic("Cannot connect to server!\n");
+	if (ret < 0) {
+		fprintf(stderr, "Cannot connect to server!\n");
+		fprintf(stderr, "Continuing without sensord.\n");
+		return;
+	}
 
 	memset(buff, 0, sizeof(buff));
 	hdr = (struct notfct_hdr *) buff;
