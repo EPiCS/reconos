@@ -11,7 +11,7 @@ lib-objs	= xutils.o reconfig.o ipc.o props.o lex.yy.o parser.tab.o  \
 
 target		= configd
 
-all: pre $(lib-objs) $(core-objs) builtin_client
+all: pre $(lib-objs) $(core-objs) builtin_client builtin_ping
 	gcc $(core-objs) $(lib-objs) -o $(target) $(LIBS)
 
 pre:
@@ -22,6 +22,8 @@ pre:
 	gcc -c $(CFLAGS) $<
 
 builtin_client:
+
+builtin_ping:
 
 clean:
 	rm -f *.o configd builtin_client lex.yy.c parser.tab.c parser.tab.h
