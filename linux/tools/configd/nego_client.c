@@ -4,6 +4,8 @@
 #include <netinet/in.h>
 #include <sys/poll.h>
 #include <stdio.h>
+#include <signal.h>
+#include <errno.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <unistd.h>
@@ -13,7 +15,9 @@
 
 #define BUFLEN 512
 #define PORT 9930
-#define SRV_IP "255.255.255.255"
+#define SRV_IP "192.168.0.253"
+
+extern sig_atomic_t sigint;
 
 int negotiation_client(char sugg[MAXS][256], size_t used)
 {
@@ -58,6 +62,9 @@ int negotiation_client(char sugg[MAXS][256], size_t used)
 	ack = ntohs(hdr->seq);
 
 retry:
+	if (sigint)
+		return -EIO;
+
 	ret = sendto(sock, buf, len, 0, (struct sockaddr *) &si_other, slen);
 	if (ret < 0)
 		panic("sendto()");

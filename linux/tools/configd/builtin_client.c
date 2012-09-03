@@ -21,6 +21,7 @@
 struct bind_msg {
 	char name[FBNAMSIZ];
 	enum fblock_props props[MAX_PROPS];
+	int flags;
 };
 
 static int bind_config(struct bind_msg *bmsg)
@@ -65,7 +66,7 @@ int main(void)
 	bmsg = (struct bind_msg *) buff;
 	bmsg->props[0] = RELIABLE;
 	bmsg->props[1] = DUMMY;
-	bmsg->props[2] = DUMMY2;
+	bmsg->flags = TYPE_CLIENT;
 
 	ret = ioctl(sock, 35296, bmsg->name);
 	if (ret < 0)

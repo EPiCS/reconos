@@ -28,9 +28,12 @@ extern sig_atomic_t sigint;
 struct bind_msg {
 	char name[FBNAMSIZ];
 	enum fblock_props props[MAX_PROPS];
+	int flags;
 };
 
 #define lower_fb_name	"eth0"	//XXX
+
+static char srv_name[FBNAMSIZ];
 
 static void ipc_do_configure_client(struct bind_msg *bmsg)
 {
@@ -46,6 +49,11 @@ static void ipc_do_configure_client(struct bind_msg *bmsg)
 	bind_elems_in_stack(lower_fb_name, bmsg->name);
 	init_reconfig(bmsg->name, "ch.ethz.csg.pf_lana",
 		      lower_fb_name, "ch.ethz.csg.eth");
+
+	if (bmsg->flags == TYPE_SERVER) {
+		strlcpy(srv_name, bmsg->name, FBNAMSIZ);
+		return;
+	}
 
 	orig = num;
 	while ((ret = find_type_by_properties(type, bmsg->props, &num)) >= -32) {
@@ -65,6 +73,12 @@ static void ipc_do_configure_client(struct bind_msg *bmsg)
 	}
 
 	setopt_of_elem_in_stack(bmsg->name, "iface=eth0", strlen("iface=eth0")); //XXX
+
+	ret = init_negotiation();
+	if (ret < 0) {
+		printd("Remote end does not support stack config!\n");
+		return;
+	}
 }
 
 static void *ipc_server(void *null)

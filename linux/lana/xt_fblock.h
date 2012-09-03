@@ -87,6 +87,9 @@ enum fblock_props {
 	__MAX_PROP,
 };
 
+#define TYPE_SERVER 1
+#define TYPE_CLIENT 2
+
 #ifdef __KERNEL__
 
 extern struct proc_dir_entry *fblock_proc_dir;

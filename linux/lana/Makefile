@@ -1,15 +1,15 @@
 # For cross compilation
-ARCH		=	microblaze
-CROSS_COMPILE	=	microblaze-unknown-linux-gnu-
-KDIR		?=	~/linux-2.6-xlnx
-EXTRA_CFLAGS	+=	-I$(PWD)/../reconos/libreconos-ks/
-EXTRA_CFLAGS	+=	-DWITH_RECONOS
+#ARCH		=	microblaze
+#CROSS_COMPILE	=	microblaze-unknown-linux-gnu-
+#KDIR		?=	~/linux-2.6-xlnx
+#EXTRA_CFLAGS	+=	-I$(PWD)/../reconos/libreconos-ks/
+#EXTRA_CFLAGS	+=	-DWITH_RECONOS
 
-export ARCH CROSS_COMPILE
+#export ARCH CROSS_COMPILE
 
 # For non-cross compilation, e.g. 2.6.37
-#MDIR     := /lib/modules/$(shell uname -r)
-#KDIR     := $(MDIR)/build
+MDIR     := /lib/modules/$(shell uname -r)
+KDIR     := $(MDIR)/build
 
 lana-y   := core.o xt_vlink.o xt_engine.o xt_fblock.o xt_critbit.o xt_conf.o \
 	    xt_nocx.o

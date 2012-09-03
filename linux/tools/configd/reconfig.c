@@ -38,6 +38,20 @@ void dumpstack(void)
 	}
 }
 
+int init_negotiation(void)
+{
+	int i;
+	size_t used = 0;
+	char conf[MAXS][256];
+
+	for (i=0;i<=curr;++i) {
+		strlcpy(conf[i], pipeline[i].type, TYPNAMSIZ);
+		used++;
+	}
+
+	return negotiation_client(conf, used);
+}
+
 void init_reconfig(char *upper_name, char *upper_type,
 		   char *lower_name, char *lower_type)
 {
