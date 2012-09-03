@@ -27,13 +27,16 @@ extern sig_atomic_t sigint;
 
 struct bind_msg {
 	char name[FBNAMSIZ];
+	char app[FBNAMSIZ];
 	enum fblock_props props[MAX_PROPS];
 	int flags;
 };
 
 #define lower_fb_name	"eth0"	//XXX
 
+// Multiplexing: have this as a list e.g. and traverse it
 static char srv_name[FBNAMSIZ];
+static char srv_app[FBNAMSIZ];
 
 static void ipc_do_configure_client(struct bind_msg *bmsg)
 {
@@ -52,6 +55,8 @@ static void ipc_do_configure_client(struct bind_msg *bmsg)
 
 	if (bmsg->flags == TYPE_SERVER) {
 		strlcpy(srv_name, bmsg->name, FBNAMSIZ);
+		strlcpy(srv_app, bmsg->app, FBNAMSIZ);
+		printd("Registered server %s for app %s\n", srv_name, srv_app);
 		return;
 	}
 
@@ -79,6 +84,8 @@ static void ipc_do_configure_client(struct bind_msg *bmsg)
 		printd("Remote end does not support stack config!\n");
 		return;
 	}
+
+	printd("Client %s up and running!\n", bmsg->name);
 }
 
 static void *ipc_server(void *null)

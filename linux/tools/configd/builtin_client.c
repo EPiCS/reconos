@@ -20,6 +20,7 @@
 
 struct bind_msg {
 	char name[FBNAMSIZ];
+	char app[FBNAMSIZ];
 	enum fblock_props props[MAX_PROPS];
 	int flags;
 };
@@ -64,9 +65,14 @@ int main(void)
 
 	memset(buff, 0, sizeof(buff));
 	bmsg = (struct bind_msg *) buff;
+#if 0
 	bmsg->props[0] = RELIABLE;
 	bmsg->props[1] = DUMMY;
 	bmsg->flags = TYPE_CLIENT;
+#else
+	strcpy(bmsg->app, "http");
+	bmsg->flags = TYPE_SERVER;
+#endif
 
 	ret = ioctl(sock, 35296, bmsg->name);
 	if (ret < 0)
