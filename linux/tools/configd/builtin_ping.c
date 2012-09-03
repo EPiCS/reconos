@@ -92,7 +92,7 @@ int main(int argc, char **argv)
 	if (ret < 0)
 		panic("Cannot bind configuration!\n");
 
-	printf("Config bound!\n");
+	printf("Config bound! Listening ....\n");
 
 	memset(buff, 0xff, sizeof(buff));
 	while (1) {
@@ -105,6 +105,10 @@ int main(int argc, char **argv)
 			printf("\n");
 		} else {
 			ret = recvfrom(sock, buff, sizeof(buff), 0, NULL, 0);
+			if (ret < 0) {
+				sleep(1);
+				continue;
+			}
 			printf("Received %d bytes: ", ret);
 			for (i = 0; i < ret; ++i) {
 				printf("%2x ", buff[i]);
