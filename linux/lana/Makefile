@@ -7,7 +7,7 @@ EXTRA_CFLAGS	+=	-DWITH_RECONOS
 
 export ARCH CROSS_COMPILE
 
-# For non-cross compilation
+# For non-cross compilation, e.g. 2.6.37
 #MDIR     := /lib/modules/$(shell uname -r)
 #KDIR     := $(MDIR)/build
 

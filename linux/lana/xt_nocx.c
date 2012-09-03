@@ -15,10 +15,9 @@
 
 #include "xt_engine.h"
 #include "xt_fblock.h"
+#ifdef WITH_RECONOS
 #include "reconos.h"
 #include "mbox.h"
-
-#ifdef WITH_RECONOS
 
 enum noc_hw_slots {
 	C_HWT_SLOT_NR = 0,
