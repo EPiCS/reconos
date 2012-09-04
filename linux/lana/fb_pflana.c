@@ -54,6 +54,12 @@ struct lana_sock {
 	int bound;
 };
 
+#define PFLANA_CTL_TYPE_DATA	1
+#define PFLANA_CTL_TYPE_CONF	2
+struct pflana_ctl {
+	uint8_t type;
+};
+
 static DEFINE_MUTEX(proto_tab_lock);
 
 static struct lana_protocol *proto_tab[LANA_NPROTO] __read_mostly;
@@ -63,12 +69,17 @@ static int fb_pflana_netrx(const struct fblock * const fb,
 			   enum path_type * const dir)
 {
 	u8 *skb_head = skb->data;
-	int skb_len = skb->len, inuse;
+	int drop = 0, skb_len = skb->len, inuse;
+	unsigned int seq;
 	struct sock *sk;
 	struct fb_pflana_priv *fb_priv;
-	printk(KERN_INFO "[fb_pflana] netrx called, fb->idp = %x\n", fb->idp);
+	struct pflana_ctl *ctlhdr;
 
 	fb_priv = rcu_dereference_raw(fb->private_data);
+
+	if (*dir == TYPE_EGRESS)
+		goto forward_skb;
+
 	sk = &fb_priv->sock_self->sk;
 	if (skb_shared(skb)) {
 		struct sk_buff *nskb = skb_clone(skb, GFP_ATOMIC);
@@ -103,6 +114,24 @@ static int fb_pflana_netrx(const struct fblock * const fb,
 	}
 out:
 	return PPE_HALT;
+forward_skb:
+	/* Only conf data from configd passes through here ... */
+	/* configd -> config -> pflana -> ... -> ethX */
+	ctlhdr = (struct pflana_ctl *) skb_push(skb, sizeof(*ctlhdr));
+	ctlhdr->type = PFLANA_CTL_TYPE_CONF;
+
+	do {
+		seq = read_seqbegin(&fb_priv->lock);
+		write_next_idp_to_skb(skb, fb->idp, fb_priv->port[*dir]);
+		if (fb_priv->port[*dir] == IDP_UNKNOWN)
+			drop = 1;
+	} while (read_seqretry(&fb_priv->lock, seq));
+	if (drop) {
+		kfree_skb(skb);
+		return PPE_DROPPED;
+	}
+
+	return PPE_SUCCESS;
 }
 
 static int fb_pflana_event(struct notifier_block *self, unsigned long cmd,
@@ -270,6 +299,7 @@ static int lana_proto_sendmsg(struct kiocb *iocb, struct sock *sk,
 	struct lana_sock *lana = to_lana_sk(sk);
 	struct fblock *fb = lana->fb;
 	struct fb_pflana_priv *fb_priv;
+	struct pflana_ctl *ctlhdr;
 //	printk(KERN_INFO "[fb_pflana] lana_proto_sendmsg\n");
 
 	if (lana->bound == 0){
@@ -294,7 +324,8 @@ static int lana_proto_sendmsg(struct kiocb *iocb, struct sock *sk,
 	/* This is a big LANA fuckup! We allocate more space than we
 	 * actually need, since we don't know what fbs are bound until
 	 * the fb_eth. Actual len is in 'len' instead of dev->mtu */
-	skb = sock_alloc_send_skb(sk, LL_ALLOCATED_SPACE(dev) + dev->mtu,
+	skb = sock_alloc_send_skb(sk, LL_ALLOCATED_SPACE(dev) + dev->mtu +
+				  sizeof(*ctlhdr),
 				  msg->msg_flags & MSG_DONTWAIT, &err);
 	if (!skb){
 		printk(KERN_INFO "[fb_pflana] no skb\n");			
@@ -312,6 +343,10 @@ static int lana_proto_sendmsg(struct kiocb *iocb, struct sock *sk,
 		printk(KERN_INFO "[fb_pflana] memcpy error\n");					
 		goto drop;
 	}
+
+	/* Mark as data payload ... */
+	ctlhdr = (struct pflana_ctl *) skb_push(skb, sizeof(*ctlhdr));
+	ctlhdr->type = PFLANA_CTL_TYPE_DATA;
 
 	skb->dev = dev;
 	skb->sk = sk;
