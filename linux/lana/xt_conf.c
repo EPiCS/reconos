@@ -61,8 +61,10 @@ static ssize_t re_conf_read(struct file *file, char __user *buff, size_t len,
 static ssize_t re_conf_write(struct file *file, const char __user *buff,
 			     size_t len, loff_t *ignore)
 {
+	ssize_t ret = 0;
 	struct fblock *fb;
 	struct lana_sock_io_args args;
+	struct fblock_notifier fbn;
 
 	if (!capable(CAP_SYS_ADMIN))
 		return -EPERM;
@@ -76,10 +78,15 @@ static ssize_t re_conf_write(struct file *file, const char __user *buff,
 	args.buff = buff;
 	args.len = len;
 
-	/* create skb and forward it to PPE */
+	fbn.self = fb;
+
+	/* We let the fb handle all the rest, since there can be more
+	 * than just PF_LANA fbs. Thus, it's implementation specific. */
+	ret = fb->event_rx(&fbn.nb, FBLOCK_CTL_PUSH, &args);
 
 	put_fblock(fb);
-	return 0;
+
+	return ret;
 }
 
 static long re_conf_ioctl(struct file *file, unsigned int cmd,

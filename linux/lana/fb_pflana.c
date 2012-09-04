@@ -191,10 +191,10 @@ static int fb_pflana_event(struct notifier_block *self, unsigned long cmd,
 	case FBLOCK_CTL_PUSH: {
 		/* Dirty hack ... */
 		struct lana_sock_io_args *msg = args;
-		__lana_proto_sendmsg(NULL, &fb_priv->sock_self->sk,
-				     (void *) msg->buff, msg->len,
-				     PFLANA_CTL_TYPE_CONF,
-				     __FROM_FILE, 0);
+		ret = __lana_proto_sendmsg(NULL, &fb_priv->sock_self->sk,
+				 	   (void *) msg->buff, msg->len,
+					   PFLANA_CTL_TYPE_CONF,
+					   __FROM_FILE, 0);
 		break; }
 	default:
 		break;
