@@ -15,18 +15,82 @@
 
 #include "xt_fblock.h"
 
-static char fblock_name[FBNAMSIZ];
-static volatile int fblock_set = 0;
+//TODO: locking for both dev files e.g. mutex
+
+#define	FBLOCK_CONF_SET_NAME	_IOWR(MISC_MAJOR, 0, char *)
+
+static char ei_fblock_name[FBNAMSIZ], re_fblock_name[FBNAMSIZ];
+static volatile int ei_fblock_set = 0, re_fblock_set = 0;
+
+static long __conf_ioctl(struct file *file, unsigned int cmd,
+			 unsigned long arg, char *dst,
+			 volatile int *fblock_set)
+{
+	if (!capable(CAP_SYS_ADMIN))
+		return -EPERM;
+
+	switch (cmd) {
+	case FBLOCK_CONF_SET_NAME:
+		if (*fblock_set)
+			return -EBUSY;
+
+		memset(dst, 0 , FBNAMSIZ);
+		if (copy_from_user(dst, (void __user*) arg, FBNAMSIZ) != 0)
+			return -EFAULT;
+		dst[FBNAMSIZ - 1] = 0;
+		*fblock_set = 1;
+		break;
+	default:
+		return -EINVAL;
+	}
+
+	return 0;
+}
 
 static ssize_t re_conf_read(struct file *file, char __user *buff, size_t len,
 			    loff_t *ignore)
 {
+	if (!capable(CAP_SYS_ADMIN))
+		return -EPERM;
+	if (re_fblock_set == 0)
+		return -EINVAL;
+
 	return 0;
 }
 
 static ssize_t re_conf_write(struct file *file, const char __user *buff,
 			     size_t len, loff_t *ignore)
 {
+	struct fblock *fb;
+	struct lana_sock_io_args args;
+
+	if (!capable(CAP_SYS_ADMIN))
+		return -EPERM;
+	if (re_fblock_set == 0)
+		return -EINVAL;
+
+	fb = search_fblock_n(re_fblock_name);
+	if (!fb)
+		return -EINVAL;
+
+	args.buff = buff;
+	args.len = len;
+
+	/* create skb and forward it to PPE */
+
+	put_fblock(fb);
+	return 0;
+}
+
+static long re_conf_ioctl(struct file *file, unsigned int cmd,
+			  unsigned long arg)
+{
+	return __conf_ioctl(file, cmd, arg, re_fblock_name, &re_fblock_set);
+}
+
+static int re_conf_close(struct inode *i, struct file *f)
+{
+	re_fblock_set = 0;
 	return 0;
 }
 
@@ -39,10 +103,10 @@ static ssize_t ei_conf_read(struct file *file, char __user *buff, size_t len,
 
 	if (!capable(CAP_SYS_ADMIN))
 		return -EPERM;
-	if (!fblock_set || len == 0)
+	if (!ei_fblock_set || len == 0)
 		return -EINVAL;
 
-	fb = search_fblock_n(fblock_name);
+	fb = search_fblock_n(ei_fblock_name);
 	if (!fb)
 		return -EINVAL;
 
@@ -78,10 +142,10 @@ static ssize_t ei_conf_write(struct file *file, const char __user *buff,
 
 	if (!capable(CAP_SYS_ADMIN))
 		return -EPERM;
-	if (!fblock_set || len == 0)
+	if (!ei_fblock_set || len == 0)
 		return -EINVAL;
 
-	fb = search_fblock_n(fblock_name);
+	fb = search_fblock_n(ei_fblock_name);
 	if (!fb)
 		return -EINVAL;
 
@@ -110,37 +174,15 @@ out:
 	return ret;
 }
 
-#define	FBLOCK_CONF_SET_NAME	_IOWR(MISC_MAJOR, 0, char *)
-
 static long ei_conf_ioctl(struct file *file, unsigned int cmd,
 			  unsigned long arg)
 {
-	if (!capable(CAP_SYS_ADMIN))
-		return -EPERM;
-
-	switch (cmd) {
-	case FBLOCK_CONF_SET_NAME:
-		if (fblock_set)
-			return -EBUSY;
-
-		memset(fblock_name, 0 , sizeof(fblock_name));
-		if (copy_from_user(fblock_name, (void __user*) arg,
-				   sizeof(fblock_name)) != 0)
-			return -EFAULT;
-		fblock_name[sizeof(fblock_name) - 1] = 0;
-
-		fblock_set = 1;
-		break;
-	default:
-		return -EINVAL;
-	}
-
-	return 0;
+	return __conf_ioctl(file, cmd, arg, ei_fblock_name, &ei_fblock_set);
 }
 
 static int ei_conf_close(struct inode *i, struct file *f)
 {
-	fblock_set = 0;
+	ei_fblock_set = 0;
 	return 0;
 }
 
@@ -162,6 +204,8 @@ static struct file_operations re_conf_fops __read_mostly = {
 	.owner = THIS_MODULE,
 	.read = re_conf_read,
 	.write = re_conf_write,
+	.unlocked_ioctl	= re_conf_ioctl,
+	.release = re_conf_close,
 };
 
 static struct miscdevice re_conf_misc_dev __read_mostly = {

@@ -25,6 +25,9 @@
 #define LANA_PROTO_AUTO 	0	/* Auto-select if none is given */
 #define LANA_PROTO_RAW  	1	/* LANA raw proto */
 
+#define __FROM_SOCK 1
+#define __FROM_FILE 2
+
 #define LANA_NPROTO     	2
 #define MEM_PRESSURE_THRES	(130*1024)
 
@@ -54,11 +57,9 @@ struct lana_sock {
 	int bound;
 };
 
-#define PFLANA_CTL_TYPE_DATA	1
-#define PFLANA_CTL_TYPE_CONF	2
-struct pflana_ctl {
-	uint8_t type;
-};
+static int __lana_proto_sendmsg(struct kiocb *iocb, struct sock *sk,
+				void *argp, size_t len, int what,
+				int where, int noblock);
 
 static DEFINE_MUTEX(proto_tab_lock);
 
@@ -187,6 +188,14 @@ static int fb_pflana_event(struct notifier_block *self, unsigned long cmd,
 			       msg->val);
 		}
 		break; }
+	case FBLOCK_CTL_PUSH: {
+		/* Dirty hack ... */
+		struct lana_sock_io_args *msg = args;
+		__lana_proto_sendmsg(NULL, &fb_priv->sock_self->sk,
+				     (void *) msg->buff, msg->len,
+				     PFLANA_CTL_TYPE_CONF,
+				     __FROM_FILE, 0);
+		break; }
 	default:
 		break;
 	}
@@ -288,8 +297,9 @@ static int lana_raw_sendmsg(struct kiocb *iocb, struct socket *sock,
 	return sk->sk_prot->sendmsg(iocb, sk, msg, len);
 }
 
-static int lana_proto_sendmsg(struct kiocb *iocb, struct sock *sk,
-			      struct msghdr *msg, size_t len)
+static int __lana_proto_sendmsg(struct kiocb *iocb, struct sock *sk,
+				void *argp, size_t len, int what,
+				int where, int noblock)
 {
 	int err, ret;
 	unsigned int seq;
@@ -325,8 +335,7 @@ static int lana_proto_sendmsg(struct kiocb *iocb, struct sock *sk,
 	 * actually need, since we don't know what fbs are bound until
 	 * the fb_eth. Actual len is in 'len' instead of dev->mtu */
 	skb = sock_alloc_send_skb(sk, LL_ALLOCATED_SPACE(dev) + dev->mtu +
-				  sizeof(*ctlhdr),
-				  msg->msg_flags & MSG_DONTWAIT, &err);
+				  sizeof(*ctlhdr), noblock, &err);
 	if (!skb){
 		printk(KERN_INFO "[fb_pflana] no skb\n");			
 		goto drop_put;
@@ -338,15 +347,27 @@ static int lana_proto_sendmsg(struct kiocb *iocb, struct sock *sk,
 	skb_reset_mac_header(skb);
 	skb_reset_network_header(skb);
 
-	err = memcpy_fromiovec((void *) skb_push(skb, len), msg->msg_iov, len);
-	if (err < 0){
-		printk(KERN_INFO "[fb_pflana] memcpy error\n");					
-		goto drop;
+	if (where == __FROM_SOCK) {
+		err = memcpy_fromiovec((void *) skb_push(skb, len),
+				       ((struct msghdr *) argp)->msg_iov, len);
+		if (err < 0){
+			printk(KERN_INFO "[fb_pflana] memcpy error "
+			       "(memcpy_fromiovec)\n");
+			goto drop;
+		}
+	} else if (where == __FROM_FILE) {
+		if (copy_from_user((void *) skb_push(skb, len), argp, len)) {
+			printk(KERN_INFO "[fb_pflana] memcpy error "
+			       "(copy_from_user)\n");
+			goto drop;
+		}
+	} else {
+		BUG();
 	}
 
 	/* Mark as data payload ... */
 	ctlhdr = (struct pflana_ctl *) skb_push(skb, sizeof(*ctlhdr));
-	ctlhdr->type = PFLANA_CTL_TYPE_DATA;
+	ctlhdr->type = (uint8_t) what;
 
 	skb->dev = dev;
 	skb->sk = sk;
@@ -372,6 +393,15 @@ drop:
 drop_put:
 	dev_put(dev);
 	return err;
+}
+
+static int lana_proto_sendmsg(struct kiocb *iocb, struct sock *sk,
+			      struct msghdr *msg, size_t len)
+{
+	return __lana_proto_sendmsg(iocb, sk, msg, len,
+				    msg->msg_flags & MSG_DONTWAIT,
+				    PFLANA_CTL_TYPE_DATA,
+				    __FROM_SOCK);
 }
 
 static int lana_proto_recvmsg(struct kiocb *iocb, struct sock *sk,

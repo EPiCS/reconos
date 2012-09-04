@@ -41,6 +41,17 @@ enum path_type {
         _TYPE_MAX,
 };
 
+#define PFLANA_CTL_TYPE_DATA    1
+#define PFLANA_CTL_TYPE_CONF    2
+struct pflana_ctl {
+	uint8_t type;
+};
+
+struct lana_sock_io_args {
+	const char __user *buff;
+	size_t len;
+};
+
 extern const char *path_names[];
 
 enum fblock_mode {
@@ -61,6 +72,7 @@ enum fblock_mode {
 #define FBLOCK_DOWN		0x0005
 #define FBLOCK_WAIT		0x0006	/* Must wait for other, busy fblock */
 #define FBLOCK_MEM_PRESSURE	0x0007	/* Socket under memory pressure */
+#define FBLOCK_CTL_PUSH		0x0008
 
 #else
 static const char *fblock_props_to_str[] = {
