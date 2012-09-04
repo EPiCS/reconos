@@ -18,6 +18,18 @@
 static char fblock_name[FBNAMSIZ];
 static volatile int fblock_set = 0;
 
+static ssize_t re_conf_read(struct file *file, char __user *buff, size_t len,
+			    loff_t *ignore)
+{
+	return 0;
+}
+
+static ssize_t re_conf_write(struct file *file, const char __user *buff,
+			     size_t len, loff_t *ignore)
+{
+	return 0;
+}
+
 static ssize_t ei_conf_read(struct file *file, char __user *buff, size_t len,
 			    loff_t *ignore)
 {
@@ -146,12 +158,26 @@ static struct miscdevice ei_conf_misc_dev __read_mostly = {
 	.name =	"lana_ei_cfg",
 };
 
+static struct file_operations re_conf_fops __read_mostly = {
+	.owner = THIS_MODULE,
+	.read = re_conf_read,
+	.write = re_conf_write,
+};
+
+static struct miscdevice re_conf_misc_dev __read_mostly = {
+	.fops =	&re_conf_fops,
+	.minor = MISC_DYNAMIC_MINOR,
+	.name =	"lana_re_cfg",
+};
+
 int init_ei_conf(void)
 {
-	return misc_register(&ei_conf_misc_dev);
+	return misc_register(&ei_conf_misc_dev) ||
+	       misc_register(&re_conf_misc_dev);
 }
 
 void cleanup_ei_conf(void)
 {
 	misc_deregister(&ei_conf_misc_dev);
+	misc_deregister(&re_conf_misc_dev);
 }
