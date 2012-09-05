@@ -9,8 +9,11 @@
 #include <linux/miscdevice.h>
 #include <linux/capability.h>
 #include <linux/rcupdate.h>
+#include <linux/kthread.h>
 #include <linux/slab.h>
 #include <linux/kernel.h>
+#include <linux/skbuff.h>
+#include <linux/wait.h>
 #include <asm/uaccess.h>
 
 #include "xt_fblock.h"
@@ -21,6 +24,16 @@
 
 static char ei_fblock_name[FBNAMSIZ], re_fblock_name[FBNAMSIZ];
 static volatile int ei_fblock_set = 0, re_fblock_set = 0;
+
+static wait_queue_head_t wait_queue;
+static struct sk_buff_head queue_to_configd;
+
+void packet_sw_to_configd(struct sk_buff *skb)
+{
+	skb_queue_tail(&queue_to_configd, skb);
+	wake_up_interruptible(&wait_queue);
+}
+EXPORT_SYMBOL(packet_sw_to_configd);
 
 static long __conf_ioctl(struct file *file, unsigned int cmd,
 			 unsigned long arg, char *dst,
@@ -50,12 +63,27 @@ static long __conf_ioctl(struct file *file, unsigned int cmd,
 static ssize_t re_conf_read(struct file *file, char __user *buff, size_t len,
 			    loff_t *ignore)
 {
+	struct sk_buff *skb;
+	ssize_t slen;
+
 	if (!capable(CAP_SYS_ADMIN))
 		return -EPERM;
 	if (re_fblock_set == 0)
 		return -EINVAL;
 
-	return 0;
+	wait_event_interruptible(wait_queue, !skb_queue_empty(&queue_to_configd));
+
+	skb = skb_dequeue(&queue_to_configd);
+	if (skb == NULL)
+		return -EAGAIN;
+
+	slen = skb->len;
+	if (copy_to_user(buff, skb->data, skb->len))
+		return -EIO;
+
+	kfree_skb(skb);
+
+	return slen;
 }
 
 static ssize_t re_conf_write(struct file *file, const char __user *buff,
@@ -223,6 +251,9 @@ static struct miscdevice re_conf_misc_dev __read_mostly = {
 
 int init_ei_conf(void)
 {
+	skb_queue_head_init(&queue_to_configd);
+	init_waitqueue_head(&wait_queue);
+
 	return misc_register(&ei_conf_misc_dev) ||
 	       misc_register(&re_conf_misc_dev);
 }

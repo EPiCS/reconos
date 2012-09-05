@@ -70,16 +70,21 @@ static int fb_pflana_netrx(const struct fblock * const fb,
 			   enum path_type * const dir)
 {
 	u8 *skb_head = skb->data;
-	int drop = 0, skb_len = skb->len, inuse;
-	unsigned int seq;
+	int skb_len = skb->len, inuse;
 	struct sock *sk;
 	struct fb_pflana_priv *fb_priv;
 	struct pflana_ctl *ctlhdr;
 
 	fb_priv = rcu_dereference_raw(fb->private_data);
 
-	if (*dir == TYPE_EGRESS)
-		goto forward_skb;
+	ctlhdr = (struct pflana_ctl *) skb_pull(skb, sizeof(*ctlhdr));
+	if (ctlhdr->type == PFLANA_CTL_TYPE_CONF) {
+		packet_sw_to_configd(skb);
+		goto out;
+	} else if (ctlhdr->type != PFLANA_CTL_TYPE_DATA) {
+		kfree(skb);
+		goto out;
+	}
 
 	sk = &fb_priv->sock_self->sk;
 	if (skb_shared(skb)) {
@@ -115,24 +120,6 @@ static int fb_pflana_netrx(const struct fblock * const fb,
 	}
 out:
 	return PPE_HALT;
-forward_skb:
-	/* Only conf data from configd passes through here ... */
-	/* configd -> config -> pflana -> ... -> ethX */
-	ctlhdr = (struct pflana_ctl *) skb_push(skb, sizeof(*ctlhdr));
-	ctlhdr->type = PFLANA_CTL_TYPE_CONF;
-
-	do {
-		seq = read_seqbegin(&fb_priv->lock);
-		write_next_idp_to_skb(skb, fb->idp, fb_priv->port[*dir]);
-		if (fb_priv->port[*dir] == IDP_UNKNOWN)
-			drop = 1;
-	} while (read_seqretry(&fb_priv->lock, seq));
-	if (drop) {
-		kfree_skb(skb);
-		return PPE_DROPPED;
-	}
-
-	return PPE_SUCCESS;
 }
 
 static int fb_pflana_event(struct notifier_block *self, unsigned long cmd,
