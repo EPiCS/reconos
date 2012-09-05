@@ -66,6 +66,45 @@ static inline void fb_eth_make_dev_unbridged(struct net_device *dev)
 	dev->priv_flags &= ~IFF_IS_BRIDGED;
 }
 
+/* GPLv2.0, Linux kernel */
+static int hex_to_bin_compat(char ch)
+{
+	if ((ch >= '0') && (ch <= '9'))
+		return ch - '0';
+	ch = tolower(ch);
+	if ((ch >= 'a') && (ch <= 'f'))
+		return ch - 'a' + 10;
+	return -1;
+}
+
+/* GPLv2.0, Linux kernel */
+static int hex2bin_compat(u8 *dst, const char *src, size_t count)
+{
+	while (count--) {
+		int hi = hex_to_bin_compat(*src++);
+		int lo = hex_to_bin_compat(*src++);
+
+		if ((hi < 0) || (lo < 0))
+			return -1;
+
+		*dst++ = (hi << 4) | lo;
+	}
+	return 0;
+}
+
+static char *bin2hex_compat(uint8_t *hash, size_t lhsh, char *str, size_t lstr)
+{
+	char *ret = str;
+	if (lhsh >= lstr)
+		return NULL;
+	while (lhsh-- > 0) {
+		str += sprintf(str, "%02x", *hash);
+		hash++;
+	}
+	*str = '\0';
+	return ret;
+}
+
 //XXX: for newer kernels
 //static rx_handler_result_t fb_eth_handle_frame(struct sk_buff **pskb)
 struct sk_buff *fb_eth_handle_frame(struct sk_buff *skb)
@@ -105,8 +144,12 @@ struct sk_buff *fb_eth_handle_frame(struct sk_buff *skb)
 
 	nxt = struct_of(critbit_get_bin(&fbhash, hash, lhsh),
 			struct fb_eth_next);
-	if (!nxt)
+	if (!nxt) {
+		char str[64];
+		printk("[fb_eth] no such hash \'%s\'\n", bin2hex_compat(hash, lhsh,
+			str, sizeof(str)));
 		goto drop;
+	}
 
 //	fb_priv = rcu_dereference(fb->private_data);
 //	if (fb_priv->port[TYPE_INGRESS] == IDP_UNKNOWN)
@@ -117,6 +160,7 @@ struct sk_buff *fb_eth_handle_frame(struct sk_buff *skb)
 //				      fb_priv->port[TYPE_INGRESS]);
 //	} while (read_seqretry(&fb_priv->lock, seq));
 
+	printk("[fb_eth] forwarding to idp %u\n", nxt->idp);
 	write_next_idp_to_skb(skb, fb->idp, nxt->idp);
 
 	process_packet(skb, TYPE_INGRESS);
@@ -150,32 +194,6 @@ static int fb_eth_netrx(const struct fblock * const fb,
 
 	dev_queue_xmit(skb);
 	return PPE_DROPPED;
-}
-
-/* GPLv2.0, Linux kernel */
-static int hex_to_bin_compat(char ch)
-{
-	if ((ch >= '0') && (ch <= '9'))
-		return ch - '0';
-	ch = tolower(ch);
-	if ((ch >= 'a') && (ch <= 'f'))
-		return ch - 'a' + 10;
-	return -1;
-}
-
-/* GPLv2.0, Linux kernel */
-static int hex2bin_compat(u8 *dst, const char *src, size_t count)
-{
-	while (count--) {
-		int hi = hex_to_bin_compat(*src++);
-		int lo = hex_to_bin_compat(*src++);
-
-		if ((hi < 0) || (lo < 0))
-			return -1;
-
-		*dst++ = (hi << 4) | lo;
-	}
-	return 0;
 }
 
 static int fb_eth_event(struct notifier_block *self, unsigned long cmd,
