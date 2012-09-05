@@ -70,12 +70,15 @@ static inline void fb_eth_make_dev_unbridged(struct net_device *dev)
 //static rx_handler_result_t fb_eth_handle_frame(struct sk_buff **pskb)
 struct sk_buff *fb_eth_handle_frame(struct sk_buff *skb)
 {
-	unsigned int seq;
+//	unsigned int seq;
 //	struct sk_buff *skb = *pskb;
 	struct fb_eth_dev_node *node;
 	struct fblock *fb = NULL;
-	struct fb_eth_priv *fb_priv;
+//	struct fb_eth_priv *fb_priv;
 	struct ethhdr *ethhdr = NULL;
+	uint8_t *hash;
+	struct fb_eth_next *nxt;
+	size_t lhsh;
 
 	if (unlikely(skb->pkt_type == PACKET_LOOPBACK))
 		return skb;
@@ -94,17 +97,30 @@ struct sk_buff *fb_eth_handle_frame(struct sk_buff *skb)
 	skb_orphan(skb);
 
 	ethhdr = (struct ethhdr *) skb_pull(skb, sizeof(struct ethhdr));
-	/* TODO: multiplex */
 
-	fb_priv = rcu_dereference(fb->private_data);
-	if (fb_priv->port[TYPE_INGRESS] == IDP_UNKNOWN)
+	lhsh = sizeof(((struct fb_eth_next *) 0)->hex);
+	hash = (uint8_t *) skb_pull(skb, lhsh);
+	if (!hash)
 		goto drop;
-	do {
-		seq = read_seqbegin(&fb_priv->lock);
-		write_next_idp_to_skb(skb, fb->idp,
-				      fb_priv->port[TYPE_INGRESS]);
-	} while (read_seqretry(&fb_priv->lock, seq));
+
+	nxt = struct_of(critbit_get_bin(&fbhash, hash, lhsh),
+			struct fb_eth_next);
+	if (!nxt)
+		goto drop;
+
+//	fb_priv = rcu_dereference(fb->private_data);
+//	if (fb_priv->port[TYPE_INGRESS] == IDP_UNKNOWN)
+//		goto drop;
+//	do {
+//		seq = read_seqbegin(&fb_priv->lock);
+//		write_next_idp_to_skb(skb, fb->idp,
+//				      fb_priv->port[TYPE_INGRESS]);
+//	} while (read_seqretry(&fb_priv->lock, seq));
+
+	write_next_idp_to_skb(skb, fb->idp, nxt->idp);
+
 	process_packet(skb, TYPE_INGRESS);
+
 //	return RX_HANDLER_CONSUMED;
 	return NULL;
 drop:
