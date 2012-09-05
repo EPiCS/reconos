@@ -42,10 +42,20 @@ extern int critbit_delete(struct critbit_tree *tree, const char *elem);
 extern int critbit_contains(struct critbit_tree *tree, const char *elem);
 
 /* Non-lock holding variants. */
-extern int __critbit_insert(struct critbit_tree *tree, char *elem);
-extern char *__critbit_get(struct critbit_tree *tree, const char *elem);
-extern int __critbit_delete(struct critbit_tree *tree, const char *elem);
-extern int __critbit_contains(struct critbit_tree *tree, const char *elem);
+extern int __critbit_insert(struct critbit_tree *tree, char *elem,
+			    int bin, size_t len);
+extern char *__critbit_get(struct critbit_tree *tree, const char *elem,
+			   int bin, size_t len);
+extern int __critbit_delete(struct critbit_tree *tree, const char *elem,
+			    int bin, size_t len);
+extern int __critbit_contains(struct critbit_tree *tree, const char *elem,
+			      int bin, size_t len);
+
+/* Binary variants */
+extern int critbit_insert_bin(struct critbit_tree *tree, char *elem, size_t elen);
+extern char *critbit_get_bin(struct critbit_tree *tree, const char *elem, size_t elen);
+extern int critbit_delete_bin(struct critbit_tree *tree, const char *elem, size_t elen);
+extern int critbit_contains_bin(struct critbit_tree *tree, const char *elem, size_t elen);
 
 /*
  * If your module needs the critbit cache, call get_critbit_cache() on

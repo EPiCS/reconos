@@ -96,7 +96,7 @@ static int unregister_from_fblock_namespace(char *name)
 /* Called within RCU read lock! */
 idp_t __get_fblock_namespace_mapping(char *name)
 {
-	struct idp_elem *elem = struct_of(__critbit_get(&idpmap, name),
+	struct idp_elem *elem = struct_of(__critbit_get(&idpmap, name, 0, 0),
 					  struct idp_elem);
 	if (unlikely(!elem))
 		return IDP_UNKNOWN;
@@ -118,7 +118,7 @@ EXPORT_SYMBOL_GPL(get_fblock_namespace_mapping);
 /* Called within RCU read lock! */
 int __change_fblock_namespace_mapping(char *name, idp_t new)
 {
-	struct idp_elem *elem = struct_of(__critbit_get(&idpmap, name),
+	struct idp_elem *elem = struct_of(__critbit_get(&idpmap, name, 0, 0),
 					  struct idp_elem);
 	if (unlikely(!elem))
 		return -ENOENT;

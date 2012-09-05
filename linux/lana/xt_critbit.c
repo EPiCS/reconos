@@ -62,10 +62,11 @@ static inline void critbit_free_node(struct critbit_node *p)
 	module_put(THIS_MODULE);
 }
 
-int __critbit_contains(struct critbit_tree *tree, const char *elem)
+int __critbit_contains(struct critbit_tree *tree, const char *elem,
+		       int bin, size_t len)
 {
 	const u8 *ubytes = (void *) elem;
-	const size_t ulen = strlen(elem);
+	const size_t ulen = (bin ? len : strlen(elem));
 	u8 c, *p;
 	struct critbit_node *q;
 	int direction;
@@ -86,7 +87,8 @@ int __critbit_contains(struct critbit_tree *tree, const char *elem)
 		p = rcu_dereference_raw(q->child[direction]);
 	}
 
-	return (0 == strcmp(elem, (char *) p));
+	return (0 == (bin ? memcmp(elem, (char *) p, len) :
+			    strcmp(elem, (char *) p)));
 }
 EXPORT_SYMBOL(__critbit_contains);
 
@@ -94,16 +96,27 @@ int critbit_contains(struct critbit_tree *tree, const char *elem)
 {
 	int ret;
 	rcu_read_lock();
-	ret = __critbit_contains(tree, elem);
+	ret = __critbit_contains(tree, elem, 0, 0);
 	rcu_read_unlock();
 	return ret;
 }
 EXPORT_SYMBOL(critbit_contains);
 
-char *__critbit_get(struct critbit_tree *tree, const char *elem)
+int critbit_contains_bin(struct critbit_tree *tree, const char *elem, size_t elen)
+{
+	int ret;
+	rcu_read_lock();
+	ret = __critbit_contains(tree, elem, 1, elen);
+	rcu_read_unlock();
+	return ret;
+}
+EXPORT_SYMBOL(critbit_contains_bin);
+
+char *__critbit_get(struct critbit_tree *tree, const char *elem,
+		    int bin, size_t len)
 {
 	const u8 *ubytes = (void *) elem;
-	const size_t ulen = strlen(elem);
+	const size_t ulen = (bin ? len : strlen(elem));
 	u8 c, *p;
 	struct critbit_node *q;
 	int direction;
@@ -124,7 +137,8 @@ char *__critbit_get(struct critbit_tree *tree, const char *elem)
 		p = rcu_dereference_raw(q->child[direction]);
 	}
 
-	return (0 == strcmp(elem, (char *) p)) ? (char *) p : NULL;
+	return (0 == (bin ? memcmp(elem, (char *) p, len) :
+			    strcmp(elem, (char *) p))) ? (char *) p : NULL;
 }
 EXPORT_SYMBOL(__critbit_get);
 
@@ -132,16 +146,26 @@ char *critbit_get(struct critbit_tree *tree, const char *elem)
 {
 	char *ret;
 	rcu_read_lock();
-	ret = __critbit_get(tree, elem);
+	ret = __critbit_get(tree, elem, 0, 0);
 	rcu_read_unlock();
 	return ret;
 }
 EXPORT_SYMBOL(critbit_get);
 
-int __critbit_insert(struct critbit_tree *tree, char *elem)
+char *critbit_get_bin(struct critbit_tree *tree, const char *elem, size_t elen)
+{
+	char *ret;
+	rcu_read_lock();
+	ret = __critbit_get(tree, elem, 1, elen);
+	rcu_read_unlock();
+	return ret;
+}
+EXPORT_SYMBOL(critbit_get_bin);
+
+int __critbit_insert(struct critbit_tree *tree, char *elem, int bin, size_t len)
 {
 	const u8 *const ubytes = (void *) elem;
-	const size_t ulen = strlen(elem);
+	const size_t ulen = (bin ? len : strlen(elem));
 	u8 c, *p = rcu_dereference_raw(tree->root);
 	u32 newbyte, newotherbits;
 	struct critbit_node *q, *newnode;
@@ -221,11 +245,22 @@ int critbit_insert(struct critbit_tree *tree, char *elem)
 	int ret;
 	unsigned long flags;
 	spin_lock_irqsave(&tree->wr_lock, flags);
-	ret = __critbit_insert(tree, elem);
+	ret = __critbit_insert(tree, elem, 0, 0);
 	spin_unlock_irqrestore(&tree->wr_lock, flags);
 	return ret;
 }
 EXPORT_SYMBOL(critbit_insert);
+
+int critbit_insert_bin(struct critbit_tree *tree, char *elem, size_t elen)
+{
+	int ret;
+	unsigned long flags;
+	spin_lock_irqsave(&tree->wr_lock, flags);
+	ret = __critbit_insert(tree, elem, 1, elen);
+	spin_unlock_irqrestore(&tree->wr_lock, flags);
+	return ret;
+}
+EXPORT_SYMBOL(critbit_insert_bin);
 
 static void critbit_do_free_rcu(struct rcu_head *rp)
 {
@@ -233,10 +268,11 @@ static void critbit_do_free_rcu(struct rcu_head *rp)
 	critbit_free_node(p);
 }
 
-int __critbit_delete(struct critbit_tree *tree, const char *elem)
+int __critbit_delete(struct critbit_tree *tree, const char *elem,
+		     int bin, size_t len)
 {
 	const u8 *ubytes = (void *) elem;
-	const size_t ulen = strlen(elem);
+	const size_t ulen = (bin ? len : strlen(elem));
 	u8 c, *p = rcu_dereference_raw(tree->root);
 	void **wherep = &tree->root;
 	void **whereq = NULL;
@@ -256,7 +292,8 @@ int __critbit_delete(struct critbit_tree *tree, const char *elem)
 		p = *wherep;
 	}
 
-	if (0 != strcmp(elem, (char *) p))
+	if (0 != (bin ? memcmp(elem, (char *) p, len) :
+			strcmp(elem, (char *) p)))
 		return -ENOENT;
 	/* Here, we could decrement a refcount to the elem. */
 	if (!whereq) {
@@ -275,11 +312,22 @@ int critbit_delete(struct critbit_tree *tree, const char *elem)
 	int ret;
 	unsigned long flags;
 	spin_lock_irqsave(&tree->wr_lock, flags);
-	ret = __critbit_delete(tree, elem);
+	ret = __critbit_delete(tree, elem, 0, 0);
 	spin_unlock_irqrestore(&tree->wr_lock, flags);
 	return ret;
 }
 EXPORT_SYMBOL(critbit_delete);
+
+int critbit_delete_bin(struct critbit_tree *tree, const char *elem, size_t elen)
+{
+	int ret;
+	unsigned long flags;
+	spin_lock_irqsave(&tree->wr_lock, flags);
+	ret = __critbit_delete(tree, elem, 1, elen);
+	spin_unlock_irqrestore(&tree->wr_lock, flags);
+	return ret;
+}
+EXPORT_SYMBOL(critbit_delete_bin);
 
 static int critbit_node_cache_init(void)
 {

@@ -9,16 +9,24 @@
 #include <linux/if_ether.h>
 #include <linux/if_arp.h>
 #include <linux/if.h>
+#include <linux/ctype.h>
 #include <linux/etherdevice.h>
 #include <linux/rtnetlink.h>
 #include <linux/seqlock.h>
 
 #include "xt_engine.h"
 #include "xt_fblock.h"
+#include "xt_critbit.h"
 
 #define IFF_VLINK_MAS	0x20000
 #define IFF_VLINK_DEV	0x40000
 #define IFF_IS_BRIDGED  0x60000
+
+struct fb_eth_next {
+	char hex[20];
+	idp_t idp;
+	struct rcu_head rcu;
+} ____cacheline_aligned;
 
 struct fb_eth_priv {
 	idp_t port[2];
@@ -27,7 +35,10 @@ struct fb_eth_priv {
 } ____cacheline_aligned_in_smp;
 
 static LIST_HEAD(fb_eth_devs);
+
 static DEFINE_SPINLOCK(fb_eth_devs_lock);
+
+static struct critbit_tree fbhash;
 
 struct fb_eth_dev_node {
 	struct list_head list;
@@ -125,6 +136,32 @@ static int fb_eth_netrx(const struct fblock * const fb,
 	return PPE_DROPPED;
 }
 
+/* GPLv2.0, Linux kernel */
+static int hex_to_bin_compat(char ch)
+{
+	if ((ch >= '0') && (ch <= '9'))
+		return ch - '0';
+	ch = tolower(ch);
+	if ((ch >= 'a') && (ch <= 'f'))
+		return ch - 'a' + 10;
+	return -1;
+}
+
+/* GPLv2.0, Linux kernel */
+static int hex2bin_compat(u8 *dst, const char *src, size_t count)
+{
+	while (count--) {
+		int hi = hex_to_bin_compat(*src++);
+		int lo = hex_to_bin_compat(*src++);
+
+		if ((hi < 0) || (lo < 0))
+			return -1;
+
+		*dst++ = (hi << 4) | lo;
+	}
+	return 0;
+}
+
 static int fb_eth_event(struct notifier_block *self, unsigned long cmd,
 			void *args)
 {
@@ -139,24 +176,66 @@ static int fb_eth_event(struct notifier_block *self, unsigned long cmd,
 
 	switch (cmd) {
 	case FBLOCK_BIND_IDP: {
-		struct fblock_bind_msg *msg = args;
-		if (fb_priv->port[msg->dir] == IDP_UNKNOWN) {
-			write_seqlock(&fb_priv->lock);
-			fb_priv->port[msg->dir] = msg->idp;
-			write_sequnlock(&fb_priv->lock);
-		} else {
-			ret = NOTIFY_BAD;
-		}
+//		struct fblock_bind_msg *msg = args;
+//		if (fb_priv->port[msg->dir] == IDP_UNKNOWN) {
+//			write_seqlock(&fb_priv->lock);
+//			fb_priv->port[msg->dir] = msg->idp;
+//			write_sequnlock(&fb_priv->lock);
+//		} else {
+//			ret = NOTIFY_BAD;
+//		}
 		break; }
 	case FBLOCK_UNBIND_IDP: {
-		struct fblock_bind_msg *msg = args;
-		if (fb_priv->port[msg->dir] == msg->idp) {
-			write_seqlock(&fb_priv->lock);
-			fb_priv->port[msg->dir] = IDP_UNKNOWN;
-			write_sequnlock(&fb_priv->lock);
-		} else {
-			ret = NOTIFY_BAD;
+//		struct fblock_bind_msg *msg = args;
+//		if (fb_priv->port[msg->dir] == msg->idp) {
+//			write_seqlock(&fb_priv->lock);
+//			fb_priv->port[msg->dir] = IDP_UNKNOWN;
+//			write_sequnlock(&fb_priv->lock);
+//		} else {
+//			ret = NOTIFY_BAD;
+//		}
+		break; }
+	case FBLOCK_SET_OPT: {
+		struct fblock *fb;
+		struct fblock_opt_msg *msg = args;
+		struct fb_eth_next *new, *new2;
+
+		fb = search_fblock_n(msg->val);
+		if (!fb) {
+			return NOTIFY_BAD;
 		}
+
+		new = kmalloc(sizeof(*new), GFP_KERNEL);
+		if (!new) {
+			put_fblock(fb);
+			return NOTIFY_BAD;
+		}
+
+		hex2bin_compat(new->hex, msg->key, sizeof(new->hex));
+
+		if ((new2 = struct_of(critbit_get_bin(&fbhash, new->hex,
+						      sizeof(new->hex)),
+				      struct fb_eth_next)) != NULL) {
+			critbit_delete_bin(&fbhash, new2->hex,
+					   sizeof(new->hex));
+			kfree(new2);
+			kfree(new);
+
+			put_fblock(fb);
+
+			printk("[fb_eth] %s->%s removed\n", msg->key, msg->val);
+			return NOTIFY_OK;
+		}
+
+		rcu_read_lock();
+		new->idp = fb->idp;
+		rcu_read_unlock();
+
+		critbit_insert_bin(&fbhash, new->hex, sizeof(new->hex));
+
+		put_fblock(fb);
+
+		printk("[fb_eth] %s->%s created\n", msg->key, msg->val);
 		break; }
 	default:
 		break;
@@ -344,17 +423,26 @@ static struct vlink_callback fb_eth_stop_hook_dev_cb =
 static int __init init_fb_eth_module(void)
 {
 	int ret = 0;
+
 	ret = vlink_subsys_register(&fb_eth_sys);
 	if (ret)
 		return ret;
+
 	vlink_add_callback(&fb_eth_sys, &fb_eth_start_hook_dev_cb);
         vlink_add_callback(&fb_eth_sys, &fb_eth_stop_hook_dev_cb);
+
+	get_critbit_cache();
+	critbit_init_tree(&fbhash);
+
 	return ret;
 }
 
 static void __exit cleanup_fb_eth_module(void)
 {
+	put_critbit_cache();
+
 	synchronize_rcu();
+
 	vlink_subsys_unregister_batch(&fb_eth_sys);
 }
 
