@@ -83,7 +83,7 @@ static int fb_pflana_netrx(const struct fblock * const fb,
 		goto out;
 	} else if (ctlhdr->type != PFLANA_CTL_TYPE_DATA) {
 		kfree(skb);
-		goto out;
+		return PPE_DROPPED;
 	}
 
 	sk = &fb_priv->sock_self->sk;

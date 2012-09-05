@@ -78,6 +78,7 @@ static ssize_t re_conf_read(struct file *file, char __user *buff, size_t len,
 		return -EAGAIN;
 
 	slen = skb->len;
+	/* TODO: handle non-linear data i.e. fragments */
 	if (copy_to_user(buff, skb->data, skb->len))
 		return -EIO;
 
