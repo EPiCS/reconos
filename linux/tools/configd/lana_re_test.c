@@ -3,6 +3,7 @@
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <unistd.h>
 #include <sys/ioctl.h>
 
@@ -35,8 +36,14 @@ int main(int argc, char**argv)
 		}
 		printf("Got: ");
 		for (j = 0; j < ret; ++j)
-			printf("%02x ", buff[j]);
+			printf("%02x ", (uint8_t) buff[j]);
 		printf("\n");
+
+		ret = write(fd, buff, ret);
+		if (ret < 0) {
+			perror("write");
+			continue;
+		}
 	}
 
 	close(fd);

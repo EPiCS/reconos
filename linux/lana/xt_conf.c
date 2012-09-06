@@ -52,6 +52,7 @@ static long __conf_ioctl(struct file *file, unsigned int cmd,
 			return -EFAULT;
 		dst[FBNAMSIZ - 1] = 0;
 		*fblock_set = 1;
+		printk("[xt_conf] configure %s!\n", dst);
 		break;
 	default:
 		return -EINVAL;
@@ -101,8 +102,10 @@ static ssize_t re_conf_write(struct file *file, const char __user *buff,
 		return -EINVAL;
 
 	fb = search_fblock_n(re_fblock_name);
-	if (!fb)
+	if (!fb) {
+		printk("[xt_conf] no such functional block!\n");
 		return -EINVAL;
+	}
 
 	args.buff = buff;
 	args.len = len;

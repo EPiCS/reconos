@@ -77,13 +77,19 @@ static int fb_pflana_netrx(const struct fblock * const fb,
 
 	fb_priv = rcu_dereference_raw(fb->private_data);
 
-	ctlhdr = (struct pflana_ctl *) skb_pull(skb, sizeof(*ctlhdr));
+	ctlhdr = (struct pflana_ctl *) skb->data;
+	skb_pull(skb, sizeof(*ctlhdr));
+
 	if (ctlhdr->type == PFLANA_CTL_TYPE_CONF) {
+		printk("[pflana] packet type: conf!\n");
 		packet_sw_to_configd(skb);
 		goto out;
 	} else if (ctlhdr->type != PFLANA_CTL_TYPE_DATA) {
+		printk("[pflana] packet type: other!\n");
 		kfree(skb);
 		return PPE_DROPPED;
+	} else {
+		printk("[pflana] packet type: data!\n");
 	}
 
 	sk = &fb_priv->sock_self->sk;
@@ -297,10 +303,11 @@ static int __lana_proto_sendmsg(struct kiocb *iocb, struct sock *sk,
 	struct fblock *fb = lana->fb;
 	struct fb_pflana_priv *fb_priv;
 	struct pflana_ctl *ctlhdr;
-//	printk(KERN_INFO "[fb_pflana] lana_proto_sendmsg\n");
+
+	printk(KERN_INFO "[fb_pflana] lana_proto_sendmsg\n");
 
 	if (lana->bound == 0){
-//		printk(KERN_INFO "[fb_pflana] not bound, returning -EINVAL\n");
+		printk(KERN_INFO "[fb_pflana] not bound, returning -EINVAL\n");
 		return -EINVAL;
 	}
 	rcu_read_lock();

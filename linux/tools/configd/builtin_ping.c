@@ -73,6 +73,8 @@ int main(int argc, char **argv)
 	if (sock < 0)
 		panic("Cannot create socket!\n");
 
+	sleep(100000);
+
 	memset(buff, 0, sizeof(buff));
 	bmsg = (struct bind_msg *) buff;
 	if (client) {

@@ -114,7 +114,6 @@ struct sk_buff *fb_eth_handle_frame(struct sk_buff *skb)
 	struct fb_eth_dev_node *node;
 	struct fblock *fb = NULL;
 //	struct fb_eth_priv *fb_priv;
-	struct ethhdr *ethhdr = NULL;
 	uint8_t *hash;
 	struct fb_eth_next *nxt;
 	size_t lhsh;
@@ -135,11 +134,10 @@ struct sk_buff *fb_eth_handle_frame(struct sk_buff *skb)
 		goto drop;
 	skb_orphan(skb);
 
-	ethhdr = (struct ethhdr *) skb_pull(skb, sizeof(struct ethhdr));
-
+//	skb_pull(skb, sizeof(struct ethhdr));
 	lhsh = sizeof(((struct fb_eth_next *) 0)->hex);
-	hash = (uint8_t *) skb_pull(skb, lhsh);
-	if (!hash)
+	hash = (uint8_t *) skb->data;
+	if (!skb_pull(skb, lhsh))
 		goto drop;
 
 	nxt = struct_of(critbit_get_bin(&fbhash, hash, lhsh),
