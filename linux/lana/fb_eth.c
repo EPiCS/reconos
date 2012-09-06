@@ -13,6 +13,7 @@
 #include <linux/etherdevice.h>
 #include <linux/rtnetlink.h>
 #include <linux/seqlock.h>
+#include <linux/radix-tree.h>
 
 #include "xt_engine.h"
 #include "xt_fblock.h"
@@ -37,6 +38,8 @@ struct fb_eth_priv {
 static LIST_HEAD(fb_eth_devs);
 
 static DEFINE_SPINLOCK(fb_eth_devs_lock);
+
+RADIX_TREE(fbrehash, GFP_ATOMIC);
 
 static struct critbit_tree fbhash;
 
@@ -177,20 +180,24 @@ static int fb_eth_netrx(const struct fblock * const fb,
 {
 	struct fb_eth_priv *fb_priv;
 	struct ethhdr *ethhdr = NULL;
+	struct fb_eth_next *n;
 
 	fb_priv = rcu_dereference(fb->private_data);
 	write_next_idp_to_skb(skb, fb->idp, IDP_UNKNOWN);
 	skb->dev = fb_priv->dev;
 
+	n = radix_tree_lookup(&fbrehash, read_last_idp_from_skb(skb));
+	if (n)
+		memcpy(skb_push(skb, sizeof(n->hex)), n->hex, sizeof(n->hex));
+
 	ethhdr = (struct ethhdr *) skb_push(skb, sizeof(struct ethhdr));
 	memcpy(ethhdr->h_source, skb->dev->dev_addr, ETH_ALEN);
-	/* FIXME: fill */
 	memset(ethhdr->h_dest, 0xFF, ETH_ALEN);
 	ethhdr->h_proto = cpu_to_be16(0x800);
-
 	skb_set_mac_header(skb, 0);
 
 	dev_queue_xmit(skb);
+
 	return PPE_DROPPED;
 }
 
@@ -250,12 +257,16 @@ static int fb_eth_event(struct notifier_block *self, unsigned long cmd,
 				      struct fb_eth_next)) != NULL) {
 			critbit_delete_bin(&fbhash, new2->hex,
 					   sizeof(new->hex));
+
+			radix_tree_delete(&fbrehash, new2->idp);
+
 			kfree(new2);
 			kfree(new);
 
 			put_fblock(fb);
 
 			printk("[fb_eth] %s->%s removed\n", msg->key, msg->val);
+
 			return NOTIFY_OK;
 		}
 
@@ -265,9 +276,12 @@ static int fb_eth_event(struct notifier_block *self, unsigned long cmd,
 
 		critbit_insert_bin(&fbhash, new->hex, sizeof(new->hex));
 
+		radix_tree_insert(&fbrehash, new->idp, new);
+
 		put_fblock(fb);
 
 		printk("[fb_eth] %s->%s created\n", msg->key, msg->val);
+
 		break; }
 	default:
 		break;
