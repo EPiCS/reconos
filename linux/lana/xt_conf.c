@@ -14,6 +14,7 @@
 #include <linux/kernel.h>
 #include <linux/skbuff.h>
 #include <linux/wait.h>
+#include <linux/poll.h>
 #include <asm/uaccess.h>
 
 #include "xt_fblock.h"
@@ -59,6 +60,17 @@ static long __conf_ioctl(struct file *file, unsigned int cmd,
 	}
 
 	return 0;
+}
+
+static unsigned int re_conf_poll(struct file *file, struct poll_table_struct *wait)
+{
+	unsigned int mask = 0;
+
+	poll_wait(file, &wait_queue, wait);
+	if (!skb_queue_empty(&queue_to_configd))
+		mask |= POLLIN | POLLRDNORM;
+
+	return mask;
 }
 
 static ssize_t re_conf_read(struct file *file, char __user *buff, size_t len,
@@ -243,6 +255,7 @@ static struct file_operations re_conf_fops __read_mostly = {
 	.owner = THIS_MODULE,
 	.read = re_conf_read,
 	.write = re_conf_write,
+	.poll = re_conf_poll,
 	.unlocked_ioctl	= re_conf_ioctl,
 	.release = re_conf_close,
 };
