@@ -181,12 +181,13 @@ static int fb_eth_netrx(const struct fblock * const fb,
 	struct fb_eth_priv *fb_priv;
 	struct ethhdr *ethhdr = NULL;
 	struct fb_eth_next *n;
+	unsigned long key = read_last_idp_from_skb(skb);
 
 	fb_priv = rcu_dereference(fb->private_data);
 	write_next_idp_to_skb(skb, fb->idp, IDP_UNKNOWN);
 	skb->dev = fb_priv->dev;
 
-	n = radix_tree_lookup(&fbrehash, read_last_idp_from_skb(skb));
+	n = radix_tree_lookup(&fbrehash, key);
 	if (n)
 		memcpy(skb_push(skb, sizeof(n->hex)), n->hex, sizeof(n->hex));
 
