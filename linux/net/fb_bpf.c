@@ -82,7 +82,7 @@ static int __fb_bpf_init_filter(struct fb_bpf_priv *fb_priv,
 static int fb_bpf_init_filter(struct fblock *fb, struct sock_fprog_kern *fprog)
 {
 	int err;
-	struct fb_bpf_priv __percpu *fb_priv;
+	struct fb_bpf_priv *fb_priv;
 	rcu_read_lock();
 	fb_priv = rcu_dereference_raw(fb->private_data);
 	rcu_read_unlock();
