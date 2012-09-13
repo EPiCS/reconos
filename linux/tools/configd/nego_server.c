@@ -16,8 +16,7 @@
 
 #include "xutils.h"
 #include "reconfig.h"
-
-#define PORT 9930
+//#define PORT 9930
 
 enum server_state_num {
 	STATE_SWAIT1 = 0,
@@ -44,10 +43,14 @@ static pthread_t thread;
 
 extern sig_atomic_t sigint;
 
+//XXX hack
+static char buff[MAXMSG];
+static size_t buff_len;
+
 static enum server_state_num server_swait1(int sock)
 {
 	struct pollfd fds;
-	char buff[MAXMSG];
+//	char buff[MAXMSG];
 	ssize_t ret;
 	struct pn_hdr *hdr;
 
@@ -58,9 +61,11 @@ static enum server_state_num server_swait1(int sock)
 	if ((fds.revents & POLLIN) != POLLIN)
 		return STATE_SWAIT1;
 
-	ret = recvfrom(sock, buff, sizeof(buff), MSG_PEEK, NULL, NULL);
+//	ret = recvfrom(sock, buff, sizeof(buff), MSG_PEEK, NULL, NULL);
+	ret = read(sock, buff, sizeof(buff)); //XXX MSG_PEEK
 	if (ret <= 0)
 		goto out_purge;
+	buff_len = ret; //XXX
 	hdr = (struct pn_hdr *) buff;
 	if (hdr->type != TYPE_SUGGEST)
 		goto out_purge;
@@ -69,7 +74,7 @@ static enum server_state_num server_swait1(int sock)
 
 	return STATE_SCOMPOSE;
 out_purge:
-	recvfrom(sock, buff, sizeof(buff), 0, NULL, NULL);
+	//recvfrom(sock, buff, sizeof(buff), 0, NULL, NULL); XXX
 	return STATE_SWAIT1;
 }
 
@@ -106,18 +111,19 @@ static int process_proposals(uint8_t *str, size_t len)
 static enum server_state_num server_scompose(int sock)
 {
 	int ret;
-	char buff[MAXMSG];
+//	char buff[MAXMSG];
 	ssize_t len;
 	struct pn_hdr *hdr;
 	struct pn_hdr_compose *chdr;
 
-	sacurrlen = sizeof(sacurrent);
-	ret = recvfrom(sock, buff, sizeof(buff), 0,
-		       (struct sockaddr *) &sacurrent, &sacurrlen);
-	if (ret <= 0 || ret < sizeof(*hdr))
-		return STATE_SWAIT1;
+//	sacurrlen = sizeof(sacurrent);
+//	ret = recvfrom(sock, buff, sizeof(buff), 0,
+//		       (struct sockaddr *) &sacurrent, &sacurrlen);
+//	ret = read(sock, buff, sizeof(buff));
+//	if (ret <= 0 || ret < sizeof(*hdr))
+//		return STATE_SWAIT1;
 
-	len = ret;
+	len = buff_len; //ret;
 	hdr = (struct pn_hdr *) buff;
 	chdr = (struct pn_hdr_compose *) buff + sizeof(*hdr);
 
@@ -134,8 +140,9 @@ static enum server_state_num server_scompose(int sock)
 	hdr->type = TYPE_COMPOSE;
 	chdr->which = ret;
 
-	ret = sendto(sock, buff, sizeof(*hdr) + sizeof(*chdr), 0,
-		     (struct sockaddr *) &sacurrent, sacurrlen);
+//	ret = sendto(sock, buff, sizeof(*hdr) + sizeof(*chdr), 0,
+//		     (struct sockaddr *) &sacurrent, sacurrlen);
+	ret = write(sock, buff, sizeof(*hdr) + sizeof(*chdr));
 	if (ret <= 0)
 		return STATE_SWAIT1;
 
@@ -145,7 +152,7 @@ static enum server_state_num server_scompose(int sock)
 static enum server_state_num server_swait2(int sock)
 {
 	struct pollfd fds;
-	char buff[MAXMSG];
+//	char buff[MAXMSG];
 	ssize_t ret;
 	struct pn_hdr *hdr;
 	struct sockaddr_in sa;
@@ -158,8 +165,9 @@ static enum server_state_num server_swait2(int sock)
 	if ((fds.revents & POLLIN) != POLLIN)
 		return STATE_SWAIT1;
 
-	ret = recvfrom(sock, buff, sizeof(buff), MSG_PEEK,
-		       (struct sockaddr *) &sa, &slen);
+//	ret = recvfrom(sock, buff, sizeof(buff), MSG_PEEK,
+//		       (struct sockaddr *) &sa, &slen);
+	ret = read(sock, buff, sizeof(buff)); //XXX: MSG_PEEK
 	if (ret <= 0)
 		goto out_purge;
 	hdr = (struct pn_hdr *) buff;
@@ -174,7 +182,7 @@ static enum server_state_num server_swait2(int sock)
 
 	return STATE_SDONE;
 out_purge:
-	recvfrom(sock, buff, sizeof(buff), 0, NULL, NULL);
+	//recvfrom(sock, buff, sizeof(buff), 0, NULL, NULL); XXX
 	return STATE_SWAIT1;
 }
 
@@ -184,13 +192,14 @@ static enum server_state_num server_sdone(int sock)
 	ssize_t ret;
 	struct pn_hdr *hdr;
 	struct sockaddr_in saother;
-	socklen_t salen;
+//	socklen_t salen;
 
-	salen = sizeof(saother);
-	ret = recvfrom(sock, buff, sizeof(buff), 0,
-		       (struct sockaddr *) &saother, &salen);
-	if (ret <= 0)
-		return STATE_SWAIT1;
+//	salen = sizeof(saother);
+//	ret = recvfrom(sock, buff, sizeof(buff), 0,
+//		       (struct sockaddr *) &saother, &salen);
+//	ret = read(sock, buff, sizeof(buff));
+//	if (ret <= 0)
+//		return STATE_SWAIT1;
 
 	hdr = (struct pn_hdr *) buff;
 	if (hdr->type == TYPE_NACK)
@@ -199,9 +208,11 @@ static enum server_state_num server_sdone(int sock)
 	/* Established! */
 
 	while (!sigint) {
-		ret = recvfrom(sock, buff, sizeof(buff), MSG_PEEK, NULL, NULL);
+	//	ret = recvfrom(sock, buff, sizeof(buff), MSG_PEEK, NULL, NULL);
+		ret = read(sock, buff, sizeof(buff)); // MSG_PEEK XXX
 		if (ret <= 0)
 			return STATE_SDONE;
+		buff_len = ret;
 		hdr = (struct pn_hdr *) buff;
 		if (hdr->type == TYPE_SUGGEST)
 			return STATE_SWAIT1;
@@ -233,23 +244,31 @@ static void server_state_machine(int sock)
 	}
 }
 
-static void *nego_server(void *arg)
+static void *nego_server(void *fbname)
 {
 	int sock, ret;
-	struct sockaddr_in same;
+//	struct sockaddr_in same;
 
-	sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+//	sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+//	if (sock < 0)
+//		panic("socket");
+
+//	memset(&same, 0, sizeof(same));
+//	same.sin_family = AF_INET;
+//	same.sin_port = htons(PORT);
+//	same.sin_addr.s_addr = htonl(INADDR_ANY);
+
+//	ret = bind(sock, (struct sockaddr *) &same, sizeof(same));
+//	if (ret < 0)
+//		panic("bind");
+
+	sock = open("/dev/lana_re_cfg", O_RDWR);
 	if (sock < 0)
-		panic("socket");
+		panic("open\n");
 
-	memset(&same, 0, sizeof(same));
-	same.sin_family = AF_INET;
-	same.sin_port = htons(PORT);
-	same.sin_addr.s_addr = htonl(INADDR_ANY);
-
-	ret = bind(sock, (struct sockaddr *) &same, sizeof(same));
+	ret = ioctl(sock, -1073477120, fbname);
 	if (ret < 0)
-		panic("bind");
+		panic("ioctl\n");
 
 	server_state_machine(sock);
 
@@ -257,9 +276,9 @@ static void *nego_server(void *arg)
 	pthread_exit(0);
 }
 
-void start_negotiation_server(void)
+void start_negotiation_server(char fbname[64])
 {
-	int ret = pthread_create(&thread, NULL, nego_server, NULL);
+	int ret = pthread_create(&thread, NULL, nego_server, fbname);
 	if (ret < 0)
 		panic("Cannot create thread!\n");
 

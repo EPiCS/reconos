@@ -30,6 +30,6 @@ extern int init_negotiation(void);
 extern void start_negotiation_server(void);
 extern void stop_negotiation_server(void);
 /* returns index of picked config */
-extern int negotiation_client(char sugg[MAXS][256], size_t used);
+extern int negotiation_client(char sugg[MAXS][256], size_t used, char fbname[64]);
 
 #endif /* RECONFIG_H */

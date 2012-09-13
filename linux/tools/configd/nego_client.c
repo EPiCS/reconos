@@ -9,22 +9,25 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <unistd.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <sys/ioctl.h>
 
 #include "xutils.h"
 #include "reconfig.h"
 
 #define BUFLEN 512
-#define PORT 9930
-#define SRV_IP "192.168.0.253"
+//#define PORT 9930
+//#define SRV_IP "192.168.0.253"
 
 extern sig_atomic_t sigint;
 
-int negotiation_client(char sugg[MAXS][256], size_t used)
+int negotiation_client(char sugg[MAXS][256], size_t used, char fbname[64])
 {
 	int sock, ret, ack, seq, i;
-	struct sockaddr_in si_other;
+//	struct sockaddr_in si_other;
 	char buf[BUFLEN];
-	socklen_t slen = sizeof(si_other);
+//	socklen_t slen = sizeof(si_other);
 	struct pn_hdr *hdr;
 	struct pn_hdr_compose *chdr;
 	size_t len;
@@ -33,19 +36,27 @@ int negotiation_client(char sugg[MAXS][256], size_t used)
 	if (used < 1)
 		panic("No suggestions available!\n");
 
-	sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+	sock = open("/dev/lana_re_cfg", O_RDWR);
+//	sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
 	if (sock < 0)
 		panic("socket");
 
-	memset((char *) &si_other, 0, sizeof(si_other));
-	si_other.sin_family = AF_INET;
-	si_other.sin_port = htons(PORT);
+	fbname[63] = 0;
+	ret = ioctl(sock, -1073477120, fbname);
+	if (ret < 0)
+		panic("ioctl");
 
-	ret = inet_aton(SRV_IP, &si_other.sin_addr);
-	if (ret == 0) {
-		fprintf(stderr, "inet_aton() failed\n");
-		exit(1);
-	}
+        printf("ioctl done!\n");
+
+//	memset((char *) &si_other, 0, sizeof(si_other));
+//	si_other.sin_family = AF_INET;
+//	si_other.sin_port = htons(PORT);
+
+//	ret = inet_aton(SRV_IP, &si_other.sin_addr);
+//	if (ret == 0) {
+//		fprintf(stderr, "inet_aton() failed\n");
+//		exit(1);
+//	}
 
 	hdr = (struct pn_hdr *) buf;
 	hdr->seq = htons((uint16_t) random());
@@ -65,7 +76,8 @@ retry:
 	if (sigint)
 		return -EIO;
 
-	ret = sendto(sock, buf, len, 0, (struct sockaddr *) &si_other, slen);
+//	ret = sendto(sock, buf, len, 0, (struct sockaddr *) &si_other, slen);
+	ret = write(sock, buf, len);
 	if (ret < 0)
 		panic("sendto()");
 
@@ -78,7 +90,8 @@ retry:
 		goto retry;
 	}
 
-	ret = recvfrom(sock, buf, BUFLEN, 0, NULL, NULL);
+//	ret = recvfrom(sock, buf, BUFLEN, 0, NULL, NULL);
+	ret = read(sock, buf, BUFLEN);
 	if (ret < sizeof(*hdr) + sizeof(*chdr))
 		panic("recvfrom()");
 
@@ -94,7 +107,8 @@ retry:
 	hdr->ack = htons(seq);
 	hdr->seq = htons(ack + 1);
 
-	ret = sendto(sock, buf, sizeof(*hdr), 0, (struct sockaddr *) &si_other, slen);
+//	ret = sendto(sock, buf, sizeof(*hdr), 0, (struct sockaddr *) &si_other, slen);
+	ret = write(sock, buf, sizeof(*hdr));
 	if (ret < 0)
 		panic("sendto()");
 
