@@ -24,10 +24,10 @@ extern void reconfig_reliability(void);
 extern void get_dependencies(char *from_upper, char *to_lower, char ***stack,
 			     size_t *len);
 
-extern int init_negotiation(void);
+extern int init_negotiation(char *fbpfname);
 
 #define MAXS 10
-extern void start_negotiation_server(void);
+extern void start_negotiation_server(char *fbpfname);
 extern void stop_negotiation_server(void);
 /* returns index of picked config */
 extern int negotiation_client(char sugg[MAXS][256], size_t used, char fbname[64]);

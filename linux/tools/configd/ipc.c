@@ -79,7 +79,7 @@ static void ipc_do_configure_client(struct bind_msg *bmsg)
 
 	setopt_of_elem_in_stack(bmsg->name, "iface=eth0", strlen("iface=eth0")); //XXX
 
-	ret = init_negotiation();
+	ret = init_negotiation(bmsg->name);
 	if (ret < 0) {
 		printd("Remote end does not support stack config!\n");
 		return;

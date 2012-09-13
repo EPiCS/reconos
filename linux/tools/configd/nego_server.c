@@ -13,6 +13,7 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <time.h>
+#include <sys/ioctl.h>
 
 #include "xutils.h"
 #include "reconfig.h"
@@ -191,7 +192,7 @@ static enum server_state_num server_sdone(int sock)
 	char buff[MAXMSG];
 	ssize_t ret;
 	struct pn_hdr *hdr;
-	struct sockaddr_in saother;
+//	struct sockaddr_in saother;
 //	socklen_t salen;
 
 //	salen = sizeof(saother);
@@ -276,7 +277,7 @@ static void *nego_server(void *fbname)
 	pthread_exit(0);
 }
 
-void start_negotiation_server(char fbname[64])
+void start_negotiation_server(char *fbname)
 {
 	int ret = pthread_create(&thread, NULL, nego_server, fbname);
 	if (ret < 0)

@@ -38,7 +38,7 @@ void dumpstack(void)
 	}
 }
 
-int init_negotiation(void)
+int init_negotiation(char *fbpfname)
 {
 	int i;
 	size_t used = 0;
@@ -49,7 +49,7 @@ int init_negotiation(void)
 		used++;
 	}
 
-	return negotiation_client(conf, used);
+	return negotiation_client(conf, used, fbpfname);
 }
 
 void init_reconfig(char *upper_name, char *upper_type,
