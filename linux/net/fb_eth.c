@@ -143,7 +143,7 @@ struct sk_buff *fb_eth_handle_frame(struct sk_buff *skb)
 	if (!skb_pull(skb, lhsh))
 		goto drop;
 
-	nxt = struct_of(__critbit_get_bin(&fbhash, hash, lhsh),
+	nxt = struct_of(__critbit_get(&fbhash, hash, 1, lhsh),
 			struct fb_eth_next);
 	if (!nxt) {
 		char str[64];

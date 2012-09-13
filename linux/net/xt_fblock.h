@@ -78,6 +78,7 @@ enum fblock_mode {
 static const char *fblock_props_to_str[] = {
 	"none",
 	"reliable",
+	"privacy",
 	"dummy",
 	"dummy",
 };
@@ -94,6 +95,7 @@ static const char *fblock_props_to_str[] = {
 enum fblock_props {
 	NONE = 0,
 	RELIABLE,
+	PRIVACY,
 	DUMMY,
 	DUMMY2,
 	__MAX_PROP,

@@ -17,6 +17,7 @@ lana-y   := core.o xt_vlink.o xt_engine.o xt_fblock.o xt_critbit.o xt_conf.o \
 obj-m    += lana.o
 obj-m    += fb_dummy.o
 obj-m    += fb_eth.o
+obj-m    += fb_otp.o
 obj-m    += fb_ipv4.o
 obj-m    += fb_udp.o
 obj-m    += fb_tcp.o

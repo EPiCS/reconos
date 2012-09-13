@@ -271,7 +271,7 @@ int init_ei_conf(void)
 	skb_queue_head_init(&queue_to_configd);
 	init_waitqueue_head(&wait_queue);
 
-	printk("[xt_conf] %d\n", FBLOCK_CONF_SET_NAME);
+	printk("[xt_conf] %lu\n", FBLOCK_CONF_SET_NAME);
 
 	return misc_register(&ei_conf_misc_dev) ||
 	       misc_register(&re_conf_misc_dev);

@@ -10,6 +10,7 @@
 #include <linux/seqlock.h>
 #include <linux/prefetch.h>
 #include <linux/slab.h>
+#include <linux/seq_file.h>
 
 #include "xt_fblock.h"
 #include "xt_engine.h"
@@ -26,8 +27,6 @@ static int fb_otp_netrx(const struct fblock * const fb,
 			  struct sk_buff * const skb,
 			  enum path_type * const dir)
 {
-	int drop = 0;
-	u8 mask = 1;
 	unsigned int seq;
 	unsigned long flags;
 	struct fb_otp_priv *fb_priv;
@@ -103,15 +102,18 @@ static int fb_otp_proc_show(struct seq_file *m, void *v)
 	struct fblock *fb = (struct fblock *) m->private;
 	struct fb_otp_priv *fb_priv;
 	unsigned long flags;
+	char sline[64];
 
 	rcu_read_lock();
 	fb_priv = rcu_dereference_raw(fb->private_data);
 	rcu_read_unlock();
 
+	memset(sline, 0, sizeof(sline));
 	spin_lock_irqsave(&fb_priv->klock, flags);
-	seq_puts(m, "%zd\n", fb_priv->len - fb_priv->off);
+	snprintf(sline, sizeof(sline), "%zd\n", (fb_priv->len - fb_priv->off));
 	spin_unlock_irqrestore(&fb_priv->klock, flags);
 
+	seq_puts(m, sline);
 	return 0;
 }
 
@@ -162,12 +164,12 @@ static ssize_t fb_otp_proc_write(struct file *file, const char __user * ubuff,
 	return len;
 }
 
-static const struct file_operations fb_otr_proc_fops = {
+static const struct file_operations fb_otp_proc_fops = {
 	.owner   = THIS_MODULE,
-	.open    = fb_otr_proc_open,
+	.open    = fb_otp_proc_open,
 	.read    = seq_read,
 	.llseek  = seq_lseek,
-	.write   = fb_otr_proc_write,
+	.write   = fb_otp_proc_write,
 	.release = single_release,
 };
 
@@ -176,6 +178,7 @@ static struct fblock *fb_otp_ctor(char *name)
 	int ret = 0;
 	struct fblock *fb;
 	struct fb_otp_priv *fb_priv;
+	struct proc_dir_entry *fb_proc;
 
 	fb = alloc_fblock(GFP_ATOMIC);
 	if (!fb)
