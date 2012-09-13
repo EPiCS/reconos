@@ -267,7 +267,7 @@ static void *nego_server(void *fbname)
 	if (sock < 0)
 		panic("open\n");
 
-	ret = ioctl(sock, -1073477120, fbname);
+	ret = ioctl(sock, 3221752320, fbname);
 	if (ret < 0)
 		panic("ioctl\n");
 

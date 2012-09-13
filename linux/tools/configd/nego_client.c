@@ -22,7 +22,7 @@
 
 extern sig_atomic_t sigint;
 
-int negotiation_client(char sugg[MAXS][256], size_t used, char fbname[64])
+int negotiation_client(char sugg[MAXS][256], size_t used, char *fbname)
 {
 	int sock, ret, ack, seq, i;
 //	struct sockaddr_in si_other;
@@ -41,12 +41,12 @@ int negotiation_client(char sugg[MAXS][256], size_t used, char fbname[64])
 	if (sock < 0)
 		panic("socket");
 
-	fbname[63] = 0;
-	ret = ioctl(sock, -1073477120, fbname);
+//	fbname[63] = 0;
+	ret = ioctl(sock, 3221752320, fbname);
 	if (ret < 0)
-		panic("ioctl");
+		panic("ioctl %s\n", strerror(errno));
 
-        printf("ioctl done!\n");
+	printd("ioctl done!\n");
 
 //	memset((char *) &si_other, 0, sizeof(si_other));
 //	si_other.sin_family = AF_INET;
@@ -76,24 +76,31 @@ retry:
 	if (sigint)
 		return -EIO;
 
+	printd("Doing write!\n");
+
 //	ret = sendto(sock, buf, len, 0, (struct sockaddr *) &si_other, slen);
 	ret = write(sock, buf, len);
-	if (ret < 0)
-		panic("sendto()");
+	if (ret < 0) {
+		panic("write(%d,%s)\n", ret,strerror(errno));
+	}
+
+	printd("Sent suggesttions!\n");
 
 	fds.fd = sock;
 	fds.events = POLLIN;
 
 	poll(&fds, 1, 1000 * 15);
 	if ((fds.revents & POLLIN) != POLLIN) {
-		printf("Timeout! Retry!\n");
+		printd("Timeout! Retry!\n");
 		goto retry;
 	}
+
+	printd("Waiting for server response!\n");
 
 //	ret = recvfrom(sock, buf, BUFLEN, 0, NULL, NULL);
 	ret = read(sock, buf, BUFLEN);
 	if (ret < sizeof(*hdr) + sizeof(*chdr))
-		panic("recvfrom()");
+		panic("recvfrom(%s)", strerror(errno));
 
 	hdr = (struct pn_hdr *) buf;
 	chdr = (struct pn_hdr_compose *) buf + sizeof(*hdr);
@@ -110,7 +117,7 @@ retry:
 //	ret = sendto(sock, buf, sizeof(*hdr), 0, (struct sockaddr *) &si_other, slen);
 	ret = write(sock, buf, sizeof(*hdr));
 	if (ret < 0)
-		panic("sendto()");
+		panic("sendto(%s)\n", strerror(errno));
 
 	close(sock);
 	return chdr->which;
