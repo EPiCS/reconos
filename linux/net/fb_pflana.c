@@ -148,9 +148,11 @@ static int fb_pflana_event(struct notifier_block *self, unsigned long cmd,
 	case FBLOCK_BIND_IDP: {
 		struct fblock_bind_msg *msg = args;
 		printk(KERN_INFO "[fb_pflana] bind IDP in direction %d to value %d\n", msg->dir, msg->idp);
-		if (fb_priv->port[msg->dir] == IDP_UNKNOWN) {
+		if (fb_priv->port[TYPE_INGRESS] == IDP_UNKNOWN &&
+		    fb_priv->port[TYPE_EGRESS] == IDP_UNKNOWN) {
 			write_seqlock(&fb_priv->lock);
-			fb_priv->port[msg->dir] = msg->idp;
+			fb_priv->port[TYPE_INGRESS] = msg->idp;
+			fb_priv->port[TYPE_EGRESS] = msg->idp;
 			write_sequnlock(&fb_priv->lock);
 		} else {
 			ret = NOTIFY_BAD;
@@ -373,13 +375,15 @@ static int __lana_proto_sendmsg(struct kiocb *iocb, struct sock *sk,
 	rcu_read_lock();
 	do {
 		seq = read_seqbegin(&fb_priv->lock);
-		DEBUG(printk(KERN_INFO "[fb_pflana] next idp: %d\n", fb_priv->port[TYPE_EGRESS]));		
+		printk(KERN_INFO "[fb_pflana] next idp: %d,%d\n", fb_priv->port[TYPE_EGRESS], fb_priv->port[TYPE_INGRESS]);
 		write_next_idp_to_skb(skb, fb->idp,
 				      fb_priv->port[TYPE_EGRESS]);
         } while (read_seqretry(&fb_priv->lock, seq));
         ret = process_packet(skb, TYPE_EGRESS);
 
 	rcu_read_unlock();
+
+	printk(KERN_INFO "[fb_pflana] pkt processed\n");
 
 	return (err >= 0) ? len : err;
 drop:

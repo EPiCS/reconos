@@ -81,7 +81,8 @@ retry:
 //	ret = sendto(sock, buf, len, 0, (struct sockaddr *) &si_other, slen);
 	ret = write(sock, buf, len);
 	if (ret < 0) {
-		panic("write(%d,%s)\n", ret,strerror(errno));
+		close(sock);
+		return ret;
 	}
 
 	printd("Sent suggesttions!\n");
@@ -116,8 +117,10 @@ retry:
 
 //	ret = sendto(sock, buf, sizeof(*hdr), 0, (struct sockaddr *) &si_other, slen);
 	ret = write(sock, buf, sizeof(*hdr));
-	if (ret < 0)
-		panic("sendto(%s)\n", strerror(errno));
+	if (ret < 0) {
+		close(sock);
+		return ret;
+	}
 
 	close(sock);
 	return chdr->which;

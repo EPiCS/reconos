@@ -68,7 +68,7 @@ int main(void)
 #if 1
 	strcpy(bmsg->app, "http");
 //	bmsg->props[0] = RELIABLE;
-	bmsg->props[1] = DUMMY;
+//	bmsg->props[1] = DUMMY;
 	bmsg->flags = TYPE_CLIENT;
 #else
 	strcpy(bmsg->app, "http");

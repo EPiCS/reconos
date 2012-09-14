@@ -187,9 +187,12 @@ static int fb_eth_netrx(const struct fblock * const fb,
 	write_next_idp_to_skb(skb, fb->idp, IDP_UNKNOWN);
 	skb->dev = fb_priv->dev;
 
+	printk("Radix Lookup\n");
 	n = radix_tree_lookup(&fbrehash, key);
-	if (n)
+	if (n) {
+		printk("Found hash!\n");
 		memcpy(skb_push(skb, sizeof(n->hex)), n->hex, sizeof(n->hex));
+	}
 
 	ethhdr = (struct ethhdr *) skb_push(skb, sizeof(struct ethhdr));
 	memcpy(ethhdr->h_source, skb->dev->dev_addr, ETH_ALEN);
@@ -198,6 +201,7 @@ static int fb_eth_netrx(const struct fblock * const fb,
 	skb_set_mac_header(skb, 0);
 
 	dev_queue_xmit(skb);
+	printk("Transmitted!\n");
 
 	return PPE_DROPPED;
 }

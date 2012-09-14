@@ -60,6 +60,7 @@ static void ipc_do_configure_client(struct bind_msg *bmsg)
 		return;
 	}
 
+#if 0
 	orig = num;
 	while ((ret = find_type_by_properties(type, bmsg->props, &num)) >= -32) {
 		char name[FBNAMSIZ];
@@ -76,16 +77,20 @@ static void ipc_do_configure_client(struct bind_msg *bmsg)
 		//XXX cleanup!
 		return;
 	}
+#endif
 
 	setopt_of_elem_in_stack(bmsg->name, "iface=eth0", strlen("iface=eth0")); //XXX
 
 	printd("%s bound to eth0!\n", bmsg->name);
 	sleep(1);
 
-	ret = init_negotiation(bmsg->name);
-	if (ret < 0) {
-		printd("Remote end does not support stack config!\n");
-		return;
+	if (bmsg->flags == TYPE_CLIENT) {
+		printd("Initiate negotiation with server....\n");
+		ret = init_negotiation(bmsg->name);
+		if (ret < 0) {
+			printd("Remote end does not support stack config!\n");
+			return;
+		}
 	}
 
 	printd("Client %s up and running!\n", bmsg->name);
