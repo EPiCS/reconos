@@ -53,7 +53,7 @@ static int bind_config(struct bind_msg *bmsg)
 	return 0;
 }
 
-int main(void)
+int main(int argc, char **argv)
 {
 	int sock, ret, i;
 	char buff[512];
@@ -65,15 +65,18 @@ int main(void)
 
 	memset(buff, 0, sizeof(buff));
 	bmsg = (struct bind_msg *) buff;
-#if 0
-	strcpy(bmsg->app, "http");
-//	bmsg->props[0] = RELIABLE;
-//	bmsg->props[1] = DUMMY;
-	bmsg->flags = TYPE_CLIENT;
-#else
-	strcpy(bmsg->app, "http");
-	bmsg->flags = TYPE_SERVER;
-#endif
+
+	if (!strcmp("client", argv[1])) {
+		strcpy(bmsg->app, "http");
+//		bmsg->props[0] = RELIABLE;
+//		bmsg->props[1] = DUMMY;
+		bmsg->flags = TYPE_CLIENT;
+		printf("client!\n");
+	} else {
+		strcpy(bmsg->app, "http");
+		bmsg->flags = TYPE_SERVER;
+		printf("server!\n");
+	}
 
 	ret = ioctl(sock, 35296, bmsg->name);
 	if (ret < 0)
@@ -92,7 +95,7 @@ int main(void)
 	memset(buff, 0xff, sizeof(buff));
 
 	while (1) {
-		sendto(sock, buff, 64, 0, NULL, 0);
+	//	sendto(sock, buff, 64, 0, NULL, 0);
 		sleep(1);
 	}
 

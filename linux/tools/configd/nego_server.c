@@ -36,10 +36,6 @@ static uint16_t last_seq_on_server_from_remote = 0;
 
 static uint16_t last_seq_on_server_from_us = 0;
 
-static struct sockaddr_in sacurrent;
-
-static socklen_t sacurrlen;
-
 static pthread_t thread;
 
 extern sig_atomic_t sigint;
@@ -156,8 +152,6 @@ static enum server_state_num server_swait2(int sock)
 //	char buff[MAXMSG];
 	ssize_t ret;
 	struct pn_hdr *hdr;
-	struct sockaddr_in sa;
-	socklen_t slen = sizeof(sa);
 
 	fds.fd = sock;
 	fds.events = POLLIN;
@@ -175,10 +169,6 @@ static enum server_state_num server_swait2(int sock)
 	if (hdr->type != TYPE_ACK && hdr->type != TYPE_NACK)
 		goto out_purge;
 	if (ntohs(hdr->ack) != last_seq_on_server_from_us || hdr->seq == 0)
-		goto out_purge;
-	if (sacurrlen != slen)
-		goto out_purge;
-	if (memcmp(&sacurrent, &sa, sacurrlen))
 		goto out_purge;
 
 	return STATE_SDONE;
