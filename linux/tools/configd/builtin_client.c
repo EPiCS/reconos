@@ -65,7 +65,7 @@ int main(void)
 
 	memset(buff, 0, sizeof(buff));
 	bmsg = (struct bind_msg *) buff;
-#if 1
+#if 0
 	strcpy(bmsg->app, "http");
 //	bmsg->props[0] = RELIABLE;
 //	bmsg->props[1] = DUMMY;

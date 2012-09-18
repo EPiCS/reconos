@@ -53,11 +53,23 @@ static void ipc_do_configure_client(struct bind_msg *bmsg)
 	init_reconfig(bmsg->name, "ch.ethz.csg.pf_lana",
 		      lower_fb_name, "ch.ethz.csg.eth");
 
+	setopt_of_elem_in_stack(bmsg->name, "iface=eth0", strlen("iface=eth0")); //XXX
+	printd("%s bound to eth0!\n", bmsg->name);
+	sleep(1);
+
 	if (bmsg->flags == TYPE_SERVER) {
 		strlcpy(srv_name, bmsg->name, FBNAMSIZ);
 		strlcpy(srv_app, bmsg->app, FBNAMSIZ);
 		printd("Registered server %s for app %s\n", srv_name, srv_app);
+		start_negotiation_server(bmsg->name);
 		return;
+	}else if (bmsg->flags == TYPE_CLIENT) {
+		printd("Initiate negotiation with server....\n");
+		ret = init_negotiation(bmsg->name);
+		if (ret < 0) {
+			printd("Remote end does not support stack config!\n");
+			return;
+		}
 	}
 
 #if 0
@@ -78,20 +90,6 @@ static void ipc_do_configure_client(struct bind_msg *bmsg)
 		return;
 	}
 #endif
-
-	setopt_of_elem_in_stack(bmsg->name, "iface=eth0", strlen("iface=eth0")); //XXX
-
-	printd("%s bound to eth0!\n", bmsg->name);
-	sleep(1);
-
-	if (bmsg->flags == TYPE_CLIENT) {
-		printd("Initiate negotiation with server....\n");
-		ret = init_negotiation(bmsg->name);
-		if (ret < 0) {
-			printd("Remote end does not support stack config!\n");
-			return;
-		}
-	}
 
 	printd("Client %s up and running!\n", bmsg->name);
 }

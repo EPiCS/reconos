@@ -81,15 +81,11 @@ static int fb_pflana_netrx(const struct fblock * const fb,
 	skb_pull(skb, sizeof(*ctlhdr));
 
 	if (ctlhdr->type == PFLANA_CTL_TYPE_CONF) {
-		printk("[pflana] packet type: conf!\n");
 		packet_sw_to_configd(skb);
 		goto out;
 	} else if (ctlhdr->type != PFLANA_CTL_TYPE_DATA) {
-		printk("[pflana] packet type: other!\n");
 		kfree(skb);
 		return PPE_DROPPED;
-	} else {
-		printk("[pflana] packet type: data!\n");
 	}
 
 	sk = &fb_priv->sock_self->sk;
@@ -272,7 +268,6 @@ static unsigned int lana_raw_poll(struct file *file, struct socket *sock,
 	struct lana_sock *lana = to_lana_sk(sk);
 	struct fblock *fb = lana->fb;
 	struct fb_pflana_priv *fb_priv;
-	printk(KERN_INFO "[fb_pflana] lana raw poll\n");
 
 	rcu_read_lock();
 	fb_priv = rcu_dereference(fb->private_data);
@@ -305,8 +300,6 @@ static int __lana_proto_sendmsg(struct kiocb *iocb, struct sock *sk,
 	struct fblock *fb = lana->fb;
 	struct fb_pflana_priv *fb_priv;
 	struct pflana_ctl *ctlhdr;
-
-	printk(KERN_INFO "[fb_pflana] lana_proto_sendmsg\n");
 
 	if (lana->bound == 0){
 		printk(KERN_INFO "[fb_pflana] not bound, returning -EINVAL\n");
@@ -375,15 +368,12 @@ static int __lana_proto_sendmsg(struct kiocb *iocb, struct sock *sk,
 	rcu_read_lock();
 	do {
 		seq = read_seqbegin(&fb_priv->lock);
-		printk(KERN_INFO "[fb_pflana] next idp: %d,%d\n", fb_priv->port[TYPE_EGRESS], fb_priv->port[TYPE_INGRESS]);
 		write_next_idp_to_skb(skb, fb->idp,
 				      fb_priv->port[TYPE_EGRESS]);
         } while (read_seqretry(&fb_priv->lock, seq));
         ret = process_packet(skb, TYPE_EGRESS);
 
 	rcu_read_unlock();
-
-	printk(KERN_INFO "[fb_pflana] pkt processed\n");
 
 	return (err >= 0) ? len : err;
 drop:
@@ -412,7 +402,6 @@ static int lana_proto_recvmsg(struct kiocb *iocb, struct sock *sk,
 	struct lana_sock *lana = to_lana_sk(sk);
 	struct fblock *fb = lana->fb;
 	struct fb_pflana_priv *fb_priv;
-	//printk(KERN_INFO "[fb_pflana] lana_proto_recvmsg\n");
 
 	rcu_read_lock();
 	fb_priv = rcu_dereference(fb->private_data);
@@ -420,8 +409,7 @@ static int lana_proto_recvmsg(struct kiocb *iocb, struct sock *sk,
 //	do {
 		skb = skb_dequeue(&fb_priv->backlog);
 //	} while (!skb);
-	if (!skb){
-	//	printk(KERN_INFO "[fb_pflana] dequeue failed\n");
+	if (!skb) {
 		return -EAGAIN;
 	}
 	atomic_sub(skb->len, &fb_priv->backlog_used);

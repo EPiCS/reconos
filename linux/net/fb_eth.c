@@ -161,7 +161,6 @@ struct sk_buff *fb_eth_handle_frame(struct sk_buff *skb)
 //				      fb_priv->port[TYPE_INGRESS]);
 //	} while (read_seqretry(&fb_priv->lock, seq));
 
-	printk("[fb_eth] forwarding to idp %u\n", nxt->idp);
 	write_next_idp_to_skb(skb, fb->idp, nxt->idp);
 
 	process_packet(skb, TYPE_INGRESS);
@@ -187,10 +186,8 @@ static int fb_eth_netrx(const struct fblock * const fb,
 	write_next_idp_to_skb(skb, fb->idp, IDP_UNKNOWN);
 	skb->dev = fb_priv->dev;
 
-	printk("Radix Lookup\n");
 	n = radix_tree_lookup(&fbrehash, key);
 	if (n) {
-		printk("Found hash!\n");
 		memcpy(skb_push(skb, sizeof(n->hex)), n->hex, sizeof(n->hex));
 	}
 
@@ -201,7 +198,6 @@ static int fb_eth_netrx(const struct fblock * const fb,
 	skb_set_mac_header(skb, 0);
 
 	dev_queue_xmit(skb);
-	printk("Transmitted!\n");
 
 	return PPE_DROPPED;
 }
