@@ -24,7 +24,7 @@
 #define IFF_IS_BRIDGED  0x60000
 
 struct fb_eth_next {
-	char hex[20];
+	char hex[8];
 	idp_t idp;
 	struct rcu_head rcu;
 } ____cacheline_aligned;
@@ -95,6 +95,7 @@ static int hex2bin_compat(u8 *dst, const char *src, size_t count)
 	return 0;
 }
 
+#if 0
 static char *bin2hex_compat(uint8_t *hash, size_t lhsh, char *str, size_t lstr)
 {
 	char *ret = str;
@@ -107,6 +108,7 @@ static char *bin2hex_compat(uint8_t *hash, size_t lhsh, char *str, size_t lstr)
 	*str = '\0';
 	return ret;
 }
+#endif
 
 //XXX: for newer kernels
 //static rx_handler_result_t fb_eth_handle_frame(struct sk_buff **pskb)
@@ -146,9 +148,9 @@ struct sk_buff *fb_eth_handle_frame(struct sk_buff *skb)
 	nxt = struct_of(__critbit_get(&fbhash, hash, 1, lhsh),
 			struct fb_eth_next);
 	if (!nxt) {
-		char str[64];
-		printk("[fb_eth] no such hash \'%s\'\n", bin2hex_compat(hash, lhsh,
-			str, sizeof(str)));
+		//char str[64];
+		//printk("[fb_eth] no such hash \'%s\'\n", bin2hex_compat(hash, lhsh,
+		//	str, sizeof(str)));
 		goto drop;
 	}
 

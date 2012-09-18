@@ -7,7 +7,7 @@ CFLAGS		+= -Wall -O0 -I../../net/
 core-objs	= configd.o
 lib-objs	= xutils.o reconfig.o ipc.o props.o lex.yy.o parser.tab.o  \
 		  reconfig_simple.o reconfig_reliable.o reconfig_initial.o \
-		  nego_client.o nego_server.o
+		  nego_client.o nego_server.o sha1.o
 
 target		= configd
 
