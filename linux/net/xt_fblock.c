@@ -836,8 +836,10 @@ static int fblock_userctl_set(struct lananlmsg *lmsg)
 	struct fblock *fb;
 	struct lananlmsg_set *msg = (struct lananlmsg_set *) lmsg->buff;
 	fb = search_fblock_n(msg->name);
-	if (!fb)
+	if (!fb) {
+		printk("[lana] no such name \'%s\'!\n", msg->name);
 		return -EINVAL;
+	}
 	ret = fblock_set_option(fb, msg->option);
 	put_fblock(fb);
 	return ret;

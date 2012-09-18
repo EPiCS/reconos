@@ -20,7 +20,7 @@
 
 static void setup_cleanup_vlink(int cmd)
 {
-	int sock, ret, if_num, i;
+	int sock, ret, if_num, i, good = 0;
 	struct vlinknlmsg vmsg;
 	struct ifconf ifc;
 	struct ifreq *ifr;
@@ -39,6 +39,8 @@ static void setup_cleanup_vlink(int cmd)
 
 	ifr = ifc.ifc_req;
 	if_num = ifc.ifc_len / sizeof(struct ifreq);
+
+	printd("scanning through %d devs\n", if_num);
 
 	for (i = 0; i < if_num; ++i) {
 		struct ifreq *item = &ifr[i];
@@ -60,7 +62,11 @@ static void setup_cleanup_vlink(int cmd)
 			sizeof(vmsg.real_name));
 
 		send_netlink_vlink(&vmsg);
+		good = 1;
 	}
+
+	if (!good)
+		panic("No Ethernet device available!\n");
 }
 
 void setup_initial_stack(void)

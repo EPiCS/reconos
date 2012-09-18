@@ -18,6 +18,7 @@
 #include "xutils.h"
 #include "props.h"
 #include "reconfig.h"
+#include "sha1.h"
 
 #define SOCK_ADDR	"/tmp/configdsock"
 
@@ -38,11 +39,27 @@ struct bind_msg {
 static char srv_name[FBNAMSIZ];
 static char srv_app[FBNAMSIZ];
 
+static char *bin2hex_compat(uint8_t *hash, size_t lhsh, char *str, size_t lstr)
+{
+	char *ret = str;
+	if (lhsh >= lstr)
+		return NULL;
+	while (lhsh-- > 0) {
+		str += sprintf(str, "%02x", *hash);
+		hash++;
+	}
+	*str = '\0';
+	return ret;
+}
+
 static void ipc_do_configure_client(struct bind_msg *bmsg)
 {
 	int ret, i;
 	char type[TYPNAMSIZ];
 	size_t num = 0, orig;
+	git_SHA_CTX sha;
+	unsigned char hashout[20], hash[40];
+	char hashopt[1024], str[64];
 
 	for (i = 0; i < MAX_PROPS; ++i) {
 		if (bmsg->props[i] != 0)
@@ -50,11 +67,33 @@ static void ipc_do_configure_client(struct bind_msg *bmsg)
 	}
 
 	bind_elems_in_stack(lower_fb_name, bmsg->name);
+
 	init_reconfig(bmsg->name, "ch.ethz.csg.pf_lana",
 		      lower_fb_name, "ch.ethz.csg.eth");
 
 	setopt_of_elem_in_stack(bmsg->name, "iface=eth0", strlen("iface=eth0")); //XXX
 	printd("%s bound to eth0!\n", bmsg->name);
+	sleep(1);
+
+	memset(hashopt, 0, sizeof(hashopt));
+
+	git_SHA1_Init(&sha);
+	git_SHA1_Update(&sha, "ch.ethz.csg.pf_lana-ch.ethz.csg.eth",
+			strlen("ch.ethz.csg.pf_lana-ch.ethz.csg.eth"));
+	git_SHA1_Final(hash, &sha);
+	git_SHA1_Init(&sha);
+	git_SHA1_Update(&sha, bmsg->app, strlen(bmsg->app));
+	git_SHA1_Final(&hash[20], &sha);
+	git_SHA1_Init(&sha);
+	git_SHA1_Update(&sha, hash, sizeof(hash));
+	git_SHA1_Final(hashout, &sha);
+
+	snprintf(hashopt, sizeof(hashopt)-1, "%s=%s",
+		 bin2hex_compat(hashout, 8, str, sizeof(str)),
+		 bmsg->name);
+
+	setopt_of_elem_in_stack(lower_fb_name, hashopt, strlen(hashopt));
+	printd("%s set with opt: %s\n", lower_fb_name, hashopt);
 	sleep(1);
 
 	if (bmsg->flags == TYPE_SERVER) {
@@ -71,7 +110,6 @@ static void ipc_do_configure_client(struct bind_msg *bmsg)
 			return;
 		}
 	}
-
 #if 0
 	orig = num;
 	while ((ret = find_type_by_properties(type, bmsg->props, &num)) >= -32) {
@@ -91,7 +129,7 @@ static void ipc_do_configure_client(struct bind_msg *bmsg)
 	}
 #endif
 
-	printd("Client %s up and running!\n", bmsg->name);
+	printd("IPC Client %s up and running!\n", bmsg->name);
 }
 
 static void *ipc_server(void *null)

@@ -242,6 +242,8 @@ static int fb_eth_event(struct notifier_block *self, unsigned long cmd,
 		struct fblock_opt_msg *msg = args;
 		struct fb_eth_next *new, *new2;
 
+		printk("[fb_eth] trying to set hash!\n");
+
 		fb = search_fblock_n(msg->val);
 		if (!fb) {
 			return NOTIFY_BAD;
