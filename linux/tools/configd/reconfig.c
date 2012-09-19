@@ -38,6 +38,15 @@ void dumpstack(void)
 	}
 }
 
+void build_stack_and_hash(char *cfg[MAXS], size_t max)
+{
+	int i;
+	printd("BLUBBER!\n");
+	for (i = 0; i < max; ++i) {
+		printd("%s\n", cfg[i]);
+	}
+}
+
 int init_negotiation(char *fbpfname)
 {
 	int i;

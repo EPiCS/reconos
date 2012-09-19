@@ -32,4 +32,6 @@ extern void stop_negotiation_server(void);
 /* returns index of picked config */
 extern int negotiation_client(char sugg[MAXS][256], size_t used, char *fbname);
 
+extern void build_stack_and_hash(char *cfg[MAXS], size_t max);
+
 #endif /* RECONFIG_H */

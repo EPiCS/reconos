@@ -80,6 +80,7 @@ static int process_proposals(uint8_t *str, size_t len)
 {
 	int i, max, num = 0, pick = 0;
 	uint8_t *tmp = str;
+	char *cfg[MAXS];
 
 	for (i = 0; i < len; ++i) {
 		if (tmp[i] == 0)
@@ -88,16 +89,16 @@ static int process_proposals(uint8_t *str, size_t len)
 	if (num < 1)
 		return -EINVAL;
 	max = num;
-
+	i = 0;
+	memset(cfg, 0, sizeof(cfg));
 	printd("Got remote proposal:\n");
 	do {
+		cfg[i++] = tmp;
 		printd("  %s\n", tmp);
 		if(!fbtype_is_available((char *) tmp)) {
 			pick = -1;
 			printd("%s is not available to us!\n", tmp);
 			break;
-		} else {
-			printd("%s is available to us!\n", tmp);
 		}
 		if (--num <= 0)
 			break;
@@ -114,8 +115,10 @@ static int process_proposals(uint8_t *str, size_t len)
 	//TODO:
 	// lookup, if we can build this!, if not ret -1
 	// if yes, build it and create new hash on eth
-	if (pick > 0) {
+	if (pick >= 0) {
 		printd("We can build this one!\n");
+		build_stack_and_hash(cfg, max);
+		printd("Built!\n");
 	}
 
 	return pick;

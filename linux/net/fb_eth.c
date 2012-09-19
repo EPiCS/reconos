@@ -260,17 +260,12 @@ static int fb_eth_event(struct notifier_block *self, unsigned long cmd,
 				      struct fb_eth_next)) != NULL) {
 			critbit_delete_bin(&fbhash, new2->hex,
 					   sizeof(new->hex));
-
 			radix_tree_delete(&fbrehash, new2->idp);
-
 			kfree(new2);
-			kfree(new);
-
-			put_fblock(fb);
-
-			printk("[fb_eth] %s->%s removed\n", msg->key, msg->val);
-
-			return NOTIFY_OK;
+			//kfree(new);
+			//put_fblock(fb);
+			printk("[fb_eth] %s->%s overwritten\n", msg->key, msg->val);
+			//return NOTIFY_OK;
 		}
 
 		rcu_read_lock();
@@ -278,13 +273,10 @@ static int fb_eth_event(struct notifier_block *self, unsigned long cmd,
 		rcu_read_unlock();
 
 		critbit_insert_bin(&fbhash, new->hex, sizeof(new->hex));
-
 		radix_tree_insert(&fbrehash, new->idp, new);
 
 		put_fblock(fb);
-
 		printk("[fb_eth] %s->%s created\n", msg->key, msg->val);
-
 		break; }
 	default:
 		break;
