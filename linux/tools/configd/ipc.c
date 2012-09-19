@@ -105,6 +105,7 @@ static void ipc_do_configure_client(struct bind_msg *bmsg)
 	}else if (bmsg->flags == TYPE_CLIENT) {
 		printd("Initiate negotiation with server....\n");
 		ret = init_negotiation(bmsg->name);
+		printd("client negotiation returned with %d!\n", ret);
 		if (ret < 0) {
 			printd("Remote end does not support stack config!\n");
 			return;

@@ -59,6 +59,9 @@ int main(int argc, char **argv)
 	char buff[512];
 	struct bind_msg *bmsg;
 
+	if (argc == 1)
+		panic("Usage: %s <client/server>\n", argv[0]);
+
 	sock = socket(27, SOCK_RAW, 0);
 	if (sock < 0)
 		panic("Cannot create socket!\n");

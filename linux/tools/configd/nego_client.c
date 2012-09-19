@@ -70,6 +70,7 @@ int negotiation_client(char sugg[MAXS][256], size_t used, char *fbname)
 		buf[len] = 0;
 		len++;
 	}
+
 	ack = ntohs(hdr->seq);
 
 retry:
