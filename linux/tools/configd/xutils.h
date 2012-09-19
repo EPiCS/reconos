@@ -118,4 +118,17 @@ static inline void printd(const char *format, ...)
 	va_end(vl);
 }
 
+static inline char *bin2hex_compat(uint8_t *hash, size_t lhsh, char *str, size_t lstr)
+{
+	char *ret = str;
+	if (lhsh >= lstr)
+		return NULL;
+	while (lhsh-- > 0) {
+		str += sprintf(str, "%02x", *hash);
+		hash++;
+	}
+	*str = '\0';
+	return ret;
+}
+
 #endif /* XUTILS_H */

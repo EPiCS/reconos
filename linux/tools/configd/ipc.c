@@ -39,6 +39,7 @@ struct bind_msg {
 static char srv_name[FBNAMSIZ];
 static char srv_app[FBNAMSIZ];
 
+#if 0
 static char *bin2hex_compat(uint8_t *hash, size_t lhsh, char *str, size_t lstr)
 {
 	char *ret = str;
@@ -51,6 +52,7 @@ static char *bin2hex_compat(uint8_t *hash, size_t lhsh, char *str, size_t lstr)
 	*str = '\0';
 	return ret;
 }
+#endif
 
 static void ipc_do_configure_client(struct bind_msg *bmsg)
 {
@@ -78,8 +80,8 @@ static void ipc_do_configure_client(struct bind_msg *bmsg)
 	memset(hashopt, 0, sizeof(hashopt));
 
 	git_SHA1_Init(&sha);
-	git_SHA1_Update(&sha, "ch.ethz.csg.pf_lana-ch.ethz.csg.eth",
-			strlen("ch.ethz.csg.pf_lana-ch.ethz.csg.eth"));
+	git_SHA1_Update(&sha, "ch.ethz.csg.eth-ch.ethz.csg.pf_lana",
+			strlen("ch.ethz.csg.eth-ch.ethz.csg.pf_lana"));
 	git_SHA1_Final(hash, &sha);
 	git_SHA1_Init(&sha);
 	git_SHA1_Update(&sha, bmsg->app, strlen(bmsg->app));
@@ -103,6 +105,20 @@ static void ipc_do_configure_client(struct bind_msg *bmsg)
 		start_negotiation_server(bmsg->name);
 		return;
 	}else if (bmsg->flags == TYPE_CLIENT) {
+		orig = num;
+		while ((ret = find_type_by_properties(type, bmsg->props, &num)) >= -32) {
+			char name[FBNAMSIZ];
+			printd("Found match for %s: %s,%d (satisfied %zu of %zu)\n",
+			       bmsg->name, type, ret, orig - num, orig);
+			insert_and_bind_elem_to_vstack(type, name, sizeof(name));
+			memset(type, 0, sizeof(type));
+			memset(name, 0, sizeof(name));
+		}
+		if (num > 0) {
+			printd("Cannot match requirements! Unable to connect socket!\n");
+			//XXX cleanup!
+			return;
+		}
 		printd("Initiate negotiation with server....\n");
 		ret = init_negotiation(bmsg->name);
 		printd("client negotiation returned with %d!\n", ret);
@@ -110,25 +126,8 @@ static void ipc_do_configure_client(struct bind_msg *bmsg)
 			printd("Remote end does not support stack config!\n");
 			return;
 		}
+		commit_vstack(bmsg->app);
 	}
-#if 0
-	orig = num;
-	while ((ret = find_type_by_properties(type, bmsg->props, &num)) >= -32) {
-		char name[FBNAMSIZ];
-		printd("Found match for %s: %s,%d (satisfied %zu of %zu)\n",
-		       bmsg->name, type, ret, orig - num, orig);
-
-		insert_and_bind_elem_to_stack(type, name, sizeof(name));
-		memset(type, 0, sizeof(type));
-		memset(name, 0, sizeof(name));
-	}
-
-	if (num > 0) {
-		printd("Cannot match requirements! Unable to connect socket!\n");
-		//XXX cleanup!
-		return;
-	}
-#endif
 
 	printd("IPC Client %s up and running!\n", bmsg->name);
 }

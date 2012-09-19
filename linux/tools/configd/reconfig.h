@@ -13,6 +13,8 @@ extern void insert_and_bind_elem_to_stack(char *type, char *name, size_t len);
 extern void remove_and_unbind_elem_from_stack(char *name, size_t len);
 
 extern void insert_elem_to_stack(char *type, char *name, size_t len);
+extern void insert_and_bind_elem_to_vstack(char *type, char *name, size_t len);
+extern void commit_vstack(char *appname);
 extern void remove_elem_from_stack(char *name);
 extern void bind_elems_in_stack(char *name1, char *name2);
 extern void unbind_elems_in_stack(char *name1, char *name2);
