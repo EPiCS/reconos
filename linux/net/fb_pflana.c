@@ -699,15 +699,29 @@ static void fb_pflana_destroy_fblock(struct fblock *fb)
 	module_put(THIS_MODULE);
 }
 
+static struct vlink_subsys fb_pflana_sys __read_mostly = {
+	.name = "ch.ethz.csg.pf_lana",
+	.owner = THIS_MODULE,
+	.type = VLINKNLGRP_SOCKET,
+	.rwsem = __RWSEM_INITIALIZER(fb_pflana_sys.rwsem),
+};
+
 static int __init init_fb_pflana_module(void)
 {
-	return init_fb_pflana();
+	int ret = vlink_subsys_register(&fb_pflana_sys);
+	if (ret)
+		return ret;
+	ret = init_fb_pflana();
+	if (ret != 0)
+		vlink_subsys_unregister_batch(&fb_pflana_sys);
+	return ret;
 }
 
 static void __exit cleanup_fb_pflana_module(void)
 {
 	synchronize_rcu();
 	cleanup_fb_pflana();
+	vlink_subsys_unregister_batch(&fb_pflana_sys);
 }
 
 module_init(init_fb_pflana_module);

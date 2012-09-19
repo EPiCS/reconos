@@ -8,5 +8,6 @@ extern void stop_property_fetcher(void);
 extern int find_type_by_properties(char name[FBNAMSIZ],
 				   enum fblock_props needed[MAX_PROPS],
 				   size_t *num);
+extern int fbtype_is_available(char name[FBNAMSIZ]);
 
 #endif /* PROPS_H */

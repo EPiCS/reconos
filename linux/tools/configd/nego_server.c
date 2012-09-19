@@ -17,6 +17,7 @@
 
 #include "xutils.h"
 #include "reconfig.h"
+#include "props.h"
 //#define PORT 9930
 
 enum server_state_num {
@@ -77,7 +78,7 @@ out_purge:
 
 static int process_proposals(uint8_t *str, size_t len)
 {
-	int i, max, num = 0, pick;
+	int i, max, num = 0, pick = 0;
 	uint8_t *tmp = str;
 
 	for (i = 0; i < len; ++i) {
@@ -91,6 +92,13 @@ static int process_proposals(uint8_t *str, size_t len)
 	printd("Got remote proposal:\n");
 	do {
 		printd("  %s\n", tmp);
+		if(!fbtype_is_available((char *) tmp)) {
+			pick = -1;
+			printd("%s is not available to us!\n", tmp);
+			break;
+		} else {
+			printd("%s is available to us!\n", tmp);
+		}
 		if (--num <= 0)
 			break;
 		while (*tmp != 0)
@@ -99,8 +107,16 @@ static int process_proposals(uint8_t *str, size_t len)
 	} while (tmp < (str + len));
 
 	/* pick a random one */
-	srand(time(NULL));
-	pick = random() % max;
+//	srand(time(NULL));
+//	pick = random() % max;
+	//TODO: EPiCS
+
+	//TODO:
+	// lookup, if we can build this!, if not ret -1
+	// if yes, build it and create new hash on eth
+	if (pick > 0) {
+		printd("We can build this one!\n");
+	}
 
 	return pick;
 }

@@ -612,10 +612,14 @@ static int procfs_fblocks_props(char *page, char **start, off_t offset,
 				int count, int *eof, void *data)
 {
 	int i, has_prop;
-	off_t len = 0;
+	off_t len = 0, blen = 0;
 	struct fblock_factory *f;
+	char buff[256]; //XXX
 
 	len += sprintf(page + len, "type|properties|sprio\n");
+	blen = vlink_procfs_props(buff, sizeof(buff));
+	len += sprintf(page + len, buff);
+
 	rcu_read_lock();
 	list_for_each_entry_rcu(f, &fb_props_list, e_list) {
 		has_prop = 0;

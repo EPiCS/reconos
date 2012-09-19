@@ -278,6 +278,27 @@ static void vlink_rcv(struct sk_buff *skb)
 	vlink_unlock();
 }
 
+int vlink_procfs_props(char *buff, size_t len)
+{
+	int i;
+	size_t curr = 0;
+
+	//XXX: fits into buff?
+	memset(buff, 0, len);
+	vlink_lock();
+	for (i = 0; i < MAX_VLINK_SUBSYSTEMS && curr < len; ++i) {
+		if (vlink_subsystem_table[i]) {
+			curr += sprintf(buff + curr, "%s [] 0\n",
+					vlink_subsystem_table[i]->name);
+		}
+	}
+	vlink_unlock();
+	buff[len - 1] = 0;
+
+	return curr;
+}
+EXPORT_SYMBOL(vlink_procfs_props);
+
 static int vlink_procfs(char *page, char **start, off_t offset,
 			int count, int *eof, void *data)
 {

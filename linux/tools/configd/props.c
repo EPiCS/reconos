@@ -31,6 +31,22 @@ static struct prop_type table[MAX_ELEMS];
 static size_t elems;
 static struct mutexlock lock;
 
+int fbtype_is_available(char name[FBNAMSIZ])
+{
+	int available = 0, i;
+
+	mutexlock_lock(&lock);
+	for (i = 0; i < elems; ++i) {
+		if (!strncmp(table[i].name, name, sizeof(table[i].name))) {
+			available = 1;
+			break;
+		}
+	}
+	mutexlock_unlock(&lock);
+
+	return available;
+}
+
 int find_type_by_properties(char name[FBNAMSIZ],
 			    enum fblock_props needed[MAX_PROPS],
 			    size_t *num)

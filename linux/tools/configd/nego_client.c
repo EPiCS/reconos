@@ -113,6 +113,9 @@ retry:
 	take = chdr->which;
 	printf("Take %d!\n", take);
 
+	//TODO:
+	// build stack, create new hash on eth
+
 	hdr->type = TYPE_ACK;
 	hdr->ack = htons(seq);
 	hdr->seq = htons(ack + 1);

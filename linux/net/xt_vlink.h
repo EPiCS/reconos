@@ -38,6 +38,8 @@ enum vlink_groups {
 #define VLINKNLGRP_INFINIBAND   VLINKNLGRP_INFINIBAND
 	VLINKNLGRP_I2C,            /* To vlink I^2C type                 */
 #define VLINKNLGRP_I2C          VLINKNLGRP_I2C
+	VLINKNLGRP_SOCKET,         /* To vlink socket type                 */
+#define VLINKNLGRP_SOCKET       VLINKNLGRP_SOCKET
 	__VLINKNLGRP_MAX
 };
 #define VLINKNLGRP_MAX          (__VLINKNLGRP_MAX - 1)
@@ -107,6 +109,7 @@ extern int vlink_add_callbacks_va(struct vlink_subsys *n,
 			          va_list ap);
 extern int vlink_rm_callback(struct vlink_subsys *n,
 			     struct vlink_callback *cb);
+extern int vlink_procfs_props(char *buff, size_t len);
 
 #endif /* __KERNEL__ */
 #endif /* XT_VLINK_H */
