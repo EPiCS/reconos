@@ -26,4 +26,4 @@ builtin_client:
 builtin_ping:
 
 clean:
-	rm -f *.o configd builtin_client lex.yy.c parser.tab.c parser.tab.h
+	rm -f *.o configd builtin_client builtin_ping lex.yy.c parser.tab.c parser.tab.h
