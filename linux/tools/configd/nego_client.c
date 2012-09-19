@@ -24,7 +24,7 @@ extern sig_atomic_t sigint;
 
 int negotiation_client(char sugg[MAXS][256], size_t used, char *fbname)
 {
-	int sock, ret, ack, seq, i;
+	int sock, ret, ack, seq, i, take;
 //	struct sockaddr_in si_other;
 	char buf[BUFLEN];
 //	socklen_t slen = sizeof(si_other);
@@ -110,7 +110,8 @@ retry:
 		panic("Wrong ack number!\n");
 	seq = ntohs(hdr->seq);
 
-	printf("Take %d!\n", chdr->which);
+	take = chdr->which;
+	printf("Take %d!\n", take);
 
 	hdr->type = TYPE_ACK;
 	hdr->ack = htons(seq);
@@ -124,5 +125,5 @@ retry:
 	}
 
 	close(sock);
-	return chdr->which;
+	return take;
 }

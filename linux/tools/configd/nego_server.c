@@ -88,7 +88,7 @@ static int process_proposals(uint8_t *str, size_t len)
 		return -EINVAL;
 	max = num;
 
-	printd("Got %d proposals:\n", num);
+	printd("Got remote proposal:\n");
 	do {
 		printd("  %s\n", tmp);
 		if (--num <= 0)
