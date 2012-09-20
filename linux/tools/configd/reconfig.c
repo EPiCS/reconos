@@ -46,17 +46,18 @@ void dumpstack(void)
 
 void build_stack_and_hash(char *cfg[MAXS], size_t max)
 {
-	int i, j;
+	int i, j, exists;
 	char name[FBNAMSIZ];
 	for (i = 0; i < max; ++i) {
+		exists = 0;
 		for(j = 0; j <= curr; ++j) {
-			if (!strcmp(cfg[i], pipeline[i].type)) {
-				printd("%s already exists\n", cfg[i]);
-			} else {
-				insert_and_bind_elem_to_stack(cfg[i], name,
-							      sizeof(name));
-			}
+			if (!strcmp(cfg[i], pipeline[j].type))
+				exists = 1;
 		}
+		if (!exists)
+			insert_and_bind_elem_to_stack(cfg[i], name, sizeof(name));
+		else
+			printd("%s already exists\n", cfg[i]);
 	}
 }
 
