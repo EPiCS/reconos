@@ -158,7 +158,8 @@ static int fb_pflana_event(struct notifier_block *self, unsigned long cmd,
 		struct fblock_bind_msg *msg = args;
 		if (fb_priv->port[msg->dir] == msg->idp) {
 			write_seqlock(&fb_priv->lock);
-			fb_priv->port[msg->dir] = IDP_UNKNOWN;
+			fb_priv->port[TYPE_INGRESS] = IDP_UNKNOWN;
+			fb_priv->port[TYPE_EGRESS] = IDP_UNKNOWN;
 			write_sequnlock(&fb_priv->lock);
 		} else {
 			ret = NOTIFY_BAD;
