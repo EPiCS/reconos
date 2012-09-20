@@ -120,13 +120,13 @@ static void ipc_do_configure_client(struct bind_msg *bmsg)
 			return;
 		}
 		printd("Initiate negotiation with server....\n");
-		ret = init_negotiation(bmsg->name);
+		ret = init_negotiation(bmsg->name, bmsg->app);
 		printd("client negotiation returned with %d!\n", ret);
 		if (ret < 0) {
 			printd("Remote end does not support stack config!\n");
 			return;
 		}
-		commit_vstack(bmsg->app);
+//		commit_vstack(bmsg->app);
 	}
 
 	printd("IPC Client %s up and running!\n", bmsg->name);
