@@ -123,8 +123,9 @@ retry:
 //	ret = sendto(sock, buf, sizeof(*hdr), 0, (struct sockaddr *) &si_other, slen);
 	ret = write(sock, buf, sizeof(*hdr));
 	if (ret < 0) {
-		close(sock);
-		return ret;
+		printd("sth went wrong: %s\n", strerror(ret));
+//		close(sock);
+//		return ret;
 	}
 
 	close(sock);
