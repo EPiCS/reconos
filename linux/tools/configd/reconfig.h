@@ -27,6 +27,7 @@ extern void get_dependencies(char *from_upper, char *to_lower, char ***stack,
 			     size_t *len);
 
 extern int init_negotiation(char *fbpfname, char *appname);
+extern void reconfig_tell_app(char *appname);
 
 #define MAXS 10
 extern void start_negotiation_server(char *fbpfname);

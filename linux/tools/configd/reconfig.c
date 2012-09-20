@@ -54,6 +54,8 @@ void dumpstack(void)
 	}
 }
 
+void build_stack_and_hash(char *cfg[MAXS], size_t max){}
+#if 0
 void build_stack_and_hash(char *cfg[MAXS], size_t max)
 {
 	git_SHA_CTX sha;
@@ -110,6 +112,7 @@ void build_stack_and_hash(char *cfg[MAXS], size_t max)
 	printd("%s set with opt: %s\n", pipeline[0].name, hashopt);
 	sleep(1);
 }
+#endif
 
 int init_negotiation(char *fbpfname, char *appname)
 {
@@ -155,6 +158,11 @@ void insert_and_bind_elem_to_vstack(char *type, char *name, size_t len)
 	printd("Added to vpipe: %s\n", vpipeline[vcurr-1].type);
 }
 
+void reconfig_tell_app(char *appname)
+{
+	memcpy(glob_appname, appname, strlen(appname));
+}
+
 void commit_vstack(char *appname)
 {
 	int i;
@@ -174,7 +182,7 @@ void commit_vstack(char *appname)
 			continue;
 		insert_and_bind_elem_to_stack(vpipeline[i].type, name, sizeof(name));
 		l += snprintf(hashfoo + l, sizeof(hashfoo) - 1, "%s-", vpipeline[i].type);
-		printd("Inserted %s:%s to stack!\n", name, vpipeline[i].type);
+//		printd("Inserted %s:%s to stack!\n", name, vpipeline[i].type);
 		memset(name, 0, sizeof(name));
 	}
 	l += snprintf(hashfoo + l, sizeof(hashfoo) - 1, "ch.ethz.csg.pf_lana");

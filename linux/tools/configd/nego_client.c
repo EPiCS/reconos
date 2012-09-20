@@ -116,10 +116,6 @@ retry:
 	//TODO:
 	// build stack, create new hash on eth
 
-	printd("Commit new stack!\n");
-	commit_vstack(NULL);
-	printd("Done, ACK new stack!\n");
-
 	//send under new stack
 	hdr->type = TYPE_ACK;
 	hdr->ack = htons(seq);
@@ -132,6 +128,9 @@ retry:
 //		close(sock);
 //		return ret;
 	}
+
+	commit_vstack(NULL);
+	printd("Communication now via new vstack!\n");
 
 	close(sock);
 	return take;

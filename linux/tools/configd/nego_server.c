@@ -93,7 +93,7 @@ static int process_proposals(uint8_t *str, size_t len)
 	memset(cfg, 0, sizeof(cfg));
 	printd("Got remote proposal:\n");
 	do {
-		cfg[i++] = tmp;
+		cfg[i++] = (char*)tmp;
 		printd("  %s\n", tmp);
 		if(!fbtype_is_available((char *) tmp)) {
 			pick = -1;
@@ -117,8 +117,10 @@ static int process_proposals(uint8_t *str, size_t len)
 	// if yes, build it and create new hash on eth
 	if (pick >= 0) {
 		printd("We can build this one!\n");
-		build_stack_and_hash(cfg, max);
-		printd("Built!\n");
+		for (i = 0; i < max; ++i)
+			insert_and_bind_elem_to_vstack(cfg[i], NULL, 0);
+//		build_stack_and_hash(cfg, max);
+//		printd("Built!\n");
 	}
 
 	return pick;
@@ -198,8 +200,8 @@ out_purge:
 
 static enum server_state_num server_sdone(int sock)
 {
-	char buff[MAXMSG];
 	ssize_t ret;
+//	char buff[MAXMSG];
 	struct pn_hdr *hdr;
 //	struct sockaddr_in saother;
 //	socklen_t salen;
@@ -216,6 +218,8 @@ static enum server_state_num server_sdone(int sock)
 		return STATE_SWAIT1;
 
 	/* Established! */
+	commit_vstack(NULL);
+	printd("Communication now via new vstack!\n");
 
 	while (!sigint) {
 	//	ret = recvfrom(sock, buff, sizeof(buff), MSG_PEEK, NULL, NULL);

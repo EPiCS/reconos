@@ -101,6 +101,7 @@ static void ipc_do_configure_client(struct bind_msg *bmsg)
 	if (bmsg->flags == TYPE_SERVER) {
 		strlcpy(srv_name, bmsg->name, FBNAMSIZ);
 		strlcpy(srv_app, bmsg->app, FBNAMSIZ);
+		reconfig_tell_app(bmsg->app);
 		printd("Registered server %s for app %s\n", srv_name, srv_app);
 		start_negotiation_server(bmsg->name);
 		return;
