@@ -71,8 +71,7 @@ int main(int argc, char **argv)
 
 	if (!strcmp("client", argv[1])) {
 		strcpy(bmsg->app, "http");
-//		bmsg->props[0] = RELIABLE;
-//		bmsg->props[1] = DUMMY;
+		bmsg->props[0] = RELIABLE;
 		bmsg->flags = TYPE_CLIENT;
 		printf("client!\n");
 	} else {
