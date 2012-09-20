@@ -99,11 +99,15 @@ int main(int argc, char **argv)
 	memset(buff, 0xff, sizeof(buff));
 	while (1) {
 		if (server) {
-			printf("Sending: ");
+			ret = sendto(sock, buff, 64, 0, NULL, 0);
+			if (ret < 0) {
+				printf("Error: ret:%d, errno:%d\n", ret, errno);
+				continue;
+			}
+			printf("Sent: ");
 			for (i = 0; i < 64; ++i)
 				printf("%02x ", (uint8_t) buff[i]);
 			printf("\n");
-			sendto(sock, buff, 64, 0, NULL, 0);
 			sleep(1);
 		} else {
 			ret = recvfrom(sock, buff, 64, 0, NULL, NULL);
