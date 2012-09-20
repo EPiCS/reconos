@@ -107,8 +107,11 @@ int main(int argc, char **argv)
 			sleep(1);
 		} else {
 			ret = recvfrom(sock, buff, 64, 0, NULL, NULL);
-			if (ret < 0)
+			if (ret < 0) {
+				if (errno != 11)
+					printf("Error: ret:%d, errno:%d\n", ret, errno);
 				continue;
+			}
 			printf("Got: ");
 			for (i = 0; i < 64; ++i)
 				printf("%02x ", (uint8_t) buff[i]);
