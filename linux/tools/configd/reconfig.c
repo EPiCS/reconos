@@ -66,7 +66,7 @@ int init_negotiation(char *fbpfname)
 	size_t used = 0;
 	char conf[MAXS][256];
 
-	for (i=0;i<=curr;++i) {
+	for (i=0;i < vcurr;++i) {
 		strlcpy(conf[i], vpipeline[i].type, TYPNAMSIZ);
 		used++;
 	}
@@ -81,9 +81,12 @@ void init_reconfig(char *upper_name, char *upper_type,
 
 	strlcpy(pipeline[0].name, lower_name, sizeof(pipeline[0].name));
 	strlcpy(pipeline[0].type, lower_type, sizeof(pipeline[0].type));
-
+	strlcpy(vpipeline[0].type, lower_type, sizeof(vpipeline[0].type));
+	vcurr++;
 	strlcpy(pipeline[1].name, upper_name, sizeof(pipeline[1].name));
 	strlcpy(pipeline[1].type, upper_type, sizeof(pipeline[1].type));
+	strlcpy(vpipeline[1].type, upper_type, sizeof(vpipeline[1].type));
+	vcurr++;
 
 	printd("Initial: %s(%s)->%s(%s)\n",
 	       pipeline[0].name, pipeline[0].type,
@@ -96,7 +99,8 @@ void init_reconfig(char *upper_name, char *upper_type,
 
 void insert_and_bind_elem_to_vstack(char *type, char *name, size_t len)
 {
-	memcpy(vpipeline[vcurr++].type, type, strlen(type));
+	strcpy(vpipeline[vcurr++].type, type);
+	printd("Added to vpipe: %s\n", vpipeline[vcurr-1].type);
 }
 
 static void cleanup_pre_pipeline(void)
@@ -123,6 +127,9 @@ void commit_vstack(char *appname)
 	memset(hashfoo, 0, sizeof(hashfoo));
 	l += snprintf(hashfoo + l, sizeof(hashfoo) - 1, "ch.ethz.csg.eth-");
 	for (i = 0; i < vcurr; ++i) {
+		if(!strcmp(vpipeline[i].type, "ch.ethz.csg.pf_lana") ||
+		   !strcmp(vpipeline[i].type, "ch.ethz.csg.eth"))
+			continue;
 		insert_and_bind_elem_to_stack(vpipeline[i].type, name, sizeof(name));
 		l += snprintf(hashfoo + l, sizeof(hashfoo) - 1, "%s-", vpipeline[i].type);
 		memset(name, 0, sizeof(name));
