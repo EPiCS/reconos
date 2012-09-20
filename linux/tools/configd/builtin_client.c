@@ -55,7 +55,7 @@ static int bind_config(struct bind_msg *bmsg)
 
 int main(int argc, char **argv)
 {
-	int sock, ret, i;
+	int sock, ret, i, server = 0;
 	char buff[512];
 	struct bind_msg *bmsg;
 
@@ -70,11 +70,13 @@ int main(int argc, char **argv)
 	bmsg = (struct bind_msg *) buff;
 
 	if (!strcmp("client", argv[1])) {
+		server = 0;
 		strcpy(bmsg->app, "http");
 		bmsg->props[0] = RELIABLE;
 		bmsg->flags = TYPE_CLIENT;
 		printf("client!\n");
 	} else {
+		server = 1;
 		strcpy(bmsg->app, "http");
 		bmsg->flags = TYPE_SERVER;
 		printf("server!\n");
@@ -95,10 +97,23 @@ int main(int argc, char **argv)
 		panic("Cannot bind configuration!\n");
 
 	memset(buff, 0xff, sizeof(buff));
-
 	while (1) {
-	//	sendto(sock, buff, 64, 0, NULL, 0);
-		sleep(1);
+		if (server) {
+			printf("Sending: ");
+			for (i = 0; i < 64; ++i)
+				printf("%02x ", (uint8_t) buff[i]);
+			printf("\n");
+			sendto(sock, buff, 64, 0, NULL, 0);
+			sleep(1);
+		} else {
+			ret = recvfrom(sock, buff, 64, 0, NULL, NULL);
+			if (ret < 0)
+				continue;
+			printf("Got: ");
+			for (i = 0; i < 64; ++i)
+				printf("%02x ", (uint8_t) buff[i]);
+			printf("\n");
+		}
 	}
 
 	close(sock);
