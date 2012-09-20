@@ -55,6 +55,7 @@ static int fb_dummy_netrx(const struct fblock * const fb,
 		write_next_idp_to_skb(skb, fb->idp, fb_priv->port[*dir]);
 		if (fb_priv->port[*dir] == IDP_UNKNOWN)
 			drop = 1;
+//		printk("IDP to push: %u, path: %u\n", fb_priv->port[*dir], *dir);
 		//TODO: loop through payload (skb->data, skb->len) and set last bit of every byte to 1
 //		for (i = 0; i < skb->len; i++){
 //			skb->data[i] = skb->data[i] | mask;

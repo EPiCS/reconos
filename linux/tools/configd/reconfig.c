@@ -228,7 +228,8 @@ void insert_and_bind_elem_to_stack(char *type, char *name, size_t len)
 	assert(wanted>0&&wanted+slen-1<MAXP);
 
 	memcpy(pipetmp, &pipeline[wanted], (MAXP-curr)*sizeof(struct fb));
-	unbind_elems_in_stack(pipeline[wanted-1].name, pipeline[wanted].name);
+//	unbind_elems_in_stack(pipeline[wanted-1].name, pipeline[wanted].name);
+	unbind_elems_in_stack(pipeline[wanted].name, pipeline[wanted-1].name);
 
 	for (i = 0; i < slen - 1; ++i) {
 		if (i>0)
@@ -236,12 +237,14 @@ void insert_and_bind_elem_to_stack(char *type, char *name, size_t len)
 		strlcpy(pipeline[curr].type, stack[i], sizeof(pipeline[curr].type));
 		insert_elem_to_stack(pipeline[curr].type, pipeline[curr].name,
 				     sizeof(pipeline[curr].name));
-		bind_elems_in_stack(pipeline[curr-1].name, pipeline[curr].name);
+//		bind_elems_in_stack(pipeline[curr-1].name, pipeline[curr].name);
+		bind_elems_in_stack(pipeline[curr].name, pipeline[curr-1].name);
 		num++;
 	}
 
 	memcpy(&pipeline[curr+1], pipetmp, (MAXP-(curr+1))*sizeof(struct fb));
-	bind_elems_in_stack(pipeline[curr].name, pipeline[curr+1].name);
+//	bind_elems_in_stack(pipeline[curr].name, pipeline[curr+1].name);
+	bind_elems_in_stack(pipeline[curr+1].name, pipeline[curr].name);
 	curr+=num;
 
 	dumpstack();
@@ -257,12 +260,17 @@ void remove_and_unbind_elem_from_stack(char *name, size_t len)
 			assert(i>0);
 
 			if (i!=curr-1) {
-				unbind_elems_in_stack(pipeline[i-1].name, name);
-				unbind_elems_in_stack(name, pipeline[i+1].name);
-				bind_elems_in_stack(pipeline[i-1].name,
-						    pipeline[i+1].name);
+//				unbind_elems_in_stack(pipeline[i-1].name, name);
+//				unbind_elems_in_stack(name, pipeline[i+1].name);
+				unbind_elems_in_stack(name, pipeline[i-1].name);
+				unbind_elems_in_stack(pipeline[i+1].name, name);
+//				bind_elems_in_stack(pipeline[i-1].name,
+//						    pipeline[i+1].name);
+				bind_elems_in_stack(pipeline[i+1].name,
+						    pipeline[i-1].name);
 			} else {
-				unbind_elems_in_stack(pipeline[i-1].name, name);
+//				unbind_elems_in_stack(pipeline[i-1].name, name);
+				unbind_elems_in_stack(name,pipeline[i-1].name);
 			}
 
 			remove_elem_from_stack(name);
