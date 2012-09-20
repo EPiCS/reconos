@@ -388,9 +388,9 @@ static int lana_proto_sendmsg(struct kiocb *iocb, struct sock *sk,
 			      struct msghdr *msg, size_t len)
 {
 	return __lana_proto_sendmsg(iocb, sk, msg, len,
-				    msg->msg_flags & MSG_DONTWAIT,
 				    PFLANA_CTL_TYPE_DATA,
-				    __FROM_SOCK);
+				    __FROM_SOCK,
+				    msg->msg_flags & MSG_DONTWAIT);
 }
 
 static int lana_proto_recvmsg(struct kiocb *iocb, struct sock *sk,
