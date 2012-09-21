@@ -44,7 +44,7 @@ static void cleanup_pre_pipeline(void)
 	while (curr > 1) {
 		if (!strcmp(pipeline[1].type, "ch.ethz.csg.pf_lana"))
 			break;
-		printf("Removing %s!\n", pipeline[1].name);
+		printd("Removing %s!\n", pipeline[1].name);
 		remove_and_unbind_elem_from_stack(pipeline[1].name, sizeof(pipeline[1].name));
 	}
 }
@@ -321,25 +321,30 @@ void remove_and_unbind_elem_from_stack(char *name, size_t len)
 	int i, found=0;
 	struct fb pipetmp[MAXP];
 
-	for (i = 0; i < curr; ++i) {
+	for (i = 0; i <= curr; ++i) {
 		if (!strncmp(pipeline[i].name, name, len)) {
 			assert(i>0);
 
-			if (i!=curr-1) {
+			if (i!=curr/*-1*/) {
 //				unbind_elems_in_stack(pipeline[i-1].name, name);
 //				unbind_elems_in_stack(name, pipeline[i+1].name);
 				unbind_elems_in_stack(name, pipeline[i-1].name);
 				unbind_elems_in_stack(pipeline[i+1].name, name);
+				printd("unbind %s <-> %s\n", name, pipeline[i-1].name);
+				printd("unbind %s <-> %s\n", pipeline[i+1].name, name);
 //				bind_elems_in_stack(pipeline[i-1].name,
 //						    pipeline[i+1].name);
 				bind_elems_in_stack(pipeline[i+1].name,
 						    pipeline[i-1].name);
+				printd("bind %s <-> %s\n", pipeline[i+1].name,
+					pipeline[i-1].name);
 			} else {
 //				unbind_elems_in_stack(pipeline[i-1].name, name);
 				unbind_elems_in_stack(name,pipeline[i-1].name);
 			}
 
 			remove_elem_from_stack(name);
+			printd("remove: %s\n", name);
 			found=1;
 			break;
 		}
