@@ -36,8 +36,8 @@ struct bind_msg {
 #define lower_fb_name	"eth0"	//XXX
 
 // Multiplexing: have this as a list e.g. and traverse it
-static char srv_name[FBNAMSIZ];
-static char srv_app[FBNAMSIZ];
+char srv_name[FBNAMSIZ];
+char srv_app[FBNAMSIZ];
 
 #if 0
 static char *bin2hex_compat(uint8_t *hash, size_t lhsh, char *str, size_t lstr)
@@ -98,9 +98,10 @@ static void ipc_do_configure_client(struct bind_msg *bmsg)
 	printd("%s set with opt: %s\n", lower_fb_name, hashopt);
 	sleep(1);
 
+	strlcpy(srv_name, bmsg->name, FBNAMSIZ);
+	strlcpy(srv_app, bmsg->app, FBNAMSIZ);
+
 	if (bmsg->flags == TYPE_SERVER) {
-		strlcpy(srv_name, bmsg->name, FBNAMSIZ);
-		strlcpy(srv_app, bmsg->app, FBNAMSIZ);
 		reconfig_tell_app(bmsg->app);
 		printd("Registered server %s for app %s\n", srv_name, srv_app);
 		start_negotiation_server(bmsg->name);

@@ -54,6 +54,12 @@ void dumpstack(void)
 	}
 }
 
+void copy_pipeline_to_vpipeline(void)
+{
+	memcpy(vpipeline, pipeline, sizeof(pipeline));
+	vcurr=curr+1;
+}
+
 void build_stack_and_hash(char *cfg[MAXS], size_t max){}
 #if 0
 void build_stack_and_hash(char *cfg[MAXS], size_t max)
@@ -156,6 +162,25 @@ void insert_and_bind_elem_to_vstack(char *type, char *name, size_t len)
 {
 	strcpy(vpipeline[vcurr++].type, type);
 	printd("Added to vpipe: %s\n", vpipeline[vcurr-1].type);
+}
+
+void remove_and_unbind_elem_from_vstack(char *type)
+{
+	int i, found = 0;
+	for (i = 0; i < vcurr; ++i) {
+		if (!strcmp(type, vpipeline[i].type)) {
+			if (i + 1 < vcurr) {
+				memmove(&vpipeline[i], &vpipeline[i+1],
+					sizeof(vpipeline[i]) * (MAXP - (i + 1)));
+			} else {
+				memset(&vpipeline[i], 0, sizeof(vpipeline[i]));
+			}
+			found = 1;
+			break;
+		}
+	}
+	if (found)
+		vcurr--;
 }
 
 void reconfig_tell_app(char *appname)

@@ -19,32 +19,53 @@
 #include "xt_fblock.h"
 
 static sig_atomic_t need_reliability = 0, need_reliability_switched = 0;
-static char name_reliability[FBNAMSIZ];
+static char name_reliability[FBNAMSIZ], type_reliability[FBNAMSIZ];
+
+extern char srv_name[FBNAMSIZ];
+extern char srv_app[FBNAMSIZ];
 
 static void __reconfig_reliability_check_for_inclusion(void)
 {
 	int ret;
-	char type[FBNAMSIZ];
 	enum fblock_props needed[MAX_PROPS];
 	size_t num = 0, orig;
+
+	copy_pipeline_to_vpipeline();
 
 	memset(needed, 0, sizeof(needed));
 	needed[0] = RELIABLE;
 
 	orig = num = 1;
-	while ((ret = find_type_by_properties(type, needed, &num)) >= -32) {
-		insert_and_bind_elem_to_stack(type, name_reliability,
+	while ((ret = find_type_by_properties(type_reliability, needed, &num)) >= -32) {
+		insert_and_bind_elem_to_vstack(type_reliability, name_reliability,
 					      sizeof(name_reliability));
 		printd("Added %s as reliability!\n", name_reliability);
 		break;
+	}
+
+	printd("Initiate negotiation with server....\n");
+	ret = init_negotiation(srv_name, srv_app);
+	printd("client negotiation returned with %d!\n", ret);
+	if (ret < 0) {
+		printd("Remote end does not support stack config!\n");
+		return;
 	}
 }
 
 static void __reconfig_reliability_check_for_exclusion(void)
 {
-	remove_and_unbind_elem_from_stack(name_reliability,
-					  sizeof(name_reliability));
-	printd("Removed %s as reliability!\n", name_reliability);
+	int ret;
+
+	copy_pipeline_to_vpipeline();
+	remove_and_unbind_elem_from_vstack(type_reliability);
+
+	printd("Initiate negotiation with server....\n");
+	ret = init_negotiation(srv_name, srv_app);
+	printd("client negotiation returned with %d!\n", ret);
+	if (ret < 0) {
+		printd("Remote end does not support stack config!\n");
+		return;
+	}
 }
 
 void reconfig_notify_reliability(int type)
@@ -64,10 +85,10 @@ void reconfig_reliability(void)
 {
 	if (need_reliability == 1 && need_reliability_switched == 1) {
 		printd("Need reliability!\n");
-//		__reconfig_reliability_check_for_inclusion();
+		__reconfig_reliability_check_for_inclusion();
 	} else if (need_reliability == 0 && need_reliability_switched == 1) {
 		printd("Don't need reliability!\n");
-//		__reconfig_reliability_check_for_exclusion();
+		__reconfig_reliability_check_for_exclusion();
 	}
 
 	need_reliability_switched = 0;
