@@ -22,6 +22,8 @@ extern void setopt_of_elem_in_stack(char *name, char *opt, size_t len);
 
 extern void reconfig_notify_reliability(int type);
 extern void reconfig_reliability(void);
+extern void reconfig_notify_privacy(int type);
+extern void reconfig_privacy(void);
 
 extern void get_dependencies(char *from_upper, char *to_lower, char ***stack,
 			     size_t *len);

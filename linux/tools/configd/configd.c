@@ -23,7 +23,7 @@
 #include "reconfig.h"
 #include "notification.h"
 
-#define PLUGIN_TO_TEST	"linkqual"
+#define PLUGIN_TO_TEST	"file-1"
 
 static void *buffshared = NULL;
 
@@ -155,10 +155,9 @@ int main(int argc, char **argv)
 	while (!sigint) {
 		timeout.tv_sec = 0;
 		timeout.tv_usec = 100000;
-
 		select(0, NULL, NULL, NULL, &timeout);
-
-//		reconfig_reliability();
+		reconfig_reliability();
+		reconfig_privacy();
 		/* ... */
 	}
 

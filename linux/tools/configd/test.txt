@@ -9,4 +9,4 @@ c :: ch.ethz.csg.otp;
 x ^ { l a b };
 a ^ { l b };
 b ^ { l };
-c ^ { l a b }
+c ^ { l a b };

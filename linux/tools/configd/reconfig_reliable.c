@@ -64,10 +64,10 @@ void reconfig_reliability(void)
 {
 	if (need_reliability == 1 && need_reliability_switched == 1) {
 		printd("Need reliability!\n");
-		__reconfig_reliability_check_for_inclusion();
+//		__reconfig_reliability_check_for_inclusion();
 	} else if (need_reliability == 0 && need_reliability_switched == 1) {
 		printd("Don't need reliability!\n");
-		__reconfig_reliability_check_for_exclusion();
+//		__reconfig_reliability_check_for_exclusion();
 	}
 
 	need_reliability_switched = 0;
