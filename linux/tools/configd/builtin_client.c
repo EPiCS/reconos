@@ -112,7 +112,8 @@ int main(int argc, char **argv)
 		} else {
 			ret = recvfrom(sock, buff, 64, 0, NULL, NULL);
 			if (ret < 0) {
-				printf("Error: ret:%d, errno:%d\n", ret, errno);
+				if (errno != 11)
+					printf("Error: ret:%d, errno:%d\n", ret, errno);
 				continue;
 			}
 			printf("Got: ");
