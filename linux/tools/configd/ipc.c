@@ -24,7 +24,7 @@
 
 static pthread_t thread;
 
-extern sig_atomic_t sigint;
+extern sig_atomic_t sigint, server;
 
 struct bind_msg {
 	char name[FBNAMSIZ];
@@ -105,9 +105,11 @@ static void ipc_do_configure_client(struct bind_msg *bmsg)
 		reconfig_tell_app(bmsg->app);
 		printd("Registered server %s for app %s\n", srv_name, srv_app);
 		start_negotiation_server(bmsg->name);
+		server = 1;
 		return;
 	}else if (bmsg->flags == TYPE_CLIENT) {
 		orig = num;
+		server = 0;
 		while ((ret = find_type_by_properties(type, bmsg->props, &num)) >= -32) {
 			char name[FBNAMSIZ];
 			printd("Found match for %s: %s,%d (satisfied %zu of %zu)\n",

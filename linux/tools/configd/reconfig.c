@@ -35,6 +35,10 @@ static int vcurr = 0;
 
 char glob_appname[256];
 
+extern sig_atomic_t ready;
+
+static int issamepipe(void);
+
 static void cleanup_pre_pipeline(void)
 {
 	while (curr > 1) {
@@ -126,6 +130,12 @@ int init_negotiation(char *fbpfname, char *appname)
 	size_t used = 0;
 	char conf[MAXS][256];
 
+	if (issamepipe()) {
+		printd("No need to change!\n");
+		vcurr = 0;
+		return 0;
+	}
+
 	memcpy(glob_appname, appname, strlen(appname));
 	for (i=0;i < vcurr;++i) {
 		strlcpy(conf[i], vpipeline[i].type, TYPNAMSIZ);
@@ -160,8 +170,18 @@ void init_reconfig(char *upper_name, char *upper_type,
 
 void insert_and_bind_elem_to_vstack(char *type, char *name, size_t len)
 {
-	strcpy(vpipeline[vcurr++].type, type);
-	printd("Added to vpipe: %s\n", vpipeline[vcurr-1].type);
+	int i, already = 0;
+
+	for (i = 0; i < vcurr; ++i) {
+		if (!strcmp(type, vpipeline[i].type)) {
+			already = 1;
+			break;
+		}
+	}
+	if (!already) {
+		strcpy(vpipeline[vcurr++].type, type);
+		printd("Added to vpipe: %s\n", vpipeline[vcurr-1].type);
+	}
 }
 
 void remove_and_unbind_elem_from_vstack(char *type)
@@ -188,6 +208,21 @@ void reconfig_tell_app(char *appname)
 	memcpy(glob_appname, appname, strlen(appname));
 }
 
+static int issamepipe(void)
+{
+	int i;
+
+	if (vcurr - 1 != curr)
+		return 0;
+
+	for (i = 0; i < vcurr; ++i) {
+		if (strcmp(vpipeline[i].type, pipeline[i].type))
+			return 0;
+	}
+
+	return 1;
+}
+
 void commit_vstack(char *appname)
 {
 	int i;
@@ -197,6 +232,11 @@ void commit_vstack(char *appname)
 	char hashfoo[2048];
 	off_t l = 0;
 	char hashopt[1024], str[64];
+
+	if (issamepipe()) {
+		printd("No need to change!\n");
+		return;
+	}
 
 	cleanup_pre_pipeline();
 	memset(hashfoo, 0, sizeof(hashfoo));
@@ -235,6 +275,7 @@ void commit_vstack(char *appname)
 	sleep(1);
 
 	vcurr = 0;
+	ready = 1;
 }
 
 void insert_and_bind_elem_to_stack(char *type, char *name, size_t len)

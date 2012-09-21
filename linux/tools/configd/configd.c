@@ -27,7 +27,7 @@
 
 static void *buffshared = NULL;
 
-sig_atomic_t sigint = 0;
+sig_atomic_t sigint = 0, ready = 0, server = 0;
 
 extern int compile_source(char *file, int verbose);
 
@@ -39,7 +39,7 @@ static void sighandler(int num)
 
 static void upper_threshold_triggered(int num)
 {
-	if (num != SIGUSR1)
+	if (num != SIGUSR1 || !ready || server)
 		return;
 
 	reconfig_notify_reliability(SIG_THRES_UPPER);
@@ -48,7 +48,7 @@ static void upper_threshold_triggered(int num)
 
 static void lower_threshold_triggered(int num)
 {
-	if (num != SIGUSR2)
+	if (num != SIGUSR2 || !ready || server)
 		return;
 
 	reconfig_notify_reliability(SIG_THRES_LOWER);
