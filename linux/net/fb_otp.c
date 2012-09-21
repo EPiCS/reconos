@@ -2,6 +2,7 @@
  * Copyright 2012 Daniel Borkmann <dborkma@tik.ee.ethz.ch>
  */
 
+/* e.g. dd if=/dev/urandom of=/proc/net/lana/fblock/fb0 */
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/spinlock.h>
@@ -20,7 +21,7 @@ struct fb_otp_priv {
 	seqlock_t lock;
 	uint8_t *key;
 	size_t len, off;
-	spinlock_t klock;
+	rwlock_t klock;
 } ____cacheline_aligned_in_smp;
 
 static int fb_otp_netrx(const struct fblock * const fb,
@@ -28,11 +29,15 @@ static int fb_otp_netrx(const struct fblock * const fb,
 			  enum path_type * const dir)
 {
 	unsigned int seq;
-	unsigned long flags;
 	struct fb_otp_priv *fb_priv;
 	size_t i;
 
 	fb_priv = rcu_dereference_raw(fb->private_data);
+
+	printk("BEFORE:\n");
+	for (i=0;i<10;++i){
+		printk("%02x\n", skb->data[i]);
+	}
 
 	do {
 		seq = read_seqbegin(&fb_priv->lock);
@@ -42,13 +47,18 @@ static int fb_otp_netrx(const struct fblock * const fb,
 			goto drop;
 	} while (read_seqretry(&fb_priv->lock, seq));
 
-	spin_lock_irqsave(&fb_priv->klock, flags);
+	read_lock(&fb_priv->klock);
 	for (i = 0; i < skb->len && fb_priv->off < fb_priv->len; i++)
 		skb->data[i] = skb->data[i] ^ fb_priv->key[fb_priv->off++];
-	spin_unlock_irqrestore(&fb_priv->klock, flags);
+	read_unlock(&fb_priv->klock);
 
 	if (i != skb->len - 1)
 		goto drop;
+
+	printk("AFTER:\n");
+	for (i=0;i<10;++i){
+		printk("%02x\n", skb->data[i]);
+	}
 
 	return PPE_SUCCESS;
 drop:
@@ -101,7 +111,6 @@ static int fb_otp_proc_show(struct seq_file *m, void *v)
 {
 	struct fblock *fb = (struct fblock *) m->private;
 	struct fb_otp_priv *fb_priv;
-	unsigned long flags;
 	char sline[64];
 
 	rcu_read_lock();
@@ -109,9 +118,10 @@ static int fb_otp_proc_show(struct seq_file *m, void *v)
 	rcu_read_unlock();
 
 	memset(sline, 0, sizeof(sline));
-	spin_lock_irqsave(&fb_priv->klock, flags);
+
+	read_lock(&fb_priv->klock);
 	snprintf(sline, sizeof(sline), "%zd\n", (fb_priv->len - fb_priv->off));
-	spin_unlock_irqrestore(&fb_priv->klock, flags);
+	read_unlock(&fb_priv->klock);
 
 	seq_puts(m, sline);
 	return 0;
@@ -128,7 +138,6 @@ static ssize_t fb_otp_proc_write(struct file *file, const char __user * ubuff,
 				 size_t count, loff_t * offset)
 {
 	uint8_t *code, *tmp = NULL;
-	unsigned long flags;
 	size_t len = MAX_BUFF_SIZ;
 	struct fblock *fb = PDE(file->f_path.dentry->d_inode)->data;
 	struct fb_otp_priv *fb_priv;
@@ -151,13 +160,13 @@ static ssize_t fb_otp_proc_write(struct file *file, const char __user * ubuff,
 		return -EIO;
 	}
 
-	spin_lock_irqsave(&fb_priv->klock, flags);
+	write_lock(&fb_priv->klock);
 	if (fb_priv->len)
 		tmp = fb_priv->key;
 	fb_priv->key = code;
 	fb_priv->len = len;
 	fb_priv->off = 0;
-	spin_unlock_irqrestore(&fb_priv->klock, flags);
+	write_unlock(&fb_priv->klock);
 
 	if (tmp)
 		vfree(tmp);
@@ -187,7 +196,7 @@ static struct fblock *fb_otp_ctor(char *name)
 	if (!fb_priv)
 		goto err;
 	seqlock_init(&fb_priv->lock);
-	spin_lock_init(&fb_priv->klock);
+	rwlock_init(&fb_priv->klock);
 	fb_priv->port[0] = IDP_UNKNOWN;
 	fb_priv->port[1] = IDP_UNKNOWN;
 	fb_priv->key = NULL;

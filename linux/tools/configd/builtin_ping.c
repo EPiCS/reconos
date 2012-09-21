@@ -73,7 +73,7 @@ int main(int argc, char **argv)
 	if (sock < 0)
 		panic("Cannot create socket!\n");
 
-	sleep(100000);
+//	sleep(100000);
 
 	memset(buff, 0, sizeof(buff));
 	bmsg = (struct bind_msg *) buff;
@@ -90,9 +90,9 @@ int main(int argc, char **argv)
 	if (ret < 0)
 		panic("Cannot do ioctl!\n");
 
-	ret = bind_config(bmsg);
-	if (ret < 0)
-		panic("Cannot bind configuration!\n");
+//	ret = bind_config(bmsg);
+//	if (ret < 0)
+//		panic("Cannot bind configuration!\n");
 
 	printf("Config bound! Listening ....\n");
 
