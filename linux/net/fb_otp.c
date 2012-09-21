@@ -33,16 +33,9 @@ static int fb_otp_netrx(const struct fblock * const fb,
 	size_t i;
 
 	fb_priv = rcu_dereference_raw(fb->private_data);
-
-	printk("BEFORE:\n");
-	for (i=0;i<10;++i){
-		printk("%02x\n", skb->data[i]);
-	}
-
 	do {
 		seq = read_seqbegin(&fb_priv->lock);
 		write_next_idp_to_skb(skb, fb->idp, fb_priv->port[*dir]);
-
 		if (fb_priv->port[*dir] == IDP_UNKNOWN)
 			goto drop;
 	} while (read_seqretry(&fb_priv->lock, seq));
@@ -51,14 +44,8 @@ static int fb_otp_netrx(const struct fblock * const fb,
 	for (i = 0; i < skb->len && fb_priv->off < fb_priv->len; i++)
 		skb->data[i] = skb->data[i] ^ fb_priv->key[fb_priv->off++];
 	read_unlock(&fb_priv->klock);
-
-	if (i != skb->len - 1)
+	if (i != skb->len)
 		goto drop;
-
-	printk("AFTER:\n");
-	for (i=0;i<10;++i){
-		printk("%02x\n", skb->data[i]);
-	}
 
 	return PPE_SUCCESS;
 drop:
@@ -168,6 +155,7 @@ static ssize_t fb_otp_proc_write(struct file *file, const char __user * ubuff,
 	fb_priv->off = 0;
 	write_unlock(&fb_priv->klock);
 
+	printk(KERN_INFO "[fb_otp] wrote new key!\n");
 	if (tmp)
 		vfree(tmp);
 	return len;
