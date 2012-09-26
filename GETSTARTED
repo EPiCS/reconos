@@ -1,0 +1,316 @@
+From Richard Huber:
+
+* Install Microblaze GNU Tools on Debian *
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+This page describes, how to install the GNU cross compiler tools for microblaze
+on a debian system. There is a big endian and a little endian version in two
+different git repositories. The ReconOS project requires the bit endian version.
+
+First, clone into the git repository hosted by xilinx (big endian):
+
+  git clone git://git.xilinx.com/xldk/microblaze_v2.0.git
+
+Unpack the archive with:
+
+  tar -xzf microblaze-unknown-linux-gnu.tgz
+
+Add the path to the executables to your PATH environment variable:
+
+  export PATH=$PATH:/<path to git repo>/microblaze_v2.0/microblaze-unknown-linux-gnu/bin
+
+You may want to add this last command to your .bashrc so you don't have to
+retype it any time you want to use the cross compiler.
+
+* Install Xilinx 13.3er Tools on Debian *
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Copy the DVD to a temporary directory on the harddrive. Change ownership
+of /opt:
+
+  chown -hR <username> /opt
+
+Change the file mode of the install scripts to be executable:
+
+  chmod a+x <tmp dir>/xsetup <tmp dir>/bin/lin64/*
+
+Execute the install script and follow the instructions on the screen.
+(Do not aquire any license keys in the wizard.)
+
+  <tmp dir>/xsetup
+
+Add the following lines to the .bashrc:
+
+  export XILINXD_LICENSE_FILE=<blubber>
+  source /opt/Xilinx/13.3/settings64.sh
+
+Create the following link:
+
+  ln /usr/bin/make /usr/bin/gmake
+
+Establish a vpn connection to the ETHZ domain, start a new console and enter.
+
+  ise
+
+... to start the ISE project manager.
+
+* Install Modelsim SE on Debian *
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Install Sun Java6: Before you can start with the installation of modelsim, you
+have to install sun's java. The installer does not work with open java.
+
+Download the software: Download the software from the modelsim website into a
+temporary directory.
+
+License file: Set the environment variables for the modelsim license file:
+
+  export LM_LICENSE_FILE=<blubber>
+  export MGLS_LICENSE_FILE=<blubber>
+
+Since you have to set these environment variables every time you want to work
+with modelsim, we recommend to include these two lines in your .bashrc file.
+
+Installation: Change permission of install.linux, execute it and follow the
+instructions on the screen.
+
+  chmod a+x install.linux
+  ./install.linux
+
+The recommended installation directory is /opt/modelsim/.
+
+Run modelsim: You can start modelsim with the command
+
+  /PATH/TO/MODELSIM/modeltech/bin/vsim
+
+Alternatively, you may add:
+
+  export PATH=$PATH:/PATH/TO/MODELSIM/modeltech/bin
+
+... to your .bashrc file. If you did this, you can run modelsim with the
+command:
+
+  vsim
+
+* Xilinx USB driver for linux *
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Install required packages:
+
+  sudo apt-get install fxload
+  sudo apt-get install libusb-dev
+  sudo apt-get install libftdi-dev
+
+Navigate to the directory where you want to install the driver. Get the
+driver source:
+
+  git clone git://git.zerfleddert.de/usb-driver
+
+Build the driver:
+
+  cd usb-driver
+  make
+
+Run the setup setup script
+
+  ./setup_pcusb
+
+Restart the PC and plugin the JTAG cable. Verify that the SysACE switch is
+configured correctly (see images docs/switch.jpg, docs/jumper.jpg).
+
+* Setup ReconOS V3 *
+~~~~~~~~~~~~~~~~~~~~
+
+Clone the reconos v3 repository. Add the following lines to the .bashrc:
+
+  export RECONOS=<path to reconos>/reconos_v3
+  export PATH=$PATH:$RECONOS/tools
+  export RECONOS_BOARD=ml605
+
+Install the microblaze GNU tools as described above. Build the ReconOS libraries:
+
+  cd $RECONOS/linux/fsl_driver
+  make
+  cd $RECONOS/linux/getpgd
+  make
+  cd $RECONOS/linux/libreconos
+  make
+  cd $RECONOS/linux/readpvr
+  make
+
+* Run the sort_demo Application *
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Be sure that you set up ReconOS V3 correctly. Compile the software:
+
+  cd $RECONOS/demos/sort_demo/linux
+  make all
+
+Setup the hardware design:
+
+  $RECONOS/demos/sort_demo/hw/setup.sh
+
+Synthesize hardware desing:
+
+  cd $RECONOS/demos/sort_demo/hw/edk
+  make clean all
+
+Download the linux kernel via 
+
+  git clone git://git.xilinx.com/linux-2.6-xlnx.git   or
+  http://pc-techinf-25.cs.upb.de/ml605-linux/linux-2.6-xlnx.tar.bz2
+
+... and extract it. Copy the device tree file from the ReconOS reference design
+into the linux source.
+
+cp reconos_v3/designs/ml605_linux_13.3/device_tree.dts linux-2.6-xlnx/arch/microblaze/boot/dts/
+
+Compile the linux kernel:
+
+  cd linux-2.6-xlnx make CROSS_COMPILE=microblaze-unknown-linux-gnu- ARCH=microblaze -j8 simpleImage.device_tree
+
+Set up the NFS Server with the Root Filesystem. Install the xilinx usb calbe
+driver as described.
+
+Download the bitstream and the linux kernel to the FPGA:
+
+  dow reconos_v3/demos/sort_demo/hw/edk/implementation/system.bit
+  dow linux-2.6-xlnx/arch/microblaze/boot/simpleImage.device_tree
+
+* NFS Server with Root Filesystem *
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Create the exported directory (must be exactly this directory):
+
+  mkdir /exports
+
+Download the ReconOS root filesystem from
+
+  http://pc-techinf-25.cs.upb.de/ml605-linux/rootfs_mb.tar
+
+... into the created folder and untar it:
+
+  tar -xvf /exports/rootfs_mb.tar
+
+Set up a static ip for the NIC (assuming eth0 is connected to the board): Add
+the following lines to /etc/network/interfaces
+
+  auto eth0
+  iface eth0 inet static
+    address 192.168.30.1
+    network 192.168.30.0
+    netmask 255.255.255.0
+    broadcast 192.168.30.255
+
+Install the NFS server packet:
+
+  apt-get install nfs-kernel-server
+
+Configure the NFS server by adding the following line to /etc/exports:
+
+  /exports/rootfs_mb  192.168.30.2(rw,async,no_root_squash)
+
+Verify that you set up reconos correctly!
+
+Copy the ReconOS libraries and scripts to the root folder of the NFS filesystem:
+
+  cp $RECONOS/linux/fsl_driver/fsl.ko /exports/rootfs_mb/
+  cp $RECONOS/linux/getpgd/getpgd.ko /exports/rootfs_mb/
+  cp $RECONOS/linux/readpvr/readpvr /exports/rootfs_mb/
+  cp $RECONOS/linux/scripts/load_fsl.sh /exports/rootfs_mb/
+  cp $RECONOS/linux/scripts/load_getpgd.sh /exports/rootfs_mb/
+  cp $RECONOS/linux/scripts/rcS /exports/rootfs_mb/
+
+To activate the changes restart the NFS kernel-server service.
+
+* Debug 'Hello World' from console *
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Start Xilinx Microprocessor Debugger (XMD) Engine:
+
+  rihuber@pc-10105:~$ xmd
+  Xilinx Microprocessor Debugger (XMD) Engine
+  Xilinx EDK 12.3 Build EDK_MS3.70d
+  Copyright (c) 1995-2009 Xilinx, Inc.  All rights reserved.
+  
+  XMD%
+  Connect the xmd to the hardware:
+  
+  XMD% connect mb mdm
+  
+  JTAG chain configuration
+  --------------------------------------------------
+  Device   ID Code        IR Length    Part Name
+   1       0a001093           8        System_ACE_CF
+   2       64250093          10        XC6VLX240T
+  
+  MicroBlaze Processor Configuration :
+  -------------------------------------
+  Version............................8.00.a
+  Optimization.......................Performance
+  Interconnect.......................PLB_v46
+  MMU Type...........................No_MMU
+  No of PC Breakpoints...............1
+  No of Read Addr/Data Watchpoints...0
+  No of Write Addr/Data Watchpoints..0
+  Instruction Cache Support..........off
+  Data Cache Support.................off
+  Exceptions  Support................off
+  FPU  Support.......................off
+  Hard Divider Support...............off
+  Hard Multiplier Support............on - (Mul32)
+  Barrel Shifter Support.............on
+  MSR clr/set Instruction Support....on
+  Compare Instruction Support........on
+  Data Cache Write-back Support......off
+  
+  Connected to "mb" target. id = 0
+  Starting GDB server for "mb" target (id = 0) at TCP port no 1234
+  The xmd engine has now opened a gdb server on port 1234.
+  
+Start the MicroBlaze GNU Debugger:
+
+  rihuber@pc-10105:~/sdk_demo2/hello_world_0/Debug$ mb-gdb hello_world_0.elf
+  GNU gdb 6.5
+  Copyright (C) 2006 Free Software Foundation, Inc.
+  GDB is free software, covered by the GNU General Public License, and you are
+  welcome to change it and/or distribute copies of it under certain conditions.
+  Type "show copying" to see the conditions.
+  There is absolutely no warranty for GDB.  Type "show warranty" for details.
+  This GDB was configured as "--host=i686-pc-linux-gnu --target=microblaze-xilinx-elf"...
+  Connect to the gdb server provided by the xmd engine:
+  
+  (gdb) target remote localhost:1234
+  Remote debugging using localhost:1234
+  0x9000002c in __do_global_dtors_aux ()
+  Download the executable to the hardware:
+  
+  (gdb) load
+  Loading section .vectors.reset, size 0x8 lma 0x0
+  Loading section .vectors.sw_exception, size 0x8 lma 0x8
+  Loading section .vectors.interrupt, size 0x8 lma 0x10
+  Loading section .vectors.hw_exception, size 0x8 lma 0x20
+  Loading section .text, size 0x804 lma 0x90000000
+  Loading section .init, size 0x24 lma 0x90000804
+  Loading section .fini, size 0x1c lma 0x90000828
+  Loading section .rodata, size 0x16 lma 0x90000844
+  Loading section .data, size 0x110 lma 0x90000860
+  Loading section .ctors, size 0x8 lma 0x90000970
+  Loading section .dtors, size 0x8 lma 0x90000978
+  Loading section .eh_frame, size 0x4 lma 0x90000980
+  Loading section .jcr, size 0x4 lma 0x90000984
+  Start address 0x0, load size 2466
+  Transfer rate: 32880 bits/sec, 189 bytes/write.
+  Set a breakpoint in main:
+  
+  (gdb) b main
+  Breakpoint 1 at 0x900001b0: file ../src/helloworld.c, line 28.
+  Start program execution:
+  
+  (gdb) c
+  Continuing.
+  
+  Breakpoint 1, main () at ../src/helloworld.c:28
+  28      init_platform();
+
+That's it!
