@@ -19,6 +19,7 @@
 #include <linux/types.h>
 #include <linux/percpu.h>
 #include <linux/u64_stats_sync.h>
+#include <linux/ktime.h>
 
 #include "xt_vlink.h"
 
@@ -503,5 +504,13 @@ struct lananlmsg {
 
 extern int init_ei_conf(void);
 extern void cleanup_ei_conf(void);
+
+static inline void fblock_print_time(char *str)
+{
+	struct timespec ts;
+
+	ktime_get_ts(&ts);
+	printk("%s: %ld.%ld\n", str, ts.tv_sec, ts.tv_nsec);
+}
 
 #endif /* XT_FBLOCK_H */
