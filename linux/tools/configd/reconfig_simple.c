@@ -92,4 +92,5 @@ void setopt_of_elem_in_stack(char *name, char *opt, size_t len)
 	strlcpy(msg->option, opt, sizeof(msg->option));
 
 	send_netlink_fbctl(&lmsg);
+	sleep(0);
 }

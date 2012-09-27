@@ -272,7 +272,6 @@ void commit_vstack(char *appname)
 
 	setopt_of_elem_in_stack(pipeline[0].name, hashopt, strlen(hashopt));
 	printd("%s set with opt: %s\n", pipeline[0].name, hashopt);
-	sleep(1);
 
 	vcurr = 0;
 	ready = 1;
