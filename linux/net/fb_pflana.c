@@ -302,8 +302,6 @@ static int __lana_proto_sendmsg(struct kiocb *iocb, struct sock *sk,
 	struct fb_pflana_priv *fb_priv;
 	struct pflana_ctl *ctlhdr;
 
-//	fblock_print_time("fb_pflana");
-
 	if (lana->bound == 0){
 		printk(KERN_INFO "[fb_pflana] not bound, returning -EINVAL\n");
 		return -EINVAL;
