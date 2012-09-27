@@ -23,7 +23,7 @@
 enum server_state_num {
 	STATE_SWAIT1 = 0,
 	STATE_SCOMPOSE,
-	STATE_SWAIT2,
+//	STATE_SWAIT2,
 	STATE_SDONE,
 	__STATE_MAX,
 };
@@ -164,9 +164,11 @@ static enum server_state_num server_scompose(int sock)
 	if (ret <= 0)
 		return STATE_SWAIT1;
 
-	return STATE_SWAIT2;
+//	return STATE_SWAIT2;
+	return STATE_SDONE;
 }
 
+#if 0
 static enum server_state_num server_swait2(int sock)
 {
 	struct pollfd fds;
@@ -197,6 +199,7 @@ out_purge:
 	//recvfrom(sock, buff, sizeof(buff), 0, NULL, NULL); XXX
 	return STATE_SWAIT1;
 }
+#endif
 
 static enum server_state_num server_sdone(int sock)
 {
@@ -213,9 +216,9 @@ static enum server_state_num server_sdone(int sock)
 //	if (ret <= 0)
 //		return STATE_SWAIT1;
 
-	hdr = (struct pn_hdr *) buff;
-	if (hdr->type == TYPE_NACK)
-		return STATE_SWAIT1;
+//	hdr = (struct pn_hdr *) buff;
+//	if (hdr->type == TYPE_NACK)
+//		return STATE_SWAIT1;
 
 	/* Established! */
 	commit_vstack(NULL);
@@ -238,14 +241,14 @@ static enum server_state_num server_sdone(int sock)
 static struct server_state state_machine[__STATE_MAX] = {
 	STATE_MAP_SET(STATE_SWAIT1, server_swait1),
 	STATE_MAP_SET(STATE_SCOMPOSE, server_scompose),
-	STATE_MAP_SET(STATE_SWAIT2, server_swait2),
+//	STATE_MAP_SET(STATE_SWAIT2, server_swait2),
 	STATE_MAP_SET(STATE_SDONE, server_sdone),
 };
 
 static char *state_name[__STATE_MAX] = {
 	"STATE_SWAIT1",
 	"STATE_SCOMPOSE",
-	"STATE_SWAIT2",
+//	"STATE_SWAIT2",
 	"STATE_SDONE",
 };
 

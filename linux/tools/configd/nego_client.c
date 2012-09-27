@@ -117,17 +117,17 @@ retry:
 	// build stack, create new hash on eth
 
 	//send under new stack
-	hdr->type = TYPE_ACK;
-	hdr->ack = htons(seq);
-	hdr->seq = htons(ack + 1);
+//	hdr->type = TYPE_ACK;
+//	hdr->ack = htons(seq);
+//	hdr->seq = htons(ack + 1);
 
 //	ret = sendto(sock, buf, sizeof(*hdr), 0, (struct sockaddr *) &si_other, slen);
-	ret = write(sock, buf, sizeof(*hdr));
-	if (ret < 0) {
-		printd("sth went wrong: %s\n", strerror(ret));
+//	ret = write(sock, buf, sizeof(*hdr));
+//	if (ret < 0) {
+//		printd("sth went wrong: %s\n", strerror(ret));
 //		close(sock);
 //		return ret;
-	}
+//	}
 
 	commit_vstack(NULL);
 	printd("Communication now via new vstack!\n");
