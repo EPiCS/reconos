@@ -55,7 +55,7 @@ static int bind_config(struct bind_msg *bmsg)
 
 int main(int argc, char **argv)
 {
-	int sock, ret, i, client = -1;
+	int sock, ret, i, j, client = -1;
 	char buff[512];
 	struct bind_msg *bmsg;
 
@@ -90,14 +90,16 @@ int main(int argc, char **argv)
 	if (ret < 0)
 		panic("Cannot do ioctl!\n");
 
-//	ret = bind_config(bmsg);
-//	if (ret < 0)
-//		panic("Cannot bind configuration!\n");
+	ret = bind_config(bmsg);
+	if (ret < 0)
+		panic("Cannot bind configuration!\n");
 
 	printf("Config bound! Listening ....\n");
-
+	sleep(30);
 	memset(buff, 0xff, sizeof(buff));
 	while (1) {
+		buff[0] = j;
+		j++;
 		if (client) {
 			ret = sendto(sock, buff, 64, 0, NULL, 0);
 			printf("Sent %d bytes: ", ret);
