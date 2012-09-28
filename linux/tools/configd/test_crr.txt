@@ -1,0 +1,10 @@
+/* declare bla */
+
+x :: ch.ethz.csg.pf_lana;
+l :: ch.ethz.csg.eth;
+b :: ch.ethz.csg.dummy;
+d :: ch.ethz.csg.crr;
+
+x ^ { l b d };
+b ^ { l };
+d ^ { l };
