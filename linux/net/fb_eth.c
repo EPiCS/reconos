@@ -201,7 +201,7 @@ static int fb_eth_netrx(const struct fblock * const fb,
 	ethhdr = (struct ethhdr *) skb_push(skb, sizeof(struct ethhdr));
 	memcpy(ethhdr->h_source, skb->dev->dev_addr, ETH_ALEN);
 	memset(ethhdr->h_dest, 0xFF, ETH_ALEN);
-	ethhdr->h_proto = cpu_to_be16(0x800);
+	ethhdr->h_proto = cpu_to_be16(0xabba);
 	skb_set_mac_header(skb, 0);
 
 	dev_queue_xmit(skb);

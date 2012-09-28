@@ -47,7 +47,7 @@ static void setup_cleanup_vlink(int cmd)
 
 		if (!strncmp(item->ifr_name, "lo", strlen(item->ifr_name)))
 			continue;
-		if (!strncmp(item->ifr_name, "wlan", strlen("wlan"))) //XXX
+		if (!strncmp(item->ifr_name, "eth", strlen("eth"))) //XXX
 			continue;
 
 		printd("seting up lana for %s\n", item->ifr_name);
@@ -63,6 +63,7 @@ static void setup_cleanup_vlink(int cmd)
 
 		send_netlink_vlink(&vmsg);
 		good = 1;
+		sleep(0);
 	}
 
 	if (!good)
