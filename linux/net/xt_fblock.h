@@ -510,7 +510,7 @@ static inline void fblock_print_time(char *str)
 	struct timespec ts;
 
 	ktime_get_ts(&ts);
-	printk("%s: %ld.%ld\n", str, ts.tv_sec, ts.tv_nsec);
+	printk("%s: %lds,%ldns\n", str, ts.tv_sec, ts.tv_nsec);
 }
 
 #endif /* XT_FBLOCK_H */

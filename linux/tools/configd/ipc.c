@@ -75,7 +75,6 @@ static void ipc_do_configure_client(struct bind_msg *bmsg)
 
 	setopt_of_elem_in_stack(bmsg->name, "iface=eth0", strlen("iface=eth0")); //XXX
 	printd("%s bound to eth0!\n", bmsg->name);
-	sleep(1);
 
 	memset(hashopt, 0, sizeof(hashopt));
 
@@ -96,7 +95,6 @@ static void ipc_do_configure_client(struct bind_msg *bmsg)
 
 	setopt_of_elem_in_stack(lower_fb_name, hashopt, strlen(hashopt));
 	printd("%s set with opt: %s\n", lower_fb_name, hashopt);
-	sleep(1);
 
 	strlcpy(srv_name, bmsg->name, FBNAMSIZ);
 	strlcpy(srv_app, bmsg->app, FBNAMSIZ);
