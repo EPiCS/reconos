@@ -137,7 +137,12 @@ struct sk_buff *fb_eth_handle_frame(struct sk_buff *skb)
 			fb = node->fb;
 	if (unlikely(!fb))
 		goto drop;
+
 	skb_orphan(skb);
+
+	/* XXX: should be fixed asap!!! */
+	if (skb_linearize(skb) < 0)
+		goto drop;
 
 //	skb_pull(skb, sizeof(struct ethhdr));
 	lhsh = sizeof(((struct fb_eth_next *) 0)->hex);
