@@ -114,8 +114,8 @@ int main(int argc, char **argv)
 				continue;
 			}
 			printf("Received %d bytes: ", ret);
-			for (i = 0; i < ret; ++i) {
-				printf("%2x ", buff[i]);
+			for (i = 0; i < 3; ++i) {
+				printf("%2x ", (uint8_t) buff[i]);
 			}
 			printf("\n");
 		}

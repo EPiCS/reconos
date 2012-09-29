@@ -91,7 +91,7 @@ retry:
 	fds.fd = sock;
 	fds.events = POLLIN;
 
-	poll(&fds, 1, 1000 * 15);
+	poll(&fds, 1, 1000 * 1 /* sec */);
 	if ((fds.revents & POLLIN) != POLLIN) {
 		printd("Timeout! Retry!\n");
 		goto retry;
