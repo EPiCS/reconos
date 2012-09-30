@@ -18,7 +18,7 @@
 #include "xt_vlink.h"
 #include "xt_fblock.h"
 
-static sig_atomic_t need_reliability = 0, need_reliability_switched = 0;
+sig_atomic_t need_reliability = 0, need_reliability_switched = 0;
 static char name_reliability[FBNAMSIZ], type_reliability[FBNAMSIZ];
 
 extern char srv_name[FBNAMSIZ];
@@ -70,13 +70,18 @@ static void __reconfig_reliability_check_for_exclusion(void)
 
 void reconfig_notify_reliability(int type)
 {
+	//printd("---------------------\n");
 	if (type == SIG_THRES_UPPER) {
-		if (need_reliability == 1)
+		if (need_reliability == 1){
+	//		printd("2\n");
 			need_reliability_switched = 1;
+		}
 		need_reliability = 0;
 	} else {
-		if (need_reliability == 0)
+		if (need_reliability == 0){
+	//		printd("3\n");
 			need_reliability_switched = 1;
+		}
 		need_reliability = 1;
 	}
 }

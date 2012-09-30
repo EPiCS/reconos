@@ -21,6 +21,7 @@
 //#define SRV_IP "192.168.0.253"
 
 extern sig_atomic_t sigint;
+extern sig_atomic_t ready;
 
 int negotiation_client(char sugg[MAXS][256], size_t used, char *fbname)
 {
@@ -35,6 +36,8 @@ int negotiation_client(char sugg[MAXS][256], size_t used, char *fbname)
 
 	if (used < 1)
 		panic("No suggestions available!\n");
+
+	ready = 0;
 
 	sock = open("/dev/lana_re_cfg", O_RDWR);
 //	sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
@@ -82,7 +85,9 @@ retry:
 //	ret = sendto(sock, buf, len, 0, (struct sockaddr *) &si_other, slen);
 	ret = write(sock, buf, len);
 	if (ret < 0) {
+		printd("Cold not write!!!\n");
 		close(sock);
+		ready = 1;
 		return ret;
 	}
 
@@ -91,7 +96,7 @@ retry:
 	fds.fd = sock;
 	fds.events = POLLIN;
 
-	poll(&fds, 1, 1000 * 15);
+	poll(&fds, 1, 1000 * 1);
 	if ((fds.revents & POLLIN) != POLLIN) {
 		printd("Timeout! Retry!\n");
 		goto retry;
@@ -101,13 +106,18 @@ retry:
 
 //	ret = recvfrom(sock, buf, BUFLEN, 0, NULL, NULL);
 	ret = read(sock, buf, BUFLEN);
-	if (ret < sizeof(*hdr) + sizeof(*chdr))
-		panic("recvfrom(%s)", strerror(errno));
+	if (ret < sizeof(*hdr) + sizeof(*chdr)) {
+		printd("Packet too small!!!! Retry!\n");
+		goto retry;
+		//panic("recvfrom(%s)", strerror(errno));
+	}
 
 	hdr = (struct pn_hdr *) buf;
 	chdr = (struct pn_hdr_compose *) buf + sizeof(*hdr);
-	if (ack != ntohs(hdr->ack))
-		panic("Wrong ack number!\n");
+	if (ack != ntohs(hdr->ack)) {
+		printd("Wrong ACK number, but okay for now....\n");
+	//	goto retry;
+	}
 	seq = ntohs(hdr->seq);
 
 	take = chdr->which;

@@ -11,6 +11,7 @@
 #include <linux/netlink.h>
 #include <linux/types.h>
 #include <linux/if.h>
+#include <signal.h>
 
 #include "reconfig.h"
 #include "notification.h"
@@ -21,6 +22,8 @@
 #include "sha1.h"
 
 #define MAXP	64
+
+extern sig_atomic_t need_reliability_switched;
 
 struct fb {
 	char name[FBNAMSIZ];
@@ -225,7 +228,7 @@ static int issamepipe(void)
 
 void commit_vstack(char *appname)
 {
-	int i;
+	int i, doit=0;
 	char name[FBNAMSIZ];
 	git_SHA_CTX sha;
 	unsigned char hashout[20], hash[40];
@@ -274,7 +277,11 @@ void commit_vstack(char *appname)
 	printd("%s set with opt: %s\n", pipeline[0].name, hashopt);
 
 	vcurr = 0;
+//	if (ready == 0)
+//		doit=1;
 	ready = 1;
+//	if(doit)
+//		need_reliability_switched=1;
 }
 
 void insert_and_bind_elem_to_stack(char *type, char *name, size_t len)
