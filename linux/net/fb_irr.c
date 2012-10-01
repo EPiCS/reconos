@@ -105,7 +105,7 @@ static int fb_irr_netrx_egress(const struct fblock * const fb,
 	fb_priv = rcu_dereference_raw(fb->private_data);
 	if (fb_priv->hold != NULL) {
 		engine_backlog_tail(skb, TYPE_EGRESS);
-		return PPE_DROPPED;
+		return PPE_HALT_NO_REDUCE;
 	}
 
 	hdr = (struct irr_hdr *) skb_push(skb, sizeof(*hdr));

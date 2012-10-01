@@ -118,34 +118,26 @@ pkt:
 	engine_inc_pkts_stats();
 	engine_add_bytes_stats(skb->len);
 	
-//	printk(KERN_INFO "[engine] before while\n");	
 	while ((cont = read_next_idp_from_skb(skb))) {
 		struct fblock_stats *stats;
 		u64 before, after;
-		DEBUG(printk(KERN_INFO "[engine] foward packet to idp %d\n", cont));	
 
 		fb = __search_fblock(cont);
 		if (unlikely(!fb)) {
 			kfree_skb(skb);
 			ret = PPE_ERROR;
-			printk(KERN_INFO "[engine] idp %d not found, dropping packet\n", cont);	
-
 			break;
 		}
 
 		if (fblock_transition_inbound_isset(fb)) {
-			DEBUG(printk(KERN_INFO "[engine] transision inbound\n"));	
 			engine_backlog_tail(skb, dir);
 			put_fblock(fb);
 			goto out;
 		}
 
 		if (fblock_offload_isset(fb)) {
-			DEBUG(printk(KERN_INFO "[engine] put packet to hw\n"));	
 			packet_sw_to_hw(skb, dir);
-		//	printk(KERN_INFO "[engine] put packet to hw done\n");				
 			put_fblock(fb);
-		//	printk(KERN_INFO "[engine] put fblock done\n");							
 			goto out_next;
 		}
 		
