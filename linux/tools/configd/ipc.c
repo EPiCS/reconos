@@ -33,7 +33,7 @@ struct bind_msg {
 	int flags;
 };
 
-#define lower_fb_name	"wlan1"	//XXX
+#define lower_fb_name	"eth0"	//XXX
 
 // Multiplexing: have this as a list e.g. and traverse it
 char srv_name[FBNAMSIZ];
@@ -73,8 +73,8 @@ static void ipc_do_configure_client(struct bind_msg *bmsg)
 	init_reconfig(bmsg->name, "ch.ethz.csg.pf_lana",
 		      lower_fb_name, "ch.ethz.csg.eth");
 
-	setopt_of_elem_in_stack(bmsg->name, "iface=wlan1", strlen("iface=wlan1")); //XXX
-	printd("%s bound to wlan1!\n", bmsg->name);
+	setopt_of_elem_in_stack(bmsg->name, "iface=eth0", strlen("iface=eth0")); //XXX
+	printd("%s bound to eth0!\n", bmsg->name);
 
 	memset(hashopt, 0, sizeof(hashopt));
 

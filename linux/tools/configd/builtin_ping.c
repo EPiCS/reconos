@@ -78,7 +78,7 @@ int main(int argc, char **argv)
 	memset(buff, 0, sizeof(buff));
 	bmsg = (struct bind_msg *) buff;
 	if (client) {
-//		bmsg->props[0] = RELIABLE;
+		bmsg->props[0] = RELIABLE;
 		strcpy(bmsg->app, "ping");
 		bmsg->flags = TYPE_CLIENT;
 	} else {

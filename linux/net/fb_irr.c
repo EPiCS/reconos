@@ -82,14 +82,21 @@ static int fb_irr_netrx_ingress(const struct fblock * const fb,
 
 static enum hrtimer_restart irr_timer_handler(struct hrtimer *self)
 {
+	struct sk_buff *skb;
 	struct tasklet_hrtimer *thr = container_of(self, struct tasklet_hrtimer, timer);
 	struct fb_irr_priv *fb_priv = container_of(thr, struct fb_irr_priv, htimer);
 
 	if (!fb_priv->hold)
 		return HRTIMER_NORESTART;
 
+	skb = skb_copy(fb_priv->hold, GFP_ATOMIC);
+	if (unlikely(!skb)) {
+		printk("Unable to resend packet!\n");
+		return HRTIMER_NORESTART;
+	}
+
 	rcu_read_lock();
-	process_packet(fb_priv->hold, TYPE_EGRESS);
+	process_packet(skb, TYPE_EGRESS);
 	rcu_read_unlock();
 
 	tasklet_hrtimer_start(thr, ktime_set(KTSEC, 0), HRTIMER_MODE_REL);
