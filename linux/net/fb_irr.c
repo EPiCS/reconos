@@ -226,9 +226,10 @@ static void fb_irr_dtor(struct fblock *fb)
 
 	fb_priv = rcu_dereference_raw(fb->private_data);
 
-	tasklet_hrtimer_cancel(&fb_priv->htimer);
-
-	kfree(fb_priv->hold);
+	if (fb_priv->hold) {
+		tasklet_hrtimer_cancel(&fb_priv->htimer);
+		kfree(fb_priv->hold);
+	}
 	kfree(fb_priv);
 
 	module_put(THIS_MODULE);
