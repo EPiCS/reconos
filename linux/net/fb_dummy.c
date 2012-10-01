@@ -160,7 +160,7 @@ static struct fblock_factory fb_dummy_factory = {
 	.ctor = fb_dummy_ctor,
 	.dtor = fb_dummy_dtor,
 	.owner = THIS_MODULE,
-	.properties = { RELIABLE, DUMMY },
+	.properties = { RELIABLE },
 };
 
 static int __init init_fb_dummy_module(void)

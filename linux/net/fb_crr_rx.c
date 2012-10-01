@@ -107,9 +107,7 @@ static int fb_crr_rx_netrx(const struct fblock * const fb,
 			  enum path_type * const dir)
 {
 	int drop = 0;
-	unsigned int i, queue_len;
-	unsigned char mac_src[6];
-	unsigned char mac_dst[6];
+	unsigned int queue_len;
 	unsigned char seq, win_nr;
 	struct sk_buff *skb_last, *cloned_skb;
 	struct fb_crr_rx_priv *fb_priv;

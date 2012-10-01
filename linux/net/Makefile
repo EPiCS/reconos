@@ -21,6 +21,7 @@ obj-m    += fb_otp.o
 obj-m    += fb_ipv4.o
 obj-m    += fb_udp.o
 obj-m    += fb_tcp.o
+obj-m    += fb_irr.o
 obj-m    += fb_crr_rx.o
 obj-m    += fb_crr_tx.o
 #obj-m    += fb_ethtag.o

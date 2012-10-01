@@ -78,7 +78,7 @@ int main(int argc, char **argv)
 	memset(buff, 0, sizeof(buff));
 	bmsg = (struct bind_msg *) buff;
 	if (client) {
-		bmsg->props[0] = DUMMY;
+//		bmsg->props[0] = RELIABLE;
 		strcpy(bmsg->app, "ping");
 		bmsg->flags = TYPE_CLIENT;
 	} else {
@@ -89,6 +89,8 @@ int main(int argc, char **argv)
 	ret = ioctl(sock, 35296, bmsg->name);
 	if (ret < 0)
 		panic("Cannot do ioctl!\n");
+
+//	getchar();
 
 	ret = bind_config(bmsg);
 	if (ret < 0)
@@ -103,7 +105,7 @@ int main(int argc, char **argv)
 		if (client) {
 			ret = sendto(sock, buff, 64, 0, NULL, 0);
 			printf("Sent %d bytes: ", ret);
-			for (i = 0; i < ret; ++i) {
+			for (i = 0; i < 8; ++i) {
 				printf("%2x ", buff[i]);
 			}
 			printf("\n");
