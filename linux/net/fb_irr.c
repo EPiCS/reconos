@@ -37,7 +37,7 @@ struct irr_hdr {
 	 (instr); \
 	} while (read_seqretry(&(fb_priv)->lock, seq));}
 
-#define KTSEC	(3)
+#define KTSEC	(1)
 
 static int fb_irr_netrx_ingress(const struct fblock * const fb,
 				struct sk_buff * const skb)
@@ -77,10 +77,12 @@ static int fb_irr_netrx_ingress(const struct fblock * const fb,
 
 		return PPE_SUCCESS;
 	} else if (!hdr->psh && hdr->ack) {
-		tasklet_hrtimer_cancel(&fb_priv->htimer);
-		kfree_skb(fb_priv->hold);
-		fb_priv->hold = NULL;
-		
+		if (ntohl(hdr->seq) == fb_priv->seq_counter-1) {
+			tasklet_hrtimer_cancel(&fb_priv->htimer);
+			kfree_skb(fb_priv->hold);
+			fb_priv->hold = NULL;
+		}
+
 		kfree_skb(skb);
 		return PPE_DROPPED;
 	} else {
