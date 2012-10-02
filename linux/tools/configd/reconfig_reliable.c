@@ -10,6 +10,7 @@
 #include <linux/netlink.h>
 #include <linux/types.h>
 #include <linux/if.h>
+#include <sys/time.h>
 
 #include "reconfig.h"
 #include "notification.h"
@@ -88,12 +89,21 @@ void reconfig_notify_reliability(int type)
 
 void reconfig_reliability(void)
 {
+	struct timeval tv1, tv2;
+
+
 	if (need_reliability == 1 && need_reliability_switched == 1) {
 		printd("Need reliability!\n");
+		gettimeofday(&tv1, NULL);
 		__reconfig_reliability_check_for_inclusion();
+		gettimeofday(&tv2, NULL);
+		printd("TIME RECONF: %ld us\n", tv2.tv_usec - tv1.tv_usec);
 	} else if (need_reliability == 0 && need_reliability_switched == 1) {
 		printd("Don't need reliability!\n");
+		gettimeofday(&tv1, NULL);
 		__reconfig_reliability_check_for_exclusion();
+		gettimeofday(&tv2, NULL);
+		printd("TIME RECONF: %ld us\n", tv2.tv_usec - tv1.tv_usec);
 	}
 
 	need_reliability_switched = 0;

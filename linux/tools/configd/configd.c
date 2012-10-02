@@ -23,7 +23,7 @@
 #include "reconfig.h"
 #include "notification.h"
 
-#define PLUGIN_TO_TEST	"linkqual"
+#define PLUGIN_TO_TEST	"file-1"
 
 static void *buffshared = NULL;
 
