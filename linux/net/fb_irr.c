@@ -14,6 +14,8 @@
 struct fb_irr_priv {
 	idp_t port[2];
 	seqlock_t lock;
+	uint32_t seq_last_seen;
+	uint32_t seq_counter;
 	struct tasklet_hrtimer htimer;
 	struct sk_buff *hold;
 } ____cacheline_aligned_in_smp;
@@ -22,6 +24,7 @@ struct irr_hdr {
 	uint8_t ack:1,
 		psh:1,
 		unused:6;
+	uint32_t seq;
 };
 
 #define while_seqrd(fb_priv,instr) \
@@ -39,7 +42,6 @@ static int fb_irr_netrx_ingress(const struct fblock * const fb,
 	struct fb_irr_priv *fb_priv;
 
 	fb_priv = rcu_dereference_raw(fb->private_data);
-
 	hdr = (struct irr_hdr *) skb->data;
 	if (hdr->psh && !hdr->ack) {
 		struct irr_hdr *ack_hdr;
@@ -59,9 +61,15 @@ static int fb_irr_netrx_ingress(const struct fblock * const fb,
 				fb_priv->port[TYPE_EGRESS]); });
 		engine_backlog_tail(ack, TYPE_EGRESS);
 
-		skb_pull(skb, sizeof(*hdr));
-		while_seqrd(fb_priv, { write_next_idp_to_skb(skb, fb->idp,
-				fb_priv->port[TYPE_INGRESS]); });
+		if (fb_priv->seq_last_seen < ntohs(hdr->seq)) {
+			skb_pull(skb, sizeof(*hdr));
+			while_seqrd(fb_priv, { write_next_idp_to_skb(skb, fb->idp,
+					fb_priv->port[TYPE_INGRESS]); });
+			fb_priv->seq_last_seen = ntohs(hdr->seq);
+		} else {
+			kfree_skb(skb);
+			return PPE_DROPPED;
+		}
 
 		return PPE_SUCCESS;
 	} else if (!hdr->psh && hdr->ack) {
@@ -111,6 +119,7 @@ static int fb_irr_netrx_egress(const struct fblock * const fb,
 	hdr = (struct irr_hdr *) skb_push(skb, sizeof(*hdr));
 	hdr->psh = 1;
 	hdr->ack = 0;
+	hdr->seq = htons(fb_priv->seq_counter++);
 
 	while_seqrd(fb_priv, { write_next_idp_to_skb(skb, fb->idp,
 			fb_priv->port[TYPE_EGRESS]); });
@@ -197,6 +206,8 @@ static struct fblock *fb_irr_ctor(char *name)
 		goto err;
 	seqlock_init(&fb_priv->lock);
 	fb_priv->hold = NULL;
+	fb_priv->seq_counter = 1;
+	fb_priv->seq_last_seen = 0;
 	fb_priv->port[0] = IDP_UNKNOWN;
 	fb_priv->port[1] = IDP_UNKNOWN;
 	ret = init_fblock(fb, name, fb_priv);
