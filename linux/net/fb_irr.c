@@ -65,11 +65,11 @@ static int fb_irr_netrx_ingress(const struct fblock * const fb,
 				fb_priv->port[TYPE_EGRESS]); });
 		engine_backlog_tail(ack, TYPE_EGRESS);
 
-		if (fb_priv->seq_last_seen < ntohs(hdr->seq)) {
+		if (fb_priv->seq_last_seen < ntohl(hdr->seq)) {
 			skb_pull(skb, sizeof(*hdr));
 			while_seqrd(fb_priv, { write_next_idp_to_skb(skb, fb->idp,
 					fb_priv->port[TYPE_INGRESS]); });
-			fb_priv->seq_last_seen = ntohs(hdr->seq);
+			fb_priv->seq_last_seen = ntohl(hdr->seq);
 		} else {
 			kfree_skb(skb);
 			return PPE_DROPPED;
@@ -130,7 +130,7 @@ static int fb_irr_netrx_egress(const struct fblock * const fb,
 	hdr = (struct irr_hdr *) skb_push(skb, sizeof(*hdr));
 	hdr->psh = 1;
 	hdr->ack = 0;
-	hdr->seq = htons(fb_priv->seq_counter++);
+	hdr->seq = htonl(fb_priv->seq_counter++);
 
 	while_seqrd(fb_priv, { write_next_idp_to_skb(skb, fb->idp,
 			fb_priv->port[TYPE_EGRESS]); });
