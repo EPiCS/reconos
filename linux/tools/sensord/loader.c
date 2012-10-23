@@ -94,7 +94,6 @@ int load_plugin(struct plugin *p)
 err:
 	dlclose(p->sym_fd);
 	printd("[%s] not loaded!\n", p->so_path);
-	xfree(p);
 
 	return -EIO;
 }
