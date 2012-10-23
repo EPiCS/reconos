@@ -126,6 +126,11 @@ struct sk_buff *fb_eth_handle_frame(struct sk_buff *skb)
 	if (unlikely(skb->pkt_type == PACKET_LOOPBACK))
 		return skb;
 //		return RX_HANDLER_PASS;
+#if 1
+	if (be16_to_cpu(eth_hdr(skb)->h_proto) != 0xabba)
+		return skb;
+//		return RX_HANDLER_PASS;
+#endif
 	if (unlikely(!is_valid_ether_addr(eth_hdr(skb)->h_source)))
 		goto drop;
 	skb = skb_share_check(skb, GFP_ATOMIC);
