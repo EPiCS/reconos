@@ -446,6 +446,10 @@ enum fblock_userctl_groups {
 #define NETLINK_USERCTL_CMD_UNSET_TRANS		10
 #define NETLINK_USERCTL_CMD_SET_HW		11
 #define NETLINK_USERCTL_CMD_UNSET_HW		12
+#define NETLINK_USERCTL_CMD_BIND_E		13
+#define NETLINK_USERCTL_CMD_BIND_I		14
+#define NETLINK_USERCTL_CMD_UNBIND_E		15
+#define NETLINK_USERCTL_CMD_UNBIND_I		16
 
 struct lananlmsg_add {
 	char name[FBNAMSIZ];
@@ -492,5 +496,9 @@ static inline void fblock_print_time(char *str)
 	ktime_get_ts(&ts);
 	printk("%s: %lds,%ldns\n", str, ts.tv_sec, ts.tv_nsec);
 }
+
+#define BIND_TYPE_NORM		0
+#define BIND_TYPE_EGR		1
+#define BIND_TYPE_INGR		2
 
 #endif /* XT_FBLOCK_H */

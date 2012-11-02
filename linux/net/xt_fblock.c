@@ -55,6 +55,11 @@ static LIST_HEAD(fb_props_list);
 
 static DEFINE_SPINLOCK(fb_props_list_lock);
 
+static int __fblock_bind_ingr(struct fblock *fb1, struct fblock *fb2);
+static int __fblock_bind_egr(struct fblock *fb1, struct fblock *fb2);
+static int __fblock_unbind_ingr(struct fblock *fb1, struct fblock *fb2);
+static int __fblock_unbind_egr(struct fblock *fb1, struct fblock *fb2);
+
 static inline idp_t provide_new_fblock_idp(void)
 {
 	return (idp_t) atomic_inc_return(&idp_counter);
@@ -346,6 +351,170 @@ int fblock_bind(struct fblock *fb1, struct fblock *fb2)
 	return ret;
 }
 EXPORT_SYMBOL_GPL(fblock_bind);
+
+static int __fblock_bind_egr(struct fblock *fb1, struct fblock *fb2)
+{
+	int ret;
+	struct fblock_bind_msg msg;
+	/* Hack: we let the fb think that this belongs to his own chain to
+	 * get the reference back to itself. */
+	struct fblock_notifier fbn;
+
+	memset(&fbn, 0, sizeof(fbn));
+	memset(&msg, 0, sizeof(msg));
+
+	get_fblock(fb1);
+	get_fblock(fb2);
+
+	msg.dir = TYPE_EGRESS;
+	msg.idp = fb2->idp;
+	fbn.self = fb1;
+	ret = fb1->event_rx(&fbn.nb, FBLOCK_BIND_IDP, &msg);
+	if (ret != NOTIFY_OK) {
+		put_fblock(fb1);
+		put_fblock(fb2);
+		return -EBUSY;
+	}
+
+	ret = subscribe_to_remote_fblock(fb1, fb2);
+	if (ret) {
+		__fblock_unbind_egr(fb1, fb2);
+		return -ENOMEM;
+	}
+
+	/* We don't give refcount back! */
+	return 0;
+}
+
+static int __fblock_bind_ingr(struct fblock *fb1, struct fblock *fb2)
+{
+	int ret;
+	struct fblock_bind_msg msg;
+	/* Hack: we let the fb think that this belongs to his own chain to
+	 * get the reference back to itself. */
+	struct fblock_notifier fbn;
+
+	memset(&fbn, 0, sizeof(fbn));
+	memset(&msg, 0, sizeof(msg));
+
+	get_fblock(fb1);
+	get_fblock(fb2);
+
+	msg.dir = TYPE_INGRESS;
+	msg.idp = fb2->idp;
+	fbn.self = fb1;
+	ret = fb1->event_rx(&fbn.nb, FBLOCK_BIND_IDP, &msg);
+	if (ret != NOTIFY_OK) {
+		put_fblock(fb1);
+		put_fblock(fb2);
+		return -EBUSY;
+	}
+
+	ret = subscribe_to_remote_fblock(fb1, fb2);
+	if (ret) {
+		__fblock_unbind_ingr(fb1, fb2);
+		return -ENOMEM;
+	}
+
+	/* We don't give refcount back! */
+	return 0;
+}
+
+static int __fblock_unbind_egr(struct fblock *fb1, struct fblock *fb2)
+{
+	int ret;
+	struct fblock_bind_msg msg;
+	/* Hack: we let the fb think that this belongs to his own chain to
+	 * get the reference back to itself. */
+	struct fblock_notifier fbn;
+
+	/* We still have refcnt, we drop it on exit! */
+
+	memset(&fbn, 0, sizeof(fbn));
+	memset(&msg, 0, sizeof(msg));
+
+	msg.dir = TYPE_EGRESS;
+	msg.idp = fb2->idp;
+	fbn.self = fb1;
+	ret = fb1->event_rx(&fbn.nb, FBLOCK_UNBIND_IDP, &msg);
+	if (ret != NOTIFY_OK) {
+		/* We are not bound to fb2 */
+		return -EBUSY;
+	}
+
+	unsubscribe_from_remote_fblock(fb1, fb2);
+
+	put_fblock(fb2);
+	put_fblock(fb1);
+
+	return 0;
+}
+
+static int __fblock_unbind_ingr(struct fblock *fb1, struct fblock *fb2)
+{
+	int ret;
+	struct fblock_bind_msg msg;
+	/* Hack: we let the fb think that this belongs to his own chain to
+	 * get the reference back to itself. */
+	struct fblock_notifier fbn;
+
+	/* We still have refcnt, we drop it on exit! */
+
+	memset(&fbn, 0, sizeof(fbn));
+	memset(&msg, 0, sizeof(msg));
+
+	msg.dir = TYPE_INGRESS;
+	msg.idp = fb2->idp;
+	fbn.self = fb1;
+	ret = fb1->event_rx(&fbn.nb, FBLOCK_UNBIND_IDP, &msg);
+	if (ret != NOTIFY_OK) {
+		/* We are not bound to fb2 */
+		return -EBUSY;
+	}
+
+	unsubscribe_from_remote_fblock(fb1, fb2);
+
+	put_fblock(fb2);
+	put_fblock(fb1);
+
+	return 0;
+}
+
+static int fblock_bind_egr(struct fblock *fb1, struct fblock *fb2)
+{
+	int ret;
+	rcu_read_lock();
+	ret = __fblock_bind_egr(fb1, fb2);
+	rcu_read_unlock();
+	return ret;
+}
+
+static int fblock_bind_ingr(struct fblock *fb1, struct fblock *fb2)
+{
+	int ret;
+	rcu_read_lock();
+	ret = __fblock_bind_ingr(fb1, fb2);
+	rcu_read_unlock();
+	return ret;
+}
+
+static int fblock_unbind_egr(struct fblock *fb1, struct fblock *fb2)
+{
+	int ret;
+	rcu_read_lock();
+	ret = __fblock_unbind_egr(fb1, fb2);
+	rcu_read_unlock();
+	return ret;
+}
+
+static int fblock_unbind_ingr(struct fblock *fb1, struct fblock *fb2)
+{
+	int ret;
+	rcu_read_lock();
+	ret = __fblock_unbind_ingr(fb1, fb2);
+	rcu_read_unlock();
+	return ret;
+}
 
 /*
  * fb1 on top of fb2 in the stack
@@ -974,9 +1143,9 @@ static int fblock_userctl_remove(struct lananlmsg *lmsg)
 	return 0;
 }
 
-static int fblock_userctl_bind(struct lananlmsg *lmsg)
+static int fblock_userctl_bind(struct lananlmsg *lmsg, int type)
 {
-	int ret;
+	int ret = 0;
 	struct fblock *fb1, *fb2;
 	struct lananlmsg_tuple *msg = (struct lananlmsg_tuple *) lmsg->buff;
 	fb1 = search_fblock_n(msg->name1);
@@ -987,15 +1156,29 @@ static int fblock_userctl_bind(struct lananlmsg *lmsg)
 		put_fblock(fb1);
 		return -EINVAL;
 	}
-	ret = fblock_bind(fb1, fb2);
+
+	switch (type) {
+	case BIND_TYPE_NORM:
+		ret = fblock_bind(fb1, fb2);
+		break;
+	case BIND_TYPE_EGR:
+		ret = fblock_bind_egr(fb1, fb2);
+		break;
+	case BIND_TYPE_INGR:
+		ret = fblock_bind_ingr(fb1, fb2);
+		break;
+	default:
+		BUG();
+	}
+
 	put_fblock(fb1);
 	put_fblock(fb2);
 	return ret;
 }
 
-static int fblock_userctl_unbind(struct lananlmsg *lmsg)
+static int fblock_userctl_unbind(struct lananlmsg *lmsg, int type)
 {
-	int ret;
+	int ret = 0;
 	struct fblock *fb1, *fb2;
 	struct lananlmsg_tuple *msg = (struct lananlmsg_tuple *) lmsg->buff;
 	fb1 = search_fblock_n(msg->name1);
@@ -1006,7 +1189,21 @@ static int fblock_userctl_unbind(struct lananlmsg *lmsg)
 		put_fblock(fb1);
 		return -EINVAL;
 	}
-	ret = fblock_unbind(fb1, fb2);
+
+	switch (type) {
+	case BIND_TYPE_NORM:
+		ret = fblock_unbind(fb1, fb2);
+		break;
+	case BIND_TYPE_EGR:
+		ret = fblock_unbind_egr(fb1, fb2);
+		break;
+	case BIND_TYPE_INGR:
+		ret = fblock_unbind_ingr(fb1, fb2);
+		break;
+	default:
+		BUG();
+	}
+
 	put_fblock(fb1);
 	put_fblock(fb2);
 	return ret;
@@ -1041,10 +1238,22 @@ static int __fblock_userctl_rcv(struct sk_buff *skb, struct nlmsghdr *nlh)
 		ret = fblock_userctl_remove(lmsg);
 		break;
 	case NETLINK_USERCTL_CMD_BIND:
-		ret = fblock_userctl_bind(lmsg);
+		ret = fblock_userctl_bind(lmsg, BIND_TYPE_NORM);
+		break;
+	case NETLINK_USERCTL_CMD_BIND_E:
+		ret = fblock_userctl_bind(lmsg, BIND_TYPE_EGR);
+		break;
+	case NETLINK_USERCTL_CMD_BIND_I:
+		ret = fblock_userctl_bind(lmsg, BIND_TYPE_INGR);
 		break;
 	case NETLINK_USERCTL_CMD_UNBIND:
-		ret = fblock_userctl_unbind(lmsg);
+		ret = fblock_userctl_unbind(lmsg, BIND_TYPE_NORM);
+		break;
+	case NETLINK_USERCTL_CMD_UNBIND_E:
+		ret = fblock_userctl_unbind(lmsg, BIND_TYPE_EGR);
+		break;
+	case NETLINK_USERCTL_CMD_UNBIND_I:
+		ret = fblock_userctl_unbind(lmsg, BIND_TYPE_INGR);
 		break;
 	case NETLINK_USERCTL_CMD_SET_TRANS:
 		ret = fblock_userctl_set_flags(lmsg, FBLOCK_FLAGS_TRANS_IB);
