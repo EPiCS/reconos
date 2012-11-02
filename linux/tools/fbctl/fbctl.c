@@ -327,7 +327,11 @@ static void do_unflag(int argc, char **argv)
 	send_netlink(&lmsg);
 }
 
-static void do_bind(int argc, char **argv)
+#define BIND_TYPE_NORM		0
+#define BIND_TYPE_EGR		1
+#define BIND_TYPE_INGR		2
+
+static void do_bind(int argc, char **argv, int type)
 {
 	struct lananlmsg lmsg;
 	struct lananlmsg_tuple *msg;
@@ -336,14 +340,25 @@ static void do_bind(int argc, char **argv)
 		usage();
 
 	memset(&lmsg, 0, sizeof(lmsg));
-	lmsg.cmd = NETLINK_USERCTL_CMD_BIND;
+	switch (type) {
+	case BIND_TYPE_NORM:
+		lmsg.cmd = NETLINK_USERCTL_CMD_BIND;
+		break;
+	case BIND_TYPE_EGR:
+		lmsg.cmd = NETLINK_USERCTL_CMD_BIND_E;
+		break;
+	case BIND_TYPE_INGR:
+		lmsg.cmd = NETLINK_USERCTL_CMD_BIND_I;
+		break;
+	}
+
 	msg = (struct lananlmsg_tuple *) lmsg.buff;
 	strlcpy(msg->name1, argv[0], sizeof(msg->name1));
 	strlcpy(msg->name2, argv[1], sizeof(msg->name2));
 	send_netlink(&lmsg);
 }
 
-static void do_unbind(int argc, char **argv)
+static void do_unbind(int argc, char **argv, int type)
 {
 	struct lananlmsg lmsg;
 	struct lananlmsg_tuple *msg;
@@ -352,7 +367,19 @@ static void do_unbind(int argc, char **argv)
 		usage();
 
 	memset(&lmsg, 0, sizeof(lmsg));
-	lmsg.cmd = NETLINK_USERCTL_CMD_UNBIND;
+
+	switch (type) {
+	case BIND_TYPE_NORM:
+		lmsg.cmd = NETLINK_USERCTL_CMD_UNBIND;
+		break;
+	case BIND_TYPE_EGR:
+		lmsg.cmd = NETLINK_USERCTL_CMD_UNBIND_E;
+		break;
+	case BIND_TYPE_INGR:
+		lmsg.cmd = NETLINK_USERCTL_CMD_UNBIND_I;
+		break;
+	}
+
 	msg = (struct lananlmsg_tuple *) lmsg.buff;
 	strlcpy(msg->name1, argv[0], sizeof(msg->name1));
 	strlcpy(msg->name2, argv[1], sizeof(msg->name2));
@@ -432,9 +459,17 @@ int main(int argc, char **argv)
 	else if (!strncmp("unflag", argv[0], strlen("unflag")))
 		do_unflag(--argc, ++argv);
 	else if (!strncmp("bind", argv[0], strlen("bind")))
-		do_bind(--argc, ++argv);
+		do_bind(--argc, ++argv, BIND_TYPE_NORM);
+	else if (!strncmp("bind-e", argv[0], strlen("bind-e")))
+		do_bind(--argc, ++argv, BIND_TYPE_EGR);
+	else if (!strncmp("bind-i", argv[0], strlen("bind-i")))
+		do_bind(--argc, ++argv, BIND_TYPE_INGR);
 	else if (!strncmp("unbind", argv[0], strlen("unbind")))
-		do_unbind(--argc, ++argv);
+		do_unbind(--argc, ++argv, BIND_TYPE_NORM);
+	else if (!strncmp("unbind-e", argv[0], strlen("unbind-e")))
+		do_unbind(--argc, ++argv, BIND_TYPE_EGR);
+	else if (!strncmp("unbind-i", argv[0], strlen("unbind-i")))
+		do_unbind(--argc, ++argv, BIND_TYPE_INGR);
 	else if (!strncmp("replace", argv[0], strlen("replace")))
 		do_replace(--argc, ++argv, 0);
 	else if (!strncmp("replace-drop", argv[0], strlen("replace-drop")))
