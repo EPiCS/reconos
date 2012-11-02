@@ -196,7 +196,6 @@ static struct fblock *fb_otp_ctor(char *name)
 	fb->event_rx = fb_otp_event;
 //	fb->linearize = fb_otp_linearize;
 //	fb->delinearize = fb_otp_delinearize;
-	fb->prio = 10;//FIXME fb->factory->prio;
 	fb_proc = proc_create_data(fb->name, 0444, fblock_proc_dir,
 				   &fb_otp_proc_fops, (void *)(long) fb);
 	if (!fb_proc)
@@ -233,7 +232,7 @@ static struct fblock_factory fb_otp_factory = {
 	.ctor = fb_otp_ctor,
 	.dtor = fb_otp_dtor,
 	.owner = THIS_MODULE,
-	.properties = { PRIVACY },
+	.properties = { [0] = "privacy" },
 };
 
 static int __init init_fb_otp_module(void)

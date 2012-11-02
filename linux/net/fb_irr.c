@@ -228,7 +228,6 @@ static struct fblock *fb_irr_ctor(char *name)
 		goto err2;
 	fb->netfb_rx = fb_irr_netrx;
 	fb->event_rx = fb_irr_event;
-	fb->prio = 10;//FIXME fb->factory->prio;
 	ret = register_fblock_namespace(fb);
 	if (ret)
 		goto err3;
@@ -265,7 +264,7 @@ static struct fblock_factory fb_irr_factory = {
 	.ctor = fb_irr_ctor,
 	.dtor = fb_irr_dtor,
 	.owner = THIS_MODULE,
-	.properties = { RELIABLE },
+	.properties = { [0] = "reliable" },
 };
 
 static int __init init_fb_irr_module(void)

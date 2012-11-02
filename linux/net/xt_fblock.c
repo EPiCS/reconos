@@ -626,7 +626,7 @@ static int procfs_fblocks_props(char *page, char **start, off_t offset,
 		len += sprintf(page + len, "%s [", f->type);
 		for (i = 0; i < ARRAY_SIZE(f->properties); ++i) {
 				if (f->properties[i] != 0) {
-					len += sprintf(page + len, "%u ",
+					len += sprintf(page + len, "%s ",
 						       f->properties[i]);
 					has_prop = 1;
 				}
@@ -703,14 +703,14 @@ static int procfs_fblocks(char *page, char **start, off_t offset,
 		if (fb->factory) {
 			for (j = 0; j < ARRAY_SIZE(fb->factory->properties); ++j) {
 				if (fb->factory->properties[j] != 0) {
-					len += sprintf(page + len, "%u ",
+					len += sprintf(page + len, "%s ",
 						       fb->factory->properties[j]);
 					has_prop = 1;
 				}
 			}		
 		}
 		len -= has_prop;
-		len += sprintf(page + len, "] %d\n", fb->prio);
+		len += sprintf(page + len, "]\n");
 	}
 	rcu_read_unlock();
 

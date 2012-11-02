@@ -75,14 +75,6 @@ enum fblock_mode {
 #define FBLOCK_MEM_PRESSURE	0x0007	/* Socket under memory pressure */
 #define FBLOCK_CTL_PUSH		0x0008
 
-#else
-static const char *fblock_props_to_str[] = {
-	"none",
-	"reliable",
-	"privacy",
-	"dummy",
-	"dummy",
-};
 #endif /* __KERNEL__ */
 
 #define DEBUG(fnt)
@@ -90,17 +82,6 @@ static const char *fblock_props_to_str[] = {
 	
 #define FBNAMSIZ		(IFNAMSIZ*2)
 #define TYPNAMSIZ		(FBNAMSIZ*2)
-
-#define MAX_PROPS	32
-
-enum fblock_props {
-	NONE = 0,
-	RELIABLE,
-	PRIVACY,
-	DUMMY,
-	DUMMY2,
-	__MAX_PROP,
-};
 
 #define TYPE_SERVER 1
 #define TYPE_CLIENT 2
@@ -128,8 +109,8 @@ struct fblock_factory {
 	struct fblock *(*ctor)(char *name);
 	void (*dtor)(struct fblock *fb);
 	void (*dtor_outside_rcu)(struct fblock *fb);
-	enum fblock_props properties[MAX_PROPS];
 	struct list_head e_list;
+	char *properties[16];
 } ____cacheline_aligned;
 
 struct fblock_notifier {
@@ -168,7 +149,6 @@ struct fblock {
 	atomic_t refcnt;
 	idp_t idp;
 	volatile unsigned int flags;
-	int prio;	/* XXX: replace with something better */
 	spinlock_t lock;
 	struct fblock_stats __percpu *stats;
 } ____cacheline_aligned;

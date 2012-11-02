@@ -706,7 +706,7 @@ static struct fblock_factory fb_crr_tx_factory = {
 	.ctor = fb_crr_tx_ctor,
 	.dtor = fb_crr_tx_dtor,
 	.owner = THIS_MODULE,
-	.properties = {RELIABLE}
+	.properties = { [0] = "reliable" }
 };
 
 static int __init init_fb_crr_tx_module(void)
