@@ -105,7 +105,11 @@ static void usage(void)
 	printf("  flag <name> <hw|trans>       - set fblock flags\n");
 	printf("  unflag <name> <hw|trans>     - unset fblock flags\n");
 	printf("  bind <name1> <name2>         - bind two fblocks\n");
+	printf("  bind-e <name1> <name2>       - bind two fblocks unidirectional, egress\n");
+	printf("  bind-i <name1> <name2>       - bind two fblocks unidirectional, ingress\n");
 	printf("  unbind <name1> <name2>       - unbind two fblocks\n");
+	printf("  unbind-e <name1> <name2>     - unbind two fblocks unidirectional, egress\n");
+	printf("  unbind-i <name1> <name2>     - unbind two fblocks unidirectional, ingress\n");
 	printf("  replace <name1> <name2>      - exchange fb1 with fb2 (*)\n");
 	printf("  replace_drop <name1> <name2> - exchange fb1 with fb2 (*)\n");
 	printf("  subscribe <name1> <name2>    - subscribe fb2 to fb1 (+)\n");
