@@ -462,18 +462,18 @@ int main(int argc, char **argv)
 		do_flag(--argc, ++argv);
 	else if (!strncmp("unflag", argv[0], strlen("unflag")))
 		do_unflag(--argc, ++argv);
-	else if (!strncmp("bind", argv[0], strlen("bind")))
-		do_bind(--argc, ++argv, BIND_TYPE_NORM);
 	else if (!strncmp("bind-e", argv[0], strlen("bind-e")))
 		do_bind(--argc, ++argv, BIND_TYPE_EGR);
 	else if (!strncmp("bind-i", argv[0], strlen("bind-i")))
 		do_bind(--argc, ++argv, BIND_TYPE_INGR);
-	else if (!strncmp("unbind", argv[0], strlen("unbind")))
-		do_unbind(--argc, ++argv, BIND_TYPE_NORM);
+	else if (!strncmp("bind", argv[0], strlen("bind")))
+		do_bind(--argc, ++argv, BIND_TYPE_NORM);
 	else if (!strncmp("unbind-e", argv[0], strlen("unbind-e")))
 		do_unbind(--argc, ++argv, BIND_TYPE_EGR);
 	else if (!strncmp("unbind-i", argv[0], strlen("unbind-i")))
 		do_unbind(--argc, ++argv, BIND_TYPE_INGR);
+	else if (!strncmp("unbind", argv[0], strlen("unbind")))
+		do_unbind(--argc, ++argv, BIND_TYPE_NORM);
 	else if (!strncmp("replace", argv[0], strlen("replace")))
 		do_replace(--argc, ++argv, 0);
 	else if (!strncmp("replace-drop", argv[0], strlen("replace-drop")))
