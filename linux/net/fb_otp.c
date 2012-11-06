@@ -24,6 +24,8 @@ struct fb_otp_priv {
 	rwlock_t klock;
 } ____cacheline_aligned_in_smp;
 
+#define MAX_POOL_SIZ	(1024 * 1024 * 10)
+
 static int fb_otp_netrx(const struct fblock * const fb,
 			  struct sk_buff * const skb,
 			  enum path_type * const dir)
@@ -119,46 +121,40 @@ static int fb_otp_proc_open(struct inode *inode, struct file *file)
 	return single_open(file, fb_otp_proc_show, PDE(inode)->data);
 }
 
-#define MAX_BUFF_SIZ	(1024 * 1024 * 100)
-
 static ssize_t fb_otp_proc_write(struct file *file, const char __user * ubuff,
 				 size_t count, loff_t * offset)
 {
-	uint8_t *code, *tmp = NULL;
-	size_t len = MAX_BUFF_SIZ;
 	struct fblock *fb = PDE(file->f_path.dentry->d_inode)->data;
 	struct fb_otp_priv *fb_priv;
 
-	if (count > MAX_BUFF_SIZ)
+	if (count > MAX_POOL_SIZ)
 		return -EINVAL;
-	if (count < MAX_BUFF_SIZ)
-		len = count;
 
 	rcu_read_lock();
 	fb_priv = rcu_dereference_raw(fb->private_data);
 	rcu_read_unlock();
 
-	code = vmalloc(len);
-	if (!code)
-		return -ENOMEM;
-
-	if (copy_from_user(code, ubuff, len)) {
-		vfree(code);
-		return -EIO;
+	if (fb_priv->len + count > MAX_POOL_SIZ) {
+		if (fb_priv->len - fb_priv->off < PAGE_SIZE) {
+			fb_priv->len = 0;
+			fb_priv->off = 0;
+		} else {
+			return -EBUSY;
+		}
 	}
 
+	/* XXX: make it as ring buffer or sth. */
 	write_lock(&fb_priv->klock);
-	if (fb_priv->len)
-		tmp = fb_priv->key;
-	fb_priv->key = code;
-	fb_priv->len = len;
-	fb_priv->off = 0;
+
+	if (copy_from_user(fb_priv->key + fb_priv->len, ubuff, count)) {
+		write_unlock(&fb_priv->klock);
+		return -EIO;
+	}
+	fb_priv->len += count;
+
 	write_unlock(&fb_priv->klock);
 
-	printk(KERN_INFO "[fb_otp] wrote new key!\n");
-	if (tmp)
-		vfree(tmp);
-	return len;
+	return count;
 }
 
 static const struct file_operations fb_otp_proc_fops = {
@@ -187,11 +183,17 @@ static struct fblock *fb_otp_ctor(char *name)
 	rwlock_init(&fb_priv->klock);
 	fb_priv->port[0] = IDP_UNKNOWN;
 	fb_priv->port[1] = IDP_UNKNOWN;
-	fb_priv->key = NULL;
+
+	/* TODO: dynamically increase */
+	fb_priv->key = vmalloc(MAX_POOL_SIZ);
+	if (!fb_priv->key)
+		goto err1;
 	fb_priv->len = fb_priv->off = 0;
+
 	ret = init_fblock(fb, name, fb_priv);
 	if (ret)
 		goto err2;
+
 	fb->netfb_rx = fb_otp_netrx;
 	fb->event_rx = fb_otp_event;
 //	fb->linearize = fb_otp_linearize;
@@ -213,10 +215,17 @@ err4:
 err3:
 	cleanup_fblock_ctor(fb);
 err2:
+	vfree(fb_priv->key);
+err1:
 	kfree(fb_priv);
 err:
 	kfree_fblock(fb);
 	return NULL;
+}
+
+static void fb_otp_dtor_outside_rcu(struct fblock *fb)
+{
+	vfree(((struct fb_otp_priv *)rcu_dereference_raw(fb->private_data))->key);
 }
 
 static void fb_otp_dtor(struct fblock *fb)
@@ -231,6 +240,7 @@ static struct fblock_factory fb_otp_factory = {
 	.mode = MODE_DUAL,
 	.ctor = fb_otp_ctor,
 	.dtor = fb_otp_dtor,
+	.dtor_outside_rcu = fb_otp_dtor_outside_rcu,
 	.owner = THIS_MODULE,
 	.properties = { [0] = "privacy" },
 };
