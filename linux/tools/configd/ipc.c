@@ -54,7 +54,7 @@ static char *bin2hex_compat(uint8_t *hash, size_t lhsh, char *str, size_t lstr)
 }
 #endif
 
-static void ipc_do_configure_client(struct bind_msg *bmsg)
+static int ipc_do_configure_client(struct bind_msg *bmsg)
 {
 	int ret, i;
 	char type[TYPNAMSIZ];
@@ -101,7 +101,7 @@ static void ipc_do_configure_client(struct bind_msg *bmsg)
 		printd("Registered server %s for app %s\n", srv_name, srv_app);
 		start_negotiation_server(bmsg->name);
 		server = 1;
-		return;
+		return 1;
 	}else if (bmsg->flags == TYPE_CLIENT) {
 		orig = num;
 		server = 0;
@@ -116,19 +116,20 @@ static void ipc_do_configure_client(struct bind_msg *bmsg)
 		if (num > 0) {
 			printd("Cannot match requirements! Unable to connect socket!\n");
 			//XXX cleanup!
-			return;
+			return -1;
 		}
 		printd("Initiate negotiation with server....\n");
 		ret = init_negotiation(bmsg->name, bmsg->app);
 		printd("client negotiation returned with %d!\n", ret);
 		if (ret < 0) {
 			printd("Remote end does not support stack config!\n");
-			return;
+			return -1;
 		}
 //		commit_vstack(bmsg->app);
 	}
 
 	printd("IPC Client %s up and running!\n", bmsg->name);
+	return 1;
 }
 
 static void *ipc_server(void *null)
@@ -192,13 +193,16 @@ static void *ipc_server(void *null)
 		}
 
 		ret = read(csock, &bmsg, sizeof(bmsg));
+
 		if (ret != sizeof(bmsg)) {
 			printd("Read returned with %s\n", strerror(errno));
 			close(csock);
 			continue;
 		}
 
-		ipc_do_configure_client(&bmsg);
+		/* ret 1: ok, -1: error */
+		ret = ipc_do_configure_client(&bmsg);
+		write(csock, &ret, sizeof(ret));
 
 		close(csock);
 	}

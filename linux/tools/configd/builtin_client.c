@@ -27,7 +27,7 @@ struct bind_msg {
 
 static int bind_config(struct bind_msg *bmsg)
 {
-	int sock;
+	int sock, rc;
 	ssize_t ret;
 	struct sockaddr_un saddr;
 	socklen_t slen;
@@ -49,8 +49,10 @@ static int bind_config(struct bind_msg *bmsg)
 	if (ret <= 0)
 		panic("Cannot write to server: %s\n", strerror(errno));
 
+	read(sock, &rc, sizeof(rc));
+
 	close(sock);
-	return 0;
+	return rc;
 }
 
 int main(int argc, char **argv)
