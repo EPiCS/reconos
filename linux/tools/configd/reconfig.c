@@ -256,15 +256,11 @@ void commit_vstack(char *appname)
 	l += snprintf(hashfoo + l, sizeof(hashfoo) - 1, "ch.ethz.csg.pf_lana");
 	if (appname)
 		memcpy(glob_appname, appname, strlen(appname));
+	l += snprintf(hashfoo + l, sizeof(hashfoo) - 1, "::%s", glob_appname);
+
 	printd("Update hash for %s\n", glob_appname);
 	git_SHA1_Init(&sha);
 	git_SHA1_Update(&sha, hashfoo, strlen(hashfoo));
-	git_SHA1_Final(hash, &sha);
-	git_SHA1_Init(&sha);
-	git_SHA1_Update(&sha, glob_appname, strlen(glob_appname));
-	git_SHA1_Final(&hash[20], &sha);
-	git_SHA1_Init(&sha);
-	git_SHA1_Update(&sha, hash, sizeof(hash));
 	git_SHA1_Final(hashout, &sha);
 
 	memset(hashopt, 0, sizeof(hashopt));

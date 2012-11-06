@@ -77,18 +77,15 @@ static void ipc_do_configure_client(struct bind_msg *bmsg)
 	printd("%s bound to eth0!\n", bmsg->name);
 
 	memset(hashopt, 0, sizeof(hashopt));
+	sprintf(hashopt, sizeof(hashopt) - 1,
+		"ch.ethz.csg.eth-ch.ethz.csg.pf_lana::%s",
+		bmsg->app);
 
 	git_SHA1_Init(&sha);
-	git_SHA1_Update(&sha, "ch.ethz.csg.eth-ch.ethz.csg.pf_lana",
-			strlen("ch.ethz.csg.eth-ch.ethz.csg.pf_lana"));
-	git_SHA1_Final(hash, &sha);
-	git_SHA1_Init(&sha);
-	git_SHA1_Update(&sha, bmsg->app, strlen(bmsg->app));
-	git_SHA1_Final(&hash[20], &sha);
-	git_SHA1_Init(&sha);
-	git_SHA1_Update(&sha, hash, sizeof(hash));
+	git_SHA1_Update(&sha, hashopt, strlen(hashopt));
 	git_SHA1_Final(hashout, &sha);
 
+	memset(hashopt, 0, sizeof(hashopt));
 	snprintf(hashopt, sizeof(hashopt)-1, "%s=%s",
 		 bin2hex_compat(hashout, 8, str, sizeof(str)),
 		 bmsg->name);
