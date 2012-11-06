@@ -1,0 +1,24 @@
+Currently, inter-functional block dependencies are manually configured. This
+feature must change in future, since it's required/wished that dependencies
+are determined automatically, e.g. by some AI. Therefore, the implementation
+/should/ be regarded as a hack. We provide a configuration file for configd,
+that looks similar to this (test.txt):
+
+/* comment here */
+
+x :: ch.ethz.csg.pf_lana;
+l :: ch.ethz.csg.eth;
+b :: ch.ethz.csg.dummy;
+
+x ^ { l b };
+b ^ { l };
+
+This means, we introduce aliases for long names first, e.g. x ->
+ch.ethz.csg.pf_lana, thus we only refer to short formes when describing
+dependencies. Next, we introduce rules such as 'x ^ { l b }', which says
+"x can be placed on top of the set l, b". Thus, in a full stack configuration,
+we get (hw side) l->b->x (app side). The full syntax description can be found
+in the tokenizer file linux/tools/configd/lexer.l as well as in the grammar
+file linux/tools/configd/parser.y .
+
+Config can then simply be started with: ./configd test.txt
