@@ -1,3 +1,7 @@
 configd is just a _working_ proof of concept and it is _strongly_ encouraged to
 re-implement it in a proper quality. Especially it can be nicely modularized so
 that it will be easy to implement different strategies/algorithms!
+
+Another feature that needs to be implemented is, that configd can multiplex
+between multiple clients. This can be implemented by having a PID table within
+configd while applications place their PID into IPC messages.

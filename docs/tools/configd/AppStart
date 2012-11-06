@@ -1,0 +1,7 @@
+Once a configd IPC client has been implemented and needs to be tested, the
+whole system can be bootstrapped in the following way:
+
+  1) Load all related kernel modules
+  2) Start ./sensord &
+  3) Start ./configd <conf-file>
+  4) Start configd client application

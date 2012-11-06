@@ -1,0 +1,1 @@
+configd and sensord both place their log messages into the syslog daemon.
