@@ -313,4 +313,132 @@ Start the MicroBlaze GNU Debugger:
   Breakpoint 1, main () at ../src/helloworld.c:28
   28      init_platform();
 
-That's it!
+ That's it!
+
+* Getting started with networking *
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+This part presents a short tutorial for building the Linux kernel, LANA
+modules and the LANA example application, for loading LANA into the kernel
+and for developing own functional blocks. This tutorial assumes that you
+are using Debian GNU/Linux 6.0. The basic set of tools that are needed
+can be obtained via apt-get with the following packages:
+
+* build-essential
+  (a Debian meta-package containing basic utilities and libraries for
+   building software like gcc, make, g++, coreutils, bsdutils, util-linux,
+   sed, tar and others)
+
+* gdb
+  (the GNU debugger)
+
+* libncurses5 and libncurses5-dev
+  (the graphical ncurses library, needed for ifpps)
+
+* git
+  (the distributed version control system)
+
+* grub or grub2
+  (a system boot loader, grub2 is default on most installations)
+
+* vim, uemacs or similar
+  (a command-line text editor)
+
+* minicom
+  (terminal emulation and text-based modem, for remote debugging via RS232)
+
+* coccinelle
+  (a semantic patching tool for C)
+
+* flex
+  (a fast lexical analyzer generator, needed for bpfc)
+
+* bison
+  (a parser generator that is compatible with YACC, needed for bpfc)
+
+* libcelt0-0 and libcelt-dev
+  (CELT codec, needed fot the LANA application)
+
+* libspeexdsp1 and libspeexdsp-dev
+  (Speex DSP, needed fot the LANA application)
+
+* libasound2 and libasound2-dev
+  (ALSA lib, needed fot the LANA application)
+
+Optionally, it might be useful to port the Kernel Source Level Debugger (kgdb)
+and the Kernel Source Level Debugger over Ethernet (kgdboe) without too much
+efforts from (http://kgdb.linsyssoft.com/intro.htm) for kernel debugging to the
+latest Linux release, since Linux explicitly avoids shipping a debugger within
+the kernel.
+
+++ Building Linux and LANA
+--------------------------
+
+For getting to know git, [http://linux.yyz.us/git-howto.html] gives a great
+introduction.
+
+In case you want a host-only LANA deployment (non-ML605), then do the
+following:
+
+ 1) git clone git://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git
+ 2) cd linux
+ 3) git checkout v2.6.37
+ 4) make menuconfig
+    -- configure the kernel to your needs
+    -- simplest case simply exit+save
+ 5) make -j `grep "^processor" /proc/cpuinfo | wc -l`
+ 6) make install
+ 7) make modules_install
+ 8) cd /boot/
+ 9) mkinitramfs -o initrd.img-2.6.37 2.6.37
+10) update-grub
+11) Boot into your new kernel
+
+After the reboot, the LANA repository can then be fetched via Git with the
+command (if not yet done):
+
+  git clone git://github.com/EPiCS/reconos.git
+
+and compiled through the following steps:
+
+ 1) cd reconos/linux/net/
+ 2) make
+
+For user space tools, change into the following directories (have a look
+into the tool description within the doc folder) and call 'make':
+
+For manual stack configuration:
+  - linux/tools/fbctl
+  - linux/tools/vlink
+
+For automatic stack configuration:
+  - linux/tools/sensord
+  - linux/tools/configd
+
+Misc tools:
+  - linux/tools/timedb
+  - linux/tools/fbviz
+
+In case you're cross-compiling these tools, comment in from the Makefiles:
+
+ CC	=	microblaze-unknown-linux-gnu-gcc
+ AR	=	microblaze-unknown-linux-gnu-ar
+
+The same for cross compilation of the kernel modules, comment in the
+following:
+
+ ARCH		=	microblaze
+ CROSS_COMPILE	=	microblaze-unknown-linux-gnu-
+ KDIR		?=	~/linux-2.6-xlnx
+ EXTRA_CFLAGS	+=	-I$(PWD)/../reconos/libreconos-ks/
+ EXTRA_CFLAGS	+=	-DWITH_RECONOS
+
+ export ARCH CROSS_COMPILE
+
+and comment out:
+
+ MDIR     := /lib/modules/$(shell uname -r)
+ KDIR     := $(MDIR)/build
+
+Then re-execute make. Make sure you have installed all the gnu utils as
+described in Richard's howto.
