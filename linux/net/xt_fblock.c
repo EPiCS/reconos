@@ -1272,9 +1272,10 @@ static int __fblock_userctl_rcv(struct sk_buff *skb, struct nlmsghdr *nlh)
 		ret = -ENOENT;
 		break;
 	}
-
 	if (ret < 0)
 		printk(KERN_ERR "[lana] netlink returned with %d!\n", ret);
+
+	schedule_timeout_interruptible(1);
 	return ret;
 }
 
