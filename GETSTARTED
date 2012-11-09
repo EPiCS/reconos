@@ -442,3 +442,24 @@ and comment out:
 
 Then re-execute make. Make sure you have installed all the gnu utils as
 described in Richard's howto.
+
+In case you want to run LANA on the ML605, you need to copy all relevant
+modules (*.ko) files and binaries to the compact flash card. Running it
+via nfs is no option, since you will likely loose connection from the
+moment you switch the kernel to your own stack.
+
+Make sure you have configured kernel module support for the ML605 Linux
+kernel, so that you can load these modules. In some old Paderborn kernel,
+this was not the case.
+
+In case you compile with -DWITH_RECONOS, then you also need the kernel
+space version of libreconos-ks:
+
+  1) cd linux/reconos/libreconos-ks
+  2) make
+  3) copy it to the cf card as well
+
+++ Loading LANA kernel modules
+------------------------------
+
+tba
