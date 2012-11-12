@@ -577,5 +577,32 @@ functional block dependencies removed, so that first the individual fb_<name>.ko
 modules can be removed from the stack and then last but not least the lana.ko
 module.
 
+Hw/sw offload: currently the ReconOS-based NoC offload engine has to be
+configured manually. This means that Xilinx partial reconfiguration does not
+yet work, so that a bitsream with built-in hw blocks has to be built. However,
+mid-term future work will focus on partial reconfiguration. In order to offload
+a functional block, a version in software has to exist and to be created. Then,
+we have to tell the PPE that our instance is currently in hardware, so that the
+PPE sends it down to the hw block and *not* to the next sw block. To do this,
+transfer the sw internal state to the hw block (Florian's work), and set the
+hw flag in the sw fblock via:
+
+  1) fbctl fb0 flag trans    // set into transition mode (packets are backlogged
+			     // and looped in PPE), used to transfer states
+  2) fbctl fb0 flag hw       // set as hardware flag, so that pkts are sent to hw block
+  3) fbctl fb0 unflag trans  // unset transition mode, backlogged packets are now
+			     // processed/forwarded normally (here: to the hardware)
+
+The same thing counts vice versa (where the state is transferred from hw to sw):
+
+  1) fbctl fb0 flag trans
+  2) fbctl fb0 unflag hw
+  3) fbctl fb0 unflag trans
+
+Note that ethernet functional blocks have a different notion of binding with
+functional blocks.
+
 For functional block development, it pays of to also read Paul McKenney's Perfbook:
  git clone git://git.kernel.org/pub/scm/linux/kernel/git/paulmck/perfbook.git
+
+For further documents, look at getting started section of docs/networking/lana_sw.pdf
