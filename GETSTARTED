@@ -318,6 +318,20 @@ Start the MicroBlaze GNU Debugger:
 * Getting started with networking *
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+Also have a look at:
+	- docs/networking ... for ...
+		- A big picture/overview of ETH parts of ReconOS
+		- LANA plugin howto
+		- sensord plugin howto
+		- Two ANCS conf posters, abstracts
+		- Daniel's Mater's thesis
+		- Summary of networking tools
+	- docs/tools ... for ...
+		- configd description/howto
+		- sensord description/howto
+		- timedb description/howto
+		- information about logging
+
 This part presents a short tutorial for building the Linux kernel, LANA
 modules and the LANA example application, for loading LANA into the kernel
 and for developing own functional blocks. This tutorial assumes that you
@@ -539,3 +553,7 @@ Field descriptions:
 	- timer-call: # of timer calls to invoke this CPU's PPE
 	- timer-cpu-miss: # of times a timer call was scheduled on a wrong CPU (non-caller CPU)
 	- backlog-queue: size of backlogged packets
+
+Some functional block instances create internal fb-specific files located
+under /proc/net/lana/fblock/<instance-name> . This is, for instance, the case
+in the fb_bpf or fb_otp.
