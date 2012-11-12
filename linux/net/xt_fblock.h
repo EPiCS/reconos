@@ -486,6 +486,8 @@ struct lananlmsg {
 	uint8_t buff[USERCTL_BUF_LEN];
 };
 
+#ifdef __KERNEL__
+
 extern int init_ei_conf(void);
 extern void cleanup_ei_conf(void);
 
@@ -496,6 +498,8 @@ static inline void fblock_print_time(char *str)
 	ktime_get_ts(&ts);
 	printk("%s: %lds,%ldns\n", str, ts.tv_sec, ts.tv_nsec);
 }
+
+#endif
 
 #define BIND_TYPE_NORM		0
 #define BIND_TYPE_EGR		1

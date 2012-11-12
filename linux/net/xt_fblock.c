@@ -785,7 +785,7 @@ static int procfs_fblocks_props(char *page, char **start, off_t offset,
 	struct fblock_factory *f;
 	char buff[256]; //XXX
 
-	len += sprintf(page + len, "type|properties|sprio\n");
+	len += sprintf(page + len, "type|properties\n");
 	blen = vlink_procfs_props(buff, sizeof(buff));
 	len += sprintf(page + len, buff);
 
