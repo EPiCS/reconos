@@ -5,3 +5,20 @@ that it will be easy to implement different strategies/algorithms!
 Another feature that needs to be implemented is, that configd can multiplex
 between multiple clients. This can be implemented by having a PID table within
 configd while applications place their PID into IPC messages.
+
+Further proposal (e.g. for Master thesis): as the case in the RoboCup competition,
+AI and/or other high-level strategies are always implemented in a high-level
+language (and by that I mean not C). For instance all the I/O that executes the
+(plain stupid) configuration via Netlink, can be C as well as IPC with sensord
+and configd applications. However, complicated (AI) things can be easier and
+faster to implement in Lua. This is how it's done on robots. This is how it can
+be done in LANA. Here's [1] a nice tutorial on how to embedd Lua [2] code into
+C and call each others functions. I could imagine a configd that implements a
+node-local state machine and a stack re-negotiation state machine (within a
+node-local 'reconfiguration' state) in Lua as well as a dependency resolver.
+
+Those proposed changes will make configd flexible and more easy to program/deploy
+concepts of self-awareness.
+
+  [1] http://www.debian-administration.org/articles/264
+  [2] http://en.wikipedia.org/wiki/Lua_(programming_language)
