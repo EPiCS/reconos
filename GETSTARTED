@@ -600,7 +600,16 @@ The same thing counts vice versa (where the state is transferred from hw to sw):
   3) fbctl fb0 unflag trans
 
 Note that ethernet functional blocks have a different notion of binding with
-functional blocks.
+functional blocks, since this was changed/introduced with configd. Depending
+on the packet's internal hash, fb_eth multiplexes packets to different fbs.
+The packet format looks like: <mac,mac,ether_type(0xabba),hash(sha1)>. Thus,
+binding to a functional block is:
+
+  1) fbctl set eth0 <sha1hash>=<fb-2-bind>
+	-- this will demultiplex ingress messages to fb's
+  2) Send packets in correct (header/hash) format, so that they're not
+     dropped for unknown hashes.
+  3) For egress messages, use the normal bind or bind-e
 
 For functional block development, it pays of to also read Paul McKenney's Perfbook:
  git clone git://git.kernel.org/pub/scm/linux/kernel/git/paulmck/perfbook.git
