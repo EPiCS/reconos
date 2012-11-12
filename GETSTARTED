@@ -1,4 +1,4 @@
-From Richard Huber:
+From Richard Huber (first part) / Daniel Borkmann (second part):
 
 * Install Microblaze GNU Tools on Debian *
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -556,4 +556,26 @@ Field descriptions:
 
 Some functional block instances create internal fb-specific files located
 under /proc/net/lana/fblock/<instance-name> . This is, for instance, the case
-in the fb_bpf or fb_otp.
+in the fb_bpf or fb_otp:
+
+	- bpfc ipv4.bpf > /proc/net/lana/fblock/fbbpfc
+	- dd if=/dev/urandom of=/proc/net/lana/fblock/fbotp
+	- cat /proc/net/lana/fblock/fbotp
+	- and so on ...
+
+Two functional blocks can be manually bound together by 3 different means:
+
+  1) fbctl bind fb1 fb0           // bind fb0 and fb1 (bidirectional)
+    --- fbctl unbind fb1 fb0
+  2) fbctl bind-i fb1 fb0         // bind fb0 and fb1 (in ingress direction)
+    --- fbctl unbind-i fb1 fb0
+  3) fbctl bind-e fb1 fb0         // bind fb0 and fb1 (in egress direction)
+    --- fbctl unbind-e fb1 fb0
+
+For unloading modules, first, all connections need to be unbound, all inter-
+functional block dependencies removed, so that first the individual fb_<name>.ko
+modules can be removed from the stack and then last but not least the lana.ko
+module.
+
+For functional block development, it pays of to also read Paul McKenney's Perfbook:
+ git clone git://git.kernel.org/pub/scm/linux/kernel/git/paulmck/perfbook.git
