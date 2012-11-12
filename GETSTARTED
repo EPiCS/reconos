@@ -462,4 +462,80 @@ space version of libreconos-ks:
 ++ Loading LANA kernel modules
 ------------------------------
 
-tba
+In order to load the build kernel modules, do the following:
+
+  1) insmod libreconos.ko  // if it was compiled for reconos
+  2) insmod lana.ko        // the core module
+  3) insmod fb_<name>.ko   // depending on what fb you want to use
+
+     e.g.:
+       insmod fb_eth.ko
+       insmod fb_dummy.ko
+       insmod fb_pflana.ko
+
+Now none of the loaded functional blocks are active, yet. They have only been
+registered to a functional block builder with a constructor and destructor as
+well as a type identifier. To add instances of these functional blocks into the
+LANA stack, do the following:
+
+  1) vlink ethernet hook eth0          //vlink, since it's a vlink block
+    --- vlink ethernet unhook eth0
+  2) fbctl add fb0 ch.ethz.csg.dummy   //add dummy fb
+    --- fbctl rm fb0
+
+In case of a PF_LANA module, an instance will appear when a PF_LANA socket has
+been opened by an application.
+
+Now cat /proc/net/lana/fblocks shows functional block instances that are
+currently present in LANA with many information about them:
+
+# cat /proc/net/lana/fblocks 
+name|type|address|idp|refcnt|bindings|transition|mapping|pkts|bytes|dropped|duration (jiffies)|properties
+fb0 ch.ethz.csg.dummy ffff88021fccd000 1 1 [] norm sw 0 0 0 0 [reliable privacy]
+fb1 ch.ethz.csg.dummy ffff8802300a6000 2 1 [] norm sw 0 0 0 0 [reliable privacy]
+fb2 ch.ethz.csg.irr ffff88021fccd100 3 1 [] norm sw 0 0 0 0 [reliable]
+
+In case a block gets bound via the bind/bind-e/bind-i command, dependencies
+(in form of idps) become visible in this procfs file as well (fb1 was bound
+with fb2 and eth0):
+
+# cat /proc/net/lana/fblocks 
+name|type|address|idp|refcnt|bindings|transition|mapping|pkts|bytes|dropped|duration (jiffies)|properties
+fb0 ch.ethz.csg.dummy ffff88021fccd000 1 1 [] norm sw 0 0 0 0 [reliable privacy]
+fb1 ch.ethz.csg.dummy ffff8802300a6000 2 7 [4 3] norm sw 0 0 0 0 [reliable privacy]
+fb2 ch.ethz.csg.irr ffff88021fccd100 3 4 [2] norm sw 0 0 0 0 [reliable]
+eth0 vlink ffff88021fccd200 4 4 [2] norm sw 0 0 0 0 []
+
+Field descriptions:
+	- name: fb instance name
+	- type: fb instance type
+	- address: pointer to instance structure
+	- idp: idp number
+	- refcnt: reference/usage counter
+	- bindings: list of dependencies to other fbs
+	- transition: flag if fblock is in transition phase
+	- mapping: shows if fblock runs in sw or hw
+	- pkts: # of packets that passed this fblock instance
+	- bytes: # of bytes that passed this fblock instance
+	- dropped: # of dropped packets from this instance
+	- duration: execution time of this fblock in jiffies
+	- properties: list of human readable string properties
+
+Once a eth0 (et al.) functional block was initialized via vlink, it is still
+possible to communicate with the old stack. Thus, dual-stack functionality is
+enabled. In order to gather statistics about LANA-stack only packets, display
+them via the PPE's (packet processing engine) procfs file:
+
+# cat /proc/net/lana/ppe 
+cpu|pkts|bytes|fblocks|timer-call|timer-cpu-miss|backlog-queue
+CPU0:	0	0	0	10700	0	0
+CPU1:	0	0	0	0	0	0
+
+Field descriptions:
+	- cpu: ksoftirqd execution cpu
+	- pkts: # of packets that passed this CPU's PPE
+	- bytes: # of bytes that passed this CPU's PPE
+	- fblocks: # of fblocks that passed this CPU's PPE
+	- timer-call: # of timer calls to invoke this CPU's PPE
+	- timer-cpu-miss: # of times a timer call was scheduled on a wrong CPU (non-caller CPU)
+	- backlog-queue: size of backlogged packets
