@@ -288,7 +288,7 @@ int vlink_procfs_props(char *buff, size_t len)
 	vlink_lock();
 	for (i = 0; i < MAX_VLINK_SUBSYSTEMS && curr < len; ++i) {
 		if (vlink_subsystem_table[i]) {
-			curr += sprintf(buff + curr, "%s [] 0\n",
+			curr += sprintf(buff + curr, "%s []\n",
 					vlink_subsystem_table[i]->name);
 		}
 	}
