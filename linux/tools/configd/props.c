@@ -55,7 +55,7 @@ int prop_str_tab_put_idx(char *property)
 {
 	int idx = -1, i;
 	for (i = 0; i < array_size(property_str_tab); ++i) {
-		if (!strcmp(property_str_tab[i], property))
+		if (property_str_tab[i] && !strcmp(property_str_tab[i], property))
 			return i;
 		if (property_str_tab[i] != NULL)
 			continue;
@@ -182,21 +182,24 @@ static void *property_fetcher(void *null)
 			// prop_str_tab_put_idx(char*)
 //			while (!stop && (j = strtoul(ptr, &nptr, 10))) {
 			while (!stop) {
-				//beginning: ptr
-				//end: nptr
 				nptr = ptr;
-				while (*nptr != ' ' || *nptr != ']')
+				while (*nptr != ' ' && *nptr != ']') {
 					nptr++;
-				if (*nptr == ' ') {
+				}
+				if (*nptr == ' ' || *nptr == ']') {
 					int tmp;
+					char foo;
+					foo = *nptr;
 					*nptr = '\0';
 					table[elems].props[i++] = tmp = prop_str_tab_put_idx(ptr);
-					printd("Added %s (%d) to %s.\n",
-						ptr, tmp, table[elems].name);
 					ptr = nptr + 1;
-				} else if (*nptr != ']') {
-					stop = 1;
+					*nptr = foo;
 				}
+				if (*nptr == ']') {
+					stop = 1;
+					continue;
+				}
+
 //				if (!nptr)
 //					break;
 //				if (i + 1 >= MAX_PROPS)
