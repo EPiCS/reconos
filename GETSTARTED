@@ -371,13 +371,13 @@ can be obtained via apt-get with the following packages:
   (a parser generator that is compatible with YACC, needed for bpfc)
 
 * libcelt0-0 and libcelt-dev
-  (CELT codec, needed fot the LANA application)
+  (CELT codec, needed for the LANA voice application)
 
 * libspeexdsp1 and libspeexdsp-dev
-  (Speex DSP, needed fot the LANA application)
+  (Speex DSP, needed for the LANA voice application)
 
 * libasound2 and libasound2-dev
-  (ALSA lib, needed fot the LANA application)
+  (ALSA lib, needed for the LANA voice application)
 
 Optionally, it might be useful to port the Kernel Source Level Debugger (kgdb)
 and the Kernel Source Level Debugger over Ethernet (kgdboe) without too much
