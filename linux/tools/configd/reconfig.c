@@ -228,10 +228,10 @@ static int issamepipe(void)
 
 void commit_vstack(char *appname)
 {
-	int i, doit=0;
+	int i;//, doit=0;
 	char name[FBNAMSIZ];
 	git_SHA_CTX sha;
-	unsigned char hashout[20], hash[40];
+	unsigned char hashout[20];//, hash[40];
 	char hashfoo[2048];
 	off_t l = 0;
 	char hashopt[1024], str[64];

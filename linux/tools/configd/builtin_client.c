@@ -17,11 +17,12 @@
 #include "xutils.h"
 
 #define SOCK_ADDR	"/tmp/configdsock"
+#define MAX_PROPS	32
 
 struct bind_msg {
 	char name[FBNAMSIZ];
 	char app[FBNAMSIZ];
-	enum fblock_props props[MAX_PROPS];
+	char props[MAX_PROPS][10];
 	int flags;
 };
 
@@ -74,7 +75,7 @@ int main(int argc, char **argv)
 	if (!strcmp("client", argv[1])) {
 		server = 0;
 		strcpy(bmsg->app, "http");
-		bmsg->props[0] = RELIABLE;
+		strcpy(bmsg->props[0], "reliable");
 		bmsg->flags = TYPE_CLIENT;
 		printf("client!\n");
 	} else {
@@ -89,10 +90,10 @@ int main(int argc, char **argv)
 		panic("Cannot do ioctl!\n");
 
 	printf("our instance: %s\n", bmsg->name);
-	printf("our requirements: ");
-	for (i = 0; i < 2; ++i)
-		printf("%s ", fblock_props_to_str[bmsg->props[i]]);
-	printf("\n");
+//	printf("our requirements: ");
+//	for (i = 0; i < 2; ++i)
+//		printf("%s ", fblock_props_to_str[bmsg->props[i]]);
+//	printf("\n");
 
 	ret = bind_config(bmsg);
 	if (ret < 0)

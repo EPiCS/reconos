@@ -29,7 +29,7 @@ extern sig_atomic_t sigint, server;
 struct bind_msg {
 	char name[FBNAMSIZ];
 	char app[FBNAMSIZ];
-	enum fblock_props props[MAX_PROPS];
+	char props[MAX_PROPS][10];
 	int flags;
 };
 
@@ -56,16 +56,24 @@ static char *bin2hex_compat(uint8_t *hash, size_t lhsh, char *str, size_t lstr)
 
 static int ipc_do_configure_client(struct bind_msg *bmsg)
 {
-	int ret, i;
+	int ret, i, propids[32];
 	char type[TYPNAMSIZ];
 	size_t num = 0, orig;
 	git_SHA_CTX sha;
-	unsigned char hashout[20], hash[40];
+	unsigned char hashout[20];//, hash[40];
 	char hashopt[1024], str[64];
 
+	memset(propids, 0, sizeof(propids));
 	for (i = 0; i < MAX_PROPS; ++i) {
-		if (bmsg->props[i] != 0)
+		propids[i] = prop_str_tab_get_idx(bmsg->props[i]);
+		if (propids[i] >= 0) {
 			num++;
+			printd("Requested property: %s - %d\n", bmsg->props[i], propids[i]);
+		} else {
+			return -EINVAL;
+		}
+//		if (bmsg->props[i] != 0)
+//			num++;
 	}
 
 	bind_elems_in_stack(lower_fb_name, bmsg->name);
@@ -77,7 +85,7 @@ static int ipc_do_configure_client(struct bind_msg *bmsg)
 	printd("%s bound to eth0!\n", bmsg->name);
 
 	memset(hashopt, 0, sizeof(hashopt));
-	sprintf(hashopt, sizeof(hashopt) - 1,
+	snprintf(hashopt, sizeof(hashopt) - 1,
 		"ch.ethz.csg.eth-ch.ethz.csg.pf_lana::%s",
 		bmsg->app);
 
@@ -105,7 +113,7 @@ static int ipc_do_configure_client(struct bind_msg *bmsg)
 	}else if (bmsg->flags == TYPE_CLIENT) {
 		orig = num;
 		server = 0;
-		while ((ret = find_type_by_properties(type, bmsg->props, &num)) >= -32) {
+		while ((ret = find_type_by_properties(type, /*bmsg->props*/propids, &num)) >= -32) {
 			char name[FBNAMSIZ];
 			printd("Found match for %s: %s,%d (satisfied %zu of %zu)\n",
 			       bmsg->name, type, ret, orig - num, orig);

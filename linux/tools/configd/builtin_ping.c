@@ -17,11 +17,13 @@
 #include "xutils.h"
 
 #define SOCK_ADDR	"/tmp/configdsock"
+#define MAX_PROPS	32
 
 struct bind_msg {
 	char name[FBNAMSIZ];
 	char app[FBNAMSIZ];
-	enum fblock_props props[MAX_PROPS];
+	char props[MAX_PROPS][10];
+//	enum fblock_props props[MAX_PROPS];
 	int flags;
 };
 
@@ -80,7 +82,8 @@ int main(int argc, char **argv)
 	memset(buff, 0, sizeof(buff));
 	bmsg = (struct bind_msg *) buff;
 	if (client) {
-		bmsg->props[0] = RELIABLE;
+//		bmsg->props[0] = RELIABLE;
+		strcpy(bmsg->props[0], "reliable");
 		strcpy(bmsg->app, "ping");
 		bmsg->flags = TYPE_CLIENT;
 	} else {
