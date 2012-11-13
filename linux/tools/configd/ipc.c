@@ -65,6 +65,8 @@ static int ipc_do_configure_client(struct bind_msg *bmsg)
 
 	memset(propids, 0, sizeof(propids));
 	for (i = 0; i < MAX_PROPS; ++i) {
+		if (strlen(bmsg->props[i]) == 0)
+			continue;
 		propids[i] = prop_str_tab_get_idx(bmsg->props[i]);
 		if (propids[i] >= 0) {
 			num++;
