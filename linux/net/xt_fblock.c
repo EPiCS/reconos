@@ -823,7 +823,7 @@ static int procfs_fblocks(char *page, char **start, off_t offset,
 	len += sprintf(page + len,
 		       "name|type|address|idp|refcnt|bindings|"
 		       "transition|mapping|pkts|bytes|dropped|"
-		       "duration (jiffies)|properties|sprio\n");
+		       "duration (jiffies)|properties\n");
 
 	rcu_read_lock();
 	for (i = 0; i <= max; ++i) {
