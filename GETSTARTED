@@ -613,6 +613,80 @@ binding to a functional block is:
      dropped for unknown hashes.
   3) For egress messages, use the normal bind or bind-e
 
+Simple example client (without using configd), some code adaptations may still
+be needed, but are easy to change:
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <sys/un.h>
+#include <unistd.h>
+#include <errno.h>
+#include <string.h>
+#include <stdint.h>
+#include <sys/ioctl.h>
+#include <linux/netlink.h>
+#include <linux/types.h>
+#include <linux/if.h>
+
+#include "xt_vlink.h"
+#include "xt_fblock.h"
+#include "xutils.h"
+
+int main(int argc, char **argv)
+{
+	int sock, ret, i, server = 0;
+	char buff[512];
+
+	if (argc == 1)
+		panic("Usage: %s <client/server>\n", argv[0]);
+
+	sock = socket(27, SOCK_RAW, 0);
+	if (sock < 0)
+		panic("Cannot create socket!\n");
+
+	if (!strcmp("client", argv[1]))
+		server = 0;
+	else
+		server = 1;
+
+	getchar(); // do the manual binding here, not needed in configd
+
+	memset(buff, 0xff, sizeof(buff));
+	while (1) {
+		if (server) {
+			ret = sendto(sock, buff, 64, 0, NULL, 0);
+			if (ret < 0) {
+				printf("Error: ret:%d, errno:%d\n", ret, errno);
+				continue;
+			}
+			printf("Sent: ");
+			for (i = 0; i < 64; ++i)
+				printf("%02x ", (uint8_t) buff[i]);
+			printf("\n");
+			sleep(1);
+		} else {
+			ret = recvfrom(sock, buff, 64, 0, NULL, NULL);
+			if (ret < 0) {
+				if (errno != 11)
+					printf("Error: ret:%d, errno:%d\n", ret, errno);
+				continue;
+			}
+			printf("Got: ");
+			for (i = 0; i < 64; ++i)
+				printf("%02x ", (uint8_t) buff[i]);
+			printf("\n");
+		}
+	}
+
+	close(sock);
+	return 0;
+}
+
+After compilation, run the a.out and when execution stops at getchar(), do the
+manual fbctl bind in your LANA stack, then press a character to continue a.out.
+
 For functional block development, it pays of to also read Paul McKenney's Perfbook:
  git clone git://git.kernel.org/pub/scm/linux/kernel/git/paulmck/perfbook.git
 
