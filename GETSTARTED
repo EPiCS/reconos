@@ -601,6 +601,22 @@ The same thing counts vice versa (where the state is transferred from hw to sw):
   2) fbctl fb0 unflag hw
   3) fbctl fb0 unflag trans
 
+For the state transfer itself, have a look at the fb_dummy functions:
+
+	- fb_dummy_linearize(): *flat-copies* internal memory into a binary
+				image which is exported to user space via
+				linux/net/xt_conf.c .
+
+	- fb_dummy_delinearize(): reverse operation of fb_dummy_linearize().
+
+A device file that is named /dev/lana_ei_cfg must be used to import
+the data into user space:
+	1) open(/dev/lana_ei_cfg)
+	2) ioctl(2) with wanted fbblock name
+	3) read(2) for extracting state (e.g. sw->hw) --> fb_dummy_linearize() called
+	4) write(2) for setting state (e.g. hw->sw) --> fb_dummy_delinearize() called
+	5) close(2)
+
 Note that ethernet functional blocks have a different notion of binding with
 functional blocks, since this was changed/introduced with configd. Depending
 on the packet's internal hash, fb_eth multiplexes packets to different fbs.
