@@ -617,6 +617,45 @@ the data into user space:
 	4) write(2) for setting state (e.g. hw->sw) --> fb_dummy_delinearize() called
 	5) close(2)
 
+Note that linearize/delinearize functions are specific to functional block
+implementations, and must be implemented for each functional block separately.
+
+A similar notion is present for the configd-internal interface. For inter-node
+communication (configd's stack negotiation), the device file /dev/lana_re_cfg
+must be used in the same way:
+	1) open(/dev/lana_re_cfg)
+	2) ioctl(2) with wanted fbblock name
+	3) read(2)/poll(2) for receiving remote config data
+	4) write(2) for sending config data to remote
+	5) close(2)
+
+The read(2) is blocking through a wait_event_interruptible(), but also poll
+can be used for the same. xt_conf.c contains an internal skb_queue where skbs
+are collected and pushed to user space for the receive path. Thus, the waitqueue
+is woken up when a read(2) was executed and a new skb comes in. The packet path
+is the following: a stack configuration packet traverses the stack like a usual
+packet up to a PF_LANA fblock. Inside the PF_LANA receive handler, a small
+header field is examined if the payload contains a i) data packet or ii)
+configuration packet. In case of configuration packet, the skb is enqueued inside
+xt_conf.c's skb_queue, otherwise it's processed as usual in the BSD socket
+interface.
+
+The write(2) call determines which fblock name was selected previously through
+ioctl(2). If this check was valid, it sets up an event message for this fblock
+with the user configuration payload for the remote target and sends this through
+a fb->event_rx(&fbn.nb, FBLOCK_CTL_PUSH, &args) message. Thus, the PF_LANA event
+handler is executed and internally calls ...
+	case FBLOCK_CTL_PUSH: {
+		struct lana_sock_io_args *msg = args;
+		ret = __lana_proto_sendmsg(NULL, &fb_priv->sock_self->sk,
+				 	   (void *) msg->buff, msg->len,
+					   PFLANA_CTL_TYPE_CONF,
+					   __FROM_FILE, 0);
+		break; }
+... for this event, so that the configuration packet will be "tagged" as a cfg
+packet inside __lana_proto_sendmsg() and traverses the same path in the stack
+as data packets.
+
 Note that ethernet functional blocks have a different notion of binding with
 functional blocks, since this was changed/introduced with configd. Depending
 on the packet's internal hash, fb_eth multiplexes packets to different fbs.
