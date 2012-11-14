@@ -687,6 +687,20 @@ int main(int argc, char **argv)
 After compilation, run the a.out and when execution stops at getchar(), do the
 manual fbctl bind in your LANA stack, then press a character to continue a.out.
 
+For a more throughout guide for sensord and configd, read the documentation about
+them. Here's just a short introduction:
+
+I assume you already did:
+	- copy the so-plugins into /opt/sensord/plugins
+
+Then, you can start the full system in the following (+ look at the syslog
+output):
+
+  1) load all kernel module
+  2) start sensord: ./sensord &
+  3) start configd: ./config testconfig.txt
+  4) start a config client: ./builtin_ping server
+
 For functional block development, it pays of to also read Paul McKenney's Perfbook:
  git clone git://git.kernel.org/pub/scm/linux/kernel/git/paulmck/perfbook.git
 
