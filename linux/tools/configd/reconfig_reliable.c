@@ -28,13 +28,14 @@ extern char srv_app[FBNAMSIZ];
 static void __reconfig_reliability_check_for_inclusion(void)
 {
 	int ret;
-	enum fblock_props needed[MAX_PROPS];
+	//enum fblock_props needed[MAX_PROPS];
+	int needed[MAX_PROPS];
 	size_t num = 0, orig;
 
 	copy_pipeline_to_vpipeline();
 
 	memset(needed, 0, sizeof(needed));
-	needed[0] = RELIABLE;
+	needed[0] = prop_str_tab_get_idx("reliable");
 
 	orig = num = 1;
 	while ((ret = find_type_by_properties(type_reliability, needed, &num)) >= -32) {

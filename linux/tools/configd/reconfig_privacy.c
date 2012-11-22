@@ -19,7 +19,7 @@
 #include "xt_fblock.h"
 
 static sig_atomic_t need_privacy = 0, need_privacy_switched = 0;
-static char name_privacy[FBNAMSIZ];
+//static char name_privacy[FBNAMSIZ];
 
 void reconfig_notify_privacy(int type)
 {

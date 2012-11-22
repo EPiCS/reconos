@@ -21,15 +21,50 @@ extern sig_atomic_t sigint;
 
 struct prop_type {
 	char name[FBNAMSIZ];
-	enum fblock_props props[MAX_PROPS];
+	int props[MAX_PROPS];
 	int prio;
 };
 
 #define MAX_ELEMS	1024
 
+static char *property_str_tab[MAX_ELEMS];
 static struct prop_type table[MAX_ELEMS];
 static size_t elems;
 static struct mutexlock lock;
+
+static inline void init_prop_str_tab(void)
+{
+	memset(property_str_tab, 0, sizeof(property_str_tab));
+}
+
+int prop_str_tab_get_idx(char *property)
+{
+	int idx = -1, i;
+	for (i = 0; i < array_size(property_str_tab); ++i) {
+		if (property_str_tab[i] == NULL)
+			continue;
+		if (!strcmp(property, property_str_tab[i])) {
+			idx = i;
+			break;
+		}
+	}
+	return idx;
+}
+
+int prop_str_tab_put_idx(char *property)
+{
+	int idx = -1, i;
+	for (i = 0; i < array_size(property_str_tab); ++i) {
+		if (property_str_tab[i] && !strcmp(property_str_tab[i], property))
+			return i;
+		if (property_str_tab[i] != NULL)
+			continue;
+		property_str_tab[i] = xstrdup(property);
+		idx = i;
+		break;
+	}
+	return idx;
+}
 
 int fbtype_is_available(char name[FBNAMSIZ])
 {
@@ -48,7 +83,7 @@ int fbtype_is_available(char name[FBNAMSIZ])
 }
 
 int find_type_by_properties(char name[FBNAMSIZ],
-			    enum fblock_props needed[MAX_PROPS],
+			    int needed[MAX_PROPS],
 			    size_t *num)
 {
 	size_t sat, sat_max = 0;
@@ -103,7 +138,7 @@ int find_type_by_properties(char name[FBNAMSIZ],
 
 static void *property_fetcher(void *null)
 {
-	int first = 1, i, j, stop;
+	int first = 1, i, stop;
 	FILE *fp;
 	char buff[1024], *ptr, *nptr;
 	char type[128];
@@ -143,16 +178,37 @@ static void *property_fetcher(void *null)
 			i = stop = 0;
 			ptr = strstr(buff, "[");
 			ptr++;
-			while (!stop && (j = strtoul(ptr, &nptr, 10))) {
-				if (!nptr)
-					break;
-				if (i + 1 >= MAX_PROPS)
-					panic("Too many properties!\n");
-				table[elems].props[i++] = j;
-				if (*nptr == ']')
+			//XXX
+			// prop_str_tab_put_idx(char*)
+//			while (!stop && (j = strtoul(ptr, &nptr, 10))) {
+			while (!stop) {
+				nptr = ptr;
+				while (*nptr != ' ' && *nptr != ']') {
+					nptr++;
+				}
+				if (*nptr == ' ' || *nptr == ']') {
+					int tmp;
+					char foo;
+					foo = *nptr;
+					*nptr = '\0';
+					table[elems].props[i++] = tmp = prop_str_tab_put_idx(ptr);
+					ptr = nptr + 1;
+					*nptr = foo;
+				}
+				if (*nptr == ']') {
 					stop = 1;
-				nptr++;
-				ptr = nptr;
+					continue;
+				}
+
+//				if (!nptr)
+//					break;
+//				if (i + 1 >= MAX_PROPS)
+//					panic("Too many properties!\n");
+//				table[elems].props[i++] = j;
+//				if (*nptr == ']')
+//					stop = 1;
+//				nptr++;
+//				ptr = nptr;
 			}
 
 			table[elems].prio = strtol(ptr, &nptr, 10);
@@ -172,6 +228,7 @@ static void *property_fetcher(void *null)
 
 void start_property_fetcher(void)
 {
+	init_prop_str_tab();
 	int ret = pthread_create(&thread, NULL, property_fetcher, NULL);
 	if (ret < 0)
 		panic("Cannot create thread!\n");

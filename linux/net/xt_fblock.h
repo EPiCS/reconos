@@ -75,14 +75,6 @@ enum fblock_mode {
 #define FBLOCK_MEM_PRESSURE	0x0007	/* Socket under memory pressure */
 #define FBLOCK_CTL_PUSH		0x0008
 
-#else
-static const char *fblock_props_to_str[] = {
-	"none",
-	"reliable",
-	"privacy",
-	"dummy",
-	"dummy",
-};
 #endif /* __KERNEL__ */
 
 #define DEBUG(fnt)
@@ -90,17 +82,6 @@ static const char *fblock_props_to_str[] = {
 	
 #define FBNAMSIZ		(IFNAMSIZ*2)
 #define TYPNAMSIZ		(FBNAMSIZ*2)
-
-#define MAX_PROPS	32
-
-enum fblock_props {
-	NONE = 0,
-	RELIABLE,
-	PRIVACY,
-	DUMMY,
-	DUMMY2,
-	__MAX_PROP,
-};
 
 #define TYPE_SERVER 1
 #define TYPE_CLIENT 2
@@ -128,8 +109,8 @@ struct fblock_factory {
 	struct fblock *(*ctor)(char *name);
 	void (*dtor)(struct fblock *fb);
 	void (*dtor_outside_rcu)(struct fblock *fb);
-	enum fblock_props properties[MAX_PROPS];
 	struct list_head e_list;
+	char *properties[16];
 } ____cacheline_aligned;
 
 struct fblock_notifier {
@@ -168,7 +149,6 @@ struct fblock {
 	atomic_t refcnt;
 	idp_t idp;
 	volatile unsigned int flags;
-	int prio;	/* XXX: replace with something better */
 	spinlock_t lock;
 	struct fblock_stats __percpu *stats;
 } ____cacheline_aligned;
@@ -466,6 +446,10 @@ enum fblock_userctl_groups {
 #define NETLINK_USERCTL_CMD_UNSET_TRANS		10
 #define NETLINK_USERCTL_CMD_SET_HW		11
 #define NETLINK_USERCTL_CMD_UNSET_HW		12
+#define NETLINK_USERCTL_CMD_BIND_E		13
+#define NETLINK_USERCTL_CMD_BIND_I		14
+#define NETLINK_USERCTL_CMD_UNBIND_E		15
+#define NETLINK_USERCTL_CMD_UNBIND_I		16
 
 struct lananlmsg_add {
 	char name[FBNAMSIZ];
@@ -502,6 +486,8 @@ struct lananlmsg {
 	uint8_t buff[USERCTL_BUF_LEN];
 };
 
+#ifdef __KERNEL__
+
 extern int init_ei_conf(void);
 extern void cleanup_ei_conf(void);
 
@@ -512,5 +498,11 @@ static inline void fblock_print_time(char *str)
 	ktime_get_ts(&ts);
 	printk("%s: %lds,%ldns\n", str, ts.tv_sec, ts.tv_nsec);
 }
+
+#endif
+
+#define BIND_TYPE_NORM		0
+#define BIND_TYPE_EGR		1
+#define BIND_TYPE_INGR		2
 
 #endif /* XT_FBLOCK_H */

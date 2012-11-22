@@ -19,6 +19,8 @@ fbctl:
 			     fbctl bind fb1 eth0
 			     fbctl unbind fb1 eth0
 			     fbctl rm fb1
+		Note that a bind is equivalent to a bind-e and bind-i, e.g.
+		fbctl bind fb1 fb0 := fbctl bind-i fb0 fb1 && fbctl bind-e fb1 fb0
 
 fbprop:
 		This tool prints a lana property in a human readable format.

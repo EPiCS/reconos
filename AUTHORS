@@ -1,8 +1,23 @@
 University of Paderborn:
+
  * Andreas Agne <agne@upb.de>
  * Markus Happe <markus.happe@upb.de>
  * Sebastian Meisner <sebastian.meisner@upb.de>
 
 ETH Zurich:
- * Daniel Borkmann <daniel.borkmann@tik.ee.ethz.ch>
+
+ * Daniel Borkmann <daniel.borkmann@tik.ee.ethz.ch> (<daniel@netsniff-ng.org>)
  * Ariane Keller <ariane.keller@tik.ee.ethz.ch>
+
+~~~
+Submitting Patches:
+
+For patch submissions, send them to the public mailing list to
+reconos-devel@lists.reconos.de as an inline Git diff (note, you should use
+clients such as mutt [1] so that whitespaces/linebreaks are not replaced),
+or open a pull request on the ReconOS Github site. For patch submissions
+regarding the network debugging toolkit netsniff-ng, have a look at its
+separate website [2] for how to submit patches.
+
+  [1] http://www.mutt.org/
+  [2] http://netsniff-ng.org/

@@ -1,4 +1,4 @@
-From Richard Huber:
+From Richard Huber (first part) / Daniel Borkmann (second part):
 
 * Install Microblaze GNU Tools on Debian *
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -313,4 +313,450 @@ Start the MicroBlaze GNU Debugger:
   Breakpoint 1, main () at ../src/helloworld.c:28
   28      init_platform();
 
-That's it!
+ That's it!
+
+* Getting started with networking *
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Also have a look at:
+	- docs/networking ... for ...
+		- A big picture/overview of ETH parts of ReconOS
+		- LANA plugin howto
+		- sensord plugin howto
+		- Two ANCS conf posters, abstracts
+		- Daniel's Mater's thesis
+		- Summary of networking tools
+		- Summary of networking-related demos
+		- Summary of networking-related designs
+	- docs/tools ... for ...
+		- configd description/howto
+		- sensord description/howto
+		- timedb description/howto
+		- information about logging
+
+This part presents a short tutorial for building the Linux kernel, LANA
+modules and the LANA example application, for loading LANA into the kernel
+and for developing own functional blocks. This tutorial assumes that you
+are using Debian GNU/Linux 6.0. The basic set of tools that are needed
+can be obtained via apt-get with the following packages:
+
+* build-essential
+  (a Debian meta-package containing basic utilities and libraries for
+   building software like gcc, make, g++, coreutils, bsdutils, util-linux,
+   sed, tar and others)
+
+* gdb
+  (the GNU debugger)
+
+* libncurses5 and libncurses5-dev
+  (the graphical ncurses library, needed for ifpps)
+
+* git
+  (the distributed version control system)
+
+* grub or grub2
+  (a system boot loader, grub2 is default on most installations)
+
+* vim, uemacs or similar
+  (a command-line text editor)
+
+* minicom
+  (terminal emulation and text-based modem, for remote debugging via RS232)
+
+* coccinelle
+  (a semantic patching tool for C)
+
+* flex
+  (a fast lexical analyzer generator, needed for bpfc)
+
+* bison
+  (a parser generator that is compatible with YACC, needed for bpfc)
+
+* libcelt0-0 and libcelt-dev
+  (CELT codec, needed for the LANA voice application)
+
+* libspeexdsp1 and libspeexdsp-dev
+  (Speex DSP, needed for the LANA voice application)
+
+* libasound2 and libasound2-dev
+  (ALSA lib, needed for the LANA voice application)
+
+Optionally, it might be useful to port the Kernel Source Level Debugger (kgdb)
+and the Kernel Source Level Debugger over Ethernet (kgdboe) without too much
+efforts from (http://kgdb.linsyssoft.com/intro.htm) for kernel debugging to the
+latest Linux release, since Linux explicitly avoids shipping a debugger within
+the kernel.
+
+++ Building Linux and LANA
+--------------------------
+
+For getting to know git, [http://linux.yyz.us/git-howto.html] gives a great
+introduction.
+
+In case you want a host-only LANA deployment (non-ML605), then do the
+following:
+
+ 1) git clone git://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git
+ 2) cd linux
+ 3) git checkout v2.6.37
+ 4) make menuconfig
+    -- configure the kernel to your needs
+    -- simplest case simply exit+save
+ 5) make -j `grep "^processor" /proc/cpuinfo | wc -l`
+ 6) make install
+ 7) make modules_install
+ 8) cd /boot/
+ 9) mkinitramfs -o initrd.img-2.6.37 2.6.37
+10) update-grub
+11) Boot into your new kernel
+
+After the reboot, the LANA repository can then be fetched via Git with the
+command (if not yet done):
+
+  git clone git://github.com/EPiCS/reconos.git
+
+and compiled through the following steps:
+
+ 1) cd reconos/linux/net/
+ 2) make
+
+For user space tools, change into the following directories (have a look
+into the tool description within the doc folder) and call 'make':
+
+For manual stack configuration:
+  - linux/tools/fbctl
+  - linux/tools/vlink
+
+For automatic stack configuration:
+  - linux/tools/sensord
+  - linux/tools/configd
+
+Misc tools:
+  - linux/tools/timedb
+  - linux/tools/fbviz
+
+In case you're cross-compiling these tools, comment in from the Makefiles:
+
+ CC	=	microblaze-unknown-linux-gnu-gcc
+ AR	=	microblaze-unknown-linux-gnu-ar
+
+The same for cross compilation of the kernel modules, comment in the
+following:
+
+ ARCH		=	microblaze
+ CROSS_COMPILE	=	microblaze-unknown-linux-gnu-
+ KDIR		?=	~/linux-2.6-xlnx
+ EXTRA_CFLAGS	+=	-I$(PWD)/../reconos/libreconos-ks/
+ EXTRA_CFLAGS	+=	-DWITH_RECONOS
+
+ export ARCH CROSS_COMPILE
+
+and comment out:
+
+ MDIR     := /lib/modules/$(shell uname -r)
+ KDIR     := $(MDIR)/build
+
+Then re-execute make. Make sure you have installed all the gnu utils as
+described in Richard's howto.
+
+In case you want to run LANA on the ML605, you need to copy all relevant
+modules (*.ko) files and binaries to the compact flash card. Running it
+via nfs is no option, since you will likely loose connection from the
+moment you switch the kernel to your own stack.
+
+Make sure you have configured kernel module support for the ML605 Linux
+kernel, so that you can load these modules. In some old Paderborn kernel,
+this was not the case.
+
+In case you compile with -DWITH_RECONOS, then you also need the kernel
+space version of libreconos-ks:
+
+  1) cd linux/reconos/libreconos-ks
+  2) make
+  3) copy it to the cf card as well
+
+++ Loading LANA kernel modules
+------------------------------
+
+In order to load the build kernel modules, do the following:
+
+  1) insmod libreconos.ko  // if it was compiled for reconos
+  2) insmod lana.ko        // the core module
+  3) insmod fb_<name>.ko   // depending on what fb you want to use
+
+     e.g.:
+       insmod fb_eth.ko
+       insmod fb_dummy.ko
+       insmod fb_pflana.ko
+
+Now none of the loaded functional blocks are active, yet. They have only been
+registered to a functional block builder with a constructor and destructor as
+well as a type identifier. To add instances of these functional blocks into the
+LANA stack, do the following:
+
+  1) vlink ethernet hook eth0          //vlink, since it's a vlink block
+    --- vlink ethernet unhook eth0
+  2) fbctl add fb0 ch.ethz.csg.dummy   //add dummy fb
+    --- fbctl rm fb0
+
+In case of a PF_LANA module, an instance will appear when a PF_LANA socket has
+been opened by an application.
+
+Now cat /proc/net/lana/fblocks shows functional block instances that are
+currently present in LANA with many information about them:
+
+# cat /proc/net/lana/fblocks 
+name|type|address|idp|refcnt|bindings|transition|mapping|pkts|bytes|dropped|duration (jiffies)|properties
+fb0 ch.ethz.csg.dummy ffff88021fccd000 1 1 [] norm sw 0 0 0 0 [reliable privacy]
+fb1 ch.ethz.csg.dummy ffff8802300a6000 2 1 [] norm sw 0 0 0 0 [reliable privacy]
+fb2 ch.ethz.csg.irr ffff88021fccd100 3 1 [] norm sw 0 0 0 0 [reliable]
+
+In case a block gets bound via the bind/bind-e/bind-i command, dependencies
+(in form of idps) become visible in this procfs file as well (fb1 was bound
+with fb2 and eth0):
+
+# cat /proc/net/lana/fblocks 
+name|type|address|idp|refcnt|bindings|transition|mapping|pkts|bytes|dropped|duration (jiffies)|properties
+fb0 ch.ethz.csg.dummy ffff88021fccd000 1 1 [] norm sw 0 0 0 0 [reliable privacy]
+fb1 ch.ethz.csg.dummy ffff8802300a6000 2 7 [4 3] norm sw 0 0 0 0 [reliable privacy]
+fb2 ch.ethz.csg.irr ffff88021fccd100 3 4 [2] norm sw 0 0 0 0 [reliable]
+eth0 vlink ffff88021fccd200 4 4 [2] norm sw 0 0 0 0 []
+
+Field descriptions:
+	- name: fb instance name
+	- type: fb instance type
+	- address: pointer to instance structure
+	- idp: idp number
+	- refcnt: reference/usage counter
+	- bindings: list of dependencies to other fbs
+	- transition: flag if fblock is in transition phase
+	- mapping: shows if fblock runs in sw or hw
+	- pkts: # of packets that passed this fblock instance
+	- bytes: # of bytes that passed this fblock instance
+	- dropped: # of dropped packets from this instance
+	- duration: execution time of this fblock in jiffies
+	- properties: list of human readable string properties
+
+Once a eth0 (et al.) functional block was initialized via vlink, it is still
+possible to communicate with the old stack. Thus, dual-stack functionality is
+enabled. In order to gather statistics about LANA-stack only packets, display
+them via the PPE's (packet processing engine) procfs file:
+
+# cat /proc/net/lana/ppe 
+cpu|pkts|bytes|fblocks|timer-call|timer-cpu-miss|backlog-queue
+CPU0:	0	0	0	10700	0	0
+CPU1:	0	0	0	0	0	0
+
+Field descriptions:
+	- cpu: ksoftirqd execution cpu
+	- pkts: # of packets that passed this CPU's PPE
+	- bytes: # of bytes that passed this CPU's PPE
+	- fblocks: # of fblocks that passed this CPU's PPE
+	- timer-call: # of timer calls to invoke this CPU's PPE
+	- timer-cpu-miss: # of times a timer call was scheduled on a wrong CPU (non-caller CPU)
+	- backlog-queue: size of backlogged packets
+
+Some functional block instances create internal fb-specific files located
+under /proc/net/lana/fblock/<instance-name> . This is, for instance, the case
+in the fb_bpf or fb_otp:
+
+	- bpfc ipv4.bpf > /proc/net/lana/fblock/fbbpfc
+	- dd if=/dev/urandom of=/proc/net/lana/fblock/fbotp
+	- cat /proc/net/lana/fblock/fbotp
+	- and so on ...
+
+Two functional blocks can be manually bound together by 3 different means:
+
+  1) fbctl bind fb1 fb0           // bind fb0 and fb1 (bidirectional)
+    --- fbctl unbind fb1 fb0
+  2) fbctl bind-i fb1 fb0         // bind fb0 and fb1 (in ingress direction)
+    --- fbctl unbind-i fb1 fb0
+  3) fbctl bind-e fb1 fb0         // bind fb0 and fb1 (in egress direction)
+    --- fbctl unbind-e fb1 fb0
+
+For unloading modules, first, all connections need to be unbound, all inter-
+functional block dependencies removed, so that first the individual fb_<name>.ko
+modules can be removed from the stack and then last but not least the lana.ko
+module.
+
+Hw/sw offload: currently the ReconOS-based NoC offload engine has to be
+configured manually. This means that Xilinx partial reconfiguration does not
+yet work, so that a bitsream with built-in hw blocks has to be built. However,
+mid-term future work will focus on partial reconfiguration. In order to offload
+a functional block, a version in software has to exist and to be created. Then,
+we have to tell the PPE that our instance is currently in hardware, so that the
+PPE sends it down to the hw block and *not* to the next sw block. To do this,
+transfer the sw internal state to the hw block (Florian's work), and set the
+hw flag in the sw fblock via:
+
+  1) fbctl fb0 flag trans    // set into transition mode (packets are backlogged
+			     // and looped in PPE), used to transfer states
+  2) fbctl fb0 flag hw       // set as hardware flag, so that pkts are sent to hw block
+  3) fbctl fb0 unflag trans  // unset transition mode, backlogged packets are now
+			     // processed/forwarded normally (here: to the hardware)
+
+The same thing counts vice versa (where the state is transferred from hw to sw):
+
+  1) fbctl fb0 flag trans
+  2) fbctl fb0 unflag hw
+  3) fbctl fb0 unflag trans
+
+For the state transfer itself, have a look at the fb_dummy functions:
+
+	- fb_dummy_linearize(): *flat-copies* internal memory into a binary
+				image which is exported to user space via
+				linux/net/xt_conf.c .
+
+	- fb_dummy_delinearize(): reverse operation of fb_dummy_linearize().
+
+A device file that is named /dev/lana_ei_cfg must be used to import
+the data into user space:
+	1) open(/dev/lana_ei_cfg)
+	2) ioctl(2) with wanted fbblock name
+	3) read(2) for extracting state (e.g. sw->hw) --> fb_dummy_linearize() called
+	4) write(2) for setting state (e.g. hw->sw) --> fb_dummy_delinearize() called
+	5) close(2)
+
+Note that linearize/delinearize functions are specific to functional block
+implementations, and must be implemented for each functional block separately.
+
+A similar notion is present for the configd-internal interface. For inter-node
+communication (configd's stack negotiation), the device file /dev/lana_re_cfg
+must be used in the same way:
+	1) open(/dev/lana_re_cfg)
+	2) ioctl(2) with wanted fbblock name
+	3) read(2)/poll(2) for receiving remote config data
+	4) write(2) for sending config data to remote
+	5) close(2)
+
+The read(2) is blocking through a wait_event_interruptible(), but also poll
+can be used for the same. xt_conf.c contains an internal skb_queue where skbs
+are collected and pushed to user space for the receive path. Thus, the waitqueue
+is woken up when a read(2) was executed and a new skb comes in. The packet path
+is the following: a stack configuration packet traverses the stack like a usual
+packet up to a PF_LANA fblock. Inside the PF_LANA receive handler, a small
+header field is examined if the payload contains a i) data packet or ii)
+configuration packet. In case of configuration packet, the skb is enqueued inside
+xt_conf.c's skb_queue, otherwise it's processed as usual in the BSD socket
+interface.
+
+The write(2) call determines which fblock name was selected previously through
+ioctl(2). If this check was valid, it sets up an event message for this fblock
+with the user configuration payload for the remote target and sends this through
+a fb->event_rx(&fbn.nb, FBLOCK_CTL_PUSH, &args) message. Thus, the PF_LANA event
+handler is executed and internally calls ...
+	case FBLOCK_CTL_PUSH: {
+		struct lana_sock_io_args *msg = args;
+		ret = __lana_proto_sendmsg(NULL, &fb_priv->sock_self->sk,
+				 	   (void *) msg->buff, msg->len,
+					   PFLANA_CTL_TYPE_CONF,
+					   __FROM_FILE, 0);
+		break; }
+... for this event, so that the configuration packet will be "tagged" as a cfg
+packet inside __lana_proto_sendmsg() and traverses the same path in the stack
+as data packets.
+
+Note that ethernet functional blocks have a different notion of binding with
+functional blocks, since this was changed/introduced with configd. Depending
+on the packet's internal hash, fb_eth multiplexes packets to different fbs.
+The packet format looks like: <mac,mac,ether_type(0xabba),hash(sha1)>. Thus,
+binding to a functional block is:
+
+  1) fbctl set eth0 <sha1hash>=<fb-2-bind>
+	-- this will demultiplex ingress messages to fb's
+  2) Send packets in correct (header/hash) format, so that they're not
+     dropped for unknown hashes.
+  3) For egress messages, use the normal bind or bind-e
+
+Simple example client (without using configd), some code adaptations may still
+be needed, but are easy to change:
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <sys/un.h>
+#include <unistd.h>
+#include <errno.h>
+#include <string.h>
+#include <stdint.h>
+#include <sys/ioctl.h>
+#include <linux/netlink.h>
+#include <linux/types.h>
+#include <linux/if.h>
+
+#include "xt_vlink.h"
+#include "xt_fblock.h"
+#include "xutils.h"
+
+int main(int argc, char **argv)
+{
+	int sock, ret, i, server = 0;
+	char buff[512];
+
+	if (argc == 1)
+		panic("Usage: %s <client/server>\n", argv[0]);
+
+	sock = socket(27, SOCK_RAW, 0);
+	if (sock < 0)
+		panic("Cannot create socket!\n");
+
+	if (!strcmp("client", argv[1]))
+		server = 0;
+	else
+		server = 1;
+
+	getchar(); // do the manual binding here, not needed in configd
+
+	memset(buff, 0xff, sizeof(buff));
+	while (1) {
+		if (server) {
+			ret = sendto(sock, buff, 64, 0, NULL, 0);
+			if (ret < 0) {
+				printf("Error: ret:%d, errno:%d\n", ret, errno);
+				continue;
+			}
+			printf("Sent: ");
+			for (i = 0; i < 64; ++i)
+				printf("%02x ", (uint8_t) buff[i]);
+			printf("\n");
+			sleep(1);
+		} else {
+			ret = recvfrom(sock, buff, 64, 0, NULL, NULL);
+			if (ret < 0) {
+				if (errno != 11)
+					printf("Error: ret:%d, errno:%d\n", ret, errno);
+				continue;
+			}
+			printf("Got: ");
+			for (i = 0; i < 64; ++i)
+				printf("%02x ", (uint8_t) buff[i]);
+			printf("\n");
+		}
+	}
+
+	close(sock);
+	return 0;
+}
+
+After compilation, run the a.out and when execution stops at getchar(), do the
+manual fbctl bind in your LANA stack, then press a character to continue a.out.
+
+For a more throughout guide for sensord and configd, read the documentation about
+them. Here's just a short introduction:
+
+I assume you already did:
+	- copy the so-plugins into /opt/sensord/plugins
+
+Then, you can start the full system in the following (+ look at the syslog
+output):
+
+  1) load all kernel module
+  2) start sensord: ./sensord &
+  3) start configd: ./config testconfig.txt
+  4) start a config client: ./builtin_ping server
+
+For functional block development, it pays of to also read Paul McKenney's Perfbook:
+ git clone git://git.kernel.org/pub/scm/linux/kernel/git/paulmck/perfbook.git
+
+For further documents, look at getting started section of docs/networking/lana_sw.pdf

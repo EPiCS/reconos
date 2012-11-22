@@ -228,10 +228,10 @@ static int issamepipe(void)
 
 void commit_vstack(char *appname)
 {
-	int i, doit=0;
+	int i;//, doit=0;
 	char name[FBNAMSIZ];
 	git_SHA_CTX sha;
-	unsigned char hashout[20], hash[40];
+	unsigned char hashout[20];//, hash[40];
 	char hashfoo[2048];
 	off_t l = 0;
 	char hashopt[1024], str[64];
@@ -256,15 +256,11 @@ void commit_vstack(char *appname)
 	l += snprintf(hashfoo + l, sizeof(hashfoo) - 1, "ch.ethz.csg.pf_lana");
 	if (appname)
 		memcpy(glob_appname, appname, strlen(appname));
+	l += snprintf(hashfoo + l, sizeof(hashfoo) - 1, "::%s", glob_appname);
+
 	printd("Update hash for %s\n", glob_appname);
 	git_SHA1_Init(&sha);
 	git_SHA1_Update(&sha, hashfoo, strlen(hashfoo));
-	git_SHA1_Final(hash, &sha);
-	git_SHA1_Init(&sha);
-	git_SHA1_Update(&sha, glob_appname, strlen(glob_appname));
-	git_SHA1_Final(&hash[20], &sha);
-	git_SHA1_Init(&sha);
-	git_SHA1_Update(&sha, hash, sizeof(hash));
 	git_SHA1_Final(hashout, &sha);
 
 	memset(hashopt, 0, sizeof(hashopt));

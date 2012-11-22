@@ -17,17 +17,18 @@
 #include "xutils.h"
 
 #define SOCK_ADDR	"/tmp/configdsock"
+#define MAX_PROPS	32
 
 struct bind_msg {
 	char name[FBNAMSIZ];
 	char app[FBNAMSIZ];
-	enum fblock_props props[MAX_PROPS];
+	char props[MAX_PROPS][10];
 	int flags;
 };
 
 static int bind_config(struct bind_msg *bmsg)
 {
-	int sock;
+	int sock, rc;
 	ssize_t ret;
 	struct sockaddr_un saddr;
 	socklen_t slen;
@@ -49,8 +50,10 @@ static int bind_config(struct bind_msg *bmsg)
 	if (ret <= 0)
 		panic("Cannot write to server: %s\n", strerror(errno));
 
+	read(sock, &rc, sizeof(rc));
+
 	close(sock);
-	return 0;
+	return rc;
 }
 
 int main(int argc, char **argv)
@@ -72,7 +75,7 @@ int main(int argc, char **argv)
 	if (!strcmp("client", argv[1])) {
 		server = 0;
 		strcpy(bmsg->app, "http");
-		bmsg->props[0] = RELIABLE;
+		strcpy(bmsg->props[0], "reliable");
 		bmsg->flags = TYPE_CLIENT;
 		printf("client!\n");
 	} else {
@@ -87,10 +90,10 @@ int main(int argc, char **argv)
 		panic("Cannot do ioctl!\n");
 
 	printf("our instance: %s\n", bmsg->name);
-	printf("our requirements: ");
-	for (i = 0; i < 2; ++i)
-		printf("%s ", fblock_props_to_str[bmsg->props[i]]);
-	printf("\n");
+//	printf("our requirements: ");
+//	for (i = 0; i < 2; ++i)
+//		printf("%s ", fblock_props_to_str[bmsg->props[i]]);
+//	printf("\n");
 
 	ret = bind_config(bmsg);
 	if (ret < 0)

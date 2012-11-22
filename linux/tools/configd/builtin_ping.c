@@ -17,17 +17,19 @@
 #include "xutils.h"
 
 #define SOCK_ADDR	"/tmp/configdsock"
+#define MAX_PROPS	32
 
 struct bind_msg {
 	char name[FBNAMSIZ];
 	char app[FBNAMSIZ];
-	enum fblock_props props[MAX_PROPS];
+	char props[MAX_PROPS][10];
+//	enum fblock_props props[MAX_PROPS];
 	int flags;
 };
 
 static int bind_config(struct bind_msg *bmsg)
 {
-	int sock;
+	int sock, rc;
 	ssize_t ret;
 	struct sockaddr_un saddr;
 	socklen_t slen;
@@ -49,8 +51,10 @@ static int bind_config(struct bind_msg *bmsg)
 	if (ret <= 0)
 		panic("Cannot write to server: %s\n", strerror(errno));
 
+	read(sock, &rc, sizeof(rc));
+
 	close(sock);
-	return 0;
+	return rc;
 }
 
 int main(int argc, char **argv)
@@ -78,7 +82,8 @@ int main(int argc, char **argv)
 	memset(buff, 0, sizeof(buff));
 	bmsg = (struct bind_msg *) buff;
 	if (client) {
-		bmsg->props[0] = RELIABLE;
+//		bmsg->props[0] = RELIABLE;
+		strcpy(bmsg->props[0], "reliable");
 		strcpy(bmsg->app, "ping");
 		bmsg->flags = TYPE_CLIENT;
 	} else {
@@ -89,8 +94,6 @@ int main(int argc, char **argv)
 	ret = ioctl(sock, 35296, bmsg->name);
 	if (ret < 0)
 		panic("Cannot do ioctl!\n");
-
-//	getchar();
 
 	ret = bind_config(bmsg);
 	if (ret < 0)

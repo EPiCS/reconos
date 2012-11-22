@@ -29,7 +29,7 @@ extern sig_atomic_t sigint, server;
 struct bind_msg {
 	char name[FBNAMSIZ];
 	char app[FBNAMSIZ];
-	enum fblock_props props[MAX_PROPS];
+	char props[MAX_PROPS][10];
 	int flags;
 };
 
@@ -54,18 +54,28 @@ static char *bin2hex_compat(uint8_t *hash, size_t lhsh, char *str, size_t lstr)
 }
 #endif
 
-static void ipc_do_configure_client(struct bind_msg *bmsg)
+static int ipc_do_configure_client(struct bind_msg *bmsg)
 {
-	int ret, i;
+	int ret, i, propids[32];
 	char type[TYPNAMSIZ];
 	size_t num = 0, orig;
 	git_SHA_CTX sha;
-	unsigned char hashout[20], hash[40];
+	unsigned char hashout[20];//, hash[40];
 	char hashopt[1024], str[64];
 
+	memset(propids, 0, sizeof(propids));
 	for (i = 0; i < MAX_PROPS; ++i) {
-		if (bmsg->props[i] != 0)
+		if (strlen(bmsg->props[i]) == 0)
+			continue;
+		propids[i] = prop_str_tab_get_idx(bmsg->props[i]);
+		if (propids[i] >= 0) {
 			num++;
+			printd("Requested property: %s - %d\n", bmsg->props[i], propids[i]);
+		} else {
+			return -EINVAL;
+		}
+//		if (bmsg->props[i] != 0)
+//			num++;
 	}
 
 	bind_elems_in_stack(lower_fb_name, bmsg->name);
@@ -77,18 +87,15 @@ static void ipc_do_configure_client(struct bind_msg *bmsg)
 	printd("%s bound to eth0!\n", bmsg->name);
 
 	memset(hashopt, 0, sizeof(hashopt));
+	snprintf(hashopt, sizeof(hashopt) - 1,
+		"ch.ethz.csg.eth-ch.ethz.csg.pf_lana::%s",
+		bmsg->app);
 
 	git_SHA1_Init(&sha);
-	git_SHA1_Update(&sha, "ch.ethz.csg.eth-ch.ethz.csg.pf_lana",
-			strlen("ch.ethz.csg.eth-ch.ethz.csg.pf_lana"));
-	git_SHA1_Final(hash, &sha);
-	git_SHA1_Init(&sha);
-	git_SHA1_Update(&sha, bmsg->app, strlen(bmsg->app));
-	git_SHA1_Final(&hash[20], &sha);
-	git_SHA1_Init(&sha);
-	git_SHA1_Update(&sha, hash, sizeof(hash));
+	git_SHA1_Update(&sha, hashopt, strlen(hashopt));
 	git_SHA1_Final(hashout, &sha);
 
+	memset(hashopt, 0, sizeof(hashopt));
 	snprintf(hashopt, sizeof(hashopt)-1, "%s=%s",
 		 bin2hex_compat(hashout, 8, str, sizeof(str)),
 		 bmsg->name);
@@ -104,11 +111,11 @@ static void ipc_do_configure_client(struct bind_msg *bmsg)
 		printd("Registered server %s for app %s\n", srv_name, srv_app);
 		start_negotiation_server(bmsg->name);
 		server = 1;
-		return;
+		return 1;
 	}else if (bmsg->flags == TYPE_CLIENT) {
 		orig = num;
 		server = 0;
-		while ((ret = find_type_by_properties(type, bmsg->props, &num)) >= -32) {
+		while ((ret = find_type_by_properties(type, /*bmsg->props*/propids, &num)) >= -32) {
 			char name[FBNAMSIZ];
 			printd("Found match for %s: %s,%d (satisfied %zu of %zu)\n",
 			       bmsg->name, type, ret, orig - num, orig);
@@ -119,19 +126,20 @@ static void ipc_do_configure_client(struct bind_msg *bmsg)
 		if (num > 0) {
 			printd("Cannot match requirements! Unable to connect socket!\n");
 			//XXX cleanup!
-			return;
+			return -1;
 		}
 		printd("Initiate negotiation with server....\n");
 		ret = init_negotiation(bmsg->name, bmsg->app);
 		printd("client negotiation returned with %d!\n", ret);
 		if (ret < 0) {
 			printd("Remote end does not support stack config!\n");
-			return;
+			return -1;
 		}
 //		commit_vstack(bmsg->app);
 	}
 
 	printd("IPC Client %s up and running!\n", bmsg->name);
+	return 1;
 }
 
 static void *ipc_server(void *null)
@@ -195,13 +203,16 @@ static void *ipc_server(void *null)
 		}
 
 		ret = read(csock, &bmsg, sizeof(bmsg));
+
 		if (ret != sizeof(bmsg)) {
 			printd("Read returned with %s\n", strerror(errno));
 			close(csock);
 			continue;
 		}
 
-		ipc_do_configure_client(&bmsg);
+		/* ret 1: ok, -1: error */
+		ret = ipc_do_configure_client(&bmsg);
+		write(csock, &ret, sizeof(ret));
 
 		close(csock);
 	}
