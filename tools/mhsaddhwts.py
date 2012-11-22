@@ -11,18 +11,14 @@ FSL_VER="2.11.e"
 
 if sys.argv[1] == "-nommu":
 	use_mmu = False
-	PROC_CONTROL_VER = "1.00.b"
-	FIFO32_VER = "1.00.b"
-	FIFO32_ARBITER_VER = "1.00.b"
-	FIFO32_BURST_CONVERTER_VER = "1.00.b"
-	XPS_MEM_VER = "1.00.b"
 else:
 	use_mmu = True
-	PROC_CONTROL_VER = "1.00.a"
-	FIFO32_VER = "1.00.a"
-	FIFO32_ARBITER_VER = "1.00.a"
-	FIFO32_BURST_CONVERTER_VER = "1.00.a"
-	XPS_MEM_VER = "1.00.a"
+
+PROC_CONTROL_VER = "1.00.b"
+FIFO32_VER = "1.00.b"
+FIFO32_ARBITER_VER = "1.00.b"
+FIFO32_BURST_CONVERTER_VER = "1.00.b"
+XPS_MEM_VER = "1.00.b"
 
 
 
