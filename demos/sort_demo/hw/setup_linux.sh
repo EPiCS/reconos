@@ -24,15 +24,17 @@ then
 fi
 
 
+EDKDIR="edk_linux"
+
 # copy base design
-cp -r $RECONOS/designs/$BASE_DESIGN edk
+cp -r $RECONOS/designs/$BASE_DESIGN $EDKDIR
 
 # link to ReconOS pcores
-mkdir edk/pcores
-ln -s $RECONOS/pcores/* edk/pcores
+mkdir $EDKDIR/pcores
+ln -s $RECONOS/pcores/* $EDKDIR/pcores
 
 # add links to hardware threads
-cd edk/pcores
+cd $EDKDIR/pcores
 for HWT in $HWTS
 do
 	ln -sf ../../$HWT .
@@ -40,7 +42,7 @@ done
 cd -
 
 # add ReconOS to the edk project
-cp edk/system.mhs edk/system.mhs.orig
-$RECONOS/tools/mhsaddhwts.py edk/system.mhs.orig $HWTS > edk/system.mhs
+cp $EDKDIR/system.mhs $EDKDIR/system.mhs.orig
+$RECONOS/tools/mhsaddhwts.py $EDKDIR/system.mhs.orig $HWTS > $EDKDIR/system.mhs
 
 

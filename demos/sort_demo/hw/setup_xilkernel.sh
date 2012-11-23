@@ -24,15 +24,17 @@ then
 fi
 
 
+EDKDIR="edk_xilkernel"
+
 # copy base design
-cp -r $RECONOS/designs/$BASE_DESIGN edk_nommu
+cp -r $RECONOS/designs/$BASE_DESIGN $EDKDIR
 
 # link to ReconOS pcores
-mkdir edk_nommu/pcores
-ln -s $RECONOS/pcores/* edk_nommu/pcores
+mkdir $EDKDIR/pcores
+ln -s $RECONOS/pcores/* $EDKDIR/pcores
 
 # add links to hardware threads
-cd edk_nommu/pcores
+cd $EDKDIR/pcores
 for HWT in $HWTS
 do
 	ln -sf ../../$HWT .
@@ -40,7 +42,7 @@ done
 cd -
 
 # add ReconOS to the edk project
-cp edk_nommu/system.mhs edk_nommu/system.mhs.orig
-$RECONOS/tools/mhsaddhwts.py -nommu edk_nommu/system.mhs.orig $HWTS > edk_nommu/system.mhs
+cp $EDKDIR/system.mhs $EDKDIR/system.mhs.orig
+$RECONOS/tools/mhsaddhwts.py -nommu $EDKDIR/system.mhs.orig $HWTS > $EDKDIR/system.mhs
 
 
