@@ -157,11 +157,14 @@ int main(int argc, char *argv[])
 	{
 		result = establish_connection(6666, &image_params);
 	}
+
+	reconos_cache_flush();
 	
 	mbox_init(&mb_start_filter_1,3);
 	mbox_init(&mb_start_filter_2,3);
 	mbox_init(&mb_done_filtering,3);
 
+	reconos_cache_flush();
 	
 	// create filter sw thread no. 1
 	if (filter_1!=0)
@@ -170,6 +173,8 @@ int main(int argc, char *argv[])
 		pthread_attr_setstacksize(&filter_thread_1_attr, STACK_SIZE);
 		pthread_create(&filter_thread_1, &filter_thread_1_attr, filter_1_function, 0);
 	}
+
+	reconos_cache_flush();
 	
 	// create filter sw thread no. 1
 	if (filter_2!=0)
@@ -179,7 +184,9 @@ int main(int argc, char *argv[])
 		pthread_create(&filter_thread_2, &filter_thread_2_attr, filter_2_function, 0);
 	}
 	
+	reconos_cache_flush();
 	reconos_init_autodetect();
+	reconos_cache_flush();
 
 	res_1[0].type = RECONOS_TYPE_MBOX;
 	res_1[0].ptr  = &mb_start_filter_1;
@@ -196,6 +203,8 @@ int main(int argc, char *argv[])
 	init_data[0] = SIZE_X;
 	init_data[1] = SIZE_Y;
 
+	reconos_cache_flush();
+
 	//printf("frame size (%dx%d)\r\n", SIZE_X, SIZE_Y);
 
 	// create filter hardware thread no. 1
@@ -206,6 +215,8 @@ int main(int argc, char *argv[])
 		reconos_hwt_create(&hwt_filter_1,0,NULL);
 	}
 
+	reconos_cache_flush();
+
 	// create filter hardware thread no. 2
 	if (filter_2==0)
 	{
@@ -214,10 +225,14 @@ int main(int argc, char *argv[])
 		reconos_hwt_create(&hwt_filter_2,1,NULL);
 	}
 
+	reconos_cache_flush();
+
 	// create ethernet sw thread
 	pthread_attr_init(&ethernet_thread_attr);
 	pthread_attr_setstacksize(&ethernet_thread_attr, STACK_SIZE);
 	pthread_create(&ethernet_thread, &ethernet_thread_attr, ethernet_function, 0);
+
+	reconos_cache_flush();
 
 	while(42){}
 	if (filter_1==0)
