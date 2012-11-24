@@ -39,6 +39,8 @@ struct reconos_hwt hwt_filter_2;
 struct reconos_resource res_1[2];
 struct reconos_resource res_2[2];
 
+int filter_1, filter_2;
+
 // image parameters
 image_params_t  image_params;
 
@@ -63,7 +65,10 @@ void * filter_1_function(void * data)
 	while (42)
 	{
 		ret = mbox_get( &mb_start_filter_1);
-		apply_mirror_filter( (unsigned int *)ret, SIZE_X, SIZE_Y);
+		if (filter_1==1)
+		{
+			apply_grey_filter( (unsigned int *)ret, SIZE_X, SIZE_Y);
+		}
 		mbox_put( &mb_start_filter_2, ( uint32 ) ret );
 	}
 	return NULL;
@@ -82,7 +87,11 @@ void * filter_2_function(void * data)
 	while (42)
 	{
 		ret = mbox_get( &mb_start_filter_2);
-		apply_sobel_filter( (unsigned int *)ret, SIZE_X, SIZE_Y);
+		if (filter_2==1)
+		{
+			//apply_sobel_filter( (unsigned int *)ret, SIZE_X, SIZE_Y);
+			apply_mirror_filter( (unsigned int *)ret, SIZE_X, SIZE_Y);
+		}
 		mbox_put( &mb_done_filtering, ( uint32 ) ret );
 	}
 	return NULL;
@@ -102,10 +111,10 @@ void * ethernet_function(void * data)
 	while (42)
 	{
 		read_frame();
-		cache_flush();
+		reconos_cache_flush();
 		mbox_put( &mb_start_filter_1, ( uint32 ) framebuffer );
 		ret = mbox_get( &mb_done_filtering);
-		cache_flush();
+		reconos_cache_flush();
 		write_frame();
 	}
 	return NULL;
@@ -126,6 +135,17 @@ int main(int argc, char *argv[])
 {
 	unsigned int result = 1;
 
+        if ((argc < 3) || (argc > 3))
+	{
+		printf( "there must be two arguments: filter_1 filter_2 (0=HW,1=SW,2=none)\n");
+		exit(1);
+	}
+	// we have exactly 2 arguments now...
+	filter_1 = atoi(argv[1]);
+	filter_2 = atoi(argv[2]);
+
+	reconos_cache_flush();
+
 	printf( "-------------------------------------------------------\n"
 		    "GRAPHICAL_FILTER DEMONSTRATOR\n"
 		    "(" __FILE__ ")\n"
@@ -144,14 +164,20 @@ int main(int argc, char *argv[])
 
 	
 	// create filter sw thread no. 1
-	/*pthread_attr_init(&filter_thread_1_attr);
-	pthread_attr_setstacksize(&filter_thread_1_attr, STACK_SIZE);
-	pthread_create(&filter_thread_1, &filter_thread_1_attr, filter_1_function, 0);
+	if (filter_1!=0)
+	{
+		pthread_attr_init(&filter_thread_1_attr);
+		pthread_attr_setstacksize(&filter_thread_1_attr, STACK_SIZE);
+		pthread_create(&filter_thread_1, &filter_thread_1_attr, filter_1_function, 0);
+	}
 	
 	// create filter sw thread no. 1
-	pthread_attr_init(&filter_thread_2_attr);
-	pthread_attr_setstacksize(&filter_thread_2_attr, STACK_SIZE);
-	pthread_create(&filter_thread_2, &filter_thread_2_attr, filter_2_function, 0);*/
+	if (filter_2!=0)
+	{
+		pthread_attr_init(&filter_thread_2_attr);
+		pthread_attr_setstacksize(&filter_thread_2_attr, STACK_SIZE);
+		pthread_create(&filter_thread_2, &filter_thread_2_attr, filter_2_function, 0);
+	}
 	
 	reconos_init_autodetect();
 
@@ -173,14 +199,20 @@ int main(int argc, char *argv[])
 	//printf("frame size (%dx%d)\r\n", SIZE_X, SIZE_Y);
 
 	// create filter hardware thread no. 1
-	reconos_hwt_setresources(&hwt_filter_1,res_1,2);
-	reconos_hwt_setinitdata(&hwt_filter_1, (void *)init_data);
-	reconos_hwt_create(&hwt_filter_1,0,NULL);
+	if (filter_1==0)
+	{
+		reconos_hwt_setresources(&hwt_filter_1,res_1,2);
+		reconos_hwt_setinitdata(&hwt_filter_1, (void *)init_data);
+		reconos_hwt_create(&hwt_filter_1,0,NULL);
+	}
 
 	// create filter hardware thread no. 2
-	reconos_hwt_setresources(&hwt_filter_2,res_2,2);
-	reconos_hwt_setinitdata(&hwt_filter_2, (void *)init_data);
-	reconos_hwt_create(&hwt_filter_2,1,NULL);
+	if (filter_2==0)
+	{
+		reconos_hwt_setresources(&hwt_filter_2,res_2,2);
+		reconos_hwt_setinitdata(&hwt_filter_2, (void *)init_data);
+		reconos_hwt_create(&hwt_filter_2,1,NULL);
+	}
 
 	// create ethernet sw thread
 	pthread_attr_init(&ethernet_thread_attr);
@@ -188,8 +220,14 @@ int main(int argc, char *argv[])
 	pthread_create(&ethernet_thread, &ethernet_thread_attr, ethernet_function, 0);
 
 	while(42){}
-	pthread_join(hwt_filter_1.delegate,NULL);
-	pthread_join(hwt_filter_2.delegate,NULL);
+	if (filter_1==0)
+	{
+		pthread_join(hwt_filter_1.delegate,NULL);
+	}
+	if (filter_2==0)
+	{
+		pthread_join(hwt_filter_2.delegate,NULL);
+	}
 	free(init_data);
 	return 0;
 

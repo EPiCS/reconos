@@ -6,6 +6,7 @@
 #define __CONFIG_H__
 
 #define STACK_SIZE 65536
+//#define STACK_SIZE 131072
 
 //! no ethernet needed
 //#define NO_ETHERNET 1
