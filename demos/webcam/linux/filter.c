@@ -67,4 +67,19 @@ void apply_mirror_filter( unsigned int *buf, int width, int height)
 	free(buf2);
 }
 
+void apply_grey_filter( unsigned int *buf, int width, int height)
+{
+	int i, g;
+	unsigned int * buf2 = malloc(sizeof(unsigned int)*width*height);
+	for (i=0;i<(height*width);i+=1)
+	{
+		g = buf[i] >> 24;
+		buf2[i] = g << 24;
+		buf2[i] += g << 16;
+		buf2[i] += g << 8;
+	}
+	memcpy(buf, buf2, (width*height*sizeof(unsigned int)));
+	free(buf2);
+}
+
 
