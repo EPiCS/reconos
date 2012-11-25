@@ -52,7 +52,7 @@
 
 #define BLOCK_WORDS 2048
 
-#define NUM_HWTS 14
+#define NUM_HWTS 1
 #define NUM_SWTS 0
 #define NUM_BLOCKS 128
 
@@ -272,7 +272,7 @@ void* sort_main(void * arg)
 
 	//free(data);
 	// Memory Leak on variable data!!!
-
+	while(1);
 	return NULL;
 }
 

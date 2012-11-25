@@ -107,7 +107,7 @@
 							</tool>
 							<tool id="xilinx.gnu.mb.size.debug.1168571960" name="MicroBlaze Print Size" superClass="xilinx.gnu.mb.size.debug"/>
 							<tool id="xilinx.elfcheck.mb.debug.1605165735" name="Xilinx ELF Check" superClass="xilinx.elfcheck.mb.debug">
-								<option id="xilinx.elfcheck.option.hwspec.1613436338" name="Hardware Specification" superClass="xilinx.elfcheck.option.hwspec" value="-hw ../../edk_hw_platform/system.xml" valueType="string"/>
+								<option id="xilinx.elfcheck.option.hwspec.1613436338" name="Hardware Specification" superClass="xilinx.elfcheck.option.hwspec" value="-hw ../../edk_xilkernel_hw_platform/system.xml" valueType="string"/>
 								<option id="xilinx.elfcheck.option.procname.1823332951" name="Processor Name" superClass="xilinx.elfcheck.option.procname" value="-pe microblaze_0" valueType="string"/>
 							</tool>
 						</toolChain>
@@ -821,7 +821,7 @@
 							</tool>
 							<tool id="xilinx.gnu.mb.size.release.1300313930" name="MicroBlaze Print Size" superClass="xilinx.gnu.mb.size.release"/>
 							<tool id="xilinx.elfcheck.mb.release.2012488974" name="Xilinx ELF Check" superClass="xilinx.elfcheck.mb.release">
-								<option id="xilinx.elfcheck.option.hwspec.1365310926" name="Hardware Specification" superClass="xilinx.elfcheck.option.hwspec" value="-hw ../../edk_hw_platform/system.xml" valueType="string"/>
+								<option id="xilinx.elfcheck.option.hwspec.1365310926" name="Hardware Specification" superClass="xilinx.elfcheck.option.hwspec" value="-hw ../../edk_xilkernel_hw_platform/system.xml" valueType="string"/>
 								<option id="xilinx.elfcheck.option.procname.2019032702" name="Processor Name" superClass="xilinx.elfcheck.option.procname" value="-pe microblaze_0" valueType="string"/>
 							</tool>
 						</toolChain>
