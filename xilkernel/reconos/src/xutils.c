@@ -12,7 +12,7 @@
 #include <fcntl.h>
 #include <assert.h>
 
-#include "xutils.h"
+#include "reconos_utils.h"
 
 size_t strlcpy(char *dest, const char *src, size_t size)
 {

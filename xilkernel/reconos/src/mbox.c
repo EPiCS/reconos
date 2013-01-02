@@ -9,6 +9,7 @@
 #include <pthread.h>
 #include "mbox.h"
 #include "logging.h"
+#include "reconos_utils.h"
 
 int mbox_init(struct mbox *mb, size_t size)
 {

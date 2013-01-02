@@ -3,11 +3,29 @@
 //#include "platform.h"
 //#include "mb_interface.h"
 
+
 #include "xmk.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
+#include <sys/intr.h>
 #include "sys/process.h"
+#include "logging.h"
+#include "timing.h"
+
+#define FSL_BUFFER_SIZE (16)
+#define FSL_BUFFER_MASK (FSL_BUFFER_SIZE-1)
+
+struct fsl_buffer{
+	unsigned int data[FSL_BUFFER_SIZE];
+	int write_idx;
+	int read_idx;
+	int fill;
+	sem_t sem;
+};
+
+struct fsl_buffer private_fsl_buffer[16];
+
 
 /* Returns: 0 - ok, 1 - no data available, 2 - error */
 static int fnputfsl(int id, int val)
@@ -94,8 +112,9 @@ void fsl_write(int id, int val)
 			printf("FSL-ERROR: FSL %d does not exist\r\n",id);
 			exit(1);
 		}
+		INFO("FSL-WARNING: FSL %d is full\r\n",id);
+		yield();
 	}
-	yield();
 }
 
 /* Returns: 0 - ok, 1 - no data available, 2 - error */
@@ -173,17 +192,76 @@ static int fngetfsl(int id, int *val)
 	return ret;
 }
 
+// warning : this is not thread-save, only one thread is allowed to access each FSL
 int fsl_read(int id)
 {
-	int err;
-	int val;
+	int res;
+	while(private_fsl_buffer[id].fill == 0) sem_wait(& private_fsl_buffer[id].sem);
+	res = private_fsl_buffer[id].data[private_fsl_buffer[id].read_idx];
+	private_fsl_buffer[id].fill--;
+	private_fsl_buffer[id].read_idx = (private_fsl_buffer[id].read_idx + 1) & FSL_BUFFER_MASK;
+	return res;
+}
+
+unsigned int intr_freq[32] = {0};
+
+void fsl_isr(void * arg){
+	int id,err,val;
+	int n = 0;
+
+	id = (int)(arg);
+
+	acknowledge_interrupt(id);
+	intr_freq[id]++;
+
 	while(1){
 		err = fngetfsl(id,&val);
-		if(err == 0) return val;
-		if(err == 2){
-			printf("FSL-ERROR: FSL %d does not exist\r\n",id);
-			exit(1);
+		if(err == 0){
+			if(private_fsl_buffer[id].fill >= FSL_BUFFER_SIZE){
+				printf("FSL-WARNING: FSL %d: READ BUFFER FULL\r\n",id);
+				break;
+			}
+
+			private_fsl_buffer[id].data[private_fsl_buffer[id].write_idx] = val;
+			private_fsl_buffer[id].write_idx = (private_fsl_buffer[id].write_idx + 1) & FSL_BUFFER_MASK;
+			private_fsl_buffer[id].fill++;
+			n++;
+			continue;
 		}
-		yield();
+		if(n == 0){
+			printf("FSL-ERROR: INTERNAL ERROR: FSL %d: FSL IS EMPTY!\r\n",id);
+			return;
+		}
+		break;
 	}
+
+	sem_post(&private_fsl_buffer[id].sem);
+}
+
+void fsl_init(int id)
+{
+	int j,err;
+
+	private_fsl_buffer[id].write_idx = 0;
+	private_fsl_buffer[id].read_idx = 0;
+	private_fsl_buffer[id].fill = 0;
+
+	for(j = 0; j < FSL_BUFFER_SIZE-1; j++) private_fsl_buffer[id].data[j] = 0;
+
+
+	sem_init(&private_fsl_buffer[id].sem,0,0);
+
+
+	disable_interrupt(id);
+
+
+	err = register_int_handler(id, fsl_isr, (void*)id);
+	if(err){
+		INFO("COULD NOT REGISTER INTERRUPT SERCIVE ROUTINE\r\n");
+		return;
+	}
+
+
+	enable_interrupt(id);
+
 }

@@ -1,7 +1,9 @@
 #include "reconos.h"
-#include "fsl.h"
+#include "reconos_fsl.h"
 #include "mbox.h"
 #include "logging.h"
+#include <xmk.h>
+#include <sys/intr.h>
 
 struct reconos_process {
 	int proc_control_fsl_a; // proc_control initiates requests
@@ -115,15 +117,23 @@ static void reconos_delegate_process_mbox_put(struct reconos_hwt *hwt)
 	fsl_write(hwt->slot, 0);
 }
 
+
+
 static void *reconos_delegate_thread_entry(void *arg)
 {
 	struct reconos_hwt *hwt = arg;
 
 	reconos_slot_reset(hwt->slot, 1);
+
+	fsl_init(hwt->slot);
+
 	reconos_slot_reset(hwt->slot, 0);
+	hwt->state = RECONOS_STATE_RUNNING;
 
 	while (1) {
+		hwt->state = RECONOS_STATE_RUNNING;
 		uint32_t cmd = fsl_read(hwt->slot);
+		hwt->state = RECONOS_STATE_BLOCKING;
 		DEBUG("HWT %d -> 0x%08X\r\n",hwt->slot,(unsigned int)cmd);
 		switch (cmd) {
 		case RECONOS_CMD_MBOX_GET:
@@ -167,6 +177,7 @@ static void *reconos_delegate_thread_entry(void *arg)
 			break;
 		case RECONOS_CMD_THREAD_EXIT:
 			DEBUG("HWT %d EXIT\r\n",hwt->slot);
+			hwt->state = RECONOS_STATE_DEAD;
 			return NULL;
 		default:
 			delegate_error(hwt,cmd,"UNSUPPORTED REQUEST");
@@ -179,5 +190,6 @@ static void *reconos_delegate_thread_entry(void *arg)
 int reconos_hwt_create(struct reconos_hwt *hwt, int slot, void *arg)
 {
 	hwt->slot = slot;
+	hwt->state = RECONOS_STATE_IDLE;
 	return pthread_create(&hwt->delegate, NULL,reconos_delegate_thread_entry, hwt);
 }

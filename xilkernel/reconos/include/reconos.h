@@ -1,9 +1,10 @@
 #ifndef RECONOS_H
 #define RECONOS_H
 
-#include "xmk.h"
-#include "sys/init.h"
-#include "mb_interface.h"
+#include <xmk.h>
+#include <semaphore.h>
+#include <sys/init.h>
+#include <mb_interface.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -53,12 +54,20 @@ struct reconos_resource {
 	uint32_t type;
 };
 
+#define RECONOS_STATE_IDLE 0
+#define RECONOS_STATE_RUNNING 1
+#define RECONOS_STATE_BLOCKING 2
+#define RECONOS_STATE_DEAD 3
+#define RECONOS_STATE_ARRIVING 4
+
 struct reconos_hwt {
 	pthread_t delegate;
 	int slot;
 	struct reconos_resource* resources;
 	size_t num_resources;
 	void *init_data;
+	sem_t delegate_semaphore;
+	int state;
 };
 
 #define SLOTS_MAX				16
