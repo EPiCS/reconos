@@ -22,7 +22,8 @@ typedef struct {
 
     unsigned int *left;
     unsigned int *right;
-    unsigned int blocksize;
+    unsigned int blocksize_left;
+    unsigned int blocksize_right;
     unsigned int *result;
 
 } merge_info;
