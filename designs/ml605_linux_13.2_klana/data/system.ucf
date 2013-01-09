@@ -1,3 +1,7 @@
+# Fix for newer SO-DIMM / external memory.
+# See http://www.xilinx.com/support/answers/44814.htm
+Net fpga_0_DDR2_SDRAM_DIMM0_DDR2_RowAddr_pin_13 LOC=J15 |IOSTANDARD = SSTL15;
+
 #
 # pin constraints
 #
