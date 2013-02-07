@@ -204,10 +204,10 @@ begin
 		-- Decoded values of the packet
 		noc_tx_sof  			=> tx_ll_sof, 		
 		noc_tx_eof  			=> tx_ll_eof,
-		noc_tx_data	 		=> tx_ll_data,		
+		noc_tx_data	 			=> tx_ll_data,		
 		noc_tx_src_rdy 	 		=> tx_ll_src_rdy,		
-		noc_tx_globalAddress  		=> global_addr, --destination(5 downto 2), --"0000",--(others => '0'), --6 bits--(0:send it to hw/sw)		
-		noc_tx_localAddress  		=> local_addr, --destination(1 downto 0), --"01",-- (others  => '0'), --2 bits		
+		noc_tx_globalAddress  	=> global_addr, --destination(5 downto 2), --"0000",--(others => '0'), --6 bits--(0:send it to hw/sw)		
+		noc_tx_localAddress 	=> local_addr, --destination(1 downto 0), --"01",-- (others  => '0'), --2 bits		
 		noc_tx_direction 	 	=> direction, 		
 		noc_tx_priority 	 	=> priority,		
 		noc_tx_latencyCritical 	=> latencyCritical,	
@@ -445,8 +445,15 @@ begin
 				end if;
 			when STATE_SEND_EOF_4 =>
 				if tx_ll_dst_rdy = '1' then
-					sending_state <= STATE_WAIT; --mir ist unklar, wie ich aus einem geclockten process signale und nicht register raussende => .
-					packets_sent <= '1';
+					if o_RAMAddr_sender >= len then -- = should be enough, but just to be sure ...
+						-- we sent all packets in this batch
+						sending_state <= STATE_WAIT; --mir ist unklar, wie ich aus einem geclockten process signale und nicht register raussende => .
+						packets_sent <= '1';
+					else
+						sending_state  <= STATE_READ_LEN_WAIT_A;
+						tx_ll_src_rdy <= '0';
+						payload_count <= 0;
+					end if;
 				end if;
 			when STATE_WAIT =>
 					sending_state <= STATE_IDLE;
@@ -571,6 +578,7 @@ begin
 					if packets_sent = '1' then
 						state <= STATE_PUT; --STATE_WRITE;
 						data_ready <= '0';
+						len  <= (others  => '0');
 					end if;
 					
 --				when STATE_WRITE =>

@@ -17,6 +17,7 @@
 #define A_HWT_SLOT_NR 2
 #define E_HWT_SLOT_NR 3
 
+#define NR_OF_PAGES 8 //32768 (2^15)
 
 struct reconos_resource e_res[2];
 struct reconos_hwt e_hwt;
@@ -82,7 +83,7 @@ void copy_packet(int len, int start_val, char * addr, int global, int local){
 	pkt.payload_len = len;
 	pkt.src_idp = 0xaabbccaa;
 	pkt.dst_idp = 0xddeeffdd;
-	memcpy(addr, &pkt, sizeof(struct noc_pkt));
+	memcpy(addr+4, &pkt, sizeof(struct noc_pkt));
 	while (len - i > 0){
 		addr[12 + i] = (start_val + i) % 256;
 		i++;
@@ -164,12 +165,12 @@ static int __init init_reconos_test_module(void)
 
 	//setup the hw -> sw thread
 	printk(KERN_INFO "[reconos-interface] Allocate memory\n");
-	shared_mem_h2s = get_zeroed_page(GFP_KERNEL);
+	shared_mem_h2s = alloc_pages_exact(NR_OF_PAGES, GFP_KERNEL); //get_zeroed_page(GFP_KERNEL);
 	printk(KERN_INFO "[reconos-interface] h2s memory %p\n", shared_mem_h2s);
 	mbox_put(&b_mb_put, shared_mem_h2s);
 
 	//setup the sw -> hw thread
-	shared_mem_s2h = get_zeroed_page(GFP_KERNEL);
+	shared_mem_s2h = alloc_pages_exact(NR_OF_PAGES, GFP_KERNEL); //get_zeroed_page(GFP_KERNEL);
 	printk(KERN_INFO "[reconos-interface] s2h memory %p\n", shared_mem_s2h);
 	mbox_put(&c_mb_put, shared_mem_s2h);
 	printk(KERN_INFO "[reconos-interface] HZ= %d\n", HZ);
@@ -184,12 +185,14 @@ static int __init init_reconos_test_module(void)
 		/************************************
 		 * send packet to hardware
 		 ************************************/
-                copy_packet(packet_len, 1, shared_mem_s2h, 1, 0);
-                mbox_put(&c_mb_put, packet_len + 12);
-		//printk(KERN_INFO "[reconos-interface] packet sent to hw\n");
-                result = mbox_get(&c_mb_get);
-         	printk(KERN_INFO "[reconos-interface] packet sent received ack from hw, total packet len %d \n", result);
-	
+		copy_packet(packet_len, 1, shared_mem_s2h, 1, 0);
+		copy_packet(packet_len, 100, shared_mem_s2h + 12, 1, 0);
+		mbox_put(&c_mb_put, 2 * packet_len + 2*12);
+		printk(KERN_INFO "[reconos-interface] packet sent to hw\n");
+		result = mbox_get(&c_mb_get);
+		printk(KERN_INFO "[reconos-interface] packet sent received ack from hw, total packet len %d \n", result);
+
+#ifdef blub	
 		/************************************
 		 * send packet to hardware
 		 ************************************/
@@ -199,24 +202,29 @@ static int __init init_reconos_test_module(void)
 		//printk(KERN_INFO "[reconos-interface] packet sent to hw\n");
                 result = mbox_get(&c_mb_get);
          	printk(KERN_INFO "[reconos-interface] packet sent received ack from hw, total packet len %d \n", result);
-
+#endif
 	
 		/************************************
 		 * receive packet from hardware
 		 ************************************/
-		//printk(KERN_INFO "[reconos-interface] wait for packet from hw\n");
+		printk(KERN_INFO "[reconos-interface] wait for packet from hw\n");
 		result = mbox_get(&b_mb_get);
 		struct noc_pkt * rcv_pkt = (struct noc_pkt *)shared_mem_h2s;
 	//	packet_len = *(int *)shared_mem_h2s;
 		printk(KERN_INFO "[reconos-interface] packet received with len from mbox %d, from memory %d\n", result, rcv_pkt->payload_len);
 
-		printk(KERN_INFO "packet sent\n");
-		print_packet(snd_pkt);		
+//		printk(KERN_INFO "packet sent\n");
+//		print_packet(snd_pkt);		
+		printk(KERN_INFO "packet received\n");
+		print_packet(rcv_pkt);
+	  char * tmp = shared_mem_h2s + rcv_pkt->payload_len+12;
+	  rcv_pkt = (struct noc_pkt *)tmp;
+		printk(KERN_INFO "[reconos-interface] packet received with len from mbox %d, from memory %d\n", result, rcv_pkt->payload_len);
 		printk(KERN_INFO "packet received\n");
 		print_packet(rcv_pkt);
 
-
-		for (j = 0; j < packet_len + 12; j++){ 
+	
+		for (j = 0; j < result; j++){ 
 			unsigned char written_val = shared_mem_s2h[j];
 			unsigned char read_val = shared_mem_h2s[j];
 			printk(KERN_INFO "%x %x", written_val, read_val);
@@ -229,10 +237,10 @@ static int __init init_reconos_test_module(void)
 		}
 		printk(KERN_INFO "\n");
 	
-		mbox_put(&b_mb_put, shared_mem_h2s); //dummy_value. it will be the amount of data read in a ring buffer scenario
+		mbox_put(&b_mb_put, result); //dummy_value. it will be the amount of data read in a ring buffer scenario
 		
 
-
+#ifdef blub
 		/**********************************************
 		 * send packet to hardware (s2h -> ADD -> eth)
 		 **********************************************/
@@ -380,7 +388,7 @@ static int __init init_reconos_test_module(void)
 	
 		mbox_put(&b_mb_put, shared_mem_h2s); //dummy_value. it will be the amount of data read in a ring buffer scenario
 
-
+#endif
 
 		
 	}
