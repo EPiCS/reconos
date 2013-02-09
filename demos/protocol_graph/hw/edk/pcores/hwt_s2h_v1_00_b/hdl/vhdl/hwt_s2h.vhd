@@ -356,7 +356,7 @@ begin
 				total_packet_len  <= i_RAMData_sender(16 to 31);
 				sending_state <= STATE_SRCIDP;
 				--sending_state <= STATE_IDLE;
-		--		packets_sent <= '1';
+				--packets_sent <= '1';
 				
 			when STATE_SRCIDP =>
 				o_RAMAddr_sender <= o_RAMAddr_sender + 1;		 -- Addr 1 valid, Addr 3
@@ -445,7 +445,7 @@ begin
 				end if;
 			when STATE_SEND_EOF_4 =>
 				if tx_ll_dst_rdy = '1' then
-					if o_RAMAddr_sender >= len then -- = should be enough, but just to be sure ...
+					if unsigned(o_RAMAddr_sender + 1) >= unsigned(len(16 downto 2)) then -- = should be enough, but just to be sure ...
 						-- we sent all packets in this batch
 						sending_state <= STATE_WAIT; --mir ist unklar, wie ich aus einem geclockten process signale und nicht register raussende => .
 						packets_sent <= '1';
@@ -453,6 +453,7 @@ begin
 						sending_state  <= STATE_READ_LEN_WAIT_A;
 						tx_ll_src_rdy <= '0';
 						payload_count <= 0;
+						o_RAMAddr_sender <= o_RAMAddr_sender + 1;
 					end if;
 				end if;
 			when STATE_WAIT =>
@@ -595,6 +596,8 @@ begin
 				-- Echo the data
 				when STATE_PUT =>
 					osif_mbox_put(i_osif, o_osif, MBOX_SEND, X"0000" & total_packet_len, ignore, done);
+				--	osif_mbox_put(i_osif, o_osif, MBOX_SEND, len, ignore, done);
+
 					if done then state <= STATE_GET_LEN; end if;
 				
 --				when STATE_PUT2 =>
