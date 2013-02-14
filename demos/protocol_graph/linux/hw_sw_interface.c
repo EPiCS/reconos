@@ -166,6 +166,7 @@ static int __init init_reconos_test_module(void)
 	//setup the hw -> sw thread
 	printk(KERN_INFO "[reconos-interface] Allocate memory\n");
 	shared_mem_h2s = alloc_pages_exact(NR_OF_PAGES, GFP_KERNEL); //get_zeroed_page(GFP_KERNEL);
+	memset(shared_mem_h2s, 0, 4096); 
 	printk(KERN_INFO "[reconos-interface] h2s memory %p\n", shared_mem_h2s);
 	mbox_put(&b_mb_put, shared_mem_h2s);
 
@@ -176,12 +177,13 @@ static int __init init_reconos_test_module(void)
 	printk(KERN_INFO "[reconos-interface] HZ= %d\n", HZ);
 	jiffies_before = jiffies;
 
-	for(i = 0; i < 100; i++)
+//	for(i = 0; i < 100; i++)
 {
 		int packet_len = 64;
 		int nr_of_packets = 50;
 		int j = 0;
 		int result = 0;
+#ifdef blub
 	//	memset(shared_mem_s2h, 0, 2 * packet_len);
 		/************************************
 		 * send packet to hardware
@@ -196,7 +198,7 @@ static int __init init_reconos_test_module(void)
 		result = mbox_get(&c_mb_get);
 	//	printk(KERN_INFO "[reconos-interface] packet sent received ack from hw, total packet len %d \n", result);
 
-#ifdef blub	
+	
 		/************************************
 		 * send packet to hardware
 		 ************************************/
@@ -207,20 +209,36 @@ static int __init init_reconos_test_module(void)
                 result = mbox_get(&c_mb_get);
          	printk(KERN_INFO "[reconos-interface] packet sent received ack from hw, total packet len %d \n", result);
 
-	
+#endif	
 		/************************************
 		 * receive packet from hardware
 		 ************************************/
+while(1){
 		printk(KERN_INFO "[reconos-interface] wait for packet from hw\n");
 		result = mbox_get(&b_mb_get);
+		printk(KERN_INFO "got");
 		struct noc_pkt * rcv_pkt = (struct noc_pkt *)shared_mem_h2s;
 	//	packet_len = *(int *)shared_mem_h2s;
 		printk(KERN_INFO "[reconos-interface] packet received with len from mbox %d, from memory %d\n", result, rcv_pkt->payload_len);
-
+		int len = 0;
+		char * cur = shared_mem_h2s;
+		while (len < result){
+			cur = cur + rcv_pkt->payload_len + 12; 
+			rcv_pkt = (struct noc_pkt*)cur;
+			printk(KERN_INFO "[reconos-interface] packet received with len %d\n", rcv_pkt->payload_len);
+			len += rcv_pkt->payload_len;
+		}
 //		printk(KERN_INFO "packet sent\n");
 //		print_packet(snd_pkt);		
-		printk(KERN_INFO "packet received\n");
-		print_packet(rcv_pkt);
+//		printk(KERN_INFO "packet received\n");
+//		print_packet(rcv_pkt);
+	//	for (j = 0; j < 200; j++){
+	//		printk(KERN_INFO "%x", shared_mem_h2s[j]);
+	//	} 
+
+	mbox_put(&b_mb_put, result);
+} 
+#ifdef blub
 	  char * tmp = shared_mem_h2s + rcv_pkt->payload_len+12;
 	  rcv_pkt = (struct noc_pkt *)tmp;
 		printk(KERN_INFO "[reconos-interface] packet received with len from mbox %d, from memory %d\n", result, rcv_pkt->payload_len);
