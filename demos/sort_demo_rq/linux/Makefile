@@ -1,8 +1,9 @@
 CC = microblaze-unknown-linux-gnu-gcc
-CFLAGS=-O3 -g -Wall
+CFLAGS=-O0 -g -Wall
 
 HOST_CC = gcc
-HOST_CFLAGS = -O0 -g -m32 -Wall -DHOST_COMPILE
+HOST_CFLAGS = -O0 -g -m32  -Wall -DHOST_COMPILE
+# -m32
 
 APP_OBJS = bubblesort.o data.o merge.o timing.o sort8k.o
 
@@ -18,6 +19,7 @@ sort_demo: $(APP_OBJS)
 sort_demo_shadowed: $(APP_OBJS)
 	$(CC) $(APP_OBJS) $(CFLAGS) -L ../../../linux/reconos/libreconos-us -I ../../../linux/reconos/libreconos-us sort_demo_shadowed.c -o sort_demo_shadowed -static -lreconos -lpthread -lm -lrt
 
+
 clean:
 	rm -f *.o sort_demo sort_demo_shadowed 
 
@@ -27,7 +29,6 @@ install:
 %.o: %.c
 	$(CC) -c $(CFLAGS) -L ../../../linux/reconos/libreconos-us -I ../../../linux/reconos/libreconos-us -o $@ $<
 	
-
 
 
 	

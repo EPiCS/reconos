@@ -14,6 +14,7 @@
 *.o.*
 *.a
 *.s
+*.pyc
 *.ko.unsigned
 *.ko.stripped
 *.ko.stripped.dig
@@ -38,6 +39,12 @@ modules.builtin
 *.lzo
 *.patch
 *.gcno
+
+#
+# Ignore Hardware designs
+#
+/demos/*/edk/
+/demos/*/hw/edk/
 
 #
 # git files that we don't want to ignore even it they are dot-files

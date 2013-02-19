@@ -18,6 +18,8 @@
 #include "mbox.h"
 #include "rqueue.h"
 #include "xutils.h"
+#include "thread_shadowing.h"
+#include "thread_shadowing_subs.h"
 
 static struct reconos_process reconos_proc;
 
@@ -120,14 +122,19 @@ static void *reconos_control_thread_entry(void *arg)
 		if (cmd == 0x00000002)
 			whine("proc_control selftest part 2 success\n");
 	}
+	return NULL;
 }
 
 static int reconos_get_numfsl(void)
 {
 	unsigned int pvr3;
 
+#ifndef HOST_COMPILE
 	asm volatile ("mfs %0,rPVR3" : "=d" (pvr3));
 
+#else
+	pvr3 = 16;
+#endif
 	return 0x0000001F & (pvr3 >> 7);
 }
 
@@ -350,6 +357,12 @@ static void reconos_delegate_process_rqueue_send(struct reconos_hwt *hwt)
 	free(msg);
 }
 
+static void reconos_delegate_process_thread_yield(struct reconos_hwt *hwt)
+{
+	pthread_yield(); // actually a shadow_yield(), substituted by thread_shadowing_subs.h
+	fsl_write(hwt->slot, 1);
+}
+
 static void reconos_delegate_process_get_init_data(struct reconos_hwt *hwt)
 {
 	fsl_write(hwt->slot, (uint32_t) hwt->init_data);
@@ -401,6 +414,8 @@ static void *reconos_delegate_thread_entry(void *arg)
 		case RECONOS_CMD_RQ_SEND:
 			reconos_delegate_process_rqueue_send(hwt);
 			break;
+        case RECONOS_CMD_THREAD_YIELD:
+            reconos_delegate_process_thread_yield(hwt);
 		case RECONOS_CMD_THREAD_GET_INIT_DATA:
 			reconos_delegate_process_get_init_data(hwt);
 			break;

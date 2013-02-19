@@ -11,6 +11,7 @@
 
 #include <signal.h>
 #include <sys/ucontext.h>
+
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -20,13 +21,13 @@
 #include "config.h"
 #include "merge.h"
 #include "data.h"
-#include "bubblesort.h"
+//#include "bubblesort.h"
 #include "sort8k.h"
 #include "timing.h"
 
 
 
-#define PAGE_SIZE 4096
+#define PAGE_SIZE 4096 //Bytes
 #define PAGE_WORDS 1024
 #define PAGE_MASK 0xFFFFF000
 #define PAGES_PER_THREAD 2
@@ -40,21 +41,23 @@
 #define TO_PAGES(x) ((x)/PAGE_SIZE)
 #define TO_BLOCKS(x) ((x)/(PAGE_SIZE*PAGES_PER_THREAD))
 
-// software threads
-pthread_t swt[MAX_THREADS];
-pthread_attr_t swt_attr[MAX_THREADS];
+// Thread shadowing
+int hw_threads;
+int sw_threads;
+int sh_threadcountsw = 2;
+int running_threads;
+shadowedthread_t sh[MAX_THREADS];
 
-// hardware threads
-struct reconos_resource res[2];
-struct reconos_hwt hwt[MAX_THREADS];
-
+// pointers to buffers of unsorted numbers
+unsigned int *data, *copy;
 
 // mailboxes
-struct mbox mb_start;
-struct mbox mb_stop;
+struct mbox mb_start[MAX_THREADS];
+struct mbox mb_stop[MAX_THREADS];
 
 unsigned int* malloc_page_aligned(unsigned int pages)
 {
+
 	unsigned int * temp = malloc ((pages+1)*PAGE_SIZE);
 	unsigned int * data = (unsigned int*)(((unsigned int)temp / PAGE_SIZE + 1) * PAGE_SIZE);
 	return data;
@@ -70,6 +73,48 @@ void print_data(unsigned int* data, unsigned int size)
 		if ((i+1)%4 == 0) printf("\n");
 	}
 	printf("\n");
+}
+
+/** Copies 8kBytes from given pointer to newly allocated block of memory and
+ *  returns a pointer to it.
+ */
+void *buffer_copy (void *ptr)
+{
+  void *cpy;
+  cpy = malloc (SIZE);
+  if (ptr != NULL)
+    {
+      memcpy (cpy, ptr, SIZE);
+    }
+  return cpy;
+}
+
+/** Compares two 8 kBytes buffers.
+ * \param pos Optional Parameter. If not null, the index of the found difference will be stored.
+ */
+int buffer_compare_report (unsigned int *a, unsigned int *b, unsigned int *idx)
+{
+  unsigned int index = 0;
+  while ((*a == *b) && (index < N))
+    {
+      a++, b++, index++;
+    }
+  if (index < N)
+    {
+      if (idx != NULL)
+	{
+	  *idx = index;
+	}
+      return false;
+    }
+  else
+    {
+      return true;
+    }
+}
+
+int buffer_compare( void *a, void *b){
+    return buffer_compare_report( (unsigned int*) a, (unsigned int*) b, NULL);
 }
 
 
@@ -91,7 +136,7 @@ void print_help()
 "\n"
 "Usage:\n"
 "\tsort_demo <-h|--help>\n"
-"\tsort_demo <num_hw_threads> <num_sw_threads> <num_of_blocks>\n"
+"\tsort_demo <num_hw_threads> <num_sw_threads> <num_of_blocks> [shadowthread count]\n"
 "\n"
 "Size of a block in bytes: %i\n",
 PAGE_SIZE*PAGES_PER_THREAD
@@ -103,6 +148,7 @@ PAGE_SIZE*PAGES_PER_THREAD
 // Get as much information to help in debugging as possible!
 //
 void sigsegv_handler(int sig, siginfo_t *siginfo, void * context){
+	int i;
 	ucontext_t* uc = (ucontext_t*) context;
 
     // Yeah, i know using printf in a signal context is not save.
@@ -114,17 +160,22 @@ void sigsegv_handler(int sig, siginfo_t *siginfo, void * context){
     		(void*)uc->uc_mcontext.gregs[14],
 #endif
     		(void*) siginfo->si_addr);
+
+    // Print address of unsorted numbers buffer
+    printf("data: %8p \ncopy: %8p\n", data, copy);
+    // Print OS call lists for debugging
+    for (i=0; i < running_threads; i++){
+    	shadow_dump(sh + i);
+    }
     exit(1);
 }
+
 int main(int argc, char ** argv)
 {
-	int i;
-	int ret;
-	int hw_threads;
-	int sw_threads;
-	int running_threads;
-	int buffer_size;
-	unsigned int *data, *copy;
+	int i = 0;
+	int j = 0;
+	int error_idx, from, to = 0;
+	int buffer_size = 0;
 
 	timing_t t_start;
     timing_t t_stop;
@@ -142,14 +193,20 @@ int main(int argc, char ** argv)
 	};
 	sigaction(SIGSEGV, &act, NULL);
 
-	if ((argc < 4) || (argc > 4))
+
+	if ((argc < 4) || (argc > 5))
 	{
 	  print_help();
 	  exit(1);
 	}
-	// we have exactly 3 arguments now...
+	// we have 3 or 4 arguments now...
 	hw_threads = atoi(argv[1]);
 	sw_threads = atoi(argv[2]);
+	if ( argc >= 5) {
+		sh_threadcountsw = atoi(argv[4]);
+		if ( sh_threadcountsw < 1 ){sh_threadcountsw = 1;}
+		if ( sh_threadcountsw > 2 ){sh_threadcountsw = 2;}
+	}
 
 	// Base unit is bytes. Use macros TO_WORDS, TO_PAGES and TO_BLOCKS for conversion.
 	buffer_size = atoi(argv[3])*PAGE_SIZE*PAGES_PER_THREAD;
@@ -158,39 +215,62 @@ int main(int argc, char ** argv)
 
 	//int gettimeofday(struct timeval *tv, struct timezone *tz);
 
-	// init mailboxes
-	mbox_init(&mb_start,TO_BLOCKS(buffer_size));
-    mbox_init(&mb_stop ,TO_BLOCKS(buffer_size));
+    printf("Main thread is pthread %lu\n", pthread_self());
 
-	res[0].type = RECONOS_TYPE_MBOX;
-	res[0].ptr  = &mb_start;	  	
-        res[1].type = RECONOS_TYPE_MBOX;
-	res[1].ptr  = &mb_stop;
+
+
+	// init mailboxes
+    struct reconos_resource res[MAX_THREADS][2];
+    for (i=0; i< MAX_THREADS; i++){
+    	mbox_init(&(mb_start[i]),TO_WORDS(buffer_size)+MAX_THREADS);
+    	mbox_init(&(mb_stop[i]) ,TO_WORDS(buffer_size)+MAX_THREADS);
+    	res[i][0].type = RECONOS_TYPE_MBOX;
+    	res[i][0].ptr  = &(mb_start[i]);
+    	res[i][1].type = RECONOS_TYPE_MBOX;
+    	res[i][1].ptr  = &(mb_stop[i]);
+    }
+
 #ifndef HOST_COMPILE
-	// init reconos and communication resources
+	// create hardware shadowed threads
 	reconos_init_autodetect();
 
-
-	printf("Creating %i hw-threads: ", hw_threads);
+	printf("Creating %i shadowed hw-threads: ", hw_threads);
 	fflush(stdout);
 	for (i = 0; i < hw_threads; i++)
 	{
-	  printf(" %i",i);fflush(stdout);
-	  reconos_hwt_setresources(&(hwt[i]),res,2);
-	  reconos_hwt_create(&(hwt[i]),i,NULL);
+		printf(" %i",i);fflush(stdout);
+
+		shadow_init( sh+i );
+		shadow_set_reliability( sh+i, TS_REL_DEFAULT );
+		shadow_set_copycompare( sh+i, buffer_copy, buffer_compare );
+		shadow_set_resources( sh+i, res[i], 2 );
+		shadow_set_options(sh+i, TS_MANUAL_SCHEDULE);
+		shadow_set_threadcount(sh+i, sh_threadcountsw, 0);
+		shadow_set_hwslots(sh+i, 0, 0+3*i);
+		shadow_set_hwslots(sh+i, 1, 1+3*i);
+		shadow_set_hwslots(sh+i, 2, 2+3*i);
+		shadow_thread_create(sh+i);
 	}
 	printf("\n");
 #endif
-	// init software threads
-	printf("Creating %i sw-threads: ",sw_threads);
+	// create software shadowed threads
+	printf("Creating %i shadowed sw-threads: ",sw_threads);
 	fflush(stdout);
-	for (i = 0; i < sw_threads; i++)
+	for (i = hw_threads; i < hw_threads+sw_threads; i++)
 	{
-	  printf(" %i",i);fflush(stdout);
-	  pthread_attr_init(&swt_attr[i]);
-	  pthread_create(&swt[i], &swt_attr[i], sort_thread, (void*)res);
+		printf(" %i",i-hw_threads);fflush(stdout);
+
+		shadow_init( sh+i );
+		shadow_set_reliability( sh+i, TS_REL_DEFAULT );
+		shadow_set_copycompare( sh+i, buffer_copy, buffer_compare );
+		shadow_set_swthread( sh+i, sort_thread_messages ); //sort8k_ts_worker);
+		shadow_set_resources( sh+i, res[i], 1 );
+		shadow_set_options(sh+i, TS_MANUAL_SCHEDULE);
+		shadow_set_threadcount( sh+i, 0, sh_threadcountsw);
+		shadow_thread_create( sh+i );
 	}
 	printf("\n");
+
 
 
 	//print_mmu_stats();
@@ -205,34 +285,62 @@ int main(int argc, char ** argv)
 	generate_data( data, TO_WORDS(buffer_size));
 	memcpy(copy,data,buffer_size);
 
+
+	// print generated data
+#if 0
+	printf("\ndumping the first and last 128 words of data:\n");
+	for(i = 0; i < 128; i++){
+	  printf("%08X ",data[i]);
+	  if((i % 16) == 15) printf("\n");
+	}
+	printf("[...]\n");
+	for(i = TO_WORDS(buffer_size)-128; i < TO_WORDS(buffer_size); i++){
+		  printf("%08X ",data[i]);
+		  if((i % 16) == 15) printf("\n");
+	}
+
+	printf("\ndumping the first and last 128 words of copy:\n");
+	for(i = 0; i < 128; i++){
+	  printf("%08X ",copy[i]);
+	  if((i % 16) == 15) printf("\n");
+	}
+	printf("[...]\n");
+	for(i = TO_WORDS(buffer_size)-128; i < TO_WORDS(buffer_size); i++){
+		  printf("%08X ",copy[i]);
+		  if((i % 16) == 15) printf("\n");
+	}
+#endif
+
 	t_stop = gettime();
 	t_generate = calc_timediff_ms(t_start,t_stop);
-
-	// print data of first page
-	printf("Printing of generated data skipped. \n");
-	//print_data(data, TO_WORDS(buffer_size));
-
 
 	// Start sort threads
 	t_start = gettime();
 
-	printf("Putting %i blocks into job queue: ", TO_BLOCKS(buffer_size));
+	printf("Putting %i blocks into job queues: ", TO_BLOCKS(buffer_size));
 	fflush(stdout);
 	for (i=0; i<TO_BLOCKS(buffer_size); i++)
 	{
 	  //printf(" %i",i);fflush(stdout);
-	  mbox_put(&mb_start,(unsigned int)data+(i*BLOCK_SIZE));
+	  mbox_put( &mb_start[i%running_threads],(unsigned int)TO_WORDS(BLOCK_SIZE) );
+	  for(j = 0; j < TO_WORDS(BLOCK_SIZE); j++){
+		  mbox_put( &mb_start[i%running_threads],(unsigned int)data[i*TO_WORDS(BLOCK_SIZE)+j] );
+	  }
+	  // QUICKFIX: Put one extra for hw thread
+	  //mbox_put( &mb_start[i%running_threads],(unsigned int) 0 );
 	}
 	printf("\n");
 
 	// Wait for results
-	printf("Waiting for %i acknowledgements: ", TO_BLOCKS(buffer_size));
+	printf("Waiting for %i blocks of data: ", TO_BLOCKS(buffer_size));
 	fflush(stdout);
 	for (i=0; i<TO_BLOCKS(buffer_size); i++)
 	{
 	  //printf(" %i",i);fflush(stdout);
-	  ret = mbox_get(&mb_stop);
-	}  
+	  for ( j=0; j<TO_WORDS(BLOCK_SIZE) ; j++ ){
+		  data[i*TO_WORDS(BLOCK_SIZE)+j] = mbox_get(&mb_stop[i%running_threads]);
+	  }
+	}
 	printf("\n");
 
 	t_stop = gettime();
@@ -268,16 +376,25 @@ int main(int argc, char ** argv)
 
 	printf("Checking sorted data: ... ");
 	fflush(stdout);
-	ret = check_data( data, copy, TO_WORDS(buffer_size));
-	if (ret >= 0)
+	error_idx = check_data( data, copy, TO_WORDS(buffer_size));
+	if (error_idx >= 0)
 	  {
-	    printf("failure at word index %i\n", -ret);
-	    printf("expected 0x%08X    found 0x%08X\n",copy[ret],data[ret]);
-            printf("dumping the first 2048 words:\n");
-            for(i = 0; i < 2048; i++){
-              printf("%08X ",data[i]);
-              if((i % 8) == 7) printf("\n");
-            }
+	    printf("failure at word index %i\n", error_idx);
+	    printf("expected 0x%08X    found 0x%08X\n",copy[error_idx],data[error_idx]);
+		printf("\ndumping the last %i words of data:\n", TO_WORDS(buffer_size));
+
+		from = error_idx;
+		to	 = error_idx+16; // error_idx + TO_WORDS(buffer_size)
+		for(i = from; i < to; i++){
+		  printf("%08X ",data[i]);
+		  if((i % 16) == 15) printf("\n");
+		}
+
+		printf("\ndumping the last %i words of copy:\n", TO_WORDS(buffer_size));
+		for(i = from; i < to; i++){
+		  printf("%08X ",copy[i]);
+		  if((i % 16) == 15) printf("\n");
+		}
 	  }
 	else
 	  {
@@ -294,19 +411,19 @@ int main(int argc, char ** argv)
 	for (i=0; i<running_threads; i++)
 	{
 	  printf(" %i",i);fflush(stdout);
-	  mbox_put(&mb_start,UINT_MAX);
+	  mbox_put(&mb_start[i],UINT_MAX);
+	  //shadow_dump(sh+i);
+
 	}
 	printf("\n");
 
 	printf("Waiting for termination...\n");
-	for (i=0; i<hw_threads; i++)
+	for (i=0; i<running_threads; i++)
 	{
-	  pthread_join(hwt[i].delegate,NULL);
+	  shadow_join(sh+i, NULL);
 	}
-	for (i=0; i<sw_threads; i++)
-	{
-	  pthread_join(swt[i],NULL);
-	}
+
+
 
 	printf("\n");
 
@@ -325,6 +442,7 @@ int main(int argc, char ** argv)
 	
 
 	//free(data);
+	//free(copy);
 	// Memory Leak on variable data!!!
 	
 	return 0;

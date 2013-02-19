@@ -16,5 +16,6 @@
 
 void *sort_thread(void* data);
 void *sort_thread_messages(void* data);
+void *sort_thread_rq(void* data);
 
 #endif

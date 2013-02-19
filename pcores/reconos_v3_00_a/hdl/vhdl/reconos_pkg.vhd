@@ -90,7 +90,8 @@ package reconos_pkg is
 	constant OSIF_CMD_MBOX_GET : std_logic_vector(0 to C_FSL_WIDTH-1) := X"000000F0";
 
 	constant OSIF_CMD_THREAD_GET_INIT_DATA : std_logic_vector(0 to C_FSL_WIDTH-1) := X"000000A0";
-	constant OSIF_CMD_THREAD_EXIT          : std_logic_vector(0 to C_FSL_WIDTH-1) := X"000000A2";	
+	constant OSIF_CMD_THREAD_EXIT          : std_logic_vector(0 to C_FSL_WIDTH-1) := X"000000A2";
+    constant OSIF_CMD_THREAD_YIELD         : std_logic_vector(0 to C_FSL_WIDTH-1) := X"000000A3"; 	
 	
 	constant MEMIF_CMD_READ    : std_logic_vector(7 downto 0) := X"00";
 	constant MEMIF_CMD_WRITE   : std_logic_vector(7 downto 0) := X"80";
@@ -377,6 +378,20 @@ package reconos_pkg is
 	procedure osif_thread_exit (
 		signal i_osif : in  i_osif_t;
 		signal o_osif : out o_osif_t
+	);
+
+    -- thread_yield
+    -- Blocking call; calling this function signals to the reconos system, that
+    -- this thread is ready to yield its hw resources to another thread.
+    -- Either this call returns or the runnning thread will be shut down and 
+    -- replaced.
+    -- return value == 0 : thread was interrupted
+    -- return value == 1 : thread continued without interruption
+	procedure osif_thread_yield (
+		signal   i_osif : in  i_osif_t;
+		signal   o_osif : out o_osif_t;
+    signal   result : out std_logic_vector(C_FSL_WIDTH-1 downto 0);
+    variable done   : out boolean
 	);
 	
 	-- see fsl_reset()
@@ -977,6 +992,15 @@ package body reconos_pkg is
 		end case;
 	end procedure;
 	
+    -- thread yield
+    procedure osif_thread_yield (
+		signal   i_osif : in  i_osif_t;
+		signal   o_osif : out o_osif_t;
+    signal   result : out std_logic_vector(C_FSL_WIDTH-1 downto 0);
+    variable done   : out boolean
+	)is begin   
+        osif_call_0(i_osif, o_osif,OSIF_CMD_THREAD_YIELD,result, done);      
+    end procedure;
 	procedure memif_setup (
 		signal i_memif : out i_memif_t;
 		signal o_memif : in  o_memif_t;

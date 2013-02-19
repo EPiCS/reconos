@@ -303,6 +303,7 @@ int main(int argc, char ** argv)
 	{
 	  pthread_join(hwt[i].delegate,NULL);
 	}
+
 	for (i=0; i<sw_threads; i++)
 	{
 	  pthread_join(swt[i],NULL);

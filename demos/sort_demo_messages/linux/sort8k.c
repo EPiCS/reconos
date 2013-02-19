@@ -7,12 +7,14 @@
 #include "thread_shadowing.h"
 #include "thread_shadowing_subs.h"
 
+#include "eif.h"
+
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 
 //#define BENCHMARK
-#define DEBUG 1
+//#define DEBUG 1
 
 #ifdef DEBUG
     #define SORT_DEBUG(message) printf("SORT: " message)
@@ -72,7 +74,6 @@ void *sort_thread(void* data)
 		}
 		SORT_DEBUG3("SW Thread %lu, call %d: putting acknowledgement into mailbox %p\n", self, call_nr, mb_stop);
         call_nr++;
-
     }
 
     return (void*)0;
@@ -88,7 +89,6 @@ void *sort_thread_messages(void* data)
 	unsigned int i;
     unsigned int length;
     unsigned int  buffer[N*sizeof(unsigned int)];
-    		//*=malloc(N*sizeof(unsigned int)); // local data buffer, like the hw thread one's
     struct reconos_resource *res  = (struct reconos_resource*) data;
     struct mbox *mb_start = res[0].ptr;
     struct mbox *mb_stop  = res[1].ptr;
@@ -98,15 +98,17 @@ void *sort_thread_messages(void* data)
     SORT_DEBUG4("SW Thread %lu, call %d: Started with mailbox addresses %p and %p ...\n", self, call_nr,  mb_start, mb_stop);
 
     // error injection code
-    int leading_thread = false;
-    shadowedthread_t *sh;
-    pthread_t this = pthread_self();
-    if (is_shadowed_in_parent(this, &sh)) {
-    	leading_thread = shadow_leading_thread(sh, this);\
-	}
+//    int leading_thread = false;
+//    shadowedthread_t *sh;
+//    pthread_t this = pthread_self();
+//    if (is_shadowed_in_parent(this, &sh)) {
+//    	leading_thread = shadow_leading_thread(sh, this);
+//	}
     //
 
-
+    printf("SORT8K: Address of buffer: %8p, size of buffer %i\n", buffer, sizeof(buffer));
+    //eif_add(buffer, sizeof(buffer) , 100, 0, 10, SINGLE_BIT_FLIP, 0);
+    //eif_start();
     while ( 1 ) {
     	SORT_DEBUG3("SW Thread %lu, call %d: getting length from mailbox %p\n", self, call_nr, mb_start);
         length = mbox_get(mb_start);
@@ -162,6 +164,5 @@ void *sort_thread_messages(void* data)
         pthread_yield();
     }
 
-    free(buffer);
     return (void*)0;
 }
