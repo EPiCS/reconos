@@ -15,24 +15,28 @@
 
 #include "xt_fblock.h"
 #include "xt_engine.h"
+#include "rijndael.h"
 
-struct fb_otp_priv {
+struct fb_aes_priv {
 	idp_t port[2];
 	seqlock_t lock;
 	uint8_t *key;
-	size_t len, off;
+	uint8_t key_bits;
+	int nrounds;
+	size_t len;
+	unsigned long *rk;
 	rwlock_t klock;
 } ____cacheline_aligned_in_smp;
 
-#define MAX_POOL_SIZ	(1024 * 1024 * 10)
 
 static int fb_aes_netrx(const struct fblock * const fb,
 			  struct sk_buff * const skb,
 			  enum path_type * const dir)
 {
 	unsigned int seq;
+	unsigned int padding;
 	struct fb_aes_priv *fb_priv;
-	size_t i;
+	size_t i = 0;
 	unsigned char ciphertext[16];
 
 	fb_priv = rcu_dereference_raw(fb->private_data);
@@ -44,12 +48,18 @@ static int fb_aes_netrx(const struct fblock * const fb,
 	} while (read_seqretry(&fb_priv->lock, seq));
 
 	read_lock(&fb_priv->klock);
-	//encrypt here
-	if (skb->len % 16 != 0)
-		//TODO: pad to 16
-		skb_put();
+	
+	//we need to pad to 16 bytes
+	padding = skb->len % 16;
+	if (padding == 0){
+		padding = 16;
+	}
+	skb_put(skb, padding);
+	skb->data[skb->len - 1] = (unsigned char) padding; //last byte is amount of padding;
+	
+	//here we do the encryption
 	for (i = 0; i < skb->len; i += 16){
-		rijndaelEncrypt(fb_priv->rk, fb_priv->nrounds, skb->data + i, cipertext);
+		rijndaelEncrypt(fb_priv->rk, fb_priv->nrounds, skb->data + i, ciphertext);
 		memcpy(skb->data + i, ciphertext, 16);
 	}
 
@@ -57,7 +67,7 @@ static int fb_aes_netrx(const struct fblock * const fb,
 
 	return PPE_SUCCESS;
 drop:
-	printk(KERN_INFO "[fb_otp] drop packet. Out of key material?\n");
+	printk(KERN_INFO "[fb_aes] drop packet. Out of key material?\n");
 	kfree_skb(skb);
 	return PPE_DROPPED;
 }
@@ -67,7 +77,7 @@ static int fb_aes_event(struct notifier_block *self, unsigned long cmd,
 {
 	int ret = NOTIFY_OK;
 	struct fblock *fb;
-	struct fb_otp_priv *fb_priv;
+	struct fb_aes_priv *fb_priv;
 
 	rcu_read_lock();
 	fb = rcu_dereference_raw(container_of(self, struct fblock_notifier, nb)->self);
@@ -131,10 +141,12 @@ static ssize_t fb_aes_proc_write(struct file *file, const char __user * ubuff,
 				 size_t count, loff_t * offset)
 {
 	struct fblock *fb = PDE(file->f_path.dentry->d_inode)->data;
-	struct fb_otp_priv *fb_priv;
+	struct fb_aes_priv *fb_priv;
 
-	if (count != 16 && count != 24 && count != 32) //valid key length
+	if (count != 16 && count != 24 && count != 32){
+		printk(KERN_ERR "invalid key length %d\n", count);
 		return -EINVAL;
+	}
 
 	rcu_read_lock();
 	fb_priv = rcu_dereference_raw(fb->private_data);
@@ -143,12 +155,16 @@ static ssize_t fb_aes_proc_write(struct file *file, const char __user * ubuff,
 	write_lock(&fb_priv->klock);
 
 	if (copy_from_user(fb_priv->key, ubuff, count)) {
+		printk(KERN_ERR "could not copy user buffer\n");
 		return -EIO;
 	}
 
 	//setup key
+	printk(KERN_ERR "count %d\n", count);
 	fb_priv->key_bits = count * 8;
-	fb_priv->rk = kmalloc(GFP_KERNEL, RKLENGTH(fb_priv->key_bits)*sizeof(long));
+	printk(KERN_ERR "key_bits %d\n", fb_priv->key_bits);
+
+	fb_priv->rk = kmalloc(RKLENGTH(fb_priv->key_bits)*sizeof(long), GFP_KERNEL);
 	fb_priv->nrounds = rijndaelSetupEncrypt(fb_priv->rk, fb_priv->key, fb_priv->key_bits);	
 	
 	write_unlock(&fb_priv->klock);
@@ -183,7 +199,7 @@ static struct fblock *fb_aes_ctor(char *name)
 	fb_priv->port[0] = IDP_UNKNOWN;
 	fb_priv->port[1] = IDP_UNKNOWN;
 
-	fb_priv->key = kmalloc(32); //max key size
+	fb_priv->key = kmalloc(32, GFP_KERNEL); //max key size
 	if (!fb_priv->key)
 		goto err1;
 	fb_priv->len = 0;
@@ -213,7 +229,7 @@ err4:
 err3:
 	cleanup_fblock_ctor(fb);
 err2:
-	vfree(fb_priv->key);
+	kfree(fb_priv->key);
 err1:
 	kfree(fb_priv);
 err:
@@ -221,19 +237,19 @@ err:
 	return NULL;
 }
 
-static void fb_otp_dtor_outside_rcu(struct fblock *fb)
+static void fb_aes_dtor_outside_rcu(struct fblock *fb)
 {
-	vfree(((struct fb_otp_priv *)rcu_dereference_raw(fb->private_data))->key);
+	kfree(((struct fb_aes_priv *)rcu_dereference_raw(fb->private_data))->key);
 }
 
-static void fb_otp_dtor(struct fblock *fb)
+static void fb_aes_dtor(struct fblock *fb)
 {
 	kfree(rcu_dereference_raw(fb->private_data));
 	remove_proc_entry(fb->name, fblock_proc_dir);
 	module_put(THIS_MODULE);
 }
 
-static struct fblock_factory fb_otp_factory = {
+static struct fblock_factory fb_aes_factory = {
 	.type = "ch.ethz.csg.aes",
 	.mode = MODE_DUAL,
 	.ctor = fb_aes_ctor,
