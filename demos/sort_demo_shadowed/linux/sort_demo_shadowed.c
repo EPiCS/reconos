@@ -1,5 +1,6 @@
 #include "reconos.h"
 #include "mbox.h"
+#include "rqueue.h"
 
 #include "thread_shadowing.h"
 //#include "thread_shadowing_subs.h"
@@ -8,9 +9,9 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#define  _GNU_SOURCE
 #include <pthread.h>
 #include <assert.h>
-
 #include <signal.h>
 #include <sys/ucontext.h>
 
@@ -43,6 +44,11 @@
 #define TO_PAGES(x) ((x)/PAGE_SIZE)
 #define TO_BLOCKS(x) ((x)/(PAGE_SIZE*PAGES_PER_THREAD))
 
+// Thread Interfaces
+#define TI_SHMEM  0
+#define TI_MBOX   1
+#define TI_RQUEUE 2
+
 // Thread shadowing
 int hw_threads;
 int sw_threads;
@@ -57,29 +63,39 @@ unsigned int *data, *copy;
 struct mbox mb_start[MAX_THREADS];
 struct mbox mb_stop[MAX_THREADS];
 
+// reconos queues
+rqueue rq_start[MAX_THREADS];
+rqueue rq_stop[MAX_THREADS];
 
-unsigned int* malloc_page_aligned(unsigned int pages)
-{
 
-	unsigned int * temp = malloc ((pages+1)*PAGE_SIZE);
-	unsigned int * data = (unsigned int*)(((unsigned int)temp / PAGE_SIZE + 1) * PAGE_SIZE);
-	return data;
-}
-
-// size is given in words, not bytes!
-void print_data(unsigned int* data, unsigned int size)
+/**
+ * @brief Versatile function for printing data arrays
+ * @param _data		   pointer to data array
+ * @param _data_size   is gives size of data array in bytes
+ * @param _first_count determines how many bytes at start of data array will be printed
+ * @param _last_count  determines how many bytes at end   of data array will be printed
+ */
+void print_data_first_last(unsigned int* _data, size_t _data_size, size_t _first_count, size_t _last_count)
 {
 	int i;
-	for (i=0; i<size; i++)
-	{
-		printf("(%04d) %04d \t", i, data[i]);
-		if ((i+1)%4 == 0) printf("\n");
+	for(i = 0; i < _first_count; i++){
+	  printf("%08X ",_data[i]);
+	  if((i % 16) == 15) printf("\n");
 	}
-	printf("\n");
+	if (_last_count > 0)
+	{
+		printf("[...]\n");
+		for(i = TO_WORDS(_data_size)-_last_count; i < TO_WORDS(_data_size); i++){
+				  printf("%08X ",_data[i]);
+				  if((i % 16) == 15) printf("\n");
+			}
+	}
+	if((i % 16) != 15) printf("\n");
 }
 
-/** Copies 8kBytes from given pointer to newly allocated block of memory and
- *  returns a pointer to it.
+/**
+ * @brief Copies 8kBytes from given pointer to newly allocated block of memory and returns a pointer to it.
+ *
  */
 void *buffer_copy (void *ptr)
 {
@@ -92,7 +108,8 @@ void *buffer_copy (void *ptr)
   return cpy;
 }
 
-/** Compares two 8 kBytes buffers.
+/**
+ * @brief Compares two 8 kBytes buffers.
  * \param pos Optional Parameter. If not null, the index of the found difference will be stored.
  */
 int buffer_compare_report (unsigned int *a, unsigned int *b, unsigned int *idx)
@@ -120,7 +137,9 @@ int buffer_compare( void *a, void *b){
     return buffer_compare_report( (unsigned int*) a, (unsigned int*) b, NULL);
 }
 
-
+/*
+ * @brief Prints statistics on the memory management unit in the hardware slots path to memory.
+ */
 void print_mmu_stats()
 {
 	uint32 hits,misses,pgfaults;
@@ -130,26 +149,34 @@ void print_mmu_stats()
 	printf("MMU stats: TLB hits: %d    TLB misses: %d    page faults: %d\n",hits,misses,pgfaults);
 }
 
-
+/*
+ * @brief On invalind command line syntax, this function will output a help on correct syntax.
+ */
 void print_help()
 {
   printf(
-"ReconOS v3 sort demo application.\n"
+"ReconOS v3 extended sort demo application.\n"
 "Sorts a buffer full of data with a variable number of sw and hw threads.\n"
+"Supports thread shadowing and different thread interfaces and error injection."
 "\n"
 "Usage:\n"
 "\tsort_demo <-h|--help>\n"
-"\tsort_demo <num_hw_threads> <num_sw_threads> <num_of_blocks> <redundant threads> <#injected errors> <seed>\n"
+"\tsort_demo <num_hw_threads> <num_sw_threads> <num_of_blocks> [thread interface] [redundant threads] [#injected errors] [seed]\n"
 "\n"
-"Size of a block in bytes: %i\n",
+"Size of a block in bytes: %i\n"
+"\n"
+"Implemented Thread Interfaces:\n"
+"\t0: data via shared memory, address via message box (Default),\n"
+"\t1: all data via message box,\n"
+"\t2: all data via reconos queue\n",
 PAGE_SIZE*PAGES_PER_THREAD
 );
 }
 
-//
-// Signal handler for SIGSEGV
-// Get as much information to help in debugging as possible!
-//
+/*
+ * Signal handler for SIGSEGV. Used for debugging on a microblaze processor.
+ * Get as much information to help in debugging as possible!
+ */
 void sigsegv_handler(int sig, siginfo_t *siginfo, void * context){
 	int i;
 	ucontext_t* uc = (ucontext_t*) context;
@@ -173,13 +200,46 @@ void sigsegv_handler(int sig, siginfo_t *siginfo, void * context){
     exit(32);
 }
 
+/*
+ * @brief Sets up the error injection in compute threads stack.
+ */
+void eif_setup( shadowedthread_t* shadows, unsigned int error_count, unsigned int seed)
+{
+	void* stack_address;
+	size_t stack_size;
+	extern int pthread_getattr_np(pthread_t thread, pthread_attr_t *attr);
+
+
+//	for(i=0; i< running_threads; i++){
+//		shadow_get_stack(shadows+i, 0, &stack_address, &stack_size);
+//		printf ("Shadowed Thread %i: stack address: %p stack size: %i\n",i, stack_address, stack_size);
+//	}
+//	exit(0);
+
+	pthread_attr_t main_attr;
+	pthread_getattr_np(pthread_self(),&main_attr);
+	pthread_attr_getstack(&main_attr, &stack_address, &stack_size);
+	printf("Main Thread Stack address: %8p  Stack size: %8zi\n", stack_address, stack_size);
+
+	shadow_get_stack(shadows+0, 0, &stack_address, &stack_size);
+	printf("Sort Thread Stack address: %8p  Stack size: %8zi\n", stack_address, stack_size);
+
+	eif_set_seed(seed);
+	eif_add_trans(stack_address+stack_size- 1024*1024, 1024*1024 , error_count, 0, 20, SINGLE_BIT_FLIP, 0);
+	//eif_add_trans(stack_address, stack_size , error_count, 0, 20, SINGLE_BIT_FLIP, 0);
+	eif_start();
+}
+
+/**
+ * @bief Main function
+ */
 int main(int argc, char ** argv)
 {
 	int i = 0;
 	int j = 0;
 	int error_idx, from, to = 0;
 	int buffer_size = 0;
-
+	int thread_interface = 0;
 	unsigned int error_count=0;
 	unsigned int seed=1;
 
@@ -199,50 +259,91 @@ int main(int argc, char ** argv)
 	};
 	sigaction(SIGSEGV, &act, NULL);
 
-
-	if ((argc < 4) || (argc > 7))
+	//
+	// Parse command line arguments
+	//
+	if ((argc < 4) || (argc > 8))
 	{
 	  print_help();
 	  exit(1);
 	}
 	// we have 3 or 4 arguments now...
 	hw_threads = atoi(argv[1]);
+	if ( hw_threads < 0 ) { hw_threads = 0; }
+	if ( hw_threads > MAX_THREADS ) { hw_threads = MAX_THREADS; }
 	sw_threads = atoi(argv[2]);
+	if ( sw_threads < 0 ) { sw_threads = 0; }
+	if ( sw_threads > MAX_THREADS ) { sw_threads = MAX_THREADS; }
 	// Base unit is bytes. Use macros TO_WORDS, TO_PAGES and TO_BLOCKS for conversion.
 	buffer_size = atoi(argv[3])*PAGE_SIZE*PAGES_PER_THREAD;
 	if ( argc >= 5) {
-		sh_threadcount = atoi(argv[4]);
+		thread_interface = atoi(argv[4]);
+		if ( thread_interface < TI_SHMEM ) { thread_interface = TI_SHMEM; }
+		if ( thread_interface > TI_RQUEUE ) { thread_interface = TI_RQUEUE; }
+	}
+	if ( argc >= 6) {
+		sh_threadcount = atoi(argv[5]);
 		if ( sh_threadcount < 1 ){sh_threadcount = 1;}
 		if ( sh_threadcount > 2 ){sh_threadcount = 2;}
 	}
-	if ( argc >= 6) {
-		error_count = atoi(argv[5]);
-	}
 	if ( argc >= 7) {
-		seed = atoi(argv[6]);
+		error_count = atoi(argv[6]);
 	}
+	if ( argc >= 8) {
+		seed = atoi(argv[7]);
+	}
+	printf("Parameters: hwt: %2i, swt: %2i, blocks: %5i, thread interface: %s, shadowing: %s\n",
+			hw_threads, sw_threads, TO_BLOCKS(buffer_size),
+			(thread_interface == TI_SHMEM? "SHMEM":(thread_interface == TI_MBOX? "MBOX":(thread_interface == TI_RQUEUE? "RQUEUE":"unknown"))),
+			(sh_threadcount == 1 ? "off": "on"));
 
 	running_threads = hw_threads + sw_threads;
-
-	//int gettimeofday(struct timeval *tv, struct timezone *tz);
-
     printf("Main thread is pthread %lu\n", pthread_self());
 
-
-
-	// init mailboxes
+    //
+    // Setup resources for communication with compute threads
+    //
     struct reconos_resource res[MAX_THREADS][2];
-    for (i=0; i< MAX_THREADS; i++){
-    	mbox_init(&(mb_start[i]),TO_WORDS(buffer_size)+MAX_THREADS);
-    	mbox_init(&(mb_stop[i]) ,TO_WORDS(buffer_size)+MAX_THREADS);
-    	res[i][0].type = RECONOS_TYPE_MBOX;
-    	res[i][0].ptr  = &(mb_start[i]);
-    	res[i][1].type = RECONOS_TYPE_MBOX;
-    	res[i][1].ptr  = &(mb_stop[i]);
+    switch( thread_interface )
+    {
+    case TI_SHMEM:
+    	// init one mailbox for shared memory solution
+    	mbox_init(&mb_start[0],TO_BLOCKS(buffer_size));
+        mbox_init(&mb_stop[0] ,TO_BLOCKS(buffer_size));
+
+    	res[0][0].type = RECONOS_TYPE_MBOX;
+    	res[0][0].ptr  = &(mb_start[0]);
+        res[0][1].type = RECONOS_TYPE_MBOX;
+    	res[0][1].ptr  = &(mb_stop[0]);
+    case TI_MBOX:
+		// init mailboxes for mbox solution
+		for (i=0; i< MAX_THREADS; i++){
+			mbox_init(&(mb_start[i]),TO_WORDS(buffer_size)+MAX_THREADS);
+			mbox_init(&(mb_stop[i]) ,TO_WORDS(buffer_size)+MAX_THREADS);
+			res[i][0].type = RECONOS_TYPE_MBOX;
+			res[i][0].ptr  = &(mb_start[i]);
+			res[i][1].type = RECONOS_TYPE_MBOX;
+			res[i][1].ptr  = &(mb_stop[i]);
+		}
+		break;
+    case TI_RQUEUE:
+    	// init reconos queues
+		for (i=0; i< MAX_THREADS; i++){
+			rq_init(&(rq_start[i]),TO_BLOCKS(buffer_size)*2);
+			rq_init(&(rq_stop[i]) ,TO_BLOCKS(buffer_size)*2);
+			res[i][0].type = RECONOS_TYPE_RQ;
+			res[i][0].ptr  = &(rq_start[i]);
+			res[i][1].type = RECONOS_TYPE_RQ;
+			res[i][1].ptr  = &(rq_stop[i]);
+		}
+		break;
     }
 
+
 #ifndef HOST_COMPILE
+    //
 	// create hardware shadowed threads
+    //
 	reconos_init_autodetect();
 
 	printf("Creating %i shadowed hw-threads: ", hw_threads);
@@ -254,12 +355,32 @@ int main(int argc, char ** argv)
 		shadow_init( sh+i );
 		shadow_set_reliability( sh+i, TS_REL_DEFAULT );
 		shadow_set_copycompare( sh+i, buffer_copy, buffer_compare );
-		shadow_set_resources( sh+i, res[i], 2 );
+		switch( thread_interface )
+		{
+			case TI_SHMEM:
+				shadow_set_resources( sh+i, res[0], 2 );
+				for (j=0; j< sh_threadcount; j++)
+				{
+					shadow_set_hwslots(sh+i, j, 0+j+sh_threadcount*i);
+				}
+				break;
+			case TI_MBOX:
+				shadow_set_resources( sh+i, res[i], 2 );
+				for (j=0; j< sh_threadcount; j++)
+				{
+					shadow_set_hwslots(sh+i, j, 4+j+sh_threadcount*i);
+				}
+				break;
+			case TI_RQUEUE:
+				shadow_set_resources( sh+i, res[i], 2 );
+				for (j=0; j< sh_threadcount; j++)
+				{
+					shadow_set_hwslots(sh+i, j, 8+j+sh_threadcount*i);
+				}
+				break;
+		}
 		shadow_set_options(sh+i, TS_MANUAL_SCHEDULE);
 		shadow_set_threadcount(sh+i, sh_threadcount, 0);
-		for (j=0; j< sh_threadcount; j++){
-			shadow_set_hwslots(sh+i, j, j+sh_threadcount*i);
-		}
 		shadow_thread_create(sh+i);
 	}
 	printf("\n");
@@ -274,8 +395,22 @@ int main(int argc, char ** argv)
 		shadow_init( sh+i );
 		shadow_set_reliability( sh+i, TS_REL_DEFAULT );
 		shadow_set_copycompare( sh+i, buffer_copy, buffer_compare );
-		shadow_set_swthread( sh+i, sort_thread_messages ); //sort8k_ts_worker);
-		shadow_set_resources( sh+i, res[i], 1 );
+
+		switch( thread_interface )
+		{
+		    case TI_SHMEM:
+		    	shadow_set_swthread( sh+i, sort_thread_shmem );
+		    	shadow_set_resources( sh+i, res[0], 2 );
+		    	break;
+		    case TI_MBOX:
+		    	shadow_set_swthread( sh+i, sort_thread_mbox );
+		    	shadow_set_resources( sh+i, res[i], 2 );
+		    	break;
+		    case TI_RQUEUE:
+		    	shadow_set_swthread( sh+i, sort_thread_rqueue );
+		    	shadow_set_resources( sh+i, res[i], 2 );
+		    	break;
+		}
 		shadow_set_options(sh+i, TS_MANUAL_SCHEDULE);
 		shadow_set_threadcount( sh+i, 0, sh_threadcount);
 		shadow_thread_create( sh+i );
@@ -283,28 +418,8 @@ int main(int argc, char ** argv)
 	printf("\n");
 
 
-	// Setup error injection
-	void* stack_address;
-	size_t stack_size;
-
-//	for(i=0; i< running_threads; i++){
-//		shadow_get_stack(sh+i, 0, &stack_address, &stack_size);
-//		printf ("Shadowed Thread %i: stack address: %p stack size: %i\n",i, stack_address, stack_size);
-//	}
-//	exit(0);
-
-	pthread_attr_t main_attr;
-	pthread_getattr_np(pthread_self(),&main_attr);
-	pthread_attr_getstack(&main_attr, &stack_address, &stack_size);
-	printf("Main Thread Stack address: %8p  Stack size: %8i\n", stack_address, stack_size);
-
-	shadow_get_stack(sh+0, 0, &stack_address, &stack_size);
-	printf("Sort Thread Stack address: %8p  Stack size: %8i\n", stack_address, stack_size);
-
-	eif_set_seed(seed);
-	eif_add(stack_address+stack_size- 1024*1024, 1024*1024 , error_count, 0, 20, SINGLE_BIT_FLIP, 0);
-	//eif_add(stack_address, stack_size , error_count, 0, 20, SINGLE_BIT_FLIP, 0);
-	eif_start();
+	// Setup error injection; no error injection if error count is 0 :-)
+	eif_setup(sh, error_count, seed);
 
 	//print_mmu_stats();
 
@@ -312,36 +427,19 @@ int main(int argc, char ** argv)
 	t_start = gettime();
 
 	printf("malloc page aligned ...\n");
-	data = malloc_page_aligned(TO_PAGES(buffer_size));
-	copy = malloc_page_aligned(TO_PAGES(buffer_size));
+	data = xmalloc_aligned(buffer_size,PAGE_SIZE);
+	copy = xmalloc_aligned(buffer_size,PAGE_SIZE);
 	printf("generating %i words of data ...\n", TO_WORDS(buffer_size));
 	generate_data( data, TO_WORDS(buffer_size));
 	memcpy(copy,data,buffer_size);
 
-
 	// print generated data
 #if 0
 	printf("\ndumping the first and last 128 words of data:\n");
-	for(i = 0; i < 128; i++){
-	  printf("%08X ",data[i]);
-	  if((i % 16) == 15) printf("\n");
-	}
-	printf("[...]\n");
-	for(i = TO_WORDS(buffer_size)-128; i < TO_WORDS(buffer_size); i++){
-		  printf("%08X ",data[i]);
-		  if((i % 16) == 15) printf("\n");
-	}
+	print_data_first_last(data, buffer_size, 128, 128);
 
 	printf("\ndumping the first and last 128 words of copy:\n");
-	for(i = 0; i < 128; i++){
-	  printf("%08X ",copy[i]);
-	  if((i % 16) == 15) printf("\n");
-	}
-	printf("[...]\n");
-	for(i = TO_WORDS(buffer_size)-128; i < TO_WORDS(buffer_size); i++){
-		  printf("%08X ",copy[i]);
-		  if((i % 16) == 15) printf("\n");
-	}
+	print_data_first_last(copy, buffer_size, 128, 128);
 #endif
 
 	t_stop = gettime();
@@ -352,37 +450,102 @@ int main(int argc, char ** argv)
 
 	printf("Putting %i blocks into job queues: ", TO_BLOCKS(buffer_size));
 	fflush(stdout);
-	for (i=0; i<TO_BLOCKS(buffer_size); i++)
+
+	//
+	// Transfer data to compute threads
+	//
+	unsigned int length = TO_WORDS(BLOCK_SIZE)*4;
+	switch ( thread_interface )
 	{
-	  //printf(" %i",i);fflush(stdout);
-	  mbox_put( &mb_start[i%running_threads],(unsigned int)TO_WORDS(BLOCK_SIZE) );
-	  for(j = 0; j < TO_WORDS(BLOCK_SIZE); j++){
-		  mbox_put( &mb_start[i%running_threads],(unsigned int)data[i*TO_WORDS(BLOCK_SIZE)+j] );
-	  }
+	case TI_SHMEM:
+		//
+		// shared memory solution
+		//
+		for (i=0; i<TO_BLOCKS(buffer_size); i++)
+		{
+		  mbox_put(&mb_start[0],(unsigned int)data+(i*BLOCK_SIZE));
+		  //printf(" %i",i);fflush(stdout);
+		}
+		break;
+	case TI_MBOX:
+		//
+		// mbox solution
+		//
+		for (i=0; i<TO_BLOCKS(buffer_size); i++)
+		{
+		  mbox_put( &mb_start[i%running_threads],(unsigned int)TO_WORDS(BLOCK_SIZE) );
+		  //printf(" %i",i);fflush(stdout);
+		  for(j = 0; j < TO_WORDS(BLOCK_SIZE); j++)
+		  {
+			  mbox_put( &mb_start[i%running_threads],(unsigned int)data[i*TO_WORDS(BLOCK_SIZE)+j] );
+		  }
+		}
+		break;
+	case TI_RQUEUE:
+		//
+		// rq solution
+		//
+		for (i=0; i<TO_BLOCKS(buffer_size); i++)
+		{
+			// First send length of data  to sort
+			rq_send(&rq_start[i%running_threads], &length, sizeof(length));
+			// then send actual data
+			rq_send(&rq_start[i%running_threads], data+i*TO_WORDS(BLOCK_SIZE), length);
+		}
+		break;
 	}
 	printf("\n");
 
+	//
 	// Wait for results
+	//
 	printf("Waiting for %i blocks of data: ", TO_BLOCKS(buffer_size));
 	fflush(stdout);
-	for (i=0; i<TO_BLOCKS(buffer_size); i++)
+
+	switch ( thread_interface )
 	{
-	  //printf(" %i",i);fflush(stdout);
-	  for ( j=0; j<TO_WORDS(BLOCK_SIZE) ; j++ ){
-		  data[i*TO_WORDS(BLOCK_SIZE)+j] = mbox_get(&mb_stop[i%running_threads]);
-	  }
+	case TI_SHMEM:
+		//
+		// shared memory solution
+		//
+		for (i=0; i<TO_BLOCKS(buffer_size); i++)
+		{
+		  (void) mbox_get(&mb_stop[0]); // we discard return value as it does not matter
+		}
+		break;
+	case TI_MBOX:
+		//
+		// mbox solution
+		//
+		for (i=0; i<TO_BLOCKS(buffer_size); i++)
+		{
+		  for ( j=0; j<TO_WORDS(BLOCK_SIZE) ; j++ ){
+			  data[i*TO_WORDS(BLOCK_SIZE)+j] = mbox_get(&mb_stop[i%running_threads]);
+		  }
+		  //printf(" %i",i);fflush(stdout);
+		}
+		break;
+	case TI_RQUEUE:
+		//
+		// rq solution
+		//
+		for (i=0; i<TO_BLOCKS(buffer_size); i++)
+		{
+			// receive results
+			rq_receive(&rq_stop[i%running_threads], data+i*TO_WORDS(BLOCK_SIZE), length);
+		}
+		break;
 	}
 	printf("\n");
 
 	t_stop = gettime();
 	t_sort = calc_timediff_ms(t_start,t_stop);
 
-
 	// merge data
 	t_start = gettime();	
 
 	printf("Merging sorted data slices...\n");
-	unsigned int * temp = malloc_page_aligned(TO_PAGES(buffer_size));
+	unsigned int * temp = xmalloc_aligned(buffer_size, PAGE_SIZE);
 	//printf("Data buffer at address %p \n", (void*)data);
 	//printf("Address of temporary merge buffer: %p\n", (void*)temp);
 	//printf("Total size of data in bytes: %i\n",buffer_size);
@@ -431,7 +594,7 @@ int main(int argc, char ** argv)
 	else
 	  {
 	    printf("success\n");
-	    //print_data(data, TO_WORDS(buffer_size));
+	    //print_data_first_last(data, buffer_size, buffer_size, 0);
 	  }
 
 	t_stop = gettime();
@@ -440,12 +603,42 @@ int main(int argc, char ** argv)
 	// terminate all threads
 	printf("Sending terminate message to %i threads:", running_threads);
 	fflush(stdout);
-	for (i=0; i<running_threads; i++)
-	{
-	  printf(" %i",i);fflush(stdout);
-	  mbox_put(&mb_start[i],UINT_MAX);
-	  //shadow_dump(sh+i);
 
+//	printf("\n");
+	switch ( thread_interface )
+	{
+	case TI_SHMEM:
+		for (i=0; i<running_threads; i++)
+		{
+		  printf(" %i",i);fflush(stdout);
+		  mbox_put(&mb_start[0],UINT_MAX);
+		}
+		break;
+	case TI_MBOX:
+		//
+		// mbox_solution
+		//
+		for (i=0; i<running_threads; i++)
+		{
+		  printf(" %i",i);fflush(stdout);
+		  mbox_put(&mb_start[i],UINT_MAX);
+		}
+		break;
+	case TI_RQUEUE:
+		//
+		// rq solution
+		//
+		{
+			unsigned int exit_value = UINT_MAX;
+			for (i=0; i<running_threads; i++)
+			{
+			  printf(" %i",i);fflush(stdout);
+			  rq_send(&rq_start[i],&exit_value, sizeof(exit_value));
+			  //shadow_dump(sh+i);
+
+			}
+		}
+		break;
 	}
 	printf("\n");
 
@@ -472,9 +665,8 @@ int main(int argc, char ** argv)
 		TO_WORDS(buffer_size), hw_threads, sw_threads,
 		t_generate, t_sort, t_merge, t_check, t_sort + t_merge );
 	
-	//free(data);
-	//free(copy);
-	// Memory Leak on variable data!!!
+	free(data);
+	free(copy);
 	
 	exit(0);
 }

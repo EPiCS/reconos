@@ -34,7 +34,7 @@
 // - get pointer to data buffer
 // - if valid address: sort data and post answer
 // - if exit command: issue thread exit os call
-void *sort_thread(void* data)
+void *sort_thread_shmem(void* data)
 {
 	static int call_nr = 0;
     unsigned int ret;
@@ -83,7 +83,7 @@ void *sort_thread(void* data)
 // - gets length of data and every data word via a message box
 // - if length > 0: copy data into private buffer and start sorting it; afterwards pass data back via message box
 // - if length = UINT_MAX : exit command -> issue thread exit os call
-void *sort_thread_messages(void* data)
+void *sort_thread_mbox(void* data)
 {
 	static int call_nr = 0;
 	unsigned int i;
@@ -106,7 +106,7 @@ void *sort_thread_messages(void* data)
 //	}
     //
 
-    printf("SORT8K: Address of buffer: %8p, size of buffer %i\n", buffer, sizeof(buffer));
+    printf("SORT8K: Address of buffer: %8p, size of buffer %li\n", buffer, sizeof(buffer));
     //eif_add(buffer, sizeof(buffer) , 100, 0, 10, SINGLE_BIT_FLIP, 0);
     //eif_start();
     while ( 1 ) {
@@ -155,6 +155,100 @@ void *sort_thread_messages(void* data)
 		  for (i = 0; i< length; i++){
 		  	  mbox_put(mb_stop, buffer[i]);
 		  }
+		  SORT_DEBUG3("First three data words written: %i %i %i\n", buffer[0],buffer[1],buffer[2]);
+
+		}
+		//SORT_DEBUG3("SW Thread %lu, call %d: put acknowledgement into mailbox %p\n", self, call_nr, mb_stop);
+        call_nr++;
+        SORT_DEBUG("Calling pthread_yield() ...\n");
+        pthread_yield();
+    }
+
+    return (void*)0;
+}
+
+// This is a reconos queue based solution.
+// Sort data is communicated in 8k blocks via reconos queues.
+// Protocol is:
+// - First rq message is a single word containing length of data to sort
+//   If it is UINT_MAX, thread will exit
+// - Second rq message will contain data to sort.
+// - thread sends back sorted data via rq message
+void *sort_thread_rqueue(void* data)
+{
+	static int call_nr = 0;
+    unsigned int length;
+    unsigned int error=0;
+    unsigned int  buffer[N*sizeof(unsigned int)];
+    struct reconos_resource *res  = (struct reconos_resource*) data;
+    rqueue *rq_start = res[0].ptr;
+    rqueue *rq_stop  = res[1].ptr;
+#ifdef DEBUG
+    pthread_t self = pthread_self();
+#endif
+    SORT_DEBUG4("SW Thread %lu, call %d: Started with mailbox addresses %p and %p ...\n", self, call_nr,  rq_start, rq_stop);
+
+    // error injection code
+//    int leading_thread = false;
+//    shadowedthread_t *sh;
+//    pthread_t this = pthread_self();
+//    if (is_shadowed_in_parent(this, &sh)) {
+//    	leading_thread = shadow_leading_thread(sh, this);
+//	}
+    //
+
+
+    while ( 1 ) {
+    	SORT_DEBUG3("SW Thread %lu, call %d: getting length from mailbox %p\n", self, call_nr, mb_start);
+        error = rq_receive(rq_start,&length, sizeof(length));
+        if ( error != sizeof(length) )
+        {
+        	printf("ERROR: rq_receive returned to few data. Expected: %li bytes, returned %i bytes", sizeof(length), error);
+        	exit(24);
+        }
+		//printf("SW Thread %lu: Got address %p from mailbox %p.\n", self, (void*)ret, mb_start);
+		if (length == UINT_MAX)
+		{
+		  SORT_DEBUG3("SW Thread %lu, call %d: Got exit command from mailbox %p.\n", self, call_nr, mb_start);
+		  rq_send(rq_stop, &length, sizeof(length));
+		  //free(buffer);
+		  pthread_exit((void*)0);
+		}
+		else
+		{
+		  SORT_DEBUG3("SW Thread %lu, call %d: starting bubblesort with length %i\n", self, call_nr, (unsigned int)length);
+		  // read into local buffer
+		  SORT_DEBUG("Reading Data Words:...\n");
+		  // Error injection:
+		  // if (leading_thread){length--;} // Tests parameter checking
+		  //
+		  error = rq_receive(rq_start, buffer, length);
+		  if ( error != length )
+		  {
+			printf("ERROR: rq_receive returned to few data. Expected: %i bytes, returned %i bytes", length, error);
+			exit(24);
+		  }
+
+		  SORT_DEBUG3("First three data words read: %i %i %i\n", buffer[0],buffer[1],buffer[2]);
+		  // sort local buffer
+#ifdef BENCHMARK
+		  timing_t start, stop;
+		  ms_t bubblesort_time;
+		  start = gettime();
+#endif
+		  bubblesort(  buffer, N); // N is number of (unsigned int*) the buffer consists of
+#ifdef BENCHMARK
+		  stop = gettime();
+		  bubblesort_time = calc_timediff_ms(start, stop);
+		  printf("bubblesort time: %lu ms\n", bubblesort_time);
+#endif
+		  // Error injection
+		  //if (leading_thread){buffer[42]= 0x1337;}
+		  //
+
+		  // write sorted buffer into output queue
+		  SORT_DEBUG("Writing Data Words...\n");
+		  rq_send(rq_stop, buffer, length);
 		  SORT_DEBUG3("First three data words written: %i %i %i\n", buffer[0],buffer[1],buffer[2]);
 
 		}

@@ -10,9 +10,9 @@ HOST_CFLAGS = -O0 -g -m32  -Wall -DHOST_COMPILE
 APP_OBJS = eif.o 
 
 host:
-AR=$(HOST_AR)
-CC=$(HOST_CC)
-CFLAGS=$(HOST_CFLAGS)
+#AR=$(HOST_AR)
+#CC=$(HOST_CC)
+#CFLAGS=$(HOST_CFLAGS)
 
 
 all: libeif main

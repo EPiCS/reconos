@@ -1001,6 +1001,7 @@ package body reconos_pkg is
 	)is begin   
         osif_call_0(i_osif, o_osif,OSIF_CMD_THREAD_YIELD,result, done);      
     end procedure;
+
 	procedure memif_setup (
 		signal i_memif : out i_memif_t;
 		signal o_memif : in  o_memif_t;

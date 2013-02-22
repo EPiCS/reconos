@@ -188,7 +188,7 @@ int main(int argc, char ** argv)
 	{
 	  printf(" %i",i);fflush(stdout);
 	  pthread_attr_init(&swt_attr[i]);
-	  pthread_create(&swt[i], &swt_attr[i], sort_thread, (void*)res);
+	  pthread_create(&swt[i], &swt_attr[i], sort_thread_shmem, (void*)res);
 	}
 	printf("\n");
 

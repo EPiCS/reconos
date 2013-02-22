@@ -8,9 +8,9 @@ HOST_CFLAGS = -O0 -g -Wall -m32 -DHOST_COMPILE -pthread
 # -m32
 
 host:
-AR=$(HOST_AR)
-CC=$(HOST_CC)
-CFLAGS=$(HOST_CFLAGS)
+#AR=$(HOST_AR)
+#CC=$(HOST_CC)
+#CFLAGS=$(HOST_CFLAGS)
 
 
 all: libreconos

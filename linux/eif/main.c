@@ -39,7 +39,7 @@ int main(int argc, char** argv){
 
 	// Setup error injection
 	//eif_add(testdata,TESTDATA_SIZE, 10, 1000, 5000, SET_VALUE,0);
-	if(eif_add(foo,65, 2, 1000, 5000, SINGLE_BIT_FLIP,0)!=0){
+	if(eif_add_trans(foo,65, 2, 1000, 5000, SINGLE_BIT_FLIP,0)!=0){
 		printf("Can't change permissions for memory area beginning at %8p.\n", foo);
 	}
 	eif_start();

@@ -414,8 +414,9 @@ static void *reconos_delegate_thread_entry(void *arg)
 		case RECONOS_CMD_RQ_SEND:
 			reconos_delegate_process_rqueue_send(hwt);
 			break;
-        case RECONOS_CMD_THREAD_YIELD:
-            reconos_delegate_process_thread_yield(hwt);
+	        case RECONOS_CMD_THREAD_YIELD:
+        		reconos_delegate_process_thread_yield(hwt);
+			break;
 		case RECONOS_CMD_THREAD_GET_INIT_DATA:
 			reconos_delegate_process_get_init_data(hwt);
 			break;

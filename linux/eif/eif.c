@@ -169,6 +169,7 @@ int  eif_add_trans(void* mem_start, unsigned int mem_len, unsigned int error_cnt
  */
 int  eif_add_perma(void* mem, unsigned int len, unsigned int error_cnt, unsigned int start_time, unsigned int end_time, error_t et, unsigned char ep){
 
+	return 0;
 
 }
 

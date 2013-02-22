@@ -71,6 +71,7 @@ runConf = [
 start_idx=0
 
 ofiles = ["bench_sortdemo.txt", "bench_sortdemo_shadowed_off.txt", "bench_sortdemo_shadowed_on.txt"]
+threadInterface = 0
 
 if __name__ == "__main__":
     filename = sys.argv[1] 
@@ -81,30 +82,32 @@ if __name__ == "__main__":
     f.write("# This is an automatically generatet benchmark script.\n")
     f.write("# Do not modify this by hand. Modify the generator genBenchmark.py\n\n")
         
-#    f.write("echo \"First run with unmodified sort_demo...\"\n")
-#    f.write("echo -n \"Test set \"\n")
-#    f.write("echo \"\" >" + ofiles[0] + "\n")
-#    for i in range(0, len(runConf)):
-#        f.write("echo -n \"" +  str(i) + "\"\n")
-#        f.write("./sort_demo " + str(runConf[i][HWT]) + " " + str(runConf[i][SWT]) + " " + str(runConf[i][NB]) + " >> " + ofiles[0] + "\n" )
-#        f.write("echo -e \"\\n##############################################\\n\" >> " + ofiles[0] + "\n")
-#        f.write("echo\n")
-
+    f.write("echo \"First run with unmodified sort_demo...\"\n")
+    f.write("echo -n \"Test set\"\n")
+    f.write("echo \"\" >" + ofiles[0] + "\n")
+    for i in range(0, len(runConf)):
+        f.write("echo -n \" " +  str(i) + "\"\n")
+        f.write("./sort_demo " + str(runConf[i][HWT]) + " " + str(runConf[i][SWT]) + " " + str(runConf[i][NB]) + " >> " + ofiles[0] + "\n" )
+        f.write("echo -e \"\\n##############################################\\n\" >> " + ofiles[0] + "\n")
+        f.write("\n")
+    f.write("echo\n")
     
     f.write("echo \"Second run with sort_demo_shadowed (shadowing off)...\"\n")
-    f.write("echo -n \"Test set \"\n")
+    f.write("echo -n \"Test set\"\n")
     f.write("echo \"\" >" + ofiles[1] + "\n")
     for i in range(start_idx, len(runConf)):
-        f.write("echo -n \"" +  str(i) + "\"\n")
-        f.write("./sort_demo_shadowed " + str(runConf[i][HWT]) + " " + str(runConf[i][SWT]) + " " + str(runConf[i][NB]) + " 1 >> " + ofiles[1] + "\n")
+        f.write("echo -n \" " +  str(i) + "\"\n")
+        f.write("./sort_demo_shadowed " + str(runConf[i][HWT]) + " " + str(runConf[i][SWT]) + " " + str(runConf[i][NB]) + " " + str(threadInterface) + " 1 >> " + ofiles[1] + "\n")
         f.write("echo -e \"\\n##############################################\\n\" >> " + ofiles[1] + "\n")
-        f.write("echo\n")
-        
+        f.write("\n")
+    f.write("echo\n")
+    
     f.write("echo \"Third run with sort_demo_shadowed (shadowing_on)...\"\n")
-    f.write("echo -n \"Test set \"\n")
+    f.write("echo -n \"Test set\"\n")
     f.write("echo \"\" >" + ofiles[2]  + "\n")
     for i in range(start_idx, len(runConf)):
-        f.write("echo -n \"" +  str(i) + "\"\n")
-        f.write("./sort_demo_shadowed " + str(runConf[i][HWT]) + " " + str(runConf[i][SWT]) + " " + str(runConf[i][NB]) + " 2 >> " + ofiles[2] + "\n" )
+        f.write("echo -n \" " +  str(i) + "\"\n")
+        f.write("./sort_demo_shadowed " + str(runConf[i][HWT]) + " " + str(runConf[i][SWT]) + " " + str(runConf[i][NB]) + " " + str(threadInterface) +  " 2 >> " + ofiles[2] + "\n" )
         f.write("echo -e \"\\n##############################################\\n\" >> " + ofiles[2] + "\n")
-        f.write("echo\n")
+        f.write("\n")
+    f.write("echo\n")

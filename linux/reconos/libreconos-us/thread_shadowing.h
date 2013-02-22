@@ -20,6 +20,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <semaphore.h>
+#include <sys/time.h>
 #include "reconos.h"
 #include "fifo.h"
 //

@@ -6,28 +6,24 @@ use ieee.std_logic_unsigned.all;
 library proc_common_v3_00_a;
 use proc_common_v3_00_a.proc_common_pkg.all;
 
-library reconos_v3_00_a;
-use reconos_v3_00_a.reconos_pkg.all;
+library reconos_v3_00_b;
+use reconos_v3_00_b.reconos_pkg.all;
 
 entity hwt_sort_demo_rq is
 	port (
 		-- OSIF FSL
-		OSFSL_Clk       : in  std_logic;                 -- Synchronous clock
-		OSFSL_Rst       : in  std_logic;
-		OSFSL_S_Clk     : out std_logic;                 -- Slave asynchronous clock
+		
 		OSFSL_S_Read    : out std_logic;                 -- Read signal, requiring next available input to be read
 		OSFSL_S_Data    : in  std_logic_vector(0 to 31); -- Input data
 		OSFSL_S_Control : in  std_logic;                 -- Control Bit, indicating the input data are control word
 		OSFSL_S_Exists  : in  std_logic;                 -- Data Exist Bit, indicating data exist in the input FSL bus
-		OSFSL_M_Clk     : out std_logic;                 -- Master asynchronous clock
+		
 		OSFSL_M_Write   : out std_logic;                 -- Write signal, enabling writing to output FSL bus
 		OSFSL_M_Data    : out std_logic_vector(0 to 31); -- Output data
 		OSFSL_M_Control : out std_logic;                 -- Control Bit, indicating the output data are contol word
 		OSFSL_M_Full    : in  std_logic;                 -- Full Bit, indicating output FSL bus is full
 		
 		-- FIFO Interface
-		FIFO32_S_Clk : out std_logic;
-		FIFO32_M_Clk : out std_logic;
 		FIFO32_S_Data : in std_logic_vector(31 downto 0);
 		FIFO32_M_Data : out std_logic_vector(31 downto 0);
 		FIFO32_S_Fill : in std_logic_vector(15 downto 0);
@@ -35,11 +31,12 @@ entity hwt_sort_demo_rq is
 		FIFO32_S_Rd : out std_logic;
 		FIFO32_M_Wr : out std_logic;
 		
-		-- HWT reset
+		-- HWT reset and clock
+		clk           : in std_logic;
 		rst           : in std_logic
 	);
 
-end hwt_sort_demo_rq;
+end entity;
 
 architecture implementation of hwt_sort_demo_rq is
 	type STATE_TYPE is (
@@ -112,9 +109,9 @@ architecture implementation of hwt_sort_demo_rq is
 begin
 	
 	-- local dual-port RAM
-	local_ram_ctrl_1 : process (OSFSL_Clk) is
+	local_ram_ctrl_1 : process (clk) is
 	begin
-		if (rising_edge(OSFSL_Clk)) then
+		if (rising_edge(clk)) then
 			if (o_RAMWE_reconos = '1') then
 				local_ram(conv_integer(unsigned(o_RAMAddr_reconos))) := o_RAMData_reconos;
 			else
@@ -123,9 +120,9 @@ begin
 		end if;
 	end process;
 			
-	local_ram_ctrl_2 : process (OSFSL_Clk) is
+	local_ram_ctrl_2 : process (clk) is
 	begin
-		if (rising_edge(OSFSL_Clk)) then		
+		if (rising_edge(clk)) then		
 			if (o_RAMWE_sorter = '1') then
 				local_ram(conv_integer(unsigned(o_RAMAddr_sorter))) := o_RAMData_sorter;
 			else
@@ -143,7 +140,7 @@ begin
 			G_DWIDTH  => 32
 		)
 		port map (
-			clk       => OSFSL_Clk,
+			clk       => clk,
 			reset     => rst,
 			o_RAMAddr => o_RAMAddr_sorter,
 			o_RAMData => o_RAMData_sorter,
@@ -156,8 +153,6 @@ begin
 	fsl_setup(
 		i_osif,
 		o_osif,
-		OSFSL_Clk,
-		OSFSL_Rst,
 		OSFSL_S_Data,
 		OSFSL_S_Exists,
 		OSFSL_M_Full,
@@ -170,12 +165,9 @@ begin
 	memif_setup(
 		i_memif,
 		o_memif,
-		OSFSL_Clk,
-		FIFO32_S_Clk,
 		FIFO32_S_Data,
 		FIFO32_S_Fill,
 		FIFO32_S_Rd,
-		FIFO32_M_Clk,
 		FIFO32_M_Data,
 		FIFO32_M_Rem,
 		FIFO32_M_Wr
@@ -193,7 +185,7 @@ begin
 	o_RAMAddr_reconos(0 to C_LOCAL_RAM_ADDRESS_WIDTH-1) <= o_RAMAddr_reconos_2((32-C_LOCAL_RAM_ADDRESS_WIDTH) to 31);
 		
 	-- os and memory synchronisation state machine
-	reconos_fsm: process (i_osif.clk,rst,o_osif,o_memif,o_ram) is
+	reconos_fsm: process (clk,rst,o_osif,o_memif,o_ram) is
 		variable done  : boolean;
 	begin
 		if rst = '1' then
@@ -205,7 +197,7 @@ begin
 			data_len <= (others => '0');
 			result <= (others => '0');
 			sort_start <= '0';
-		elsif rising_edge(i_osif.clk) then
+		elsif rising_edge(clk) then
 			case state is
 
 				-- get data length via reconos queue

@@ -14,7 +14,8 @@
 #ifndef __SORT8K_H__
 #define __SORT8K_H__
 
-void *sort_thread(void* data);
-void *sort_thread_messages(void* data);
+void *sort_thread_shmem(void* data);
+void *sort_thread_mbox(void* data);
+void *sort_thread_rqueue(void* data);
 
 #endif
