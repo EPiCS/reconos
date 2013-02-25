@@ -404,7 +404,7 @@ int main(int argc, char ** argv)
 		shadow_set_resources( sh+i, res[i], 2 );
 		for (j=0; j< sh_threadcount; j++)
 		{
-			shadow_set_hwslots(sh+i, j, actual_slot_map[i*j]);
+			shadow_set_hwslots(sh+i, j, actual_slot_map[i*(j+1)]);
 		}
 		shadow_set_options(sh+i, TS_MANUAL_SCHEDULE);
 		shadow_set_threadcount(sh+i, sh_threadcount, 0);
@@ -441,7 +441,7 @@ int main(int argc, char ** argv)
 	{
 	  printf(" %i",i);fflush(stdout);
 	  reconos_hwt_setresources(&(hwt[i]),res[i],2);
-	  reconos_hwt_create(&(hwt[i]),i,NULL);
+	  reconos_hwt_create(&(hwt[i]), actual_slot_map[i], NULL);
 	}
 	printf("\n");
 #endif
