@@ -7,7 +7,7 @@ HOST_CFLAGS = -O0 -g -m32  -Wall  -DHOST_COMPILE -static
 
 APP_OBJS = bubblesort.o data.o merge.o timing.o sort8k.o
 
-all: sort_demo sort_demo_shadowed
+
 
 host:
 #CC=$(HOST_CC)
@@ -15,15 +15,20 @@ host:
 
 LIBPATH = -L ../../../linux/reconos/libreconos-us -L ../../../linux/eif
 INCLUDEPATH = -I ../../../linux/reconos/libreconos-us -I ../../../linux/eif
-LIBS = -leif -lreconos -lpthread -lm -lrt
+LDFLAGS = -leif -lreconos -lpthread -lm -lrt
 
+.PHONY: clean
+
+all: sort_demo sort_demo_shadowed
+ 
 sort_demo: $(APP_OBJS)
-	$(CC) $(APP_OBJS) $(CFLAGS) $(LIBPATH) $(INCLUDEPATH) sort_demo.c -o sort_demo $(LIBS)
+	$(CC) $(APP_OBJS) $(CFLAGS) $(LIBPATH) $(INCLUDEPATH) sort_demo.c -o sort_demo $(LDFLAGS)
 
 sort_demo_shadowed: $(APP_OBJS)
-	$(CC) $(APP_OBJS) $(CFLAGS) $(LIBPATH) $(INCLUDEPATH) sort_demo_shadowed.c -o sort_demo_shadowed $(LIBS)
-# -static
-
+	# recompile needed object files for shadowing
+	rm -f sort8k.o
+	$(CC) -c $(CFLAGS) -DSHADOWING $(LIBPATH) $(INCLUDEPATH) -o sort8k.o sort8k.c
+	$(CC) $(APP_OBJS) $(CFLAGS) -DSHADOWING $(LIBPATH) $(INCLUDEPATH) sort_demo.c -o sort_demo_shadowed $(LDFLAGS)
 
 clean:
 	rm -f *.o sort_demo sort_demo_shadowed 

@@ -2,13 +2,16 @@
 #include "mbox.h"
 #include "rqueue.h"
 
-#include "thread_shadowing.h"
-//#include "thread_shadowing_subs.h"
+#ifdef SHADOWING
+	#include "thread_shadowing.h"
+	//#include "thread_shadowing_subs.h"
+#endif
 
 #include "eif.h"
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #define  _GNU_SOURCE
 #include <pthread.h>
 #include <assert.h>
@@ -49,12 +52,23 @@
 #define TI_MBOX   1
 #define TI_RQUEUE 2
 
-// Thread shadowing
 int hw_threads;
 int sw_threads;
-int sh_threadcount = 2;
 int running_threads;
-shadowedthread_t sh[MAX_THREADS];
+int sh_threadcount = 2; // command line parsing shall stay the same for both shadowed and non shadowed versions
+
+#ifdef SHADOWING
+	// Thread shadowing
+
+	shadowedthread_t sh[MAX_THREADS];
+#else
+	// software threads
+	pthread_t swt[MAX_THREADS];
+	pthread_attr_t swt_attr[MAX_THREADS];
+
+	// hardware threads
+	struct reconos_hwt hwt[MAX_THREADS];
+#endif
 
 // pointers to buffers of unsorted numbers
 unsigned int *data, *copy;
@@ -178,7 +192,6 @@ PAGE_SIZE*PAGES_PER_THREAD
  * Get as much information to help in debugging as possible!
  */
 void sigsegv_handler(int sig, siginfo_t *siginfo, void * context){
-	int i;
 	ucontext_t* uc = (ucontext_t*) context;
 
     // Yeah, i know using printf in a signal context is not save.
@@ -193,13 +206,17 @@ void sigsegv_handler(int sig, siginfo_t *siginfo, void * context){
 
     // Print address of unsorted numbers buffer
     printf("data: %8p \ncopy: %8p\n", data, copy);
+#ifdef SHADOWING
     // Print OS call lists for debugging
+    int i;
     for (i=0; i < running_threads; i++){
     	shadow_dump(sh + i);
     }
+#endif
     exit(32);
 }
 
+#ifdef SHADOWING
 /*
  * @brief Sets up the error injection in compute threads stack.
  */
@@ -229,7 +246,7 @@ void eif_setup( shadowedthread_t* shadows, unsigned int error_count, unsigned in
 	//eif_add_trans(stack_address, stack_size , error_count, 0, 20, SINGLE_BIT_FLIP, 0);
 	eif_start();
 }
-
+#endif
 /**
  * @bief Main function
  */
@@ -242,6 +259,8 @@ int main(int argc, char ** argv)
 	int thread_interface = 0;
 	unsigned int error_count=0;
 	unsigned int seed=1;
+
+	void *(*actual_sort_thread)(void* data)=NULL;
 
 	timing_t t_start;
     timing_t t_stop;
@@ -304,18 +323,39 @@ int main(int argc, char ** argv)
     // Setup resources for communication with compute threads
     //
     struct reconos_resource res[MAX_THREADS][2];
+    const int shmem_slots[]  = {0,1,2,3};
+    const int mbox_slots[]	 = {4,5,6,7};
+    const int rqueue_slots[] = {8,9,10,11};
+    const int * actual_slot_map = NULL;
+
     switch( thread_interface )
     {
     case TI_SHMEM:
+    	// set software implementation of sort thread
+    	actual_sort_thread = sort_thread_shmem;
+
+    	// set slot assignments
+    	actual_slot_map = shmem_slots;
+
     	// init one mailbox for shared memory solution
     	mbox_init(&mb_start[0],TO_BLOCKS(buffer_size));
         mbox_init(&mb_stop[0] ,TO_BLOCKS(buffer_size));
-
-    	res[0][0].type = RECONOS_TYPE_MBOX;
-    	res[0][0].ptr  = &(mb_start[0]);
-        res[0][1].type = RECONOS_TYPE_MBOX;
-    	res[0][1].ptr  = &(mb_stop[0]);
+        // Although one resource struct would suffice, we keep the resource array,
+        // to simplify the following thread configuration code.
+        for (i=0; i< MAX_THREADS; i++){
+			res[i][0].type = RECONOS_TYPE_MBOX;
+			res[i][0].ptr  = &(mb_start[0]);
+			res[i][1].type = RECONOS_TYPE_MBOX;
+			res[i][1].ptr  = &(mb_stop[0]);
+        }
+        break;
     case TI_MBOX:
+    	// set software implementation of sort thread
+    	actual_sort_thread = sort_thread_mbox;
+
+    	// set slot assignments
+    	actual_slot_map = mbox_slots;
+
 		// init mailboxes for mbox solution
 		for (i=0; i< MAX_THREADS; i++){
 			mbox_init(&(mb_start[i]),TO_WORDS(buffer_size)+MAX_THREADS);
@@ -327,6 +367,12 @@ int main(int argc, char ** argv)
 		}
 		break;
     case TI_RQUEUE:
+    	// set software implementation of sort thread
+    	actual_sort_thread = sort_thread_rqueue;
+
+    	// set slot assignments
+    	actual_slot_map = rqueue_slots;
+
     	// init reconos queues
 		for (i=0; i< MAX_THREADS; i++){
 			rq_init(&(rq_start[i]),TO_BLOCKS(buffer_size)*2);
@@ -339,7 +385,7 @@ int main(int argc, char ** argv)
 		break;
     }
 
-
+#ifdef SHADOWING
 #ifndef HOST_COMPILE
     //
 	// create hardware shadowed threads
@@ -355,29 +401,10 @@ int main(int argc, char ** argv)
 		shadow_init( sh+i );
 		shadow_set_reliability( sh+i, TS_REL_DEFAULT );
 		shadow_set_copycompare( sh+i, buffer_copy, buffer_compare );
-		switch( thread_interface )
+		shadow_set_resources( sh+i, res[i], 2 );
+		for (j=0; j< sh_threadcount; j++)
 		{
-			case TI_SHMEM:
-				shadow_set_resources( sh+i, res[0], 2 );
-				for (j=0; j< sh_threadcount; j++)
-				{
-					shadow_set_hwslots(sh+i, j, 0+j+sh_threadcount*i);
-				}
-				break;
-			case TI_MBOX:
-				shadow_set_resources( sh+i, res[i], 2 );
-				for (j=0; j< sh_threadcount; j++)
-				{
-					shadow_set_hwslots(sh+i, j, 4+j+sh_threadcount*i);
-				}
-				break;
-			case TI_RQUEUE:
-				shadow_set_resources( sh+i, res[i], 2 );
-				for (j=0; j< sh_threadcount; j++)
-				{
-					shadow_set_hwslots(sh+i, j, 8+j+sh_threadcount*i);
-				}
-				break;
+			shadow_set_hwslots(sh+i, j, actual_slot_map[i*j]);
 		}
 		shadow_set_options(sh+i, TS_MANUAL_SCHEDULE);
 		shadow_set_threadcount(sh+i, sh_threadcount, 0);
@@ -395,32 +422,45 @@ int main(int argc, char ** argv)
 		shadow_init( sh+i );
 		shadow_set_reliability( sh+i, TS_REL_DEFAULT );
 		shadow_set_copycompare( sh+i, buffer_copy, buffer_compare );
-
-		switch( thread_interface )
-		{
-		    case TI_SHMEM:
-		    	shadow_set_swthread( sh+i, sort_thread_shmem );
-		    	shadow_set_resources( sh+i, res[0], 2 );
-		    	break;
-		    case TI_MBOX:
-		    	shadow_set_swthread( sh+i, sort_thread_mbox );
-		    	shadow_set_resources( sh+i, res[i], 2 );
-		    	break;
-		    case TI_RQUEUE:
-		    	shadow_set_swthread( sh+i, sort_thread_rqueue );
-		    	shadow_set_resources( sh+i, res[i], 2 );
-		    	break;
-		}
+		shadow_set_swthread( sh+i, actual_sort_thread );
+		shadow_set_resources( sh+i, res[i], 2 );
 		shadow_set_options(sh+i, TS_MANUAL_SCHEDULE);
 		shadow_set_threadcount( sh+i, 0, sh_threadcount);
 		shadow_thread_create( sh+i );
 	}
 	printf("\n");
+#else
+#ifndef HOST_COMPILE
+	// init reconos and communication resources
+	reconos_init_autodetect();
 
 
+	printf("Creating %i hw-threads: ", hw_threads);
+	fflush(stdout);
+	for (i = 0; i < hw_threads; i++)
+	{
+	  printf(" %i",i);fflush(stdout);
+	  reconos_hwt_setresources(&(hwt[i]),res[i],2);
+	  reconos_hwt_create(&(hwt[i]),i,NULL);
+	}
+	printf("\n");
+#endif
+	// init software threads
+	printf("Creating %i sw-threads: ",sw_threads);
+	fflush(stdout);
+	for (i = 0; i < sw_threads; i++)
+	{
+	  printf(" %i",i);fflush(stdout);
+	  pthread_attr_init(&swt_attr[i]);
+	  pthread_create(&swt[i], &swt_attr[i], actual_sort_thread, (void*)res[i]);
+	}
+	printf("\n");
+#endif
+
+#ifdef SHADOWING
 	// Setup error injection; no error injection if error count is 0 :-)
 	eif_setup(sh, error_count, seed);
-
+#endif
 	//print_mmu_stats();
 
 	// create pages and generate data
@@ -643,6 +683,8 @@ int main(int argc, char ** argv)
 	printf("\n");
 
 	printf("Waiting for termination...\n");
+
+	#ifdef SHADOWING
 	for (i=0; i<running_threads; i++)
 	{
 	  shadow_join(sh+i, NULL);
@@ -651,6 +693,17 @@ int main(int argc, char ** argv)
 
 	printf("Waiting for error injection to finish...\n");
 	eif_join();
+#else
+	for (i=0; i<hw_threads; i++)
+	{
+	  pthread_join(hwt[i].delegate,NULL);
+	}
+
+	for (i=0; i<sw_threads; i++)
+	{
+	  pthread_join(swt[i],NULL);
+	}
+#endif
 
 #ifndef HOST_COMPILE
 	print_mmu_stats();

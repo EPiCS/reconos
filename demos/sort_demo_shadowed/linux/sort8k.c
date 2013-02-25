@@ -4,9 +4,14 @@
 #include "mbox.h"
 #include "config.h"
 #include "timing.h"
-#include "thread_shadowing.h"
-#include "thread_shadowing_subs.h"
 
+#ifdef SHADOWING
+	#include "thread_shadowing.h"
+	#include "thread_shadowing_subs.h"
+#endif
+
+#include "mbox.h"
+#include "rqueue.h"
 #include "eif.h"
 
 #include <limits.h>
@@ -160,8 +165,10 @@ void *sort_thread_mbox(void* data)
 		}
 		//SORT_DEBUG3("SW Thread %lu, call %d: put acknowledgement into mailbox %p\n", self, call_nr, mb_stop);
         call_nr++;
+#ifdef SHADOWING
         SORT_DEBUG("Calling pthread_yield() ...\n");
         pthread_yield();
+#endif
     }
 
     return (void*)0;
@@ -254,9 +261,10 @@ void *sort_thread_rqueue(void* data)
 		}
 		//SORT_DEBUG3("SW Thread %lu, call %d: put acknowledgement into mailbox %p\n", self, call_nr, mb_stop);
         call_nr++;
+#ifdef SHADOWING
         SORT_DEBUG("Calling pthread_yield() ...\n");
         pthread_yield();
+#endif
     }
-
     return (void*)0;
 }
