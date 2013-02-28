@@ -67,8 +67,8 @@ typedef struct os_call {
 	char params[TS_PARAM_SIZE]; // Size arbitrarily chosen
 	char retval[TS_RETVAL_SIZE]; // Size choosen so that the biggest return value
 								 // of all calls will fit in this field.
-	void* sedata; // side effect data, used to store data which was not transferred via parameters
-	unsigned int sedata_length;
+	void* retdata; // side effect data, used to store data which was transferred via parameters
+	unsigned int retdata_length;
 
 	struct timeval timestamp; // for benchmarking error detection latency
 
@@ -153,6 +153,10 @@ typedef struct shadowedthread {
 //void shadow_os_call_init( os_call_t * oc );
 void shadow_os_call_new(shadowedthread_t *sh, os_call_t * os_call,
 		const char *function, char *params, unsigned int params_length);
+void shadow_os_call_add_retdata(shadowedthread_t *sh, os_call_t * os_call,
+		void *retdata, unsigned int retdata_len);
+void shadow_os_call_get_retdata(shadowedthread_t *sh, os_call_t * os_call,
+		void ** retdata, unsigned int * retdata_len);
 void shadow_os_call_finish(shadowedthread_t *sh, os_call_t * os_call,
 		void * retval, unsigned int retval_length);
 void shadow_os_call_get_retval(shadowedthread_t *sh, void * retval,

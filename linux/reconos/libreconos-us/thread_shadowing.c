@@ -601,7 +601,7 @@ void shadow_os_call_new(shadowedthread_t *sh, os_call_t * os_call,
 	memset(os_call, 0, sizeof(os_call));
 	os_call->index = sh->os_calls_idx;
 	sh->os_calls_idx++;
-	os_call->function = (char *) function; // we accept to lose the 'const' qualifier
+	os_call->function = (char *) function; // we accept to loose the 'const' qualifier
 	memset(os_call->retval, 0, TS_RETVAL_SIZE);
 	memset(os_call->params, 0, TS_PARAM_SIZE);
 	memcpy(os_call->params, params,
@@ -611,6 +611,33 @@ void shadow_os_call_new(shadowedthread_t *sh, os_call_t * os_call,
 	gettimeofday(&os_call->timestamp, NULL);
 
 	TS_DEBUG("Leaving shadow_os_call_new\n");
+}
+
+//
+// Adds additional return data to the os_call.
+// Additional return data is returned via pointers in the function parameter list.
+//
+void shadow_os_call_add_retdata(shadowedthread_t *sh, os_call_t * os_call , void *retdata, unsigned int retdata_len){
+	TS_DEBUG("Entered shadow_os_call_add_retdata\n");
+	assert(sh);
+	assert(os_call);
+	assert(retdata);
+	os_call->retdata = retdata;
+	os_call->retdata_length = retdata_len;
+	TS_DEBUG("Leaving shadow_os_call_add_retdata\n");
+}
+
+//
+// Returns pointer to additional return data.
+//
+void shadow_os_call_get_retdata(shadowedthread_t *sh, os_call_t * os_call , void ** retdata, unsigned int * retdata_len){
+	TS_DEBUG("Entered shadow_os_call_get_retdata\n");
+	assert(sh);
+	assert(os_call);
+	assert(retdata);
+	*retdata_len = os_call->retdata_length;
+	*retdata = os_call->retdata;
+	TS_DEBUG("Leaving shadow_os_call_get_retdata\n");
 }
 
 // Saves the return value to the os_call structure and pushes it into the fifo.

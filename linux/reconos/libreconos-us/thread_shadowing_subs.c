@@ -33,7 +33,7 @@ extern shadowedthread_t *shadow_list_head;
 //
 // Debugging
 //
-//#define DEBUG 1
+#define DEBUG 1
 
 #ifdef DEBUG
     #define SUBS_DEBUG(message) printf("SUBS: " message)
@@ -85,7 +85,7 @@ extern shadowedthread_t *shadow_list_head;
 // Tell the Shadow Layer about side effect data. this is data not communicated via parameters and return values. Example is
 // a data structure, to which only a pointer was given.
 //
-#define SHADOW_ADD_SEDATA(data, length) \
+#define SHADOW_ADD_RETDATA(data, length) \
 
 
 //
@@ -282,37 +282,65 @@ void ts_rq_close(rqueue * rq){
 	SHADOW_EPILOGUE(NONBLOCKING);
 }
 
+/*
+ * Parameter msg is of outgoing type: data will be written to that address.
+ * Therefore we have to provide that data to the shadow thread too.
+ */
 int  ts_rq_receive(rqueue * rq, uint32* msg, uint32 msg_size){
 	int retval=0;
 
-	void* sedata = NULL;
-	unsigned int sedata_idx=0;
+	char* retdata = NULL;
+	unsigned int retdata_idx=0;
+	unsigned int retdata_len=0;
 
 	SHADOW_INIT;
 	SHADOW_ADD_PARAM(rq);
 	SHADOW_ADD_PARAM(msg);
 	SHADOW_ADD_PARAM(msg_size);
-
-	if ( is_shadowed ){
-		sedata = realloc(sedata,sedata_idx+msg_size);
-		//printf("SUBS: realloc returned: %8p, for size %8i\n", sedata, sedata_idx+msg_size);
-		//memcpy(sedata+sedata_idx,&(msg), msg_size);
-		//printf("SUBS: memcpy succeded\n");
-		sedata_idx += msg_size;
-	}
-
 	SHADOW_PROLOGUE;
 	SUBS_DEBUG4("Thread %8lu calling function rq_receive(%p, %p, %i)\n", pthread_self(), rq, msg, msg_size);
 	retval = rq_receive(rq, msg, msg_size);
+
+	/// SHADOW_ADD_RETVAL
+	if ( is_shadowed && is_leading_thread && status == TS_ACTIVE ){
+		retdata = realloc(retdata,retdata_idx+msg_size);
+		//printf("SUBS: realloc returned: %8p, for size %8i\n", retdata, retdata_idx+msg_size);
+		memcpy(retdata+retdata_idx,msg, msg_size);
+		//printf("SUBS: memcpy succeded\n");
+		retdata_idx += msg_size;
+	}
+
+	/// EPILOGUE
+	if ( is_shadowed && is_leading_thread && status == TS_ACTIVE ){
+		if (retdata_idx != 0) {
+			shadow_os_call_add_retdata(sh, &os_call , retdata, retdata_idx);
+		}
+	}
+
 	SHADOW_EPILOGUE(NONBLOCKING);
+
+	/// SHADOW_ADD_RETVAL
+	if ( is_shadowed && !is_leading_thread ){
+		shadow_os_call_get_retdata(sh, &os_call , (void*)&retdata, &retdata_len);
+		memcpy(msg,retdata+retdata_idx, msg_size);
+		retdata_idx += msg_size;
+	}
+
+
+	/// EPILOGUE
+	if ( is_shadowed && !is_leading_thread ){
+		if ( retdata ) { free(retdata); }
+	}
+	/// ----
+	SUBS_DEBUG2("Thread %8lu returning %i\n", pthread_self(), retval);
 	return retval;
 }
 
 void ts_rq_send(rqueue * rq, uint32* msg, uint32 msg_size){
 	int retval=0; //Dummy
 
-	void* sedata = NULL;
-	unsigned int sedata_idx=0;
+	void* retdata = NULL;
+	unsigned int retdata_idx=0;
 
 	SHADOW_INIT;
 	SHADOW_ADD_PARAM(rq);
@@ -321,9 +349,9 @@ void ts_rq_send(rqueue * rq, uint32* msg, uint32 msg_size){
 
 
 	if ( is_shadowed ){
-		sedata = realloc(sedata,sedata_idx+msg_size);
-		//memcpy(sedata+sedata_idx,&(msg), msg_size);
-		sedata_idx += msg_size;
+		retdata = realloc(retdata,retdata_idx+msg_size);
+		//memcpy(retdata+retdata_idx,&(msg), msg_size);
+		retdata_idx += msg_size;
 	}
 
 	SHADOW_PROLOGUE;
