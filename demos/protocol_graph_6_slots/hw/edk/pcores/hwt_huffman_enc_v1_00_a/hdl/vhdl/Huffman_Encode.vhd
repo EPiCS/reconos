@@ -73,6 +73,7 @@ architecture implementation of huffman_enc is
 	signal o_memif  : o_memif_t;
 	signal i_ram    : i_ram_t;
 	signal o_ram    : o_ram_t;
+	signal ignore   : std_logic_vector(C_FSL_WIDTH-1 downto 0);
 
 
 ---- CE D-FF for codes and lengths
@@ -451,7 +452,7 @@ begin
 					osif_mbox_get(i_osif, o_osif, MBOX_RECV, code_int, done);
 					if done then
 						if code_int = x"DEADDA7A" then
-							state <= WAIT_FOR_CODE;
+							state <= STATE_ACK;
 						else
 							index := CONV_INTEGER(code_int(31 downto 24)); -- ASCII Char
 							CodexDN(index)(REG_LEN-1 downto REG_LEN-MAX_LEN)  <= code_int(23 downto 23-MAX_LEN+1); -- Code
@@ -462,6 +463,11 @@ begin
 							state <= STATE_GET_CODE;
 						end if;
 					end if;
+				when STATE_ACK  => 
+					osif_mbox_put(i_osif, o_osif, MBOX_SEND, code_int, ignore, done);
+d						if done then
+							state <= WAIT_FOR_CODE;
+						end if;
 				when others =>
 					null;
 			end case;

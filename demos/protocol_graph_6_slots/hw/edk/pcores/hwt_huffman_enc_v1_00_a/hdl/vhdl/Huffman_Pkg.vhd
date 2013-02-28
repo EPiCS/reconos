@@ -32,7 +32,7 @@ package Huffman_Pkg is
 	constant MAX_LEN						  : integer := 17;
 	constant MIN_LEN						  : integer := 3;
 	
-	type STATE_TYPE is (WAIT_FOR_CODE, STATE_GET_CODE);
+	type STATE_TYPE is (WAIT_FOR_CODE, STATE_GET_CODE, STATE_ACK);
 	type FORWARD_TYPE is (NEUTRAL, ANALYZE, WAIT_PRECODE, PRECODE, CODE, POSTCODE, FORWARD);  
 	type state_fsm is (Neutral, MoreData, DecodeStart, DecodeProc1, DecodeProc2, DecodeEnd); 
 	
