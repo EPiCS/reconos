@@ -24,6 +24,7 @@
 
 #include "mbox.h"
 #include "rqueue.h"
+#include "func_call.h"
 #include "thread_shadowing_schedule.h"
 #include "thread_shadowing.h"
 
@@ -58,61 +59,52 @@ extern shadowedthread_t *shadow_list_head;
 #define SHADOW_INIT \
 	pthread_t this = pthread_self(); \
 	shadowedthread_t *sh; \
-	os_call_t os_call;\
+	func_call_t func_call;\
 	bool is_shadowed = false; \
 	bool is_leading_thread = false;\
 	shadow_state_t status = TS_INACTIVE;\
-	char params[TS_PARAM_SIZE];\
-	unsigned int params_idx=0;\
+	/*char params[TS_PARAM_SIZE]*/;\
+	/*unsigned int params_idx=0*/;\
 	SUBS_DEBUG2("Thread %8lu %s() START \n", this, __FUNCTION__); \
 	is_shadowed = is_shadowed_in_parent(this, &sh); \
+	if( is_shadowed ){ \
+        SUBS_DEBUG2("Thread %8lu %s() is shadowed\n", this,__FUNCTION__); \
+		is_leading_thread = shadow_leading_thread(sh, this);\
+		status = shadow_get_state(sh);\
+	}else{\
+		SUBS_DEBUG2("Thread %8lu %s() is not shadowed \n", this, __FUNCTION__); \
+	}\
+    if( is_shadowed ){ \
+    	func_call_new(&func_call, __FUNCTION__);\
+    }\
 
 //
 // Tell the Shadow Layer about parameters you want to be checked.
 //
 #define SHADOW_ADD_PARAM(name) \
-	if (is_shadowed && (params_idx < TS_PARAM_SIZE)){\
-		memcpy(params+params_idx,&(name), sizeof((name))< TS_PARAM_SIZE-params_idx ? sizeof((name)) : TS_PARAM_SIZE-params_idx);\
-		if( sizeof((name))< TS_PARAM_SIZE-params_idx ){\
-			params_idx += sizeof((name));\
-		}else {\
-			params_idx = TS_PARAM_SIZE ;\
-		}\
+	if (is_shadowed){\
+		func_call_add_param(&func_call, &(name), sizeof((name)));\
 	}\
 
+//
+// Shadow Layer Prologue
+//
+#define SHADOW_PROLOGUE \
+    if( is_shadowed && !is_leading_thread ) { \
+			goto Epilogue; /* jumps to SHADOW_EPILOGUE */ \
+    }\
 
 //
 // Tell the Shadow Layer about side effect data. this is data not communicated via parameters and return values. Example is
 // a data structure, to which only a pointer was given.
 //
 #define SHADOW_ADD_RETDATA(data, length) \
-
-
-//
-// Shadow Layer Prologue
-//
-#define SHADOW_PROLOGUE \
-    if( is_shadowed ){ \
-    	SUBS_DEBUG1("Thread %8lu LOCK.\n", this); \
-		/*sh_lock(sh);*/ \
-		\
-        SUBS_DEBUG2("Thread %8lu %s() is shadowed\n", this,__FUNCTION__); \
-        status = shadow_get_state(sh);\
-        is_leading_thread = shadow_leading_thread(sh, this);\
-        if ( is_leading_thread ) { \
-			/* We're the leading thread, so push the function call into the fifo */ \
-			SUBS_DEBUG2("Thread %8lu %s() is leading thread\n", this,__FUNCTION__); \
-			if ( status == TS_ACTIVE ) {shadow_os_call_new(sh, &os_call, __FUNCTION__, params, sizeof(params) );}\
-		} else { \
-			/* We are the shadow thread. Get the os call from the fifo.  */\
-			SUBS_DEBUG2("Thread %8lu %s() is shadow thread\n", this,__FUNCTION__);\
-			shadow_os_call_get_retval( sh, &retval, (sizeof(retval) < TS_RETVAL_SIZE?sizeof(retval):TS_RETVAL_SIZE), __FUNCTION__, NULL, 0  );\
-			goto Epilogue; /* should directly jump to "return retval" */ \
-		} \
-    } else { \
-        SUBS_DEBUG2("Thread %8lu %s() is not shadowed \n", this, __FUNCTION__); \
-    } \
-\
+	if ( is_shadowed && is_leading_thread && status == TS_ACTIVE ){\
+		func_call_add_retdata(&func_call , (data), (length));\
+	}\
+	if (is_shadowed && !is_leading_thread){\
+		func_call_get_retdata(&func_call , (void*)(data), (length));\
+	}\
 
 //
 // Shadow Layer Epilogue
@@ -124,13 +116,22 @@ extern shadowedthread_t *shadow_list_head;
     		sem_wait(&sh->sh_wait_sem); /* sem_post is done in shadow_schedule()*/ \
     		SUBS_DEBUG1("Thread %8lu passed sleep semaphore...\n", pthread_self());\
     }\
+    if ( is_shadowed && !is_leading_thread) {\
+    	/* We are the shadow thread. Get the os call from the fifo.  */\
+		SUBS_DEBUG2("Thread %8lu %s() is shadow thread\n", this,__FUNCTION__);\
+		func_call_get_retval(&func_call,(void*) &retval, sizeof(retval));\
+    }\
     if ( is_shadowed && is_leading_thread && status == TS_ACTIVE){ \
     	/* If we came here we are the leading thread and have to push the os call into the fifo.*/\
-        SUBS_DEBUG1("Thread %8lu saving return value to shadow structure.\n", this); \
-        shadow_os_call_finish(sh, &os_call , (char*) &retval, (sizeof(retval) < TS_RETVAL_SIZE?sizeof(retval):TS_RETVAL_SIZE)); \
+        SUBS_DEBUG1("Thread %8lu saving return value.\n", this); \
+        func_call_add_retval(&func_call , (void*) &retval, sizeof(retval) ); \
+        shadow_func_call_push(sh, &func_call); \
         SUBS_DEBUG1("Thread %8lu UNLOCK.\n", this); \
         /*sh_unlock(sh);*/ \
     } \
+    if ( is_shadowed ) { \
+    	func_call_free(&func_call);\
+    }\
     SUBS_DEBUG2("Thread %8lu %s() END \n", this, __FUNCTION__); \
 \
 
@@ -155,8 +156,11 @@ int shadow_get_thread_index(shadowedthread_t *sh, pthread_t this) {
 // Thread management calls
 //
 
-// Threads call this function to indicate zero internal state
-// Shadowing system uses this information to (de-)activate shadow threads.
+/**
+ * @brief Threads call this function to indicate zero internal state
+ *
+ * Shadowing system uses this information to (de-)activate shadow threads.
+ */
 void ts_yield(){
 	int retval;
 
@@ -289,49 +293,17 @@ void ts_rq_close(rqueue * rq){
 int  ts_rq_receive(rqueue * rq, uint32* msg, uint32 msg_size){
 	int retval=0;
 
-	char* retdata = NULL;
-	unsigned int retdata_idx=0;
-	unsigned int retdata_len=0;
-
 	SHADOW_INIT;
 	SHADOW_ADD_PARAM(rq);
 	SHADOW_ADD_PARAM(msg);
 	SHADOW_ADD_PARAM(msg_size);
 	SHADOW_PROLOGUE;
 	SUBS_DEBUG4("Thread %8lu calling function rq_receive(%p, %p, %i)\n", pthread_self(), rq, msg, msg_size);
+
 	retval = rq_receive(rq, msg, msg_size);
 
-	/// SHADOW_ADD_RETVAL
-	if ( is_shadowed && is_leading_thread && status == TS_ACTIVE ){
-		retdata = realloc(retdata,retdata_idx+msg_size);
-		//printf("SUBS: realloc returned: %8p, for size %8i\n", retdata, retdata_idx+msg_size);
-		memcpy(retdata+retdata_idx,msg, msg_size);
-		//printf("SUBS: memcpy succeded\n");
-		retdata_idx += msg_size;
-	}
-
-	/// EPILOGUE
-	if ( is_shadowed && is_leading_thread && status == TS_ACTIVE ){
-		if (retdata_idx != 0) {
-			shadow_os_call_add_retdata(sh, &os_call , retdata, retdata_idx);
-		}
-	}
-
+	SHADOW_ADD_RETDATA(msg, msg_size)
 	SHADOW_EPILOGUE(NONBLOCKING);
-
-	/// SHADOW_ADD_RETVAL
-	if ( is_shadowed && !is_leading_thread ){
-		shadow_os_call_get_retdata(sh, &os_call , (void*)&retdata, &retdata_len);
-		memcpy(msg,retdata+retdata_idx, msg_size);
-		retdata_idx += msg_size;
-	}
-
-
-	/// EPILOGUE
-	if ( is_shadowed && !is_leading_thread ){
-		if ( retdata ) { free(retdata); }
-	}
-	/// ----
 	SUBS_DEBUG2("Thread %8lu returning %i\n", pthread_self(), retval);
 	return retval;
 }
@@ -339,21 +311,10 @@ int  ts_rq_receive(rqueue * rq, uint32* msg, uint32 msg_size){
 void ts_rq_send(rqueue * rq, uint32* msg, uint32 msg_size){
 	int retval=0; //Dummy
 
-	void* retdata = NULL;
-	unsigned int retdata_idx=0;
-
 	SHADOW_INIT;
 	SHADOW_ADD_PARAM(rq);
 	SHADOW_ADD_PARAM(msg);
 	SHADOW_ADD_PARAM(msg_size);
-
-
-	if ( is_shadowed ){
-		retdata = realloc(retdata,retdata_idx+msg_size);
-		//memcpy(retdata+retdata_idx,&(msg), msg_size);
-		retdata_idx += msg_size;
-	}
-
 	SHADOW_PROLOGUE;
 	SUBS_DEBUG4("Thread %8lu calling function rq_send(%p, %p, %i)\n", pthread_self(), rq, msg, msg_size);
 	rq_send(rq, msg, msg_size);

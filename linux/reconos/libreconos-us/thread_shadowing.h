@@ -23,6 +23,8 @@
 #include <sys/time.h>
 #include "reconos.h"
 #include "fifo.h"
+#include "func_call.h"
+
 //
 // Generic constraints
 //
@@ -46,12 +48,6 @@
 typedef enum shadow_state {TS_INACTIVE, TS_PREACTIVE, TS_ACTIVE} shadow_state_t;
 
 //
-// Other Constants
-//
-#define TS_PARAM_SIZE 20
-#define TS_RETVAL_SIZE 8
-#define TS_EXIT_CODE 16
-//
 // error statistics
 //
 typedef struct error_stats {
@@ -60,19 +56,6 @@ typedef struct error_stats {
 } error_stats_t;
 
 void shadow_error_inc(error_stats_t *e, unsigned int n);
-
-typedef struct os_call {
-	unsigned int index;
-	char *function; // not a function pointer, because it points to a __FUNCTION__ string
-	char params[TS_PARAM_SIZE]; // Size arbitrarily chosen
-	char retval[TS_RETVAL_SIZE]; // Size choosen so that the biggest return value
-								 // of all calls will fit in this field.
-	void* retdata; // side effect data, used to store data which was transferred via parameters
-	unsigned int retdata_length;
-
-	struct timeval timestamp; // for benchmarking error detection latency
-
-} os_call_t;
 
 //
 // Shadowing system runtime options
@@ -131,10 +114,10 @@ typedef struct shadowedthread {
 	uint8_t hw_slot_nums[TS_MAX_REDUNDANT_THREADS];
 
 	//
-	// os-calls
+	// function-calls
 	//
-	unsigned int os_calls_idx;
-	fifo_t os_calls;
+	unsigned int func_calls_idx;
+	fifo_t func_calls;
 
 	//
 	// error statistics
@@ -146,23 +129,6 @@ typedef struct shadowedthread {
 	//
 	struct shadowedthread *next;
 } shadowedthread_t;
-
-//
-// OS-Call Management
-//
-//void shadow_os_call_init( os_call_t * oc );
-void shadow_os_call_new(shadowedthread_t *sh, os_call_t * os_call,
-		const char *function, char *params, unsigned int params_length);
-void shadow_os_call_add_retdata(shadowedthread_t *sh, os_call_t * os_call,
-		void *retdata, unsigned int retdata_len);
-void shadow_os_call_get_retdata(shadowedthread_t *sh, os_call_t * os_call,
-		void ** retdata, unsigned int * retdata_len);
-void shadow_os_call_finish(shadowedthread_t *sh, os_call_t * os_call,
-		void * retval, unsigned int retval_length);
-void shadow_os_call_get_retval(shadowedthread_t *sh, void * retval,
-		unsigned int retval_length, const char *function, char *params,
-		unsigned int params_length);
-void shadow_os_call_dump(os_call_t * oc);
 
 //
 // Shadow Configuration
@@ -204,6 +170,9 @@ void ts_unlock();
 //
 void shadow_dump(shadowedthread_t *sh);
 void shadow_dump_all();
+
+void shadow_func_call_push(shadowedthread_t *sh, func_call_t * func_call);
+void shadow_func_call_pop(shadowedthread_t *sh, func_call_t ** func_call);
 
 void shadow_thread_create(shadowedthread_t * sh);
 int shadow_join(shadowedthread_t * sh, void **value_ptr);
