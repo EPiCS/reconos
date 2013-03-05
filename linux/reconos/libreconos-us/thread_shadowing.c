@@ -607,7 +607,8 @@ int shadow_join(shadowedthread_t * sh, void **value_ptr) {
 	int ret = 0;
 
 	assert(sh);
-	for (i = 0; i < TS_MAX_REDUNDANT_THREADS; i++) {
+	//for (i = 0; i < TS_MAX_REDUNDANT_THREADS; i++) {
+	for (i = 0; i < 1; i++) {
 		if (sh->threads_type[i] != TS_THREAD_NONE) {
 			ret = pthread_join(sh->threads[i], value_ptr);
 		}
