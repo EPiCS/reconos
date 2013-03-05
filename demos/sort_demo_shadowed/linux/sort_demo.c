@@ -404,7 +404,7 @@ int main(int argc, char ** argv)
 		shadow_set_resources( sh+i, res[i], 2 );
 		for (j=0; j< sh_threadcount; j++)
 		{
-			shadow_set_hwslots(sh+i, j, actual_slot_map[i*(j+1)]);
+			shadow_set_hwslots(sh+i, j, actual_slot_map[(i*sh_threadcount)+j]);
 		}
 		shadow_set_options(sh+i, TS_MANUAL_SCHEDULE);
 		shadow_set_threadcount(sh+i, sh_threadcount, 0);
@@ -684,7 +684,7 @@ int main(int argc, char ** argv)
 
 	printf("Waiting for termination...\n");
 
-	#ifdef SHADOWING
+#ifdef SHADOWING
 	for (i=0; i<running_threads; i++)
 	{
 	  shadow_join(sh+i, NULL);
