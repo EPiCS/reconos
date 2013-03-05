@@ -172,7 +172,7 @@ void shadow_dump(shadowedthread_t *sh);
 void shadow_dump_all();
 
 void shadow_func_call_push(shadowedthread_t *sh, func_call_t * func_call);
-void shadow_func_call_pop(shadowedthread_t *sh, func_call_t ** func_call);
+void shadow_func_call_pop (shadowedthread_t *sh, func_call_t * func_call);
 
 void shadow_thread_create(shadowedthread_t * sh);
 int shadow_join(shadowedthread_t * sh, void **value_ptr);

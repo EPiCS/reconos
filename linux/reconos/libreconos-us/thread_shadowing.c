@@ -542,8 +542,12 @@ int is_shadowed(pthread_t handle) {
 	return is_shadowed_in_parent(handle, NULL);
 }
 
+/**
+ * @brief Pushes a function call object into a fifo for later retrieval by the shadow thread.
+ */
 void shadow_func_call_push(shadowedthread_t *sh, func_call_t * func_call){
-
+	assert(sh);
+	assert(func_call);
 	// Add correct call index
 	func_call->index = sh->func_calls_idx;
 	sh->func_calls_idx++;
@@ -554,9 +558,14 @@ void shadow_func_call_push(shadowedthread_t *sh, func_call_t * func_call){
 	}
 }
 
-void shadow_func_call_pop(shadowedthread_t *sh, func_call_t ** func_call){
+/*
+ * @brief Pops a function call object from a fifo, so a shadow thread can compare it with its own function call.
+ */
+void shadow_func_call_pop(shadowedthread_t *sh, func_call_t * func_call){
+	assert(sh);
+	assert(func_call);
 	// Pop from internal fifo - should block when empty!
-	fifo_pop(&sh->func_calls, &func_call);
+	fifo_pop(&sh->func_calls, func_call);
 }
 
 //
