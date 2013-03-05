@@ -111,7 +111,7 @@ void *sort_thread_mbox(void* data)
 //	}
     //
 
-    printf("SORT8K: Address of buffer: %8p, size of buffer %ui\n", buffer, sizeof(buffer));
+    SORT_DEBUG2("SORT8K: Address of buffer: %8p, size of buffer %ui\n", buffer, sizeof(buffer));
     //eif_add(buffer, sizeof(buffer) , 100, 0, 10, SINGLE_BIT_FLIP, 0);
     //eif_start();
     while ( 1 ) {
@@ -208,8 +208,8 @@ void *sort_thread_rqueue(void* data)
     while ( 1 ) {
     	SORT_DEBUG3("SW Thread %lu, call %d: getting length from mailbox %p\n", self, call_nr, mb_start);
         error = rq_receive(rq_start,&length, sizeof(length));
-        printf("RQ_RECEIVE 1 returned %i\n", error);
-        printf("RQ_RECEIVE 1 length is %i\n", length);
+        SORT_DEBUG1("RQ_RECEIVE 1 returned %i\n", error);
+        SORT_DEBUG1("RQ_RECEIVE 1 length is %i\n", length);
         if ( error != sizeof(length) )
         {
         	printf("ERROR: rq_receive 1 returned to few data. Expected: %ui bytes, returned %i bytes", sizeof(length), error);
@@ -232,8 +232,8 @@ void *sort_thread_rqueue(void* data)
 		  // if (leading_thread){length--;} // Tests parameter checking
 		  //
 		  error = rq_receive(rq_start, buffer, length);
-		  printf("RQ_RECEIVE 2 returned %i\n", error);
-		  printf("RQ_RECEIVE 2 length is %i\n", length);
+		  SORT_DEBUG1("RQ_RECEIVE 2 returned %i\n", error);
+		  SORT_DEBUG1("RQ_RECEIVE 2 length is %i\n", length);
 		  if ( error != length )
 		  {
 			printf("ERROR: rq_receive 2 returned to few data. Expected: %i bytes, returned %i bytes", length, error);
