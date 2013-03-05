@@ -51,7 +51,7 @@ void func_call_new(func_call_t * func_call, const char *function) {
 	assert(function);
 
 	// Clear it
-	memset(func_call, 0, sizeof(func_call));
+	memset(func_call, 0, sizeof(func_call_t));
 
 	func_call->function = (char *) function; // we accept to loose the 'const' qualifier
 
@@ -177,6 +177,9 @@ unsigned int func_call_get_retdata(func_call_t * func_call , void * retdata, uns
  * @brief Checks if two os calls are the same.
  * @param a Should be the TUO's func_call_t
  * @param a Should be the Shadow Thread's func_call_t
+ * @retval Returns 0 if function calls match, else terminates the program with FC_EXIT_CODE.
+ *
+ * @todo: Split comparison and reaction to not matching function calls.
  */
 int func_call_compare(func_call_t * a, func_call_t * b) {
 	FC_DEBUG("Entered func_call_compare \n");
@@ -245,7 +248,6 @@ int func_call_compare(func_call_t * a, func_call_t * b) {
 		exit(FC_EXIT_CODE);
 	}
 	if (memcmp(a->params, b->params, FC_PARAM_SIZE) != 0) {
-		int i;
 		struct timeval now;
 		gettimeofday(&now, NULL);
 		unsigned long timediff = calc_timediff_us(a->timestamp, now);
@@ -255,15 +257,9 @@ int func_call_compare(func_call_t * a, func_call_t * b) {
 		printf("# ERROR: parameters of function %s , call index %i, do not match!\n",
 				a->function, a->index);
 		printf("# My parameters:        ");
-		for (i = 0;	i < FC_PARAM_SIZE; ++i)
-		{
-			printf("%2.2x", a->params[i]);
-		}
+		func_call_dump(a);
 		printf("\n# Should be parameters: ");
-		for (i = 0;	i < FC_PARAM_SIZE; ++i)
-		{
-			printf("%2.2x", b->params[i]);
-		}
+		func_call_dump(b);
 		printf("\n# Detected after %lu us\n", timediff);
 		printf("# Thread ID %lu \n", tid);
 		printf("\n#################################################\n");
@@ -276,13 +272,13 @@ int func_call_compare(func_call_t * a, func_call_t * b) {
 /**
  * @brief  Print information of one func_call
  */
-void shadow_func_call_dump(func_call_t * fc) {
+void func_call_dump(func_call_t * fc) {
 	int i;
 
-	printf("%5u Func: %s Params: ", fc->index, fc->function);
-
+	printf("%5u Func: %s ", fc->index, fc->function);
+	printf("Params Length :%2hhi Params: ", fc->params_length);
 	for (i = 0; i < FC_PARAM_SIZE; ++i) {
-		printf("%2.2hhx", fc->params[i]);
+		printf("%2.2hhx ", fc->params[i]);
 	}
 
 	printf(" RetVal: ");
