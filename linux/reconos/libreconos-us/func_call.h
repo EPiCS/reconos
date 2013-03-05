@@ -43,6 +43,6 @@ void func_call_add_retdata(func_call_t * func_call , void * retdata, unsigned in
 unsigned int func_call_get_retval(func_call_t * func_call , void * retval, unsigned int retval_len);
 unsigned int  func_call_get_retdata(func_call_t * func_call , void * retdata, unsigned int retdata_len);
 int  func_call_compare(func_call_t * a, func_call_t * b);
-void shadow_func_call_dump(func_call_t * fc);
+void func_call_dump(func_call_t * fc);
 
 #endif /* FUNC_CALL_H_ */
