@@ -11,6 +11,24 @@
 #include <string.h>
 #include <assert.h>
 
+//
+// Debugging
+//
+//#define DEBUG 1
+
+#ifdef DEBUG
+    #define FIFO_DEBUG(message) printf("FIFO: " message)
+    #define FIFO_DEBUG1(message, arg1) printf("FIFO: " message, (arg1))
+    #define FIFO_DEBUG2(message, arg1, arg2) printf("FIFO: " message, (arg1), (arg2))
+    #define FIFO_DEBUG3(message, arg1, arg2, arg3) printf("FIFO: " message, (arg1), (arg2), (arg3))
+    #define FIFO_DEBUG4(message, arg1, arg2, arg3, arg4) printf("FIFO: " message, (arg1), (arg2), (arg3), (arg4))
+#else
+    #define FIFO_DEBUG(message)
+    #define FIFO_DEBUG1(message, arg1)
+    #define FIFO_DEBUG2(message, arg1, arg2)
+    #define FIFO_DEBUG3(message, arg1, arg2, arg3)
+    #define FIFO_DEBUG4(message, arg1, arg2, arg3, arg4)
+#endif
 
 //
 // \param f			Pointer to the fifo you want to initialize
@@ -54,7 +72,7 @@ int fifo_init( fifo_t * f, unsigned int obj_count, unsigned int obj_size){
 		perror("mutex_init: mutex_write");
 		return -1;
 	}
-
+	FIFO_DEBUG3("FIFO at %p initialized with %i objects of size %u\n",f, obj_count, obj_size );
 	return 0;
 }
 
@@ -82,6 +100,8 @@ void fifo_push( fifo_t * f, void* obj ){
 	sem_post(&f->sem_read);
 	SEM_DEBUG("put exit");
 	pthread_mutex_unlock(&f->mutex_write);
+
+	FIFO_DEBUG2("FIFO pushed data to FIFO at %p from %p\n",f, obj);
 }
 
 // Copies into obj, object deleted afterwards from fifo.
@@ -98,5 +118,5 @@ void fifo_pop ( fifo_t * f, void* obj ){
 	sem_post(&f->sem_write);
 	SEM_DEBUG("get exit");
 	pthread_mutex_unlock(&f->mutex_read);
-
+	FIFO_DEBUG2("FIFO popped data from FIFO at %p to %p\n",f, obj);
 }
