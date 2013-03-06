@@ -14,8 +14,26 @@
 #include <errno.h>
 #include <string.h>
 
+#include <pthread.h>
+
 #include "fsl.h"
 #include "xutils.h"
+
+//#define DEBUG 1
+
+#ifdef DEBUG
+    #define FSL_DEBUG(message) printf("FSL: " message)
+    #define FSL_DEBUG1(message, arg1) printf("FSL: " message, (arg1))
+    #define FSL_DEBUG2(message, arg1, arg2) printf("FSL: " message, (arg1), (arg2))
+	#define FSL_DEBUG3(message, arg1, arg2, arg3) printf("FSL: " message, (arg1), (arg2), (arg3))
+	#define FSL_DEBUG4(message, arg1, arg2, arg3, arg4) printf("FSL: " message, (arg1), (arg2), (arg3), (arg4))
+#else
+    #define FSL_DEBUG(message)
+    #define FSL_DEBUG1(message, arg1)
+    #define FSL_DEBUG2(message, arg1, arg2)
+	#define FSL_DEBUG3(message, arg1, arg2, arg3)
+	#define FSL_DEBUG4(message, arg1, arg2, arg3, arg4)
+#endif
 
 static int fsl_fd[FSL_MAX] = {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1};
 
@@ -62,6 +80,7 @@ void fsl_write(int num, uint32_t value)
 		fsl_open(num);
 
 	/* XXX: @aagne: what about checking return values? ---DB */
+	FSL_DEBUG3("Thread %8li Writing to FSL%2.2i: 0x%8.8x\n", pthread_self(), num, value);
 	ret = write(fsl_fd[num], &value, sizeof(value));
 	if (ret < 0)
 		whine("fsl_write error: %s\n", strerror(errno));
@@ -78,6 +97,7 @@ uint32_t fsl_read(int num)
 
 	/* XXX: @aagne: what about checking return values? ---DB */
 	ret = read(fsl_fd[num], &value, sizeof(value));
+	FSL_DEBUG3("Thread %8li Read from FSL%2.2i: 0x%8.8x\n",pthread_self, num, value);
 	if (ret < 0)
 		whine("fsl_read error: %s\n", strerror(errno));
 
