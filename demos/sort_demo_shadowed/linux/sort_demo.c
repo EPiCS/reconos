@@ -55,7 +55,7 @@
 int hw_threads;
 int sw_threads;
 int running_threads;
-int sh_threadcount = 2; // command line parsing shall stay the same for both shadowed and non shadowed versions
+int sh_threadcount = 1; // command line parsing shall stay the same for both shadowed and non shadowed versions
 
 #ifdef SHADOWING
 	// Thread shadowing

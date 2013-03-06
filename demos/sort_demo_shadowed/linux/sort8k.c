@@ -212,7 +212,7 @@ void *sort_thread_rqueue(void* data)
         SORT_DEBUG1("RQ_RECEIVE 1 length is %i\n", length);
         if ( error != sizeof(length) )
         {
-        	printf("ERROR: rq_receive 1 returned to few data. Expected: %ui bytes, returned %i bytes", sizeof(length), error);
+        	printf("ERROR: rq_receive 1 returned to few data. Expected: %lu bytes, returned %i bytes", sizeof(length), error);
         	exit(24);
         }
 		//printf("SW Thread %lu: Got address %p from mailbox %p.\n", self, (void*)ret, mb_start);
