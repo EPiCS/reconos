@@ -302,10 +302,12 @@ void shadow_init(shadowedthread_t *sh) {
 		perror("sem_init failed!");
 	}
 	fifo_init(&(sh->func_calls), 1, sizeof(func_call_t));
+	sh->error_handler = shadow_error_abort;
 	// ...and call substructure initializers
 	shadow_errors_init(&(sh->errors));
 
 }
+
 
 void shadow_dump(shadowedthread_t *sh) {
 	int i;
@@ -566,6 +568,30 @@ void shadow_func_call_pop(shadowedthread_t *sh, func_call_t * func_call){
 	assert(func_call);
 	// Pop from internal fifo - should block when empty!
 	fifo_pop(&sh->func_calls, func_call);
+}
+
+
+/**
+ * @brief Error handler called when function calls do not match. Aborts program.
+ */
+void shadow_error_abort(shadowedthread_t * sh, int error, func_call_t * a, func_call_t * b)
+{
+	pthread_t tid = pthread_self();
+	printf("\n#################################################\n");
+	printf("# ERROR: Thread ID %lu,  %s\n",tid, func_call_strerror(error));
+	printf("# a: "); func_call_dump(a);
+	printf("# b: "); func_call_dump(b);
+	printf("# Detected after: %lu us\n", func_call_timediff_us(a,b));
+	printf("#################################################\n");
+	if ( error != FC_ERR_NONE){
+		exit(FC_EXIT_CODE);
+	}
+}
+
+void shadow_error(shadowedthread_t * sh, int error, func_call_t * a, func_call_t * b)
+{
+	assert(sh);
+	sh->error_handler(sh, error, a, b);
 }
 
 //

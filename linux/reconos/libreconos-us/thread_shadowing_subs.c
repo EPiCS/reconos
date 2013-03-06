@@ -95,8 +95,10 @@ extern shadowedthread_t *shadow_list_head;
     		shadow_func_call_pop(sh, &func_call_sh);\
     		SUBS_DEBUG2("Thread %8lu %s() popping from fifo: ", this, __FUNCTION__); \
     		/*func_call_dump(&func_call_sh)*/;\
-    		/* @todo:  implement calling of error function */\
-			func_call_compare(&func_call_tuo, &func_call_sh);\
+    		int error = func_call_compare(&func_call_tuo, &func_call_sh);\
+    		if( error != FC_ERR_NONE) {\
+    			shadow_error(sh, error, &func_call_tuo, &func_call_sh);\
+    		}\
 			goto Epilogue; /* jumps to SHADOW_EPILOGUE */ \
     }\
 

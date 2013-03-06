@@ -15,6 +15,15 @@
 #define FC_RETVAL_SIZE 8
 #define FC_EXIT_CODE 16
 
+#define FC_ERR_NONE   0 // In case all went fine :-)
+#define FC_ERR_A_NULL 1
+#define FC_ERR_B_NULL 2
+#define FC_ERR_A_FUNCTION_NULL 3
+#define FC_ERR_B_FUNCTION_NULL 4
+#define FC_ERR_FUNCTION_MATCH  5
+#define FC_ERR_PARAMS_MATCH    6
+#define FC_ERR_INDEX_MATCH     7 /// @todo Not yet implemented
+
 typedef struct func_call {
 	unsigned int index;
 	char *function; // not a function pointer, because it points to a __FUNCTION__ string
@@ -34,15 +43,17 @@ typedef struct func_call {
 //
 // OS-Call Management
 //
-void func_call_new(func_call_t * func_call, const char *function);
-void func_call_free(func_call_t * func_call);
+void func_call_new	(func_call_t * func_call, const char *function);
+void func_call_free	(func_call_t * func_call);
 
-unsigned int  func_call_add_param(func_call_t * func_call,void *params, unsigned int params_length);
-void func_call_add_retval(func_call_t * func_call, void * retval, unsigned int retval_length);
-void func_call_add_retdata(func_call_t * func_call , void * retdata, unsigned int retdata_len);
-unsigned int func_call_get_retval(func_call_t * func_call , void * retval, unsigned int retval_len);
-unsigned int  func_call_get_retdata(func_call_t * func_call , void * retdata, unsigned int retdata_len);
-int  func_call_compare(func_call_t * a, func_call_t * b);
-void func_call_dump(func_call_t * fc);
+unsigned int	func_call_add_param		(func_call_t * func_call, void * params,  unsigned int params_length);
+void 			func_call_add_retval	(func_call_t * func_call, void * retval,  unsigned int retval_length);
+void 			func_call_add_retdata	(func_call_t * func_call, void * retdata, unsigned int retdata_len);
+unsigned int 	func_call_get_retval	(func_call_t * func_call, void * retval,  unsigned int retval_len);
+unsigned int  	func_call_get_retdata	(func_call_t * func_call, void * retdata, unsigned int retdata_len);
+int  			func_call_compare		(func_call_t * a, func_call_t * b);
+const char* 	func_call_strerror		(int error);
+unsigned long 	func_call_timediff_us	(func_call_t * a, func_call_t * b);
+void 			func_call_dump			(func_call_t * fc);
 
 #endif /* FUNC_CALL_H_ */

@@ -173,100 +173,75 @@ unsigned int func_call_get_retdata(func_call_t * func_call , void * retdata, uns
 	return len;
 }
 
+const char *func_call_errlist[]=
+		{
+				"All went fine",
+				"Argument a was NULL!",
+				"Argument b was NULL!",
+				"a->function was NULL!",
+				"b->function was NULL!",
+				"Function calls do not match!",
+				"Parameters do not match!",
+				"Indices of function calls do not match!"
+		};
+
+const char* func_call_strerror(int error)
+{
+	static char* unknown = "Unkown error occured";
+	if (error >= 0 && error < sizeof(func_call_errlist))
+	{
+		return func_call_errlist[error];
+	} else {
+		return unknown;
+	}
+}
+
+unsigned long func_call_timediff_us(func_call_t * a, func_call_t * b)
+{
+	if(a && b)
+	{
+		return  calc_timediff_us(a->timestamp, b->timestamp);
+	} else {
+		return 0;
+	}
+}
+
 /**
  * @brief Checks if two os calls are the same.
  * @param a Should be the TUO's func_call_t
  * @param a Should be the Shadow Thread's func_call_t
- * @retval Returns 0 if function calls match, else terminates the program with FC_EXIT_CODE.
+ * @retval Returns 0 if function calls match, else Return error code inidcating the type of error. See FC_ERR_*.
  *
  * @todo: Split comparison and reaction to not matching function calls.
  */
 int func_call_compare(func_call_t * a, func_call_t * b) {
 	FC_DEBUG("Entered func_call_compare \n");
-
-	int retval = 0;
-
 	// Checks...
 	if (a == NULL) {
-		pthread_t tid = pthread_self();
-		printf("#################################################\n");
-		printf("# ERROR: the func_call_t a parameter is NULL!\n");
-		printf("# Thread ID %lu \n", tid);
-		printf("#################################################\n");
-		exit(FC_EXIT_CODE);
+		return FC_ERR_A_NULL;
 	}
 	if (b == NULL) {
-			pthread_t tid = pthread_self();
-			printf("#################################################\n");
-			printf("# ERROR: the func_call_t b parameter is NULL!\n");
-			printf("# Thread ID %lu \n", tid);
-			printf("#################################################\n");
-			exit(FC_EXIT_CODE);
+		return FC_ERR_B_NULL;
 	}
-
 	if (a->function == NULL) {
-		struct timeval now;
-		gettimeofday(&now, NULL);
-		unsigned long timediff = calc_timediff_us(a->timestamp, now);
-		pthread_t tid = pthread_self();
-
-		printf("#################################################\n");
-		printf("# ERROR: a->function members is NULL!\n");
-		printf("# call index: %i \n",a->index);
-		printf("# Detected after %lu us\n", timediff);
-		printf("# Thread ID %lu \n", tid);
-		printf("#################################################\n");
-		exit(FC_EXIT_CODE);
+		return FC_ERR_A_FUNCTION_NULL;
 	}
 	if (b->function == NULL) {
-		struct timeval now;
-		gettimeofday(&now, NULL);
-		unsigned long timediff = calc_timediff_us(a->timestamp, now);
-		pthread_t tid = pthread_self();
-
-		printf("#################################################\n");
-		printf("# ERROR: b->function members is NULL!\n");
-		printf("# call index: %i \n",b->index);
-		printf("# Detected after %lu us\n", timediff);
-		printf("# Thread ID %lu \n", tid);
-		printf("#################################################\n");
-		exit(FC_EXIT_CODE);
+		return FC_ERR_B_FUNCTION_NULL;
 	}
 	if (strcmp(a->function, b->function) != 0) {
-		struct timeval now;
-		gettimeofday(&now, NULL);
-		unsigned long timediff = calc_timediff_us(a->timestamp, now);
-		pthread_t tid = pthread_self();
-
-		printf("#################################################\n");
-		printf("# ERROR: function calls  do not match!\n");
-		printf("# call index: %i , shadow call: %s , original call: %s \n",
-				a->index, b->function, a->function);
-		printf("# Detected after %lu us\n", timediff);
-		printf("# Thread ID %lu \n", tid);
-		printf("#################################################\n");
-		exit(FC_EXIT_CODE);
+		return FC_ERR_FUNCTION_MATCH;
 	}
 	if (memcmp(a->params, b->params, FC_PARAM_SIZE) != 0) {
-		struct timeval now;
-		gettimeofday(&now, NULL);
-		unsigned long timediff = calc_timediff_us(a->timestamp, now);
-		pthread_t tid = pthread_self();
-
-		printf("#################################################\n");
-		printf("# ERROR: parameters of function %s , call index %i, do not match!\n",
-				a->function, a->index);
-		printf("# My parameters:        ");
-		func_call_dump(a);
-		printf("\n# Should be parameters: ");
-		func_call_dump(b);
-		printf("\n# Detected after %lu us\n", timediff);
-		printf("# Thread ID %lu \n", tid);
-		printf("\n#################################################\n");
-		exit(FC_EXIT_CODE);
+		return FC_ERR_PARAMS_MATCH;
 	}
+#if 0 /// @todo: maybe implement index checking. But does it have any use?
+	if (a->index != b->index){
+		return FC_ERR_INDEX_MATCH;
+	}
+#endif
 	FC_DEBUG("Leaving func_call_compare \n");
-	return retval;
+	return FC_ERR_NONE;
 }
 
 /**
@@ -274,18 +249,17 @@ int func_call_compare(func_call_t * a, func_call_t * b) {
  */
 void func_call_dump(func_call_t * fc) {
 	int i;
-
-	printf("%5u Func: %s ", fc->index, fc->function);
-	printf("Params Length :%2hhi Params: ", fc->params_length);
-	for (i = 0; i < FC_PARAM_SIZE; ++i) {
-		printf("%2.2hhx ", fc->params[i]);
+	if ( fc ) {
+		printf("%5u Func: %s ", fc->index, fc->function);
+		printf("Params Length :%2hhi Params: ", fc->params_length);
+		for (i = 0; i < FC_PARAM_SIZE; ++i) {
+			printf("%2.2hhx ", fc->params[i]);
+		}
+		printf(" RetVal: ");
+		for (i = 0; i < FC_RETVAL_SIZE; ++i) {
+			printf("%2.2hhx ", fc->retval[i]);
+		}
+		printf(" Add. RetVal: %ui", fc->retdata_length_write);
+		printf("\n");
 	}
-
-	printf(" RetVal: ");
-	for (i = 0; i < FC_RETVAL_SIZE; ++i) {
-		printf("%2.2hhx ", fc->retval[i]);
-	}
-
-	printf(" Add. RetVal: %ui", fc->retdata_length_write);
-	printf("\n");
 }

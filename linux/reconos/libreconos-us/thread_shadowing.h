@@ -120,8 +120,9 @@ typedef struct shadowedthread {
 	fifo_t func_calls;
 
 	//
-	// error statistics
+	// error handling
 	//
+	void (*error_handler)(struct shadowedthread * sh, int error, func_call_t * a, func_call_t * b);
 	error_stats_t errors;
 
 	//
@@ -164,6 +165,7 @@ int is_shadowed_in_parent(pthread_t handle, shadowedthread_t **parent);
 void shadow_wake_up_all(shadowedthread_t *sh);
 void ts_lock();
 void ts_unlock();
+void shadow_error_abort(shadowedthread_t * sh, int error, func_call_t * a, func_call_t * b);
 
 //
 // Debugging
@@ -173,7 +175,7 @@ void shadow_dump_all();
 
 void shadow_func_call_push(shadowedthread_t *sh, func_call_t * func_call);
 void shadow_func_call_pop (shadowedthread_t *sh, func_call_t * func_call);
-
+void shadow_error(shadowedthread_t * sh, int error, func_call_t * a, func_call_t * b);
 void shadow_thread_create(shadowedthread_t * sh);
 int shadow_join(shadowedthread_t * sh, void **value_ptr);
 #endif
