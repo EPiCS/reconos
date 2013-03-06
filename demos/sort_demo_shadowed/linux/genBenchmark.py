@@ -18,7 +18,7 @@ SWT=1
 NB =2
 IF =3
 runConf = [
-    #(hwt, swt, blocks, thread interface)
+    #(hwt, swt, blocks)
     #sw only
     (0,1,1),
     (0,1,8),
@@ -30,6 +30,11 @@ runConf = [
     (0,2,16),
     (0,2,32),
     (0,2,64),
+    (0,3,3),
+    (0,3,8),
+    (0,3,16),
+    (0,3,32),
+    (0,3,64),
     (0,4,4),
     (0,4,8),
     (0,4,16),
@@ -105,7 +110,7 @@ if __name__ == "__main__":
     f = open(filename, 'w')
     f.write("#!/bin/sh\n\n")
     
-    f.write("# This is an automatically generatet benchmark script.\n")
+    f.write("# This is an automatically generated benchmark script.\n")
     f.write("# Do not modify this by hand. Modify the generator genBenchmark.py\n\n")
         
     #deletes old data files for consistency: old measurements don't mix with new ones
