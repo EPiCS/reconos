@@ -166,6 +166,7 @@ void shadow_wake_up_all(shadowedthread_t *sh);
 void ts_lock();
 void ts_unlock();
 void shadow_error_abort(shadowedthread_t * sh, int error, func_call_t * a, func_call_t * b);
+void* shadow_starter(void* data);
 
 //
 // Debugging

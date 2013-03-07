@@ -20,6 +20,7 @@
 #include <pthread.h>
 
 #include <errno.h>
+#include <signal.h>
 
 #include "reconos.h"
 #include "max_covering_intervals.h"
@@ -27,7 +28,7 @@
 #include "thread_shadowing_schedule.h"
 #include "glist.h"
 
-// #define DEBUG 1
+ #define DEBUG 1
 
 #ifdef DEBUG
 #define TS_DEBUG(message) printf("TS: " message)
@@ -166,8 +167,8 @@ static int shadow_add_sw_thread(shadowedthread_t *sh) {
 	pthread_attr_init(&(sh->sw_attr));
 	TS_DEBUG("Adding SW Thread: attributes initialized\n");
 	ret = pthread_create(&(sh->threads[index]), //handle
-			&(sh->sw_attr), sh->sw_thread, //start function
-			sh->resources); // @todo: allow to pass resources and init_data
+			&(sh->sw_attr), shadow_starter, //start function
+			sh); // @todo: allow to pass resources and init_data
 	TS_DEBUG1("Adding SW Thread:Thread creted with retun value: %i \n", ret);
 	switch (ret) {
 	case 0:
@@ -308,6 +309,88 @@ void shadow_init(shadowedthread_t *sh) {
 
 }
 
+/**
+ * @brief Shadowing systems signal handler for segmentation faults.
+ */
+void shadow_sig_handler(int sig, siginfo_t *siginfo, void * context){
+	pthread_t tid = pthread_self();
+	ucontext_t* uc = (ucontext_t*) context;
+
+#ifndef HOST_COMPILE
+	void * prog_address = (void*)uc->uc_mcontext.regs.pc;
+#else
+	void * prog_address = (void*)uc->uc_mcontext.gregs[14];
+#endif
+	void * mem_address  = (void*) siginfo->si_addr;
+
+    // Yeah, i know using printf in a signal context is not save.
+    // But with a SIGSEGV the programm is messed up anyway, so what?
+	switch( sig ){
+	case SIGKILL:
+		printf("SIGKILL: thread %lu killed at programm address %p, tried to access %p.\n",
+		    		tid, prog_address, mem_address);
+		break;
+	case SIGABRT:
+		printf("SIGABRT: thread %lu killed at programm address %p, tried to access %p.\n",
+		    		tid, prog_address, mem_address);
+		break;
+	case SIGFPE:
+		printf("SIGFPE: thread %lu killed at programm address %p, tried to access %p.\n",
+		    		tid, prog_address, mem_address);
+		break;
+	case SIGILL:
+		printf("SIGILL: thread %lu killed at programm address %p, tried to access %p.\n",
+		    	tid, prog_address, mem_address);
+		break;
+	case SIGSEGV:
+		printf("SIGSEGV: thread %lu killed at programm address %p, tried to access %p.\n",
+				tid, prog_address, mem_address);
+		break;
+	}
+#ifdef SHADOWING
+    // Print OS call lists for debugging
+    int i;
+    for (i=0; i < running_threads; i++){
+    	shadow_dump(sh + i);
+    }
+#endif
+    exit(32);
+}
+
+/**
+ * @brief Gets started before the actual worker thread, to set up some signal handlers.
+ */
+void* shadow_starter(void* data){
+	shadowedthread_t * sh = (shadowedthread_t*)data;
+	TS_DEBUG("Entering shadow starter.\n");
+	//
+	// Install signal handler for several fault signals
+	//
+	struct sigaction act={
+			.sa_sigaction = shadow_sig_handler,
+			.sa_flags =  SA_SIGINFO
+	};
+
+	// Kill: we got killed by external program. Maybe we hang?
+	sigaction(SIGKILL, &act, NULL);
+
+	// Abort: called by programm if something went terribly wrong.
+	sigaction(SIGABRT, &act, NULL);
+
+	// Floating point exception. Did you divide by zero?
+	sigaction(SIGFPE, &act, NULL);
+
+	// Illegal instruction: processes doesn't like/know your instructions.
+	sigaction(SIGILL, &act, NULL);
+
+	// Segmentatzion fault: wrong memory accesses
+	sigaction(SIGSEGV, &act, NULL);
+
+	// Start actual worker thread
+	TS_DEBUG("Leaving shadow starter, calling actual worker function.\n");
+	return sh->sw_thread(sh->resources);
+
+}
 
 void shadow_dump(shadowedthread_t *sh) {
 	int i;
