@@ -22,6 +22,7 @@
 
 #include <errno.h>
 #include <signal.h>
+#include <sys/ucontext.h>
 
 #include "reconos.h"
 #include "max_covering_intervals.h"
