@@ -31,5 +31,6 @@ int  fifo_init( fifo_t * f, unsigned int obj_count, unsigned int obj_size);
 void fifo_destroy (fifo_t * f);
 void fifo_push( fifo_t * f, void* obj ); // copies into fifo, no references kept
 void fifo_pop ( fifo_t * f, void* obj ); // copies into obj, object deleted afterwards
+int  fifo_peek( fifo_t * f, void* obj ); // copies into obj, return amount of objects in fifo
 
 #endif /* FIFO_H_ */

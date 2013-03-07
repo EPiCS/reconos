@@ -205,6 +205,15 @@ unsigned long func_call_timediff_us(func_call_t * a, func_call_t * b)
 		return 0;
 	}
 }
+unsigned long func_call_timediff2_us(func_call_t * a, struct timeval * b)
+{
+	if(a && b)
+	{
+		return  calc_timediff_us( a->timestamp, *b);
+	} else {
+		return 0;
+	}
+}
 
 /**
  * @brief Checks if two os calls are the same.
@@ -250,7 +259,8 @@ int func_call_compare(func_call_t * a, func_call_t * b) {
 void func_call_dump(func_call_t * fc) {
 	int i;
 	if ( fc ) {
-		printf("%5u Func: %s ", fc->index, fc->function);
+		printf("Idx: %10u Func: %s ", fc->index, fc->function);
+		printf("Time: %10lu s %10lu us ", (unsigned long int)fc->timestamp.tv_sec,(unsigned long int)fc->timestamp.tv_usec);
 		printf("Params Length :%2hhi Params: ", fc->params_length);
 		for (i = 0; i < FC_PARAM_SIZE; ++i) {
 			printf("%2.2hhx ", fc->params[i]);

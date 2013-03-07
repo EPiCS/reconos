@@ -90,33 +90,51 @@ void fifo_destroy (fifo_t * f){
 #define SEM_DEBUG(where)
 
 // copies into fifo, no references kept
+// Blocks on full FIFO until someone pops data from it.
 void fifo_push( fifo_t * f, void* obj ){
-	pthread_mutex_lock(&f->mutex_write);
-
-	SEM_DEBUG("put entry");
 	sem_wait(&f->sem_write);
+	pthread_mutex_lock(&f->mutex_write);
+	SEM_DEBUG("put entry");
+
 	memcpy(f->data+f->wr_idx, obj, f->obj_size);
 	f->wr_idx = (f->wr_idx + f->obj_size) % f->data_size;
+
+	pthread_mutex_unlock(&f->mutex_write);
 	sem_post(&f->sem_read);
 	SEM_DEBUG("put exit");
-	pthread_mutex_unlock(&f->mutex_write);
-
 	FIFO_DEBUG2("FIFO pushed data to FIFO at %p from %p\n",f, obj);
 }
 
 // Copies into obj, object deleted afterwards from fifo.
+// Blocks on empty FIFO until someone pushes data into it.
 // If obj is NULL, nothing happens and function returns immediately.
 void fifo_pop ( fifo_t * f, void* obj ){
-
 	if (obj == NULL){return;}
 
+	sem_wait(&f->sem_read);
 	pthread_mutex_lock(&f->mutex_read);
 	SEM_DEBUG("get entry");
-	sem_wait(&f->sem_read);
 	memcpy(obj,f->data+f->re_idx, f->obj_size);
 	f->re_idx = (f->re_idx + f->obj_size) % f->data_size;
+	pthread_mutex_unlock(&f->mutex_read);
 	sem_post(&f->sem_write);
 	SEM_DEBUG("get exit");
-	pthread_mutex_unlock(&f->mutex_read);
 	FIFO_DEBUG2("FIFO popped data from FIFO at %p to %p\n",f, obj);
+}
+
+// Lets you take a look at the first element in the fifo, without popping it.
+// Additionally can be used to determine is fifo is empty.
+// return value = 0 -> FIFO empty, >0 -> amount of objects in FIFO
+// Does not block on empty fifo.
+int fifo_peek ( fifo_t * f, void* obj ){
+	int retval;
+
+	pthread_mutex_lock(&f->mutex_read);
+	sem_getvalue(&f->sem_read, &retval);
+	if ( retval > 0 && obj != NULL) {
+		memcpy(obj,f->data+f->re_idx, f->obj_size);
+	}
+	pthread_mutex_unlock(&f->mutex_read);
+	FIFO_DEBUG2("FIFO peeked data from FIFO at %p to %p\n",f, obj);
+	return retval;
 }

@@ -15,6 +15,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
+#include <unistd.h>
 
 #define _GNU_SOURCE
 #include <pthread.h>
@@ -28,7 +29,7 @@
 #include "thread_shadowing_schedule.h"
 #include "glist.h"
 
- #define DEBUG 1
+//#define DEBUG 1
 
 #ifdef DEBUG
 #define TS_DEBUG(message) printf("TS: " message)
@@ -46,10 +47,72 @@
 
 shadowedthread_t *shadow_list_head = NULL;
 static pthread_mutex_t ts_mutex = PTHREAD_MUTEX_INITIALIZER;
-
+static pthread_once_t shadow_system_is_initialized = PTHREAD_ONCE_INIT;
+static pthread_t shadow_watchdog;
 //
 // Private functions
 //
+
+/**
+ * @brief This thread periodically checks, whether a shadowed thread is stuck in an infinite loop.
+ */
+void* shadow_watchdog_thread(void* data){
+	//inputs? -> none needed!
+
+	// Setup
+	unsigned long watchdog_time_us = 100000; //_s ^= seconds
+	unsigned long watchdog_delta = 1000000; //watchdog_time_us * 10;
+	unsigned long delta;
+	shadowedthread_t * sh;
+	func_call_t fc;
+	int fill_level;
+	struct timeval now;
+	// Periodically check on runtime
+	while(1){
+		usleep(watchdog_time_us);
+		//printf("############################################## Start Run\n");
+		gettimeofday(&now, NULL);
+		for(sh = shadow_list_head; sh != NULL; sh = sh->next ){
+			//Version 1: Just print Fifo status
+			fill_level = fifo_peek(&sh->func_calls, &fc);
+
+			if (fill_level) {
+				delta = func_call_timediff2_us(&fc, &now);
+				if (delta > watchdog_delta){
+					printf("WATCHDOG: FIFO %p, FILL_LEVEL %i", &sh->func_calls, fill_level);
+					printf(", DELAY(us) %10lu ",delta);
+					func_call_dump(&fc);
+				}
+			}
+		}
+		//printf("############################################## Stopp Run\n");
+	}
+	return NULL;
+}
+
+
+static void shadow_system_init(){
+	// Start watchdog thread
+	int retval = pthread_create(&shadow_watchdog, NULL, shadow_watchdog_thread, NULL);
+	switch (retval) {
+		case 0:
+			// All went fine
+			TS_DEBUG("Watchdog thread created.\n");
+			break;
+		case EAGAIN:
+			printf("shadow_system_init: Not enough resources to create watchdog thread.");
+			exit(-1);
+			break;
+		case EINVAL:
+			printf("shadow_system_init: Invalid attr.");
+			exit(-1);
+			break;
+		case EPERM:
+			printf("shadow_system_init: No permission.");
+			exit(-1);
+			break;
+		}
+}
 
 static void shadow_errors_init(error_stats_t *e) {
 	e->count = 0;
@@ -302,7 +365,7 @@ void shadow_init(shadowedthread_t *sh) {
 	if (error) {
 		perror("sem_init failed!");
 	}
-	fifo_init(&(sh->func_calls), 1, sizeof(func_call_t));
+	fifo_init(&(sh->func_calls), 128, sizeof(func_call_t));
 	sh->error_handler = shadow_error_abort;
 	// ...and call substructure initializers
 	shadow_errors_init(&(sh->errors));
@@ -688,6 +751,11 @@ void shadow_thread_create(shadowedthread_t * sh) // Init data passed to worker t
 	assert(sh);
 	assert(shadow_check_configuration(sh));
 	//"Shadow thread configuration invalid!");
+
+	//
+	// If first call, init the shadow system itself
+	//
+	pthread_once(&shadow_system_is_initialized, shadow_system_init);
 
 	//
 	// Insert in global data structures
