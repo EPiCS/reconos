@@ -121,13 +121,16 @@ if __name__ == "__main__":
     
     f.write("# This is an automatically generated benchmark script.\n")
     f.write("# Do not modify this by hand. Modify the generator genBenchmark.py\n\n")
-        
-    #deletes old data files for consistency: old measurements don't mix with new ones
-    for i in range(0, len(ofiles)):
-        f.write("echo \"\" >" + ofiles[i] + "\n")
     
     #set variables
-    f.write("if [ -n \"$1\" ]; then STARTIDX=$1; else STARTIDX=0; fi\n\n")
+    f.write("if [ -n \"$1\" ]; then \n")
+    f.write("    STARTIDX=$1;\n")
+    f.write("else\n")
+    f.write("    STARTIDX=0;\n")
+    #deletes old data files for consistency: old measurements don't mix with new ones
+    for i in range(0, len(ofiles)):
+        f.write("    echo \"\" >" + ofiles[i] + "\n")
+    f.write("fi\n\n")
     
     f.write("echo \"First run with unmodified sort_demo...\"\n")
     runIdx = genSortDemoRuns(runIdx, runConf, ofiles[0], 0, 0, len(runConf))
