@@ -118,6 +118,7 @@ void shadow_schedule(shadowedthread_t *this_shadow,  uint32 flags) {
 				SCHED_DEBUG1("TID %lu set to active\n", current->threads[0]);
 				shadow_set_state(current, TS_ACTIVE);
 				sem_post(&current->sh_wait_sem);
+				break;
 			} else {
 				current = current->next;
 			}
