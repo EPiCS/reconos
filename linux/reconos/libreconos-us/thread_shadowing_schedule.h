@@ -22,5 +22,6 @@
 void shadow_schedule_init();
 void shadow_schedule( shadowedthread_t *this_shadow, uint32 flags);
  
+void shadow_schedule_dump(shadowedthread_t *shadow_list_head);
 
 #endif

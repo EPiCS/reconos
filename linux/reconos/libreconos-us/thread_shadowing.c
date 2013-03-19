@@ -366,6 +366,7 @@ void shadow_init(shadowedthread_t *sh) {
 	if (error) {
 		perror("sem_init failed!");
 	}
+	sh->sh_status = TS_ACTIVE;
 	fifo_init(&(sh->func_calls), 128, sizeof(func_call_t));
 	sh->error_handler = shadow_error_abort;
 	// ...and call substructure initializers

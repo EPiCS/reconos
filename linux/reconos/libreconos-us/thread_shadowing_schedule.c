@@ -23,7 +23,7 @@
 //
 // Debugging
 //
-//#define DEBUG 1
+#define DEBUG 1
 
 #ifdef DEBUG
 #define SCHED_DEBUG(message) printf("SCHED: " message)
@@ -62,9 +62,10 @@ void shadow_schedule_init() {
 void shadow_schedule_dump(shadowedthread_t *shadow_list_head) {
 	shadowedthread_t *current = shadow_list_head;
 	int semval = 1337;
+	printf("SCHED: ");
 	while (current) {
 		sem_getvalue(&current->sh_wait_sem, &semval);
-		SCHED_DEBUG3("Thread %lu active:%s semaphore count:%i\n",
+		printf("TID: %lu status:%s sem_cnt:%i; ",
 				current->threads[0],
 				current->sh_status == TS_INACTIVE ? "inactive" : (
 				current->sh_status == TS_PREACTIVE ? "pre-active":
@@ -72,6 +73,7 @@ void shadow_schedule_dump(shadowedthread_t *shadow_list_head) {
 				semval);
 		current = current->next;
 	}
+	printf("\n");
 }
 
 //
@@ -98,29 +100,38 @@ void shadow_schedule(shadowedthread_t *this_shadow,  uint32 flags) {
 
 	if (flags & SCHED_FLAG_INIT) {
 		SCHED_DEBUG("Just checking if at least one thread is active...\n");
-		bool found_active = false;
+
 		// Make sure one shadow thread is active
-		// 1st: look for an active thread
-		// 2nd: if no active thread, activate first one
+		// 1st: set every non manually scheduled thread to inactive
+		// 2nd: set first not manually scheduled thread to active
+		current = shadow_list_head;
 		while (current) {
-			if (shadow_get_state(current) == TS_ACTIVE) {
-				found_active = true;
-				break; // out of while loop!
+			if ( !(current->options & TS_MANUAL_SCHEDULE) ){
+				shadow_set_state(current, TS_INACTIVE);
+				SCHED_DEBUG1("TID %lu\n set to inactive", current->threads[0]);
 			}
 			current = current->next;
 		}
-		if (!found_active) {
-			shadow_set_state(shadow_list_head, TS_ACTIVE);
-			sem_post(&shadow_list_head->sh_wait_sem);
+		current = shadow_list_head;
+		while (current) {
+			if ( !(current->options & TS_MANUAL_SCHEDULE) ){
+				SCHED_DEBUG1("TID %lu set to active\n", current->threads[0]);
+				shadow_set_state(current, TS_ACTIVE);
+				sem_post(&current->sh_wait_sem);
+			} else {
+				current = current->next;
+			}
 		}
-	} else {
+	} else if (!(this_shadow->options & TS_MANUAL_SCHEDULE)) {
 		// Default behaviour: Round robin schedule
 		// State Machine: Only reschedule if this is an active thread
 		switch(shadow_get_state(this_shadow)){
 			case TS_INACTIVE:
+				SCHED_DEBUG1("RR: TID %lu doing nothing\n", this_shadow->threads[0]);
 				break; // Do nothing
 
 			case TS_PREACTIVE:
+				SCHED_DEBUG1("RR: TID %lu set to pre-active\n", this_shadow->threads[0]);
 				shadow_set_state(this_shadow, TS_ACTIVE);
 				sem_post(&this_shadow->sh_wait_sem);
 				break;
@@ -129,28 +140,28 @@ void shadow_schedule(shadowedthread_t *this_shadow,  uint32 flags) {
 				shadow_set_state(this_shadow, TS_INACTIVE);
 				// find next thread to schedule
 				//@TODO: What about locking?
-				if (this_shadow->next == NULL) {
-					SCHED_DEBUG1("Activating thread %lu\n",
-							shadow_list_head->threads[0]);
+				current = this_shadow->next;
+				while ( current != this_shadow){
+					if (current == NULL){
+						current = shadow_list_head;
+					}
+					if (current->options & TS_MANUAL_SCHEDULE){
+						current = current->next;
+						continue;
+					}
+					SCHED_DEBUG1("RR: TID %lu set to preactive\n",	current->threads[0]);
 					shadow_set_state(shadow_list_head, TS_PREACTIVE);
-				} else {
-					SCHED_DEBUG1("Activating thread %lu\n",
-							this_shadow->next->threads[0]);
-					shadow_set_state(this_shadow->next, TS_PREACTIVE);
+				}
+				if ( current == this_shadow) {
+					// we looped through the list and ended up here again, so there is now other thread to activate.
+					// Therefor we stay activated.
+					SCHED_DEBUG1("RR: TID %lu keeps state active\n",	current->threads[0]);
+					shadow_set_state(this_shadow, TS_ACTIVE);
 				}
 				break;
 		}
-
-
-//				// Set resources of shadow threads
-//				if (!(current->options & TS_MANUAL_SCHEDULE)) {
-//					current->num_sw_threads = 1;
-//					current->num_hw_threads = 0;
-//					current->hw_slot_nums[0] = 0;
-//					current->hw_slot_nums[1] = 1;
-//					current->hw_slot_nums[2] = 2;
-//				}
-
+	}  else if ( this_shadow->options & TS_MANUAL_SCHEDULE ) {
+		sem_post(&this_shadow->sh_wait_sem);
 	}
 	shadow_schedule_dump(shadow_list_head);
 	pthread_mutex_unlock(&shadow_schedule_mutex);
