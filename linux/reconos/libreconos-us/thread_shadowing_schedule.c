@@ -132,7 +132,7 @@ void shadow_schedule(shadowedthread_t *this_shadow,  uint32 flags) {
 				break; // Do nothing
 
 			case TS_PREACTIVE:
-				SCHED_DEBUG1("RR: TID %lu set to pre-active\n", this_shadow->threads[0]);
+				SCHED_DEBUG1("RR: TID %lu set to active\n", this_shadow->threads[0]);
 				shadow_set_state(this_shadow, TS_ACTIVE);
 				sem_post(&this_shadow->sh_wait_sem);
 				break;
@@ -152,12 +152,14 @@ void shadow_schedule(shadowedthread_t *this_shadow,  uint32 flags) {
 					}
 					SCHED_DEBUG1("RR: TID %lu set to preactive\n",	current->threads[0]);
 					shadow_set_state(shadow_list_head, TS_PREACTIVE);
+					break;
 				}
 				if ( current == this_shadow) {
 					// we looped through the list and ended up here again, so there is now other thread to activate.
 					// Therefor we stay activated.
 					SCHED_DEBUG1("RR: TID %lu keeps state active\n",	current->threads[0]);
 					shadow_set_state(this_shadow, TS_ACTIVE);
+					sem_post(&this_shadow->sh_wait_sem);
 				}
 				break;
 		}
