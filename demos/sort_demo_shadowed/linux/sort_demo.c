@@ -459,7 +459,7 @@ int main(int argc, char ** argv)
 
 #ifdef SHADOWING
 	// Setup error injection; no error injection if error count is 0 :-)
-	eif_setup(sh, error_count, seed);
+	//eif_setup(sh, error_count, seed);
 #endif
 	//print_mmu_stats();
 
@@ -535,6 +535,17 @@ int main(int argc, char ** argv)
 		break;
 	}
 	printf("\n");
+
+	//
+	// Install permanent error in first Message Based HW Sort Thread
+	//
+	if (error_count) {
+		// Lowest bit in data signals coming from  sorter will suffer a stuck-at-0 error
+		//reconos_faultinject(1, 0x00000001, 0x00000000);
+
+		// Disturb hwt state machine
+		reconos_faultinject(0, 0x00000001, 0x00000000);
+	}
 
 	//
 	// Wait for results
@@ -721,6 +732,14 @@ int main(int argc, char ** argv)
 	free(data);
 	free(copy);
 	
+	//
+	// Deactivate Fault Injection
+	//
+	if (error_count) {
+		reconos_faultinject(0, 0x00000000, 0x00000000);
+		reconos_faultinject(1, 0x00000000, 0x00000000);
+	}
+
 	exit(0);
 }
 

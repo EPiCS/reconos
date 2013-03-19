@@ -19,7 +19,7 @@ LDFLAGS = -leif -lreconos -lpthread -lm -lrt
 
 .PHONY: clean
 
-all: sort_demo sort_demo_shadowed
+all: sort_demo sort_demo_shadowed fault_injection
  
 sort_demo: $(APP_OBJS)
 	$(CC) $(APP_OBJS) $(CFLAGS) $(LIBPATH) $(INCLUDEPATH) sort_demo.c -o sort_demo $(LDFLAGS)
@@ -30,12 +30,15 @@ sort_demo_shadowed: $(APP_OBJS)
 	$(CC) -c $(CFLAGS) -DSHADOWING $(LIBPATH) $(INCLUDEPATH) -o sort8k.o sort8k.c
 	$(CC) $(APP_OBJS) $(CFLAGS) -DSHADOWING $(LIBPATH) $(INCLUDEPATH) sort_demo.c -o sort_demo_shadowed $(LDFLAGS)
 
+fault_injection:
+	$(CC) $(CFLAGS) -L ../../../linux/reconos/libreconos-us -I ../../../linux/reconos/libreconos-us -o fault_injection fault_injection.c -lreconos -lpthread
+	
 clean:
-	rm -f *.o sort_demo sort_demo_shadowed 
+	rm -f *.o sort_demo sort_demo_shadowed fault_injection
 
 install:
 	./genBenchmark.py benchmark.sh
-	cp sort_demo sort_demo_shadowed benchmark.sh /exports/rootfs_mb/demos/sort_demo_shadowed/
+	cp sort_demo sort_demo_shadowed benchmark.sh  fault_injection /exports/rootfs_mb/demos/sort_demo_shadowed/
 
 %.o: %.c
 	$(CC) -c $(CFLAGS) $(LIBPATH) $(INCLUDEPATH) -o $@ $<

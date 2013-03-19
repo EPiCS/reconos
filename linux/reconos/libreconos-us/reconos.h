@@ -91,6 +91,7 @@ extern int reconos_init(int proc_ctrl_fsl_a, int proc_control_fsl_b);
 extern int reconos_init_autodetect(void);
 extern void reconos_mmu_stats(uint32_t *tlb_hits, uint32_t *tlb_misses,
 			      uint32_t *page_faults);
+extern void reconos_faultinject(unsigned char channel, long int sa0, long int sa1);
 extern void reconos_hwt_setresources(struct reconos_hwt *hwt,
 				     struct reconos_resource *res,
 				     size_t num_resources);

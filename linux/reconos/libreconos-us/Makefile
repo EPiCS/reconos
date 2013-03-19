@@ -12,6 +12,7 @@ host:
 #CC=$(HOST_CC)
 #CFLAGS=$(HOST_CFLAGS)
 
+APP_OBJS = reconos.o fsl.o mbox.o rqueue.o xutils.o glist.o fifo.o func_call.o max_covering_intervals.o thread_shadowing.o thread_shadowing_schedule.o thread_shadowing_subs.o
 
 all: libreconos
 	/bin/true
@@ -19,8 +20,8 @@ all: libreconos
 libreconos: libreconos.a
 	@true
 
-libreconos.a: reconos.o fsl.o mbox.o rqueue.o xutils.o glist.o fifo.o max_covering_intervals.o thread_shadowing.o thread_shadowing_schedule.o thread_shadowing_subs.o
-	$(AR) -rcsv libreconos.a reconos.o fsl.o mbox.o rqueue.o xutils.o glist.o fifo.o max_covering_intervals.o thread_shadowing.o thread_shadowing_schedule.o thread_shadowing_subs.o
+libreconos.a: $(APP_OBJS) 
+	$(AR) -rcsv libreconos.a $(APP_OBJS)
 
 clean:
 	rm -f *.o *.a

@@ -77,6 +77,16 @@ void reconos_mmu_stats(uint32_t *tlb_hits, uint32_t *tlb_misses,
 		*tlb_hits = hits;
 }
 
+
+#define CMD_FAULT_INJECTION 0xF0000000
+void reconos_faultinject(unsigned char channel, long int sa0, long int sa1){
+
+	unsigned long cmd_n_channel = CMD_FAULT_INJECTION | channel;
+	fsl_write(reconos_proc.proc_control_fsl_b, cmd_n_channel);
+	fsl_write(reconos_proc.proc_control_fsl_b, sa0);
+	fsl_write(reconos_proc.proc_control_fsl_b, sa1);
+}
+
 void reconos_proc_control_selftest(void)
 {
 	uint32_t res, expect = 0x5E1F7E57;

@@ -2,13 +2,15 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.std_logic_arith.all;
 use ieee.std_logic_unsigned.all;
+USE ieee.numeric_std.ALL;
 
 library reconos_v3_00_b;
 use reconos_v3_00_b.reconos_pkg.all;
 
 entity proc_control is
 	generic (
-		C_ENABLE_ILA : integer := 0
+		C_ENABLE_ILA : integer := 0;
+    C_FAULT_CHANNEL_WIDTH: Natural := 2 -- 2^2 = 4 channels
 	);
 	port (
 		clk : in std_logic;
@@ -63,24 +65,33 @@ entity proc_control is
 		tlb_hits       : in std_logic_vector(31 downto 0);
 		tlb_misses     : in std_logic_vector(31 downto 0);
 
+    -- Fault injection related ports
+    fault_sa0     : out std_logic_vector(32*(2**C_FAULT_CHANNEL_WIDTH)-1 downto 0 );
+    fault_sa1     : out std_logic_vector(32*(2**C_FAULT_CHANNEL_WIDTH)-1 downto 0 );
+
 		-- ReconOS reset
 		reconos_reset  : out std_logic
 	);
 end entity;
 
 architecture implementation of proc_control is
+  -- commands
 	constant C_RESET          : std_logic_vector(7 downto 0) := x"01";
 	constant C_PGD            : std_logic_vector(7 downto 0) := x"02";
 	constant C_PAGE_READY     : std_logic_vector(7 downto 0) := x"03";
 	constant C_RECONOS_RESET  : std_logic_vector(7 downto 0) := x"04";
 	constant C_GET_TLB_STATS  : std_logic_vector(7 downto 0) := x"05";
 	constant C_SELFTEST       : std_logic_vector(7 downto 0) := x"06";
+  
+  constant C_FAULT_INJECTION: std_logic_vector(7 downto 0) := x"F0";
 
+  -- return values
 	constant C_RETURN_ADDR       : std_logic_vector(31 downto 0) := x"00000001";
 	constant C_RETURN_SELFTEST   : std_logic_Vector(31 downto 0) := x"00000002";
 	
 	type ASTATE_TYPE is (A_WAIT, A_SELFTEST, A_PAGE_FAULT_0, A_PAGE_FAULT_1, A_WAIT_PAGE_READY_0, A_WAIT_PAGE_READY_1);
-	type BSTATE_TYPE is (B_WAIT, B_BRANCH, B_SELFTEST, B_SELFTEST_REQ, B_RESET, B_TLB_HITS, B_TLB_MISSES, B_PGD, B_RECONOS_RESET);
+	type BSTATE_TYPE is (B_WAIT, B_BRANCH, B_SELFTEST, B_SELFTEST_REQ, B_RESET, B_TLB_HITS, B_TLB_MISSES, B_PGD, B_RECONOS_RESET,
+                        B_FAULT_SA0, B_FAULT_SA1);
 
 	
 	constant C_ILA_WIDTH : integer := 200;
@@ -117,6 +128,9 @@ architecture implementation of proc_control is
 	signal o_fsla    : o_fsl_t;
 	signal i_fslb    : i_fsl_t;
 	signal o_fslb    : o_fsl_t;
+  
+  signal fault_channel : std_logic_vector(C_FAULT_CHANNEL_WIDTH-1 downto 0);
+  
 begin
 
 
@@ -276,7 +290,9 @@ begin
 			pgd <= (others => '0');
 			reset_counter <= (others => '0');
 			reconos_reset_dup <= '1';
-			selftest_initiate_req <= '0'; 
+			selftest_initiate_req <= '0';
+      fault_sa0 <= (others => '0');
+      fault_sa1 <= (others => '0');
 		elsif rising_edge(clk) then
 			reconos_reset_dup <= '0';
 			case bstate is
@@ -296,6 +312,9 @@ begin
 							bstate <= B_TLB_HITS;
 						when C_SELFTEST =>
 							bstate <= B_SELFTEST;
+            when C_FAULT_INJECTION=>
+              bstate <= B_FAULT_SA0;
+              fault_channel <= data(C_FAULT_CHANNEL_WIDTH-1 downto 0);
 						when others =>
 							bstate <= B_WAIT; -- ignore everything else
 					end case;
@@ -340,6 +359,23 @@ begin
 					else
 						reset_counter <= reset_counter + 1;
 					end if;
+          
+        when B_FAULT_SA0 =>
+          fsl_read_word(i_fslb,o_fslb,data,done);
+          if done then 
+            bstate <= B_FAULT_SA1; 
+            fault_sa0((32*(to_integer(ieee.numeric_std.unsigned(fault_channel))+1))-1 
+                          downto (32*to_integer(ieee.numeric_std.unsigned(fault_channel))) ) <= data;
+          end if;
+        
+        when B_FAULT_SA1 =>
+          fsl_read_word(i_fslb,o_fslb,data,done);
+          if done then
+            bstate <= B_WAIT; 
+            fault_sa1( (32*(to_integer(ieee.numeric_std.unsigned(fault_channel))+1))-1 
+                        downto (32*to_integer(ieee.numeric_std.unsigned(fault_channel))) ) <= data; 
+          end if;  
+         
 			end case;
 		end if;
 	end process;

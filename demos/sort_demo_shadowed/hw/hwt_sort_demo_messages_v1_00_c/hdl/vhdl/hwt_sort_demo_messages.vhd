@@ -10,6 +10,9 @@ library reconos_v3_00_b;
 use reconos_v3_00_b.reconos_pkg.all;
 
 entity hwt_sort_demo_messages is
+  generic (
+    C_FAULT_CHANNEL_WIDTH: Natural := 2 -- 2^2 = 4 channels
+  );
 	port (
 		-- OSIF FSL
 		
@@ -31,6 +34,10 @@ entity hwt_sort_demo_messages is
 		FIFO32_S_Rd : out std_logic;
 		FIFO32_M_Wr : out std_logic;
 		
+    -- Fault injection related ports
+    fault_sa0     : in std_logic_vector(32*(2**C_FAULT_CHANNEL_WIDTH)-1 downto 0 );
+    fault_sa1     : in std_logic_vector(32*(2**C_FAULT_CHANNEL_WIDTH)-1 downto 0 );
+
 		-- HWT reset and clock
 		clk           : in std_logic;
 		rst           : in std_logic
@@ -39,10 +46,25 @@ entity hwt_sort_demo_messages is
 end hwt_sort_demo_messages;
 
 architecture implementation of hwt_sort_demo_messages is
-	type STATE_TYPE is (
-					STATE_GET_LENGTH,STATE_READ,STATE_SORTING,
-					STATE_WRITE,STATE_THREAD_YIELD,STATE_THREAD_EXIT);
 
+  function faultinject(signal sa0: std_logic_vector; signal sa1: std_logic_vector; signal s: std_logic_vector)
+  return std_logic_vector
+  is
+     variable temp: std_logic_vector(s'range);
+  begin
+     temp := s and not sa0;
+     return temp or sa1;
+  end function;
+
+  function faultinject_c(signal sa0: std_logic_vector; signal sa1: std_logic_vector; constant s: std_logic_vector)
+  return std_logic_vector
+  is
+     variable temp: std_logic_vector(s'range);
+  begin
+     temp := s and not sa0;
+     return temp or sa1;
+  end function;
+  
 	component bubble_sorter is
 		generic (
 			G_LEN    : integer := 512;  -- number of words to sort
@@ -76,9 +98,21 @@ architecture implementation of hwt_sort_demo_messages is
 	constant MBOX_RECV  : std_logic_vector(C_FSL_WIDTH-1 downto 0) := x"00000000";
 	constant MBOX_SEND  : std_logic_vector(C_FSL_WIDTH-1 downto 0) := x"00000001";
 
+--	type STATE_TYPE is (
+--					STATE_GET_LENGTH,STATE_READ,STATE_SORTING,
+--					STATE_WRITE,STATE_THREAD_YIELD,STATE_THREAD_EXIT);
+--  signal state    : STATE_TYPE;
+  
+  constant STATE_GET_LENGTH   : std_logic_vector(2 downto 0) := "000";
+  constant STATE_READ         : std_logic_vector(2 downto 0) := "001";
+  constant STATE_SORTING      : std_logic_vector(2 downto 0) := "010";
+  constant STATE_WRITE        : std_logic_vector(2 downto 0) := "011";
+  constant STATE_THREAD_YIELD : std_logic_vector(2 downto 0) := "100";
+  constant STATE_THREAD_EXIT  : std_logic_vector(2 downto 0) := "101";
+  signal state  : std_logic_vector(2 downto 0) := "000";
+  
 	signal data_len : std_logic_vector(31 downto 0);
 	signal len      : std_logic_vector(31 downto 0);
-	signal state    : STATE_TYPE;
 	signal i_osif   : i_osif_t;
 	signal o_osif   : o_osif_t;
 	signal i_memif  : i_memif_t;
@@ -88,6 +122,7 @@ architecture implementation of hwt_sort_demo_messages is
 
 	signal o_RAMAddr_sorter : std_logic_vector(0 to C_LOCAL_RAM_ADDRESS_WIDTH-1);
 	signal o_RAMData_sorter : std_logic_vector(0 to 31);
+  signal o_RAMData_sorter_orig : std_logic_vector(0 to 31);
 	signal o_RAMWE_sorter   : std_logic;
 	signal i_RAMData_sorter : std_logic_vector(0 to 31);
 
@@ -107,6 +142,9 @@ architecture implementation of hwt_sort_demo_messages is
 	signal sort_done  : std_logic := '0';
 begin
 	
+  -- fault injections:
+  o_RAMData_sorter <= faultinject(fault_sa0(63 downto 32), fault_sa1(63 downto 32), o_RAMData_sorter_orig);
+  
 	-- local dual-port RAM
 	local_ram_ctrl_1 : process (clk) is
 	begin
@@ -142,7 +180,7 @@ begin
 			clk       => clk,
 			reset     => rst,
 			o_RAMAddr => o_RAMAddr_sorter,
-			o_RAMData => o_RAMData_sorter,
+			o_RAMData => o_RAMData_sorter_orig,
 			i_RAMData => i_RAMData_sorter,
 			o_RAMWE   => o_RAMWE_sorter,
 			start     => sort_start,
@@ -191,7 +229,7 @@ begin
 			osif_reset(o_osif);
 			memif_reset(o_memif);
 			ram_reset(o_ram);
-			state <= STATE_GET_LENGTH;
+			state <= faultinject_c(fault_sa0(2 downto 0), fault_sa1(2 downto 0), STATE_GET_LENGTH);
 			done  := False;
 			data_len <= (others => '0');
 			len <= (others => '0');
@@ -207,9 +245,9 @@ begin
             len <= data_len;
             o_ram.addr <= (others =>'1' );
 						if (data_len = X"FFFFFFFF") then
-							state <= STATE_THREAD_EXIT;
+							state <= faultinject_c(fault_sa0(2 downto 0), fault_sa1(2 downto 0), STATE_THREAD_EXIT);
 						else
-							state             <= STATE_READ;
+							state             <= faultinject_c(fault_sa0(2 downto 0), fault_sa1(2 downto 0), STATE_READ);
 						end if;
 					end if;
 				
@@ -222,7 +260,7 @@ begin
             o_ram.addr <= i_ram.addr + 1;
             if len = 1 then
               sort_start <= '1';
-              state <= STATE_SORTING;
+              state <= faultinject_c(fault_sa0(2 downto 0), fault_sa1(2 downto 0), STATE_SORTING);
             else
               len <= len - 1;
             end if;
@@ -235,7 +273,7 @@ begin
 					if sort_done = '1' then
 						len    <= data_len;
             o_ram.addr <= (others => '0');
-						state  <= STATE_WRITE;
+						state  <= faultinject_c(fault_sa0(2 downto 0), fault_sa1(2 downto 0), STATE_WRITE);
 					end if;
 					
 				-- copy data from local memory to main memory
@@ -244,7 +282,7 @@ begin
           o_ram.we <= '0';
 					if done then 
             if len = 1 then
-              state <= STATE_THREAD_YIELD;
+              state <= faultinject_c(fault_sa0(2 downto 0), fault_sa1(2 downto 0), STATE_THREAD_YIELD);
             else
               len <= len - 1;
               o_ram.addr <= i_ram.addr + 1;
@@ -258,12 +296,15 @@ begin
           -- be overwritten in next state.
           osif_thread_yield(i_osif, o_osif, data_len, done);
           if done then
-            state <= STATE_GET_LENGTH;
+            state <= faultinject_c(fault_sa0(2 downto 0), fault_sa1(2 downto 0), STATE_GET_LENGTH);
           end if;
         
 				-- thread exit
 				when STATE_THREAD_EXIT =>
 					osif_thread_exit(i_osif,o_osif);
+          
+        when others =>
+          state <= faultinject_c(fault_sa0(2 downto 0), fault_sa1(2 downto 0), STATE_GET_LENGTH);
 			
 			end case;
 		end if;
