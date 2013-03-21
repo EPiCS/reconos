@@ -5,7 +5,7 @@ HOST_CC = gcc
 HOST_CFLAGS = -O0 -g -m32  -Wall  -DHOST_COMPILE -static
 # -m32
 
-APP_OBJS = bubblesort.o data.o merge.o timing.o sort8k.o
+APP_OBJS = bubblesort.o data.o merge.o  sort8k.o
 
 
 
