@@ -183,14 +183,14 @@ static int noc_sendpkt(struct noc_pkt *npkt)
 	DEBUG(dump_npkt(npkt));
 	//memcpy(shared_mem_s2h, &tmp_len, 4);
 	memcpy(shared_mem_s2h, npkt, off);
-	memcpy(shared_mem_s2h + off, npkt->payload, pkt_len);
+	memcpy(shared_mem_s2h + off, npkt->payload, npkt->payload_len);
 
 /*	for(i = 0; i < tmp_len; i++){
 		unsigned char val = shared_mem_s2h[i];
 		printk(KERN_INFO "%x ", val);
 	}
 */
-	mbox_put(&noc[SW_TO_HW_SLOT].mb_put, tmp_len); //pkt_len);
+	mbox_put(&noc[SW_TO_HW_SLOT].mb_put, pkt_len);
 	//wait until hw has read the buffer!
 
 	tmp_len = mbox_get(&noc[SW_TO_HW_SLOT].mb_get);
