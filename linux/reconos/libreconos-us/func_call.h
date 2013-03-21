@@ -8,6 +8,7 @@
 #ifndef FUNC_CALL_H_
 #define FUNC_CALL_H_
 
+#include "timing.h"
 //
 // Other Constants
 //
@@ -53,8 +54,8 @@ unsigned int 	func_call_get_retval	(func_call_t * func_call, void * retval,  uns
 unsigned int  	func_call_get_retdata	(func_call_t * func_call, void * retdata, unsigned int retdata_len);
 int  			func_call_compare		(func_call_t * a, func_call_t * b);
 const char* 	func_call_strerror		(int error);
-unsigned long 	func_call_timediff_us	(func_call_t * a, func_call_t * b);
-unsigned long	func_call_timediff2_us	(func_call_t * a, struct timeval * b);
+timing_t		func_call_timediff_us	(func_call_t * a, func_call_t * b);
+timing_t		func_call_timediff2_us	(func_call_t * a, struct timeval * b);
 void 			func_call_dump			(func_call_t * fc);
 
 #endif /* FUNC_CALL_H_ */

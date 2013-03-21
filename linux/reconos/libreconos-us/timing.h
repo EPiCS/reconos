@@ -29,8 +29,17 @@ typedef unsigned long timing_t;
 typedef unsigned long ms_t;
 #endif
 
-timing_t gettime(  );
+timing_t gettime();
+void timerdiff(timing_t * a, timing_t * b, timing_t * diff);
+int timer2string(char* s, int s_len, timing_t * t);
+long int timer2s(timing_t * t);
+long int timer2ms(timing_t * t);
+long int timer2us(timing_t * t);
+
+/* Deprecated */
 ms_t calc_timediff_ms( timing_t start, timing_t stop );
+
+
 #ifdef USE_DCR_TIMEBASE
 int init_timebase();
 void close_timebase();

@@ -23,12 +23,14 @@
 #include <errno.h>
 #include <signal.h>
 #include <sys/ucontext.h>
+#include <sys/time.h>
 
 #include "reconos.h"
 #include "max_covering_intervals.h"
 #include "thread_shadowing.h"
 #include "thread_shadowing_schedule.h"
 #include "glist.h"
+#include "timing.h"
 
 //#define DEBUG 1
 
@@ -61,27 +63,27 @@ void* shadow_watchdog_thread(void* data){
 	//inputs? -> none needed!
 
 	// Setup
-	unsigned long watchdog_time_us = 100000; //_s ^= seconds
-	unsigned long watchdog_delta = 1000000; //watchdog_time_us * 10;
-	unsigned long delta;
+	unsigned long watchdog_time_us  =  100000; //_us ^= microseconds
+	unsigned long watchdog_delta_us = 1000000; //watchdog_time_us * 10;
+	timing_t delta;
 	shadowedthread_t * sh;
 	func_call_t fc;
 	int fill_level;
-	struct timeval now;
+	timing_t now;
 	// Periodically check on runtime
 	while(1){
 		usleep(watchdog_time_us);
 		//printf("############################################## Start Run\n");
-		gettimeofday(&now, NULL);
+		now = gettime();
 		for(sh = shadow_list_head; sh != NULL; sh = sh->next ){
 			//Version 1: Just print Fifo status
 			fill_level = fifo_peek(&sh->func_calls, &fc);
 
 			if (fill_level) {
 				delta = func_call_timediff2_us(&fc, &now);
-				if (delta > watchdog_delta){
+				if (timer2us(&delta) > watchdog_delta_us){
 					printf("WATCHDOG: FIFO %p, FILL_LEVEL %i", &sh->func_calls, fill_level);
-					printf(", DELAY(us) %10lu ",delta);
+					printf(", DELAY(us) %10lu ",timer2us(&delta));
 					func_call_dump(&fc);
 				}
 			}
@@ -457,10 +459,33 @@ void* shadow_starter(void* data){
 
 }
 
+void shadow_dump_timestats(shadowedthread_t *sh){
+	assert(sh);
+	printf("Timestats of shadowed thread %p: max dot %lu us, max detlat: %lu us\n",
+			sh, timer2us(&sh->max_error_detection_offline_time), timer2us(&sh->max_error_detection_latency));
+}
+
+void shadow_dump_timestats_all(){
+	shadowedthread_t * current = shadow_list_head;
+	unsigned long int max_error_detection_offline_time=0;
+	unsigned long int max_error_detection_latency=0;
+	while(current){
+		if (max_error_detection_offline_time < timer2us(&current->max_error_detection_offline_time)){
+			max_error_detection_offline_time = timer2us(&current->max_error_detection_offline_time);
+		}
+		if (max_error_detection_latency < timer2us(&current->max_error_detection_latency)){
+			max_error_detection_latency = timer2us(&current->max_error_detection_latency);
+		}
+		shadow_dump_timestats(current);
+		current = current->next;
+	}
+	printf("Timestats summary: max dot %lu us, max detlat: %lu us\n",
+				max_error_detection_offline_time, max_error_detection_latency);
+}
+
 void shadow_dump(shadowedthread_t *sh) {
 	int i;
 	assert(sh);
-	//, "sh == NULL");
 
 	printf("Dump of shadowed thread %p \n", sh);
 	printf("\tThread reliability %d \n", sh->reliability);
@@ -605,7 +630,24 @@ int shadow_check_configuration(shadowedthread_t *sh) {
 // Change shadowing status of a shadowed thread.
 void shadow_set_state(shadowedthread_t *sh, shadow_state_t s) {
 	assert(sh);
+	if (sh->sh_status == TS_ACTIVE && s == TS_INACTIVE){
+		// set deactivation timestamp
+		printf("XXXX: Saving shadow deactivation time!\n");
+		sh->deactivation_time = gettime();
+	}
+	if (sh->sh_status == TS_PREACTIVE && s == TS_ACTIVE){
+		// calculate error detection offline time
+		printf("XXXX: Updating max_error_detection_offline_time!\n");
+		timing_t now = gettime();
+		timing_t diff;
+		timerdiff(&sh->deactivation_time, &now, &diff);
+		if ( timercmp(&diff,&sh->max_error_detection_offline_time, >) ){
+			sh->max_error_detection_offline_time = diff;
+		}
+	}
+
 	sh->sh_status = s;
+
 #ifdef DEBUG
 	switch(s){
 	case TS_INACTIVE:
@@ -725,11 +767,12 @@ void shadow_func_call_pop(shadowedthread_t *sh, func_call_t * func_call){
 void shadow_error_abort(shadowedthread_t * sh, int error, func_call_t * a, func_call_t * b)
 {
 	pthread_t tid = pthread_self();
+	timing_t diff = func_call_timediff_us(a,b);
 	printf("\n#################################################\n");
 	printf("# ERROR: Thread ID %lu,  %s\n",tid, func_call_strerror(error));
 	printf("# a: "); func_call_dump(a);
 	printf("# b: "); func_call_dump(b);
-	printf("# Detected after: %lu us\n", func_call_timediff_us(a,b));
+	printf("# Detected after: %lu us\n", timer2us(&diff));
 	printf("#################################################\n");
 	if ( error != FC_ERR_NONE){
 		exit(FC_EXIT_CODE);

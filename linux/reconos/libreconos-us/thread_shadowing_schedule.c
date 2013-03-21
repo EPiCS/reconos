@@ -91,7 +91,7 @@ void shadow_schedule_dump(shadowedthread_t *shadow_list_head) {
 // @param shadow_list_head To schedule the shadow threads we need access to the list of shadowed threads.
 // @param flags Modifies behaviour of scheduling. Allowed flags start with SCHED_FLAG_ and currently comprise:
 //				SCHED_FLAG_NONE Default behaviour; makes next shadow thread runnable
-//				SCHED_FLAG_INIT Used in shadow_thread_create; just makes sure at least one shadow thread will run
+//				SCHED_FLAG_INIT Used in shadow_thread_create; make sure exactly one shadow thread, which is not manually scheduled, will run
 void shadow_schedule(shadowedthread_t *this_shadow,  uint32 flags) {
 	SCHED_DEBUG("Scheduler called...\n");
 	pthread_mutex_lock(&shadow_schedule_mutex);
@@ -126,6 +126,10 @@ void shadow_schedule(shadowedthread_t *this_shadow,  uint32 flags) {
 	} else if (!(this_shadow->options & TS_MANUAL_SCHEDULE)) {
 		// Default behaviour: Round robin schedule
 		// State Machine: Only reschedule if this is an active thread
+		// The three states {TS_INACTIVE, TS_PREACTIVE, TS_ACTIVE} are needed, because we modify state of another thread.
+		// The other thread might be in the middle of a cycle and not synchronized to its shadow. Therefore we
+		// set the other threads state to preactive. As soon as the other thread calls ts_yield, it will be at a synchronization
+		// point and set its own state from TS_PREACTIVE to TS_ACTIVE, thus activating the shadow.
 		switch(shadow_get_state(this_shadow)){
 			case TS_INACTIVE:
 				SCHED_DEBUG1("RR: TID %lu doing nothing\n", this_shadow->threads[0]);

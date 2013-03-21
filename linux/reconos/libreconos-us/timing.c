@@ -13,6 +13,8 @@
 
 #include <time.h>
 #include <limits.h>
+#include <stdio.h>
+#include <string.h>
 #include "timing.h"
 
 #ifdef USE_DCR_TIMEBASE
@@ -46,7 +48,7 @@ timing_t gettime(  )
 
 	return buf;
 #elif defined USE_GETTIMEOFDAY
-	struct timeval now;
+	timing_t now;
 
 	gettimeofday(&now, NULL);
 
@@ -73,14 +75,64 @@ void close_timebase()
 }
 #endif
 
+/**
+ * Similar to timersub, but handles negative results correct.
+ * @return Difference a - b. If result is positive a was later in time then b. If one or both components of
+ * 			timing_t are negative, b was later in time than a.
+ */
+void timerdiff(timing_t * a, timing_t * b, timing_t * diff){
+	if(timercmp(a,b,>)){
+		timersub(a,b,diff);
+	}else{
+		timersub(b,a,diff);
+		diff->tv_sec*=-1;
+		diff->tv_usec*=-1;
+	}
+}
 
-// calculate difference between start and stop time
-// and convert to milliseconds
+/**
+ * Converts a timing_t into a human readable string.
+ * The string should be at least of length 18
+ * @return Length of the generated string. If greater than s_len, string got truncated.
+ */
+int timer2string(char* s, int s_len, timing_t * t){
+	return snprintf(s, s_len, "%ld sec %6ld usec", t->tv_sec, t->tv_usec);
+}
+
+/**
+ * Converts a timing_t type to seconds
+ * @return If LONG_MAX or LONG_MIN, over/-underflow might have happened
+ */
+long int timer2s(timing_t * t){
+	return t->tv_sec;
+}
+
+/**
+ * Converts a timing_t type to miliseconds
+ * @return If LONG_MAX or LONG_MIN, over/-underflow might have happened
+ */
+long int timer2ms(timing_t * t){
+	return t->tv_sec*1000 + t->tv_usec/1000;
+}
+
+/**
+ * Converts a timing_t type to microseconds
+ * @return If LONG_MAX or LONG_MIN, over/-underflow might have happened
+ */
+long int timer2us(timing_t * t){
+	return t->tv_sec*1000000 + t->tv_usec;
+}
+
+/**
+ *  Calculate difference between start and stop time
+ * 	and convert to milliseconds
+ * 	@warning deprecated
+ */
 ms_t calc_timediff_ms( timing_t start, timing_t stop )
 {
 #ifdef USE_GETTIMEOFDAY
   ms_t ms;
-  struct timeval diff;
+  timing_t diff;
 
   // calculate difference
   timersub(&stop, &start, &diff);

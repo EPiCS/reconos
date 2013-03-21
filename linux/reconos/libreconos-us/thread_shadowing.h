@@ -24,6 +24,7 @@
 #include "reconos.h"
 #include "fifo.h"
 #include "func_call.h"
+#include "timing.h"
 
 //
 // Generic constraints
@@ -126,6 +127,13 @@ typedef struct shadowedthread {
 	error_stats_t errors;
 
 	//
+	// Statistics
+	//
+	timing_t deactivation_time;
+	timing_t max_error_detection_latency;
+	timing_t max_error_detection_offline_time;
+
+	//
 	// List housekeeping
 	//
 	struct shadowedthread *next;
@@ -171,6 +179,8 @@ void* shadow_starter(void* data);
 //
 // Debugging
 //
+void shadow_dump_timestats(shadowedthread_t *sh);
+void shadow_dump_timestats_all();
 void shadow_dump(shadowedthread_t *sh);
 void shadow_dump_all();
 

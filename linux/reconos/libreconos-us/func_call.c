@@ -12,6 +12,7 @@
 #include <assert.h>
 #include <sys/time.h>
 #include <pthread.h>
+#include "timing.h"
 #include "func_call.h"
 
 // #define DEBUG 1
@@ -25,21 +26,6 @@
 #define FC_DEBUG1(message, arg1)
 #define FC_DEBUG2(message, arg1, arg2)
 #endif
-
-/**
- * @brief  Helper function for benchmarking thread shadowing
- */
-static unsigned long calc_timediff_us(struct timeval start, struct timeval stop) {
-	unsigned long us;
-	struct timeval diff;
-
-	// calculate difference
-	timersub(&stop, &start, &diff);
-	// convert to miliseconds
-	us = diff.tv_sec * 1000000 + diff.tv_usec;
-	// this is very dirty, but allows to print the value via printf("%lu",ms)
-	return us;
-}
 
 /**
  * @brief  Does the first part out of two of initalizing the func_call structure.
@@ -56,7 +42,7 @@ void func_call_new(func_call_t * func_call, const char *function) {
 	func_call->function = (char *) function; // we accept to loose the 'const' qualifier
 
 	// for benchmarking error detection latency
-	gettimeofday(&func_call->timestamp, NULL);
+	func_call->timestamp = gettime();
 
 	FC_DEBUG("Leaving func_call_new\n");
 }
@@ -196,23 +182,22 @@ const char* func_call_strerror(int error)
 	}
 }
 
-unsigned long func_call_timediff_us(func_call_t * a, func_call_t * b)
+timing_t func_call_timediff_us(func_call_t * start, func_call_t * stop)
 {
-	if(a && b)
-	{
-		return  calc_timediff_us(a->timestamp, b->timestamp);
-	} else {
-		return 0;
-	}
+	assert(start);
+	assert(stop);
+	timing_t diff;
+	timerdiff(&stop->timestamp, &start->timestamp, &diff);
+	return diff;
+
 }
-unsigned long func_call_timediff2_us(func_call_t * a, struct timeval * b)
+timing_t func_call_timediff2_us(func_call_t * start, struct timeval * stop)
 {
-	if(a && b)
-	{
-		return  calc_timediff_us( a->timestamp, *b);
-	} else {
-		return 0;
-	}
+	assert(start);
+	assert(stop);
+	timing_t diff;
+	timerdiff(stop, &start->timestamp, &diff);
+	return diff;
 }
 
 /**

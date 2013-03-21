@@ -95,6 +95,8 @@ extern shadowedthread_t *shadow_list_head;
     		shadow_func_call_pop(sh, &func_call_sh);\
     		SUBS_DEBUG2("Thread %8lu %s() popping from fifo: ", this, __FUNCTION__); \
     		/*func_call_dump(&func_call_sh)*/;\
+    		timing_t diff = func_call_timediff_us(&func_call_tuo, &func_call_sh);\
+    		if ( timercmp(&diff,&sh->max_error_detection_latency, >)) { sh->max_error_detection_latency = diff;}\
     		int error = func_call_compare(&func_call_tuo, &func_call_sh);\
     		if( error != FC_ERR_NONE) {\
     			shadow_error(sh, error, &func_call_tuo, &func_call_sh);\

@@ -262,12 +262,12 @@ int main(int argc, char ** argv)
 
 	void *(*actual_sort_thread)(void* data)=NULL;
 
-	timing_t t_start;
-    timing_t t_stop;
-	ms_t t_generate = 0;
-	ms_t t_sort = 0;
-	ms_t t_merge = 0;
-	ms_t t_check = 0;
+	timing_t t_start = {};
+    timing_t t_stop = {};
+    timing_t t_generate = {};
+    timing_t t_sort = {};
+    timing_t t_merge = {};
+    timing_t t_check = {};
 
 	//
 	// Install signal handler for segfaults
@@ -412,7 +412,7 @@ int main(int argc, char ** argv)
 		{
 			shadow_set_hwslots(sh+i, j, actual_slot_map[(i*sh_threadcount)+j]);
 		}
-		shadow_set_options(sh+i, TS_MANUAL_SCHEDULE);
+		//shadow_set_options(sh+i, TS_MANUAL_SCHEDULE);
 		shadow_set_threadcount(sh+i, sh_threadcount, 0);
 		shadow_thread_create(sh+i);
 	}
@@ -430,7 +430,7 @@ int main(int argc, char ** argv)
 		shadow_set_copycompare( sh+i, buffer_copy, buffer_compare );
 		shadow_set_swthread( sh+i, actual_sort_thread );
 		shadow_set_resources( sh+i, res[i], 2 );
-		shadow_set_options(sh+i, TS_MANUAL_SCHEDULE);
+		//shadow_set_options(sh+i, TS_MANUAL_SCHEDULE);
 		shadow_set_threadcount( sh+i, 0, sh_threadcount);
 		shadow_thread_create( sh+i );
 	}
@@ -489,7 +489,7 @@ int main(int argc, char ** argv)
 #endif
 
 	t_stop = gettime();
-	t_generate = calc_timediff_ms(t_start,t_stop);
+	timerdiff(&t_stop,&t_start,&t_generate);
 
 	// Start sort threads
 	t_start = gettime();
@@ -596,7 +596,7 @@ int main(int argc, char ** argv)
 	printf("\n");
 
 	t_stop = gettime();
-	t_sort = calc_timediff_ms(t_start,t_stop);
+	timerdiff(&t_stop,&t_start,&t_sort);
 
 	// merge data
 	t_start = gettime();	
@@ -619,7 +619,7 @@ int main(int argc, char ** argv)
 				);
 
 	t_stop = gettime();
-	t_merge = calc_timediff_ms(t_start,t_stop);
+	timerdiff(&t_stop,&t_start,&t_merge);
 	
 	// check data
 	//data[0] = 6666; // manual fault
@@ -655,7 +655,7 @@ int main(int argc, char ** argv)
 	  }
 
 	t_stop = gettime();
-	t_check = calc_timediff_ms(t_start,t_stop);
+	timerdiff(&t_stop,&t_start,&t_stop);
 
 	// terminate all threads
 	printf("Sending terminate message to %i threads:", running_threads);
@@ -733,8 +733,10 @@ int main(int argc, char ** argv)
             "\tCheck data   : %lu ms\n"
             "Total computation time (sort & merge): %lu ms\n",
 		TO_WORDS(buffer_size), hw_threads, sw_threads,
-		t_generate, t_sort, t_merge, t_check, t_sort + t_merge );
-	
+		timer2ms(&t_generate), timer2ms(&t_sort), timer2ms(&t_merge), timer2ms(&t_check), timer2ms(&t_sort) + timer2ms(&t_merge) );
+#ifdef SHADOWING
+	shadow_dump_timestats_all();
+#endif
 	free(data);
 	free(copy);
 	
