@@ -155,7 +155,7 @@ void shadow_schedule(shadowedthread_t *this_shadow,  uint32 flags) {
 						continue;
 					}
 					SCHED_DEBUG1("RR: TID %lu set to preactive\n",	current->threads[0]);
-					shadow_set_state(shadow_list_head, TS_PREACTIVE);
+					shadow_set_state(current, TS_PREACTIVE);
 					break;
 				}
 				if ( current == this_shadow) {
