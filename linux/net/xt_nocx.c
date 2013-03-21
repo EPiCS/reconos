@@ -120,14 +120,15 @@ static struct noc_pkt *skb_to_noc_pkt(struct sk_buff *skb)
 	//for now, we assume eth1 = IDP1 = "0001" "00" = 4 and 
 	//fb1 = IDP2 = "0000" "01" = 1
 	npkt = alloc_npkt(skb->len, GFP_KERNEL);
+	//printk(KERN_ERR "---------skb_to_noc_pkt: %d\n", skb->len);
 	if (npkt) {
-		if (dst_idp = 2){ //fb1
-			npkt->hw_addr_switch = 0;
-			npkt->hw_addr_block = 1;
-		} else{ //default, send it to ethernet
+	//	if (dst_idp == 2){ //fb1
+	//		npkt->hw_addr_switch = 0;
+	//		npkt->hw_addr_block = 1;
+	//	} else{ //default, send it to ethernet
 			npkt->hw_addr_switch = 1;
 			npkt->hw_addr_block = 0;
-		}
+	//	}
 		npkt->priority = 0;
 		npkt->direction = read_path_from_skb(skb);
 		npkt->latency_critical = 0;
@@ -173,8 +174,8 @@ static struct sk_buff *noc_pkt_to_skb(struct noc_pkt *npkt)
 
 static int noc_sendpkt(struct noc_pkt *npkt)
 {
-	u32 pkt_len = npkt->payload_len;
-	u32 tmp_len = 104;
+	u32 pkt_len = npkt->payload_len + 12;
+	u32 tmp_len = 0;
 	//u32 i;
 	size_t off = sizeof(*npkt) - sizeof(npkt->payload);
 

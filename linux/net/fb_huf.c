@@ -216,7 +216,7 @@ static void compress(struct sk_buff * const skb){
     return;
 }
 
-
+#ifdef not_used
 /*function to decompress the input -- unused, just to have it...*/
 void decompressFile (FILE *input, FILE *output, Node *tree){
     Node *current = tree;
@@ -256,7 +256,7 @@ void decompressFile (FILE *input, FILE *output, Node *tree){
     return;
 }
 
-
+#endif
 
 static int fb_huf_netrx(const struct fblock * const fb,
 			  struct sk_buff * const skb,
