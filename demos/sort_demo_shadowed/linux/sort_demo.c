@@ -311,6 +311,12 @@ int main(int argc, char ** argv)
 	if ( argc >= 8) {
 		seed = atoi(argv[7]);
 	}
+
+#ifdef SHADOWING
+	printf("sort_demo_shadowed build: %s %s\n", __DATE__, __TIME__);
+#else
+	printf("sort_demo build: %s %s\n", __DATE__, __TIME__);
+#endif
 	printf("Parameters: hwt: %2i, swt: %2i, blocks: %5i, thread interface: %s, shadowing: %s\n",
 			hw_threads, sw_threads, TO_BLOCKS(buffer_size),
 			(thread_interface == TI_SHMEM? "SHMEM":(thread_interface == TI_MBOX? "MBOX":(thread_interface == TI_RQUEUE? "RQUEUE":"unknown"))),
