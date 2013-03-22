@@ -29,7 +29,7 @@ fi
 if [ "$ARCH" = "ppc" ]; then
     DOWCMD="ppccon\ndow $ELF\nrun\n"
 elif [ "$ARCH" = "mb" ]; then
-    DOWCMD="connect mb mdm\ndow $ELF\nrun\n"
+    DOWCMD="connect mb mdm\nrst\ndow $ELF\nrun\n"
 else
     echo "unknown ARCH '$ARCH'"
     exit 1
