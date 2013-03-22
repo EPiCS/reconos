@@ -17,7 +17,7 @@
 #include "xt_engine.h"
 #include "rijndael.h"
 
-struct fb_aes_priv {
+struct fb_aes_de_priv {
 	idp_t port[2];
 	seqlock_t lock;
 	uint8_t *key;
@@ -29,17 +29,17 @@ struct fb_aes_priv {
 } ____cacheline_aligned_in_smp;
 
 
-static int fb_aes_netrx(const struct fblock * const fb,
+static int fb_aes_de_netrx(const struct fblock * const fb,
 			  struct sk_buff * const skb,
 			  enum path_type * const dir)
 {
 	unsigned int seq;
 	unsigned int padding;
-	struct fb_aes_priv *fb_priv;
+	struct fb_aes_de_priv *fb_priv;
 	size_t i = 0;
-	unsigned char ciphertext[16];
+	unsigned char plaintext[16];
 	//we don't have jumbo packets.	
-	u16 pktlen = (u16)skb->len;
+	u16 pktlen = 0;
 	fb_priv = rcu_dereference_raw(fb->private_data);
 	do {
 		seq = read_seqbegin(&fb_priv->lock);
@@ -50,38 +50,31 @@ static int fb_aes_netrx(const struct fblock * const fb,
 
 	read_lock(&fb_priv->klock);
 	
-	//we need to pad to 16 bytes
-	//for hardware compatability this is done by setting the last two bytes to the actual packet len.
-	//reserve space for the padding:
-	skb_put(skb,2);
-	//reserve space for the padding
-	padding = skb->len % 16;
-	skb_put(skb, padding);
-	//write len to buffer
-	memcpy(&skb->data[skb->len - 2], &pktlen, 2);
-//	skb->data[skb->len - 1] = (unsigned char) padding; //last byte is amount of padding;
-	
 	//here we do the encryption
 	for (i = 0; i < skb->len; i += 16){
-		rijndaelEncrypt(fb_priv->rk, fb_priv->nrounds, skb->data + i, ciphertext);
-		memcpy(skb->data + i, ciphertext, 16);
+		rijndaelDecrypt(fb_priv->rk, fb_priv->nrounds, skb->data + i, plaintext);
+		memcpy(skb->data + i, plaintext, 16);
 	}
+
+	//find the actual data len and trim the buffer.
+	memcpy(&pktlen, &skb->data[skb->len - 2], 2);
+	skb_trim(skb, pktlen);
 
 	read_unlock(&fb_priv->klock);
 
 	return PPE_SUCCESS;
 drop:
-	printk(KERN_INFO "[fb_aes] drop packet. Unknown IDP\n");
+	printk(KERN_INFO "[fb_aes_de] drop packet. Unknown IDP\n");
 	kfree_skb(skb);
 	return PPE_DROPPED;
 }
 
-static int fb_aes_event(struct notifier_block *self, unsigned long cmd,
+static int fb_aes_de_event(struct notifier_block *self, unsigned long cmd,
 			  void *args)
 {
 	int ret = NOTIFY_OK;
 	struct fblock *fb;
-	struct fb_aes_priv *fb_priv;
+	struct fb_aes_de_priv *fb_priv;
 
 	rcu_read_lock();
 	fb = rcu_dereference_raw(container_of(self, struct fblock_notifier, nb)->self);
@@ -116,10 +109,10 @@ static int fb_aes_event(struct notifier_block *self, unsigned long cmd,
 	return ret;
 }
 
-static int fb_aes_proc_show(struct seq_file *m, void *v)
+static int fb_aes_de_proc_show(struct seq_file *m, void *v)
 {
 	struct fblock *fb = (struct fblock *) m->private;
-	struct fb_aes_priv *fb_priv;
+	struct fb_aes_de_priv *fb_priv;
 	char sline[64];
 
 	rcu_read_lock();
@@ -129,23 +122,23 @@ static int fb_aes_proc_show(struct seq_file *m, void *v)
 	memset(sline, 0, sizeof(sline));
 
 	read_lock(&fb_priv->klock);
-	snprintf(sline, sizeof(sline), "%d\n", (fb_priv->key_bits));
+	snprintf(sline, sizeof(sline), "%zd\n", (fb_priv->key_bits));
 	read_unlock(&fb_priv->klock);
 
 	seq_puts(m, sline);
 	return 0;
 }
 
-static int fb_aes_proc_open(struct inode *inode, struct file *file)
+static int fb_aes_de_proc_open(struct inode *inode, struct file *file)
 {
-	return single_open(file, fb_aes_proc_show, PDE(inode)->data);
+	return single_open(file, fb_aes_de_proc_show, PDE(inode)->data);
 }
 
-static ssize_t fb_aes_proc_write(struct file *file, const char __user * ubuff,
+static ssize_t fb_aes_de_proc_write(struct file *file, const char __user * ubuff,
 				 size_t count, loff_t * offset)
 {
 	struct fblock *fb = PDE(file->f_path.dentry->d_inode)->data;
-	struct fb_aes_priv *fb_priv;
+	struct fb_aes_de_priv *fb_priv;
 
 	if (count != 16 && count != 24 && count != 32){
 		printk(KERN_ERR "invalid key length %d\n", count);
@@ -169,27 +162,27 @@ static ssize_t fb_aes_proc_write(struct file *file, const char __user * ubuff,
 	printk(KERN_ERR "key_bits %d\n", fb_priv->key_bits);
 
 	fb_priv->rk = kmalloc(RKLENGTH(fb_priv->key_bits)*sizeof(long), GFP_KERNEL);
-	fb_priv->nrounds = rijndaelSetupEncrypt(fb_priv->rk, fb_priv->key, fb_priv->key_bits);	
+	fb_priv->nrounds = rijndaelSetupDecrypt(fb_priv->rk, fb_priv->key, fb_priv->key_bits);	
 	
 	write_unlock(&fb_priv->klock);
 
 	return count;
 }
 
-static const struct file_operations fb_aes_proc_fops = {
+static const struct file_operations fb_aes_de_proc_fops = {
 	.owner   = THIS_MODULE,
-	.open    = fb_aes_proc_open,
+	.open    = fb_aes_de_proc_open,
 	.read    = seq_read,
 	.llseek  = seq_lseek,
-	.write   = fb_aes_proc_write,
+	.write   = fb_aes_de_proc_write,
 	.release = single_release,
 };
 
-static struct fblock *fb_aes_ctor(char *name)
+static struct fblock *fb_aes_de_ctor(char *name)
 {
 	int ret = 0;
 	struct fblock *fb;
-	struct fb_aes_priv *fb_priv;
+	struct fb_aes_de_priv *fb_priv;
 	struct proc_dir_entry *fb_proc;
 
 	fb = alloc_fblock(GFP_ATOMIC);
@@ -212,12 +205,12 @@ static struct fblock *fb_aes_ctor(char *name)
 	if (ret)
 		goto err2;
 
-	fb->netfb_rx = fb_aes_netrx;
-	fb->event_rx = fb_aes_event;
+	fb->netfb_rx = fb_aes_de_netrx;
+	fb->event_rx = fb_aes_de_event;
 //	fb->linearize = fb_aes_linearize;
 //	fb->delinearize = fb_aes_delinearize;
 	fb_proc = proc_create_data(fb->name, 0444, fblock_proc_dir,
-				   &fb_aes_proc_fops, (void *)(long) fb);
+				   &fb_aes_de_proc_fops, (void *)(long) fb);
 	if (!fb_proc)
 		goto err3;
 
@@ -241,41 +234,41 @@ err:
 	return NULL;
 }
 
-static void fb_aes_dtor_outside_rcu(struct fblock *fb)
+static void fb_aes_de_dtor_outside_rcu(struct fblock *fb)
 {
-	kfree(((struct fb_aes_priv *)rcu_dereference_raw(fb->private_data))->key);
+	kfree(((struct fb_aes_de_priv *)rcu_dereference_raw(fb->private_data))->key);
 }
 
-static void fb_aes_dtor(struct fblock *fb)
+static void fb_aes_de_dtor(struct fblock *fb)
 {
 	kfree(rcu_dereference_raw(fb->private_data));
 	remove_proc_entry(fb->name, fblock_proc_dir);
 	module_put(THIS_MODULE);
 }
 
-static struct fblock_factory fb_aes_factory = {
-	.type = "ch.ethz.csg.aes",
+static struct fblock_factory fb_aes_de_factory = {
+	.type = "ch.ethz.csg.aes_de",
 	.mode = MODE_DUAL,
-	.ctor = fb_aes_ctor,
-	.dtor = fb_aes_dtor,
-	.dtor_outside_rcu = fb_aes_dtor_outside_rcu,
+	.ctor = fb_aes_de_ctor,
+	.dtor = fb_aes_de_dtor,
+	.dtor_outside_rcu = fb_aes_de_dtor_outside_rcu,
 	.owner = THIS_MODULE,
 	.properties = { [0] = "privacy" },
 };
 
-static int __init init_fb_aes_module(void)
+static int __init init_fb_aes_de_module(void)
 {
-	return register_fblock_type(&fb_aes_factory);
+	return register_fblock_type(&fb_aes_de_factory);
 }
 
-static void __exit cleanup_fb_aes_module(void)
+static void __exit cleanup_fb_aes_de_module(void)
 {
 	synchronize_rcu();
-	unregister_fblock_type(&fb_aes_factory);
+	unregister_fblock_type(&fb_aes_de_factory);
 }
 
-module_init(init_fb_aes_module);
-module_exit(cleanup_fb_aes_module);
+module_init(init_fb_aes_de_module);
+module_exit(cleanup_fb_aes_de_module);
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Ariane Keller <ariane.keller@tik.ee.ethz.ch>");
