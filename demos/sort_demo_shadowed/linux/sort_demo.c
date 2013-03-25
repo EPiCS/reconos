@@ -175,14 +175,18 @@ void print_help()
 "\n"
 "Usage:\n"
 "\tsort_demo <-h|--help>\n"
-"\tsort_demo <num_hw_threads> <num_sw_threads> <num_of_blocks> [thread interface] [redundant threads] [#injected errors] [seed]\n"
+"\tsort_demo <num_hw_threads> <num_sw_threads> <num_of_blocks> [thread interface] [redundant threads] [schedule] [#injected errors] [seed]\n"
 "\n"
 "Size of a block in bytes: %i\n"
 "\n"
 "Implemented Thread Interfaces:\n"
 "\t0: data via shared memory, address via message box (Default),\n"
 "\t1: all data via message box,\n"
-"\t2: all data via reconos queue\n",
+"\t2: all data via reconos queue\n"
+"\n"
+"Implemented Schedules:\n"
+"\t0: all shadow threads run in parallel,\n"
+"\t1: 1 shadow thread, round robin\n",
 PAGE_SIZE*PAGES_PER_THREAD
 );
 }
@@ -257,6 +261,7 @@ int main(int argc, char ** argv)
 	int error_idx, from, to = 0;
 	int buffer_size = 0;
 	int thread_interface = 0;
+	int sh_schedule = 0;
 	unsigned int error_count=0;
 	unsigned int seed=1;
 
@@ -306,10 +311,15 @@ int main(int argc, char ** argv)
 		if ( sh_threadcount > 2 ){sh_threadcount = 2;}
 	}
 	if ( argc >= 7) {
-		error_count = atoi(argv[6]);
+		sh_schedule = atoi(argv[6]);
+		if ( sh_schedule < 0 ){sh_schedule = 0;}
+		if ( sh_schedule > 1 ){sh_schedule = 1;}
 	}
 	if ( argc >= 8) {
-		seed = atoi(argv[7]);
+		error_count = atoi(argv[7]);
+	}
+	if ( argc >= 9) {
+		seed = atoi(argv[8]);
 	}
 
 #ifdef SHADOWING
@@ -317,10 +327,10 @@ int main(int argc, char ** argv)
 #else
 	printf("sort_demo build: %s %s\n", __DATE__, __TIME__);
 #endif
-	printf("Parameters: hwt: %2i, swt: %2i, blocks: %5i, thread interface: %s, shadowing: %s\n",
+	printf("Parameters: hwt: %2i, swt: %2i, blocks: %5i, thread interface: %s, shadowing: %s, schedule: %i\n",
 			hw_threads, sw_threads, TO_BLOCKS(buffer_size),
 			(thread_interface == TI_SHMEM? "SHMEM":(thread_interface == TI_MBOX? "MBOX":(thread_interface == TI_RQUEUE? "RQUEUE":"unknown"))),
-			(sh_threadcount == 1 ? "off": "on"));
+			(sh_threadcount == 1 ? "off": "on"), sh_schedule);
 
 	running_threads = hw_threads + sw_threads;
     printf("Main thread is pthread %lu\n", pthread_self());
@@ -412,7 +422,7 @@ int main(int argc, char ** argv)
 		{
 			shadow_set_hwslots(sh+i, j, actual_slot_map[(i*sh_threadcount)+j]);
 		}
-		//shadow_set_options(sh+i, TS_MANUAL_SCHEDULE);
+		if(sh_schedule==0){shadow_set_options(sh+i, TS_MANUAL_SCHEDULE);}
 		shadow_set_threadcount(sh+i, sh_threadcount, 0);
 		shadow_thread_create(sh+i);
 	}
@@ -430,7 +440,7 @@ int main(int argc, char ** argv)
 		shadow_set_copycompare( sh+i, buffer_copy, buffer_compare );
 		shadow_set_swthread( sh+i, actual_sort_thread );
 		shadow_set_resources( sh+i, res[i], 2 );
-		//shadow_set_options(sh+i, TS_MANUAL_SCHEDULE);
+		if(sh_schedule==0){shadow_set_options(sh+i, TS_MANUAL_SCHEDULE);}
 		shadow_set_threadcount( sh+i, 0, sh_threadcount);
 		shadow_thread_create( sh+i );
 	}

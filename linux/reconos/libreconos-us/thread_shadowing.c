@@ -16,6 +16,7 @@
 #include <string.h>
 #include <stdint.h>
 #include <unistd.h>
+#include <limits.h>
 
 #define _GNU_SOURCE
 #include <pthread.h>
@@ -371,6 +372,10 @@ void shadow_init(shadowedthread_t *sh) {
 	sh->sh_status = TS_ACTIVE;
 	fifo_init(&(sh->func_calls), 128, sizeof(func_call_t));
 	sh->error_handler = shadow_error_abort;
+
+	sh->min_error_detection_latency = (timing_t){.tv_sec= LONG_MAX, .tv_usec = LONG_MAX};
+	sh->min_error_detection_offline_time = (timing_t){.tv_sec= LONG_MAX, .tv_usec = LONG_MAX};
+
 	// ...and call substructure initializers
 	shadow_errors_init(&(sh->errors));
 
@@ -461,26 +466,57 @@ void* shadow_starter(void* data){
 
 void shadow_dump_timestats(shadowedthread_t *sh){
 	assert(sh);
-	printf("Timestats of shadowed thread %p: max dot %lu us, max detlat: %lu us\n",
-			sh, timer2us(&sh->max_error_detection_offline_time), timer2us(&sh->max_error_detection_latency));
+	printf("Timestats (min,avg,max) in us of shadowed thread %p: dot %li, %li, %li , detlat: %li, %li, %li\n",
+			sh,
+			timer2us(&sh->min_error_detection_offline_time),
+			timer2us(&sh->sum_error_detection_offline_time)/sh->cnt_error_detection_offline_time,
+			timer2us(&sh->max_error_detection_offline_time),
+			timer2us(&sh->min_error_detection_latency),
+			timer2us(&sh->sum_error_detection_latency)/sh->cnt_error_detection_latency,
+			timer2us(&sh->max_error_detection_latency));
 }
 
 void shadow_dump_timestats_all(){
 	shadowedthread_t * current = shadow_list_head;
-	unsigned long int max_error_detection_offline_time=0;
-	unsigned long int max_error_detection_latency=0;
+	long int min_error_detection_offline_time=LONG_MAX;
+	long int sum_error_detection_offline_time=0;
+	long int cnt_error_detection_offline_time=0;
+	long int max_error_detection_offline_time=LONG_MIN;
+
+	long int min_error_detection_latency=LONG_MAX;
+	long int sum_error_detection_latency=0;
+	long int cnt_error_detection_latency=0;
+	long int max_error_detection_latency=LONG_MIN;
+
 	while(current){
+		if (min_error_detection_offline_time > timer2us(&current->min_error_detection_offline_time)){
+			min_error_detection_offline_time = timer2us(&current->min_error_detection_offline_time);
+		}
+		sum_error_detection_offline_time += timer2us(&current->sum_error_detection_offline_time);
+		cnt_error_detection_offline_time += current->cnt_error_detection_offline_time;
 		if (max_error_detection_offline_time < timer2us(&current->max_error_detection_offline_time)){
 			max_error_detection_offline_time = timer2us(&current->max_error_detection_offline_time);
 		}
+
+		if (min_error_detection_latency > timer2us(&current->min_error_detection_latency)){
+			min_error_detection_latency = timer2us(&current->min_error_detection_latency);
+		}
+		sum_error_detection_latency += timer2us(&current->sum_error_detection_latency);
+		cnt_error_detection_latency += current->cnt_error_detection_latency;
 		if (max_error_detection_latency < timer2us(&current->max_error_detection_latency)){
 			max_error_detection_latency = timer2us(&current->max_error_detection_latency);
 		}
+
 		shadow_dump_timestats(current);
 		current = current->next;
 	}
-	printf("Timestats summary: max dot %lu us, max detlat: %lu us\n",
-				max_error_detection_offline_time, max_error_detection_latency);
+	printf("Timestats summary (min/avg/max) in us: dot %li, %li, %li, detlat: %li, %li, %li\n",
+				min_error_detection_offline_time,
+				sum_error_detection_offline_time / cnt_error_detection_offline_time,
+				max_error_detection_offline_time,
+				min_error_detection_latency,
+				sum_error_detection_latency / cnt_error_detection_latency,
+				max_error_detection_latency);
 }
 
 void shadow_dump(shadowedthread_t *sh) {
@@ -632,18 +668,22 @@ void shadow_set_state(shadowedthread_t *sh, shadow_state_t s) {
 	assert(sh);
 	if (sh->sh_status == TS_ACTIVE && s == TS_INACTIVE){
 		// set deactivation timestamp
-		printf("XXXX: Saving shadow deactivation time!\n");
 		sh->deactivation_time = gettime();
 	}
 	if (sh->sh_status == TS_PREACTIVE && s == TS_ACTIVE){
 		// calculate error detection offline time
-		printf("XXXX: Updating max_error_detection_offline_time!\n");
 		timing_t now = gettime();
 		timing_t diff;
-		timerdiff(&sh->deactivation_time, &now, &diff);
+		timerdiff(&now, &sh->deactivation_time, &diff);
 		if ( timercmp(&diff,&sh->max_error_detection_offline_time, >) ){
 			sh->max_error_detection_offline_time = diff;
 		}
+		if ( timercmp(&diff,&sh->min_error_detection_offline_time, <) ){
+			sh->min_error_detection_offline_time = diff;
+		}
+		timeradd(&sh->sum_error_detection_offline_time, &diff, &sh->sum_error_detection_offline_time);
+		sh->cnt_error_detection_offline_time++;
+
 	}
 
 	sh->sh_status = s;

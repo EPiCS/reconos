@@ -130,8 +130,16 @@ typedef struct shadowedthread {
 	// Statistics
 	//
 	timing_t deactivation_time;
-	timing_t max_error_detection_latency;
 	timing_t max_error_detection_offline_time;
+	timing_t min_error_detection_offline_time;
+	timing_t sum_error_detection_offline_time; // sum/cnt = average!
+	long	 cnt_error_detection_offline_time;
+
+	timing_t max_error_detection_latency;
+	timing_t min_error_detection_latency;
+	timing_t sum_error_detection_latency; // sum/cnt = average!
+	long     cnt_error_detection_latency;
+
 
 	//
 	// List housekeeping

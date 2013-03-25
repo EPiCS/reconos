@@ -97,6 +97,9 @@ extern shadowedthread_t *shadow_list_head;
     		/*func_call_dump(&func_call_sh)*/;\
     		timing_t diff = func_call_timediff_us(&func_call_tuo, &func_call_sh);\
     		if ( timercmp(&diff,&sh->max_error_detection_latency, >)) { sh->max_error_detection_latency = diff;}\
+    		if ( timercmp(&diff,&sh->min_error_detection_latency, <)) { sh->min_error_detection_latency = diff;}\
+    		timeradd(&sh->sum_error_detection_latency, &diff, &sh->sum_error_detection_latency);\
+    		sh->cnt_error_detection_latency++;\
     		int error = func_call_compare(&func_call_tuo, &func_call_sh);\
     		if( error != FC_ERR_NONE) {\
     			shadow_error(sh, error, &func_call_tuo, &func_call_sh);\

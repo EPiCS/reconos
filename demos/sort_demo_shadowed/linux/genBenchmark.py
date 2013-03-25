@@ -102,9 +102,9 @@ def genSortDemoRuns (_runIdx, _runConf, _ofile, _threadInterface, _start_idx, _e
     f.write("echo\n")
     return _runIdx
 
-def genSortDemoShadowedRuns (_runIdx, _runConf, _ofile, _threadInterface, _start_idx, _end_idx, _shadowed):
+def genSortDemoShadowedRuns (_runIdx, _runConf, _ofile, _threadInterface, _start_idx, _end_idx, _shadowed, _schedule):
     for i in range(_start_idx, _end_idx):
-        cmdString = "./sort_demo_shadowed " + str(_runConf[i][HWT]) + " " + str(_runConf[i][SWT]) + " " + str(_runConf[i][NB]) + " " + str(_threadInterface) + " " + str(_shadowed) + " >> " + _ofile + "\n"
+        cmdString = "./sort_demo_shadowed " + str(_runConf[i][HWT]) + " " + str(_runConf[i][SWT]) + " " + str(_runConf[i][NB]) + " " + str(_threadInterface) + " " + str(_shadowed) + " " + str(_schedule) + " >> " + _ofile + "\n"
         f.write("if [ $STARTIDX -le " + str(_runIdx) + " ]; then \n")
         f.write("echo -n \" " + str(_runIdx) + " " + cmdString+ "\"\n")
         f.write(cmdString)
@@ -140,12 +140,17 @@ if __name__ == "__main__":
     runIdx = genSortDemoRuns(runIdx, runConf, ofiles[0], 2, 0, len(runConf))
     
     f.write("echo \"Second run with sort_demo_shadowed (shadowing off)...\"\n")
-    runIdx = genSortDemoShadowedRuns (runIdx, runConf, ofiles[1], 0, 0, len(runConf), 1)
-    runIdx = genSortDemoShadowedRuns (runIdx, runConf, ofiles[1], 1, 0, len(runConf), 1)
-    runIdx = genSortDemoShadowedRuns (runIdx, runConf, ofiles[1], 2, 0, len(runConf), 1)
+    runIdx = genSortDemoShadowedRuns (runIdx, runConf, ofiles[1], 0, 0, len(runConf), 1, 1)
+    runIdx = genSortDemoShadowedRuns (runIdx, runConf, ofiles[1], 1, 0, len(runConf), 1, 1)
+    runIdx = genSortDemoShadowedRuns (runIdx, runConf, ofiles[1], 2, 0, len(runConf), 1, 1)
     
-    f.write("echo \"Third run with sort_demo_shadowed (shadowing_on)...\"\n")
-    runIdx = genSortDemoShadowedRuns (runIdx, runConf, ofiles[1], 0, 0, len(runConf)-10, 2)
-    runIdx = genSortDemoShadowedRuns (runIdx, runConf, ofiles[1], 1, 0, len(runConf)-10, 2)
-    runIdx = genSortDemoShadowedRuns (runIdx, runConf, ofiles[1], 2, 0, len(runConf)-10, 2)
+    f.write("echo \"Third run with sort_demo_shadowed (shadowing_on, all shadows active)...\"\n")
+    runIdx = genSortDemoShadowedRuns (runIdx, runConf, ofiles[1], 0, 0, len(runConf)-10, 2, 0)
+    runIdx = genSortDemoShadowedRuns (runIdx, runConf, ofiles[1], 1, 0, len(runConf)-10, 2, 0)
+    runIdx = genSortDemoShadowedRuns (runIdx, runConf, ofiles[1], 2, 0, len(runConf)-10, 2, 0)
+    
+    f.write("echo \"Third run with sort_demo_shadowed (shadowing_on, round-robin with 1 shadow)...\"\n")
+    runIdx = genSortDemoShadowedRuns (runIdx, runConf, ofiles[1], 0, 0, len(runConf)-10, 2, 1)
+    runIdx = genSortDemoShadowedRuns (runIdx, runConf, ofiles[1], 1, 0, len(runConf)-10, 2, 1)
+    runIdx = genSortDemoShadowedRuns (runIdx, runConf, ofiles[1], 2, 0, len(runConf)-10, 2, 1)
     
