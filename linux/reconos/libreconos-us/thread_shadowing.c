@@ -524,9 +524,6 @@ void shadow_dump(shadowedthread_t *sh) {
 	assert(sh);
 
 	printf("Dump of shadowed thread %p \n", sh);
-	printf("\tThread reliability %d \n", sh->reliability);
-	printf("\tCopy function: %s set; Compare function: %s set \n",
-			sh->input_copy ? "" : "not", sh->input_comp ? "" : "not");
 	printf("\tInit data: %p\n", sh->init_data);
 
 	for (i = 0; i < TS_MAX_REDUNDANT_THREADS; i++) {
@@ -567,25 +564,9 @@ void shadow_dump_all() {
 	}
 }
 
-int shadow_set_reliability(shadowedthread_t *sh, uint32_t rel) {
-	assert(sh);
-	//, "sh == NULL");
-	sh->reliability = rel;
-	return true;
-}
-
-int shadow_set_copycompare(shadowedthread_t *sh, void* (*input_copy)(void *src),
-		int (*input_comp)(void *src, void *dst)) {
-	assert(sh);
-	//, "sh == NULL");
-	sh->input_copy = input_copy;
-	sh->input_comp = input_comp;
-	return true;
-}
-
 int shadow_set_swthread(shadowedthread_t *sh, void* (*entry)(void*)) {
 	assert(sh);
-	//, "sh == NULL");
+
 	sh->sw_thread = entry;
 	return true;
 }
@@ -599,7 +580,7 @@ int shadow_set_swthread(shadowedthread_t *sh, void* (*entry)(void*)) {
 int shadow_set_resources(shadowedthread_t *sh, struct reconos_resource * res,
 		unsigned int res_count) {
 	assert(sh);
-	//, "sh == NULL");
+
 	sh->resources = res;
 	sh->resources_count = res_count;
 	return true;
@@ -607,7 +588,7 @@ int shadow_set_resources(shadowedthread_t *sh, struct reconos_resource * res,
 
 int shadow_set_options(shadowedthread_t *sh, uint32_t options) {
 	assert(sh);
-	//, "sh == NULL");
+
 	sh->options = options;
 	return true;
 }
@@ -615,7 +596,7 @@ int shadow_set_options(shadowedthread_t *sh, uint32_t options) {
 // Set TS_MANUAL_SCHEDULE in options!
 int shadow_set_threadcount(shadowedthread_t *sh, uint8_t hw, uint8_t sw) {
 	assert(sh);
-	//, "sh == NULL");
+
 	sh->num_hw_threads = hw;
 	sh->num_sw_threads = sw;
 	return true;
@@ -623,7 +604,7 @@ int shadow_set_threadcount(shadowedthread_t *sh, uint8_t hw, uint8_t sw) {
 
 int shadow_set_hwslots(shadowedthread_t *sh, uint8_t hwt, uint8_t hwslot) {
 	assert(sh);
-	//, "sh == NULL");
+
 	if (hwt < TS_MAX_REDUNDANT_THREADS) {
 		sh->hw_slot_nums[hwt] = hwslot;
 		return true;
@@ -634,7 +615,7 @@ int shadow_set_hwslots(shadowedthread_t *sh, uint8_t hwt, uint8_t hwslot) {
 
 int shadow_set_initdata(shadowedthread_t *sh, void* init_data) {
 	assert(sh);
-	//, "sh == NULL");
+
 	sh->init_data = init_data;
 	return true;
 }
@@ -654,14 +635,16 @@ int shadow_get_stack(shadowedthread_t *sh, unsigned int thread_idx, void ** stac
 // Private API
 //
 
+/**
+ * @brief check if shadow thread is properly configured
+ * @todo Needs more checks!
+ */
 int shadow_check_configuration(shadowedthread_t *sh) {
 	assert(sh);
-	assert(sh->input_copy);
-	assert(sh->input_comp);
 
 	// Check if at least one thread, may it be hw or sw, is configured.
 	assert(sh->sw_thread || sh->hw_thread);
-	//, "Neither a sw nor a hw thread is configured!");
+
 	return true;
 }
 
@@ -844,7 +827,6 @@ void shadow_thread_create(shadowedthread_t * sh) // Init data passed to worker t
 	//
 	assert(sh);
 	assert(shadow_check_configuration(sh));
-	//"Shadow thread configuration invalid!");
 
 	//
 	// If first call, init the shadow system itself
@@ -857,6 +839,7 @@ void shadow_thread_create(shadowedthread_t * sh) // Init data passed to worker t
 	TS_DEBUG("Adding shadowed thread to global list \n");
 	shadow_list_add(sh);
 	//shadow_dump(sh);
+
 	//
 	// Calculate first schedule according to reliability demands and available resources.
 	//

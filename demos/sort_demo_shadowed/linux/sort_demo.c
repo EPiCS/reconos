@@ -107,49 +107,7 @@ void print_data_first_last(unsigned int* _data, size_t _data_size, size_t _first
 	if((i % 16) != 15) printf("\n");
 }
 
-/**
- * @brief Copies 8kBytes from given pointer to newly allocated block of memory and returns a pointer to it.
- *
- */
-void *buffer_copy (void *ptr)
-{
-  void *cpy;
-  cpy = malloc (SIZE);
-  if (ptr != NULL)
-    {
-      memcpy (cpy, ptr, SIZE);
-    }
-  return cpy;
-}
 
-/**
- * @brief Compares two 8 kBytes buffers.
- * \param pos Optional Parameter. If not null, the index of the found difference will be stored.
- */
-int buffer_compare_report (unsigned int *a, unsigned int *b, unsigned int *idx)
-{
-  unsigned int index = 0;
-  while ((*a == *b) && (index < N))
-    {
-      a++, b++, index++;
-    }
-  if (index < N)
-    {
-      if (idx != NULL)
-	{
-	  *idx = index;
-	}
-      return false;
-    }
-  else
-    {
-      return true;
-    }
-}
-
-int buffer_compare( void *a, void *b){
-    return buffer_compare_report( (unsigned int*) a, (unsigned int*) b, NULL);
-}
 
 /*
  * @brief Prints statistics on the memory management unit in the hardware slots path to memory.
@@ -415,10 +373,7 @@ int main(int argc, char ** argv)
 	for (i = 0; i < hw_threads; i++)
 	{
 		printf(" %i",i);fflush(stdout);
-
 		shadow_init( sh+i );
-		shadow_set_reliability( sh+i, TS_REL_DEFAULT );
-		shadow_set_copycompare( sh+i, buffer_copy, buffer_compare );
 		shadow_set_resources( sh+i, res[i], 2 );
 		for (j=0; j< sh_threadcount; j++)
 		{
@@ -430,16 +385,15 @@ int main(int argc, char ** argv)
 	}
 	printf("\n");
 #endif
+	//
 	// create software shadowed threads
+	//
 	printf("Creating %i shadowed sw-threads: ",sw_threads);
 	fflush(stdout);
 	for (i = hw_threads; i < hw_threads+sw_threads; i++)
 	{
 		printf(" %i",i-hw_threads);fflush(stdout);
-
 		shadow_init( sh+i );
-		shadow_set_reliability( sh+i, TS_REL_DEFAULT );
-		shadow_set_copycompare( sh+i, buffer_copy, buffer_compare );
 		shadow_set_swthread( sh+i, actual_sort_thread );
 		shadow_set_resources( sh+i, res[i], 2 );
 		if(sh_schedule==0){shadow_set_options(sh+i, TS_MANUAL_SCHEDULE);}

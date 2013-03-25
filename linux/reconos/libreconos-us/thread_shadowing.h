@@ -34,10 +34,6 @@
 #define TS_THREAD_SW    1
 #define TS_THREAD_HW    2
 
-//
-// Reliability Constants
-//
-#define TS_REL_DEFAULT 1000
 
 //
 // Shadow status
@@ -66,8 +62,6 @@ void shadow_error_inc(error_stats_t *e, unsigned int n);
 //
 // Attributes of reliable thread wrapper:
 // - needs information about both hw and sw threads.
-// - needs information about desired reliability level
-// - resources used to copy the input data
 //
 struct shadowedthread;
 //forward declaration
@@ -80,11 +74,7 @@ typedef struct shadowedthread {
 	//
 	// general configuration
 	//
-	void* (*input_copy)(void *src); // User supplied copy function for input data
-	int (*input_comp)(void *src, void *dst); // User supplied compare function for output data
-	uint32_t reliability; // determines when and how often shadowing will be applied
 	uint32_t options; // MANUAL_SCHEDULE, SYNCHRONIZED
-	//uint32 status;
 
 	// Resources are semaphores, mailboxes etc.
 	struct reconos_resource *resources;
@@ -153,9 +143,6 @@ typedef struct shadowedthread {
 
 // Obligatory
 void shadow_init(shadowedthread_t *sh);
-int shadow_set_reliability(shadowedthread_t *sh, uint32_t rel);
-int shadow_set_copycompare(shadowedthread_t *sh, void* (*input_copy)(void *src),
-		int (*input_comp)(void *src, void *dst));
 int shadow_set_swthread(shadowedthread_t *sh, void* (*entry)(void*));
 //int  shadow_set_hwthread( shadowedthread_t *sh, struct reconos_hwt* hwt[TS_MAX_REDUNDANT_THREADS]);
 int shadow_set_resources(shadowedthread_t *sh, struct reconos_resource * res,
