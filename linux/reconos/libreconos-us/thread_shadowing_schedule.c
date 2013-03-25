@@ -23,7 +23,7 @@
 //
 // Debugging
 //
-#define DEBUG 1
+//#define DEBUG 1
 
 #ifdef DEBUG
 #define SCHED_DEBUG(message) printf("SCHED: " message)
