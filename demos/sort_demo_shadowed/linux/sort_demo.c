@@ -221,6 +221,8 @@ void sigsegv_handler(int sig, siginfo_t *siginfo, void * context){
 }
 
 #ifdef SHADOWING
+
+extern int pthread_attr_getstack(pthread_attr_t *attr, void **stackaddr, size_t *stacksize);
 /*
  * @brief Sets up the error injection in compute threads stack.
  */

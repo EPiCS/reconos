@@ -640,6 +640,8 @@ int shadow_set_initdata(shadowedthread_t *sh, void* init_data) {
 }
 
 extern int pthread_getattr_np(pthread_t thread, pthread_attr_t *attr);
+extern int pthread_attr_getstack(pthread_attr_t *attr, void **stackaddr, size_t *stacksize);
+
 int shadow_get_stack(shadowedthread_t *sh, unsigned int thread_idx, void ** stackaddr, size_t *stacksize) {
 	assert(sh);
 	pthread_attr_t attr;
@@ -727,6 +729,13 @@ void sh_lock(shadowedthread_t *sh) {
 // Unlock a shadow structure
 void sh_unlock(shadowedthread_t *sh) {
 	pthread_mutex_unlock(&sh->mutex);
+}
+
+/**
+ * @brief Returns true if the calling thread is the leading thread.
+ */
+int is_leading_thread(shadowedthread_t *sh, pthread_t this){
+	return sh->threads[0] == this;
 }
 
 //

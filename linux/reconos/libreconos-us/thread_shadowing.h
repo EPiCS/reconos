@@ -178,6 +178,7 @@ shadow_state_t 	shadow_get_state( shadowedthread_t *sh );
 int shadow_list_count();
 int is_shadowed(pthread_t handle);
 int is_shadowed_in_parent(pthread_t handle, shadowedthread_t **parent);
+int is_leading_thread(shadowedthread_t *sh, pthread_t this);
 void shadow_wake_up_all(shadowedthread_t *sh);
 void ts_lock();
 void ts_unlock();

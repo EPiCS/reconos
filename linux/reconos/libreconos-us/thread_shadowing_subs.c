@@ -62,14 +62,14 @@ extern shadowedthread_t *shadow_list_head;
 	func_call_t func_call_tuo;\
 	func_call_t func_call_sh;\
 	bool is_shadowed = false; \
-	bool is_leading_thread = false;\
+	bool is_leading = false;\
 	shadow_state_t status = TS_INACTIVE;\
 	SUBS_DEBUG2("Thread %8lu %s() START \n", this, __FUNCTION__); \
 	is_shadowed = is_shadowed_in_parent(this, &sh); \
 	if( is_shadowed ){ \
         SUBS_DEBUG2("Thread %8lu %s() is shadowed\n", this,__FUNCTION__); \
-		is_leading_thread = shadow_leading_thread(sh, this);\
-		SUBS_DEBUG3("Thread %8lu %s() is %s\n", this,__FUNCTION__, is_leading_thread?"TUO":"SHADOW"); \
+		is_leading = is_leading_thread(sh, this);\
+		SUBS_DEBUG3("Thread %8lu %s() is %s\n", this,__FUNCTION__, is_leading?"TUO":"SHADOW"); \
 		status = shadow_get_state(sh);\
 	}else{\
 		SUBS_DEBUG2("Thread %8lu %s() is not shadowed \n", this, __FUNCTION__); \
@@ -91,7 +91,7 @@ extern shadowedthread_t *shadow_list_head;
 // Shadow Layer Prologue
 //
 #define SHADOW_PROLOGUE \
-    if( is_shadowed && !is_leading_thread ) { \
+    if( is_shadowed && !is_leading ) { \
     		shadow_func_call_pop(sh, &func_call_sh);\
     		SUBS_DEBUG2("Thread %8lu %s() popping from fifo: ", this, __FUNCTION__); \
     		/*func_call_dump(&func_call_sh)*/;\
@@ -112,17 +112,17 @@ extern shadowedthread_t *shadow_list_head;
 //
 #define SHADOW_EPILOGUE(blocking)\
     Epilogue: \
-    if((blocking) && is_shadowed && !is_leading_thread){\
+    if((blocking) && is_shadowed && !is_leading){\
     		SUBS_DEBUG1("Thread %8lu getting sleep semaphore...\n", pthread_self());\
     		sem_wait(&sh->sh_wait_sem); /* sem_post is done in shadow_schedule()*/ \
     		SUBS_DEBUG1("Thread %8lu passed sleep semaphore...\n", pthread_self());\
     }\
-    if ( is_shadowed && !is_leading_thread) {\
+    if ( is_shadowed && !is_leading) {\
     	/* We are the shadow thread. Get the os call from the fifo.  */\
 		SUBS_DEBUG2("Thread %8lu %s() restoring return value\n", this,__FUNCTION__);\
 		func_call_get_retval(&func_call_sh,(void*) &retval, sizeof(retval));\
     }\
-    if ( is_shadowed && is_leading_thread && status == TS_ACTIVE){ \
+    if ( is_shadowed && is_leading && status == TS_ACTIVE){ \
     	/* If we came here we are the leading thread and have to push the os call into the fifo.*/\
         SUBS_DEBUG1("Thread %8lu saving return value.\n", this); \
         func_call_add_retval(&func_call_tuo , (void*) &retval, sizeof(retval) ); \
@@ -133,10 +133,10 @@ extern shadowedthread_t *shadow_list_head;
 // a data structure, to which only a pointer was given.
 //
 #define SHADOW_ADD_RETDATA(data, length) \
-	if ( is_shadowed && is_leading_thread && status == TS_ACTIVE ){\
+	if ( is_shadowed && is_leading && status == TS_ACTIVE ){\
 		func_call_add_retdata(&func_call_tuo , (data), (length));\
 	}\
-	if ( is_shadowed && !is_leading_thread){\
+	if ( is_shadowed && !is_leading){\
 		func_call_get_retdata(&func_call_sh , (void*)(data), (length));\
 	}\
 
@@ -144,11 +144,11 @@ extern shadowedthread_t *shadow_list_head;
 // Shadow Layer End
 //
 #define SHADOW_END\
-	if ( is_shadowed && !is_leading_thread) { \
+	if ( is_shadowed && !is_leading) { \
 		/* free the os-call only after shadow thread processed it */\
 		func_call_free(&func_call_sh);\
 	}\
-	if ( is_shadowed && is_leading_thread && status == TS_ACTIVE){ \
+	if ( is_shadowed && is_leading && status == TS_ACTIVE){ \
 		SUBS_DEBUG2("Thread %8lu %s() pushing into fifo: ", this, __FUNCTION__); \
 		/*func_call_dump(&func_call_tuo)*/;\
 		shadow_func_call_push(sh, &func_call_tuo); \
@@ -156,21 +156,6 @@ extern shadowedthread_t *shadow_list_head;
 	SUBS_DEBUG2("Thread %8lu %s() END \n", this, __FUNCTION__); \
 \
 
-//
-// Service functions
-//
-
-int shadow_leading_thread(shadowedthread_t *sh, pthread_t this){
-	return sh->threads[0] == this;
-}
-
-int shadow_get_thread_index(shadowedthread_t *sh, pthread_t this) {
-    int i;
-    for( i = 0; i < TS_MAX_REDUNDANT_THREADS; i++){
-      if ( sh->threads[i] == this ) {return i;}   
-    }
-    return -1;
-} 
 
 //
 // Thread management calls
@@ -188,7 +173,7 @@ void ts_yield(){
 	SHADOW_PROLOGUE;
 	SUBS_DEBUG1("Thread %8lu calling function pthread_yield()\n", pthread_self());
 
-	if(is_shadowed && is_leading_thread ){ /* Warning: Reusing variables from SHADOW_PROLOGUE */
+	if(is_shadowed && is_leading ){ /* Warning: Reusing variables from SHADOW_PROLOGUE */
 		shadow_schedule( sh,  SCHED_FLAG_NONE );
 	}
 
@@ -201,14 +186,14 @@ void   ts_exit(void *retval){
     shadowedthread_t *sh;
     //os_call_t os_call;
     bool is_shadowed = false;
-    bool is_leading_thread = false;
+    bool is_leading = false;
 
  	SUBS_DEBUG2("Thread %8lu %s() START \n", this, __FUNCTION__);
     is_shadowed = is_shadowed_in_parent(this, &sh);
     if( is_shadowed ){
         SUBS_DEBUG2("Thread %8lu %s() is shadowed\n", this,__FUNCTION__);
-        is_leading_thread = shadow_leading_thread(sh, this);
-        if ( is_leading_thread ) {
+        is_leading = is_leading_thread(sh, this);
+        if ( is_leading ) {
         	// kill shadow thread
         	pthread_cancel(sh->threads[1]);
         	sem_post(&sh->sh_wait_sem);
