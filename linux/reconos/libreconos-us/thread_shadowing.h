@@ -58,7 +58,9 @@ void shadow_error_inc(error_stats_t *e, unsigned int n);
 // Shadowing system runtime options
 //
 #define TS_MANUAL_SCHEDULE	0x01 // Set number of shadows manually
-#define TS_SYNCHRONIZED		0x02 // Wait until all threads call same os function
+#define TS_HW_LEADS			0x02
+#define TS_SW_LEADS			0x04
+
 //
 // Attributes of reliable thread wrapper:
 // - needs information about both hw and sw threads.

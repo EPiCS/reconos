@@ -182,21 +182,21 @@ const char* func_call_strerror(int error)
 	}
 }
 
-timing_t func_call_timediff_us(func_call_t * start, func_call_t * stop)
+timing_t func_call_timediff_us(func_call_t * a, func_call_t * b)
 {
-	assert(start);
-	assert(stop);
+	assert(a);
+	assert(b);
 	timing_t diff;
-	timerdiff(&stop->timestamp, &start->timestamp, &diff);
+	timerdiff(&a->timestamp, &b->timestamp, &diff);
 	return diff;
 
 }
-timing_t func_call_timediff2_us(func_call_t * start, struct timeval * stop)
+timing_t func_call_timediff2_us(struct timeval * a, func_call_t * b)
 {
-	assert(start);
-	assert(stop);
+	assert(a);
+	assert(b);
 	timing_t diff;
-	timerdiff(stop, &start->timestamp, &diff);
+	timerdiff(a, &b->timestamp, &diff);
 	return diff;
 }
 

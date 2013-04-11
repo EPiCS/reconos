@@ -64,8 +64,8 @@ void* shadow_watchdog_thread(void* data){
 	//inputs? -> none needed!
 
 	// Setup
-	unsigned long watchdog_time_us  =  100000; //_us ^= microseconds
-	unsigned long watchdog_delta_us = 1000000; //watchdog_time_us * 10;
+	long watchdog_time_us  =  100000; //_us ^= microseconds
+	long watchdog_delta_us = 1000000; //watchdog_time_us * 10;
 	timing_t delta;
 	shadowedthread_t * sh;
 	func_call_t fc;
@@ -81,10 +81,10 @@ void* shadow_watchdog_thread(void* data){
 			fill_level = fifo_peek(&sh->func_calls, &fc);
 
 			if (fill_level) {
-				delta = func_call_timediff2_us(&fc, &now);
+				delta = func_call_timediff2_us(&now, &fc);
 				if (timer2us(&delta) > watchdog_delta_us){
 					printf("WATCHDOG: FIFO %p, FILL_LEVEL %i", &sh->func_calls, fill_level);
-					printf(", DELAY(us) %10lu ",timer2us(&delta));
+					printf(", DELAY(us) %10li\n",timer2us(&delta));
 					func_call_dump(&fc);
 				}
 			}
@@ -176,7 +176,7 @@ static int shadow_get_next_index(shadowedthread_t *sh, unsigned int index,
 
 static int shadow_add_hw_thread(shadowedthread_t *sh) {
 	int index;
-
+	printf("Adding HW Thread \n");
 	TS_DEBUG1("Entering shadow_add_hw_thread with sh=%p\n", (void*)sh);
 	// Look for free stack and thread structure
 	index = shadow_get_next_index(sh, 0, TS_THREAD_NONE);
@@ -231,6 +231,7 @@ static int shadow_add_sw_thread(shadowedthread_t *sh) {
 
 	// Create thread
 	TS_DEBUG("Adding SW Thread \n");
+	printf("Adding SW Thread \n");
 	pthread_attr_init(&(sh->sw_attr));
 	TS_DEBUG("Adding SW Thread: attributes initialized\n");
 	ret = pthread_create(&(sh->threads[index]), //handle
@@ -370,7 +371,7 @@ void shadow_init(shadowedthread_t *sh) {
 		perror("sem_init failed!");
 	}
 	sh->sh_status = TS_ACTIVE;
-	fifo_init(&(sh->func_calls), 128, sizeof(func_call_t));
+	fifo_init(&(sh->func_calls), 1, sizeof(func_call_t));
 	sh->error_handler = shadow_error_abort;
 
 	sh->min_error_detection_latency = (timing_t){.tv_sec= LONG_MAX, .tv_usec = LONG_MAX};
@@ -593,7 +594,11 @@ int shadow_set_options(shadowedthread_t *sh, uint32_t options) {
 	return true;
 }
 
-// Set TS_MANUAL_SCHEDULE in options!
+/**
+ * @brief Copies parameters in shadowedthread structure. shadow_set_threads actually starts/ends threads.
+ * @Note  When TS_MANUAL_SCHEDULE is not set in options, shadow scheduler may activate/deactivate
+ *        threads as it thinks is best!
+ */
 int shadow_set_threadcount(shadowedthread_t *sh, uint8_t hw, uint8_t sw) {
 	assert(sh);
 
@@ -718,7 +723,16 @@ void sh_unlock(shadowedthread_t *sh) {
  * @brief Returns true if the calling thread is the leading thread.
  */
 int is_leading_thread(shadowedthread_t *sh, pthread_t this){
-	return sh->threads[0] == this;
+	// If there are HWT, then they come first in the sh->threads array.
+	// In transmodal case, we assume one HWT and one SWT. Therfore HWT will be at
+	// sh->threads[0] and SWT will be at sh->threads[1]
+	if(sh->options & TS_HW_LEADS){
+		return sh->threads[0] == this;
+	}else if(sh->options & TS_SW_LEADS){
+		return sh->threads[1] == this;
+	}else{
+		return sh->threads[0] == this;
+	}
 }
 
 //
