@@ -19,7 +19,7 @@
 #include <stdlib.h>
 
 //#define BENCHMARK
-//#define DEBUG 1
+#define DEBUG 1
 
 #ifdef DEBUG
     #define SORT_DEBUG(message) printf("SORT: " message)
@@ -111,7 +111,7 @@ void *sort_thread_mbox(void* data)
 //	}
     //
 
-    SORT_DEBUG2("SORT8K: Address of buffer: %8p, size of buffer %ui\n", buffer, sizeof(buffer));
+    SORT_DEBUG2("SORT8K: Address of buffer: %8p, size of buffer %lu\n", buffer, sizeof(buffer));
     //eif_add(buffer, sizeof(buffer) , 100, 0, 10, SINGLE_BIT_FLIP, 0);
     //eif_start();
     while ( 1 ) {
@@ -193,7 +193,7 @@ void *sort_thread_rqueue(void* data)
 #ifdef DEBUG
     pthread_t self = pthread_self();
 #endif
-    SORT_DEBUG4("SW Thread %lu, call %d: Started with mailbox addresses %p and %p ...\n", self, call_nr,  rq_start, rq_stop);
+    SORT_DEBUG4("SW Thread %lu, call %d: Started with rqueue addresses %p and %p ...\n", self, call_nr,  rq_start, rq_stop);
 
     // error injection code
 //    int leading_thread = false;
@@ -206,7 +206,7 @@ void *sort_thread_rqueue(void* data)
 
 
     while ( 1 ) {
-    	SORT_DEBUG3("SW Thread %lu, call %d: getting length from mailbox %p\n", self, call_nr, mb_start);
+    	SORT_DEBUG3("SW Thread %lu, call %d: getting length from rqueue %p\n", self, call_nr, rq_start);
         error = rq_receive(rq_start,&length, sizeof(length));
         SORT_DEBUG1("RQ_RECEIVE 1 returned %i\n", error);
         SORT_DEBUG1("RQ_RECEIVE 1 length is %i\n", length);
@@ -218,7 +218,7 @@ void *sort_thread_rqueue(void* data)
 		//printf("SW Thread %lu: Got address %p from mailbox %p.\n", self, (void*)ret, mb_start);
 		if (length == UINT_MAX)
 		{
-		  SORT_DEBUG3("SW Thread %lu, call %d: Got exit command from mailbox %p.\n", self, call_nr, mb_start);
+		  SORT_DEBUG3("SW Thread %lu, call %d: Got exit command from rqueue %p.\n", self, call_nr, rq_start);
 		  rq_send(rq_stop, &length, sizeof(length));
 		  //free(buffer);
 		  pthread_exit((void*)0);
