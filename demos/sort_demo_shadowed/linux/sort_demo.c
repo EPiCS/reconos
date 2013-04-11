@@ -133,7 +133,8 @@ void print_help()
 "\n"
 "Usage:\n"
 "\tsort_demo <-h|--help>\n"
-"\tsort_demo <num_hw_threads> <num_sw_threads> <num_of_blocks> [thread interface] [redundant threads] [schedule] [#injected errors] [seed]\n"
+"\tsort_demo <num_hw_threads> <num_sw_threads> <num_of_blocks> \n"
+"\t\t\t[thread interface] [redundant threads] [schedule] [transmodal] [#injected errors] [seed]\n"
 "\n"
 "Size of a block in bytes: %i\n"
 "\n"
@@ -222,6 +223,7 @@ int main(int argc, char ** argv)
 	int buffer_size = 0;
 	int thread_interface = 0;
 	int sh_schedule = 0;
+	int sh_transmodal = 0;
 	unsigned int error_count=0;
 	unsigned int seed=1;
 
@@ -276,10 +278,15 @@ int main(int argc, char ** argv)
 		if ( sh_schedule > 1 ){sh_schedule = 1;}
 	}
 	if ( argc >= 8) {
-		error_count = atoi(argv[7]);
+		sh_transmodal = atoi(argv[7]);
+		if ( sh_transmodal < 0 ){sh_transmodal = 0;}
+		if ( sh_transmodal > 1 ){sh_transmodal = 1;}
 	}
 	if ( argc >= 9) {
-		seed = atoi(argv[8]);
+		error_count = atoi(argv[8]);
+	}
+	if ( argc >= 10) {
+		seed = atoi(argv[9]);
 	}
 
 #ifdef SHADOWING
@@ -287,10 +294,10 @@ int main(int argc, char ** argv)
 #else
 	printf("sort_demo build: %s %s\n", __DATE__, __TIME__);
 #endif
-	printf("Parameters: hwt: %2i, swt: %2i, blocks: %5i, thread interface: %s, shadowing: %s, schedule: %i\n",
+	printf("Parameters: hwt: %2i, swt: %2i, blocks: %5i, thread interface: %s, shadowing: %s, schedule: %i, transmodal: %i\n",
 			hw_threads, sw_threads, TO_BLOCKS(buffer_size),
 			(thread_interface == TI_SHMEM? "SHMEM":(thread_interface == TI_MBOX? "MBOX":(thread_interface == TI_RQUEUE? "RQUEUE":"unknown"))),
-			(sh_threadcount == 1 ? "off": "on"), sh_schedule);
+			(sh_threadcount == 1 ? "off": "on"), sh_schedule, sh_transmodal);
 
 	running_threads = hw_threads + sw_threads;
     printf("Main thread is pthread %lu\n", pthread_self());
@@ -301,7 +308,8 @@ int main(int argc, char ** argv)
     struct reconos_resource res[MAX_THREADS][2];
     const int shmem_slots[]  = {0,1,2,3};
     const int mbox_slots[]	 = {4,5,6,7};
-    const int rqueue_slots[] = {8,9,10,11};
+    //const int rqueue_slots[] = {8,9,10,11}; // mixed configuration
+    const int rqueue_slots[] = {0,1,2,3,4,5,6,7,8,9,10,11,12,13}; //rqueue only configuration
     const int * actual_slot_map = NULL;
 
     switch( thread_interface )
@@ -362,6 +370,21 @@ int main(int argc, char ** argv)
     }
 
 #ifdef SHADOWING
+    //
+    // Configure Threads
+    //
+	printf("Configuring %i shadowed threads: ", hw_threads+sw_threads);
+	for (i = 0; i < hw_threads+sw_threads; i++){
+		shadow_init( sh+i );
+		shadow_set_resources( sh+i, res[i], 2 );
+		for (j=0; j< sh_threadcount; j++)
+		{
+			shadow_set_hwslots(sh+i, j, actual_slot_map[(i*sh_threadcount)+j]);
+		}
+		shadow_set_swthread( sh+i, actual_sort_thread );
+		if(sh_schedule==0){shadow_set_options(sh+i, TS_MANUAL_SCHEDULE);}
+	}
+
 #ifndef HOST_COMPILE
     //
 	// create hardware shadowed threads
@@ -373,18 +396,12 @@ int main(int argc, char ** argv)
 	for (i = 0; i < hw_threads; i++)
 	{
 		printf(" %i",i);fflush(stdout);
-		shadow_init( sh+i );
-		shadow_set_resources( sh+i, res[i], 2 );
-		for (j=0; j< sh_threadcount; j++)
-		{
-			shadow_set_hwslots(sh+i, j, actual_slot_map[(i*sh_threadcount)+j]);
-		}
-		if(sh_schedule==0){shadow_set_options(sh+i, TS_MANUAL_SCHEDULE);}
-		shadow_set_threadcount(sh+i, sh_threadcount, 0);
+		shadow_set_threadcount(sh+i, sh_threadcount - sh_transmodal, sh_transmodal);
+		if(sh_transmodal==1){shadow_set_options(sh+i, TS_HW_LEADS);}
 		shadow_thread_create(sh+i);
 	}
 	printf("\n");
-#endif
+#endif // HOST_COMPILE
 	//
 	// create software shadowed threads
 	//
@@ -393,15 +410,12 @@ int main(int argc, char ** argv)
 	for (i = hw_threads; i < hw_threads+sw_threads; i++)
 	{
 		printf(" %i",i-hw_threads);fflush(stdout);
-		shadow_init( sh+i );
-		shadow_set_swthread( sh+i, actual_sort_thread );
-		shadow_set_resources( sh+i, res[i], 2 );
-		if(sh_schedule==0){shadow_set_options(sh+i, TS_MANUAL_SCHEDULE);}
-		shadow_set_threadcount( sh+i, 0, sh_threadcount);
-		shadow_thread_create( sh+i );
+		shadow_set_threadcount(sh+i, sh_transmodal, sh_threadcount-sh_transmodal);
+		if(sh_transmodal==1){shadow_set_options(sh+i, TS_SW_LEADS);}
+		shadow_thread_create(sh+i);
 	}
 	printf("\n");
-#else
+#else // not SHADOWING
 #ifndef HOST_COMPILE
 	// init reconos and communication resources
 	reconos_init_autodetect();
@@ -416,7 +430,7 @@ int main(int argc, char ** argv)
 	  reconos_hwt_create(&(hwt[i]), actual_slot_map[i], NULL);
 	}
 	printf("\n");
-#endif
+#endif // HOST_COMPILE
 	// init software threads
 	printf("Creating %i sw-threads: ",sw_threads);
 	fflush(stdout);
@@ -427,7 +441,7 @@ int main(int argc, char ** argv)
 	  pthread_create(&swt[i], &swt_attr[i], actual_sort_thread, (void*)res[i]);
 	}
 	printf("\n");
-#endif
+#endif // SHADOWING
 
 #ifdef SHADOWING
 	// Setup error injection; no error injection if error count is 0 :-)

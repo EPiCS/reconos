@@ -20,10 +20,10 @@ IF =3
 runConf = [
     #(hwt, swt, blocks)
     #sw only
-    (0,1,1),
-    (0,1,8),
-    (0,1,16),
-    (0,1,32),
+#    (0,1,1),
+#    (0,1,8),
+#    (0,1,16),
+#    (0,1,32),
     (0,1,64),
     
 #    (0,2,2),
@@ -47,39 +47,39 @@ runConf = [
 #    (0,8,64),
             
     #hw only            
-    (1,0,1),
-    (1,0,8),
-    (1,0,16),
-    (1,0,32),
-    (1,0,64),
-    (2,0,2),
-    (2,0,8),
-    (2,0,16),
-    (2,0,32),
-    (2,0,64),
-    (3,0,2),
-    (3,0,8),
-    (3,0,16),
-    (3,0,32),
-    (3,0,64),
-    (4,0,4),
-    (4,0,8),
-    (4,0,16),
-    (4,0,32),
-    (4,0,64),
+#    (1,0,1),
+#    (1,0,8),
+#    (1,0,16),
+#    (1,0,32),
+     (1,0,64),
+#    (2,0,2),
+#    (2,0,8),
+#    (2,0,16),
+#    (2,0,32),
+     (2,0,64),
+#    (3,0,2),
+#    (3,0,8),
+#    (3,0,16),
+#    (3,0,32),
+     (3,0,64),
+#    (4,0,4),
+#    (4,0,8),
+#    (4,0,16),
+#    (4,0,32),
+     (4,0,64),
     
 #    (5,0,2),
 #    (5,0,16),
 #    (5,0,32),
-#    (5,0,64),
+     (5,0,64),
 #    (6,0,2),
 #    (6,0,16),
 #    (6,0,32),
-#    (6,0,64),
+     (6,0,64),
 #    (7,0,7),
 #    (7,0,16),
 #    (7,0,32),
-#    (7,0,64),
+     (7,0,64),
     ]
 
 
@@ -88,7 +88,7 @@ runConf = [
 #          "bench_sortdemo_rqueue.txt", "bench_sortdemo_shadowed_off_rqueue.txt", "bench_sortdemo_shadowed_on_rqueue.txt",
 #          ]
 
-ofiles = ["bench_sortdemo.txt", "bench_sortdemo_shadowed.txt"]
+ofiles = ["bench.txt"]
 
 def genSortDemoRuns (_runIdx, _runConf, _ofile, _threadInterface, _start_idx, _end_idx):
     for i in range(_start_idx, _end_idx):
@@ -102,9 +102,9 @@ def genSortDemoRuns (_runIdx, _runConf, _ofile, _threadInterface, _start_idx, _e
     f.write("echo\n")
     return _runIdx
 
-def genSortDemoShadowedRuns (_runIdx, _runConf, _ofile, _threadInterface, _start_idx, _end_idx, _shadowed, _schedule):
+def genSortDemoShadowedRuns (_runIdx, _runConf, _ofile, _threadInterface, _start_idx, _end_idx, _shadowed, _schedule, _transmodal=0):
     for i in range(_start_idx, _end_idx):
-        cmdString = "./sort_demo_shadowed " + str(_runConf[i][HWT]) + " " + str(_runConf[i][SWT]) + " " + str(_runConf[i][NB]) + " " + str(_threadInterface) + " " + str(_shadowed) + " " + str(_schedule) + " >> " + _ofile + "\n"
+        cmdString = "./sort_demo_shadowed " + str(_runConf[i][HWT]) + " " + str(_runConf[i][SWT]) + " " + str(_runConf[i][NB]) + " " + str(_threadInterface) + " " + str(_shadowed) + " " + str(_schedule) + " " + str(_transmodal) + " >> " + _ofile + "\n"
         f.write("if [ $STARTIDX -le " + str(_runIdx) + " ]; then \n")
         f.write("echo -n \" " + str(_runIdx) + " " + cmdString+ "\"\n")
         f.write(cmdString)
@@ -135,22 +135,33 @@ if __name__ == "__main__":
     f.write("fi\n\n")
     
     f.write("echo \"First run with unmodified sort_demo...\"\n")
-    runIdx = genSortDemoRuns(runIdx, runConf, ofiles[0], 0, 0, len(runConf))
-    runIdx = genSortDemoRuns(runIdx, runConf, ofiles[0], 1, 0, len(runConf))
+    #runIdx = genSortDemoRuns(runIdx, runConf, ofiles[0], 0, 0, len(runConf))
+    #runIdx = genSortDemoRuns(runIdx, runConf, ofiles[0], 1, 0, len(runConf))
     runIdx = genSortDemoRuns(runIdx, runConf, ofiles[0], 2, 0, len(runConf))
     
     f.write("echo \"Second run with sort_demo_shadowed (shadowing off)...\"\n")
-    runIdx = genSortDemoShadowedRuns (runIdx, runConf, ofiles[1], 0, 0, len(runConf), 1, 1)
-    runIdx = genSortDemoShadowedRuns (runIdx, runConf, ofiles[1], 1, 0, len(runConf), 1, 1)
-    runIdx = genSortDemoShadowedRuns (runIdx, runConf, ofiles[1], 2, 0, len(runConf), 1, 1)
+    #runIdx = genSortDemoShadowedRuns (runIdx, runConf, ofiles[0], 0, 0, len(runConf), 1, 0)
+    #runIdx = genSortDemoShadowedRuns (runIdx, runConf, ofiles[0], 1, 0, len(runConf), 1, 0)
+    runIdx = genSortDemoShadowedRuns (runIdx, runConf, ofiles[0], 2, 0, len(runConf), 1, 0)
     
     f.write("echo \"Third run with sort_demo_shadowed (shadowing_on, all shadows active)...\"\n")
-    runIdx = genSortDemoShadowedRuns (runIdx, runConf, ofiles[1], 0, 0, len(runConf)-10, 2, 0)
-    runIdx = genSortDemoShadowedRuns (runIdx, runConf, ofiles[1], 1, 0, len(runConf)-10, 2, 0)
-    runIdx = genSortDemoShadowedRuns (runIdx, runConf, ofiles[1], 2, 0, len(runConf)-10, 2, 0)
+    #runIdx = genSortDemoShadowedRuns (runIdx, runConf, ofiles[0], 0, 0, len(runConf), 2, 0) # -10
+    #runIdx = genSortDemoShadowedRuns (runIdx, runConf, ofiles[0], 1, 0, len(runConf), 2, 0)
+    runIdx = genSortDemoShadowedRuns (runIdx, runConf, ofiles[0], 2, 0, len(runConf), 2, 0)
     
-    f.write("echo \"Third run with sort_demo_shadowed (shadowing_on, round-robin with 1 shadow)...\"\n")
-    runIdx = genSortDemoShadowedRuns (runIdx, runConf, ofiles[1], 0, 0, len(runConf)-10, 2, 1)
-    runIdx = genSortDemoShadowedRuns (runIdx, runConf, ofiles[1], 1, 0, len(runConf)-10, 2, 1)
-    runIdx = genSortDemoShadowedRuns (runIdx, runConf, ofiles[1], 2, 0, len(runConf)-10, 2, 1)
+    f.write("echo \"Fourth run with sort_demo_shadowed (shadowing_on, round-robin with 1 shadow)...\"\n")
+    #runIdx = genSortDemoShadowedRuns (runIdx, runConf, ofiles[0], 0, 0, len(runConf), 2, 1) # -10
+    #runIdx = genSortDemoShadowedRuns (runIdx, runConf, ofiles[0], 1, 0, len(runConf), 2, 1)
+    runIdx = genSortDemoShadowedRuns (runIdx, runConf, ofiles[0], 2, 0, len(runConf), 2, 1)
+    
+    f.write("echo \"Fifth run with sort_demo_shadowed (shadowing_on, all shadows, transmodal)...\"\n")
+    #runIdx = genSortDemoShadowedRuns (runIdx, runConf, ofiles[0], 0, 0, len(runConf), 2, 0, 1) # -10
+    #runIdx = genSortDemoShadowedRuns (runIdx, runConf, ofiles[0], 1, 0, len(runConf), 2, 0, 1)
+    runIdx = genSortDemoShadowedRuns (runIdx, runConf, ofiles[0], 2, 0, len(runConf), 2, 0, 1)
+    
+    f.write("echo \"Sixth run with sort_demo_shadowed (shadowing_on, round-robin with 1 shadow, transmodal)...\"\n")
+    #runIdx = genSortDemoShadowedRuns (runIdx, runConf, ofiles[0], 0, 0, len(runConf), 2, 1, 1) # -10
+    #runIdx = genSortDemoShadowedRuns (runIdx, runConf, ofiles[0], 1, 0, len(runConf), 2, 1, 1)
+    runIdx = genSortDemoShadowedRuns (runIdx, runConf, ofiles[0], 2, 0, len(runConf), 2, 1, 1)
+    
     
