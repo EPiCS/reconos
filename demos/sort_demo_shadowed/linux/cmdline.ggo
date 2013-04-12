@@ -1,0 +1,39 @@
+package "sort_demo"
+version "0.9"
+purpose "A demo application for the ReconOS system with shadowing which sorts blocks of data."
+#usage "<usage>"
+#description "<description>"
+#versiontext "Copyright 2013 Sebastian Meisner and others"
+
+#args "<command line options>" # arguments to gengetopt itself
+
+#option <long> <short> "<desc>"
+#    {details="<detailed description>"}
+#    {argtype} {typestr="<type descr>"}
+#    {values="<value1>","<value2>",...}
+#    {default="<default value>"}
+#    {dependon="<other option>"}
+#    {required} {argoptional} {multiple}
+#    {hidden}
+
+option "hwt" h "Number of HW Threads used to sort given amount of data." 
+	int typestr="number" required
+option "swt" s "Number of SW Threads used to sort given amount of data." 
+	int typestr="number" required
+option "blocks" b "Number of blocks to sort. Currently one block is 8KB big." 
+	int typestr="number" required
+option "thread-interface" t "Which interface shall be used to communicate with worker threads?" 
+	int typestr="number" default="0" optional values="0","1","2"
+	details="0= SHMEM, 1= MBOX, 2= RQUEUE"
+
+section "Shadowing Options" sectiondesc="Activate and configure the shadow subsystem"
+option "shadow" a "Activates the shadowing subsystem." flag off
+option "shadow-schedule" c "Determines the algorithm of the shadow scheduler."
+	int typestr="algorithm" default="0" values="0","1" dependon="shadow" optional
+option "shadow-transmodal" r "Uses shadow threads of opposite modality."
+	flag off #dependon="shadow" optional
+
+section "Error Injection" sectiondesc="Configure error injection for testing the shadwing subsystem"
+option "error-count" - "How many errors du you want to be inserted?"
+	int typestr="number" optional
+option "error-seed" - "For deterministic error insertion you can specify the random number generator's seed value." int typestr="seed" optional

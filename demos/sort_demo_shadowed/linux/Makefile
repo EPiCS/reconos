@@ -21,20 +21,23 @@ LDFLAGS = -leif -lreconos -lpthread -lm -lrt
 
 all: sort_demo sort_demo_shadowed fault_injection
  
-sort_demo: $(APP_OBJS)
-	$(CC) $(APP_OBJS) $(CFLAGS) $(LIBPATH) $(INCLUDEPATH) sort_demo.c -o sort_demo $(LDFLAGS)
+cmdline:
+	LD_LIBRARY_PATH="" gengetopt < cmdline.ggo
+ 
+sort_demo: $(APP_OBJS) cmdline
+	$(CC) $(APP_OBJS) cmdline.c  $(CFLAGS) $(LIBPATH) $(INCLUDEPATH) sort_demo.c -o sort_demo $(LDFLAGS)
 
-sort_demo_shadowed: $(APP_OBJS)
+sort_demo_shadowed: $(APP_OBJS) cmdline
 	# recompile needed object files for shadowing
 	rm -f sort8k.o
 	$(CC) -c $(CFLAGS) -DSHADOWING $(LIBPATH) $(INCLUDEPATH) -o sort8k.o sort8k.c
-	$(CC) $(APP_OBJS) $(CFLAGS) -DSHADOWING $(LIBPATH) $(INCLUDEPATH) sort_demo.c -o sort_demo_shadowed $(LDFLAGS)
+	$(CC) $(APP_OBJS) cmdline.c $(CFLAGS) -DSHADOWING $(LIBPATH) $(INCLUDEPATH) sort_demo.c -o sort_demo_shadowed $(LDFLAGS)
 
 fault_injection:
 	$(CC) $(CFLAGS) -L ../../../linux/reconos/libreconos-us -I ../../../linux/reconos/libreconos-us -o fault_injection fault_injection.c -lreconos -lpthread
 	
 clean:
-	rm -f *.o sort_demo sort_demo_shadowed fault_injection
+	rm -f *.o sort_demo sort_demo_shadowed fault_injection cmdline.c cmdline.h
 
 install:
 	./genBenchmark.py benchmark.sh

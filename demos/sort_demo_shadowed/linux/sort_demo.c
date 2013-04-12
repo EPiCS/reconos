@@ -1,14 +1,3 @@
-#include "reconos.h"
-#include "mbox.h"
-#include "rqueue.h"
-
-#ifdef SHADOWING
-	#include "thread_shadowing.h"
-	//#include "thread_shadowing_subs.h"
-#endif
-
-#include "eif.h"
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
@@ -17,20 +6,28 @@
 #include <assert.h>
 #include <signal.h>
 #include <sys/ucontext.h>
-
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <limits.h>
 #include <string.h>
+
+#include "cmdline.h"
+#include "reconos.h"
+#include "mbox.h"
+#include "rqueue.h"
+#ifdef SHADOWING
+	#include "thread_shadowing.h"
+	//#include "thread_shadowing_subs.h"
+#endif
+#include "eif.h"
 #include "config.h"
 #include "merge.h"
 #include "data.h"
-//#include "bubblesort.h"
 #include "sort8k.h"
 #include "timing.h"
-#include "eif.h"
+
 
 
 #define PAGE_SIZE 4096 //Bytes
@@ -52,11 +49,10 @@
 #define TI_MBOX   1
 #define TI_RQUEUE 2
 
-int hw_threads;
-int sw_threads;
-int running_threads;
-int sh_threadcount = 1; // command line parsing shall stay the same for both shadowed and non shadowed versions
 
+
+
+int running_threads;
 #ifdef SHADOWING
 	// Thread shadowing
 
@@ -181,7 +177,12 @@ void sigsegv_handler(int sig, siginfo_t *siginfo, void * context){
 
 #ifdef SHADOWING
 
-extern int pthread_attr_getstack(pthread_attr_t *attr, void **stackaddr, size_t *stacksize);
+//extern int pthread_attr_getstack(pthread_attr_t *attr, void **stackaddr, size_t *stacksize);
+//extern int pthread_attr_getstack (__const pthread_attr_t *__restrict __attr,
+//                                  void **__restrict __stackaddr,
+//                                  size_t *__restrict __stacksize);
+
+
 /*
  * @brief Sets up the error injection in compute threads stack.
  */
@@ -212,6 +213,16 @@ void eif_setup( shadowedthread_t* shadows, unsigned int error_count, unsigned in
 	eif_start();
 }
 #endif
+
+/**
+ * @brief Used to limit the range of a variable: lower <= return value <= upper.
+ */
+int limit(int var, int lower, int upper)
+{
+	if ( var < lower ) { var = lower; }
+	if ( var > upper ) { var = upper; }
+	return var;
+}
 /**
  * @bief Main function
  */
@@ -219,16 +230,9 @@ int main(int argc, char ** argv)
 {
 	int i = 0;
 	int j = 0;
+	int buffer_size=0;
 	int error_idx, from, to = 0;
-	int buffer_size = 0;
-	int thread_interface = 0;
-	int sh_schedule = 0;
-	int sh_transmodal = 0;
-	unsigned int error_count=0;
-	unsigned int seed=1;
-
 	void *(*actual_sort_thread)(void* data)=NULL;
-
 	timing_t t_start = {};
     timing_t t_stop = {};
     timing_t t_generate = {};
@@ -248,46 +252,13 @@ int main(int argc, char ** argv)
 	//
 	// Parse command line arguments
 	//
-	if ((argc < 4) || (argc > 8))
-	{
-	  print_help();
-	  exit(1);
+	struct gengetopt_args_info args_info;
+	if (cmdline_parser (argc, argv, &args_info) != 0){
+		exit(1);
 	}
-	// we have 3 or 4 arguments now...
-	hw_threads = atoi(argv[1]);
-	if ( hw_threads < 0 ) { hw_threads = 0; }
-	if ( hw_threads > MAX_THREADS ) { hw_threads = MAX_THREADS; }
-	sw_threads = atoi(argv[2]);
-	if ( sw_threads < 0 ) { sw_threads = 0; }
-	if ( sw_threads > MAX_THREADS ) { sw_threads = MAX_THREADS; }
-	// Base unit is bytes. Use macros TO_WORDS, TO_PAGES and TO_BLOCKS for conversion.
-	buffer_size = atoi(argv[3])*PAGE_SIZE*PAGES_PER_THREAD;
-	if ( argc >= 5) {
-		thread_interface = atoi(argv[4]);
-		if ( thread_interface < TI_SHMEM ) { thread_interface = TI_SHMEM; }
-		if ( thread_interface > TI_RQUEUE ) { thread_interface = TI_RQUEUE; }
-	}
-	if ( argc >= 6) {
-		sh_threadcount = atoi(argv[5]);
-		if ( sh_threadcount < 1 ){sh_threadcount = 1;}
-		if ( sh_threadcount > 2 ){sh_threadcount = 2;}
-	}
-	if ( argc >= 7) {
-		sh_schedule = atoi(argv[6]);
-		if ( sh_schedule < 0 ){sh_schedule = 0;}
-		if ( sh_schedule > 1 ){sh_schedule = 1;}
-	}
-	if ( argc >= 8) {
-		sh_transmodal = atoi(argv[7]);
-		if ( sh_transmodal < 0 ){sh_transmodal = 0;}
-		if ( sh_transmodal > 1 ){sh_transmodal = 1;}
-	}
-	if ( argc >= 9) {
-		error_count = atoi(argv[8]);
-	}
-	if ( argc >= 10) {
-		seed = atoi(argv[9]);
-	}
+	args_info.hwt_arg = limit(args_info.hwt_arg, 0, MAX_THREADS);
+	args_info.swt_arg = limit(args_info.swt_arg, 0, MAX_THREADS);
+	buffer_size = args_info.blocks_arg*PAGE_SIZE*PAGES_PER_THREAD;
 
 #ifdef SHADOWING
 	printf("sort_demo_shadowed build: %s %s\n", __DATE__, __TIME__);
@@ -295,11 +266,11 @@ int main(int argc, char ** argv)
 	printf("sort_demo build: %s %s\n", __DATE__, __TIME__);
 #endif
 	printf("Parameters: hwt: %2i, swt: %2i, blocks: %5i, thread interface: %s, shadowing: %s, schedule: %i, transmodal: %i\n",
-			hw_threads, sw_threads, TO_BLOCKS(buffer_size),
-			(thread_interface == TI_SHMEM? "SHMEM":(thread_interface == TI_MBOX? "MBOX":(thread_interface == TI_RQUEUE? "RQUEUE":"unknown"))),
-			(sh_threadcount == 1 ? "off": "on"), sh_schedule, sh_transmodal);
+			args_info.hwt_arg, args_info.swt_arg, TO_BLOCKS(buffer_size),
+			(args_info.thread_interface_arg == TI_SHMEM? "SHMEM":(args_info.thread_interface_arg == TI_MBOX? "MBOX":(args_info.thread_interface_arg == TI_RQUEUE? "RQUEUE":"unknown"))),
+			((args_info.shadow_flag+1) == 1 ? "off": "on"), args_info.shadow_schedule_arg, args_info.shadow_transmodal_flag);
 
-	running_threads = hw_threads + sw_threads;
+	running_threads = args_info.hwt_arg + args_info.swt_arg;
     printf("Main thread is pthread %lu\n", pthread_self());
 
     //
@@ -312,7 +283,7 @@ int main(int argc, char ** argv)
     const int rqueue_slots[] = {0,1,2,3,4,5,6,7,8,9,10,11,12,13}; //rqueue only configuration
     const int * actual_slot_map = NULL;
 
-    switch( thread_interface )
+    switch( args_info.thread_interface_arg )
     {
     case TI_SHMEM:
     	// set software implementation of sort thread
@@ -373,16 +344,16 @@ int main(int argc, char ** argv)
     //
     // Configure Threads
     //
-	printf("Configuring %i shadowed threads: ", hw_threads+sw_threads);
-	for (i = 0; i < hw_threads+sw_threads; i++){
+	printf("Configuring %i shadowed threads: ", args_info.hwt_arg+args_info.swt_arg);
+	for (i = 0; i < args_info.hwt_arg+args_info.swt_arg; i++){
 		shadow_init( sh+i );
 		shadow_set_resources( sh+i, res[i], 2 );
-		for (j=0; j< sh_threadcount; j++)
+		for (j=0; j< (args_info.shadow_flag+1); j++)
 		{
-			shadow_set_hwslots(sh+i, j, actual_slot_map[(i*sh_threadcount)+j]);
+			shadow_set_hwslots(sh+i, j, actual_slot_map[(i*(args_info.shadow_flag+1))+j]);
 		}
 		shadow_set_swthread( sh+i, actual_sort_thread );
-		if(sh_schedule==0){shadow_set_options(sh+i, TS_MANUAL_SCHEDULE);}
+		if(args_info.shadow_schedule_arg==0){shadow_set_options(sh+i, TS_MANUAL_SCHEDULE);}
 	}
 
 #ifndef HOST_COMPILE
@@ -391,13 +362,13 @@ int main(int argc, char ** argv)
     //
 	reconos_init_autodetect();
 
-	printf("Creating %i shadowed hw-threads: ", hw_threads);
+	printf("Creating %i shadowed hw-threads: ", args_info.hwt_arg);
 	fflush(stdout);
-	for (i = 0; i < hw_threads; i++)
+	for (i = 0; i < args_info.hwt_arg; i++)
 	{
 		printf(" %i",i);fflush(stdout);
-		shadow_set_threadcount(sh+i, sh_threadcount - sh_transmodal, sh_transmodal);
-		if(sh_transmodal==1){shadow_set_options(sh+i, TS_HW_LEADS);}
+		shadow_set_threadcount(sh+i, (args_info.shadow_flag+1) - args_info.shadow_transmodal_flag, args_info.shadow_transmodal_flag);
+		if(args_info.shadow_transmodal_flag==1){shadow_set_options(sh+i, TS_HW_LEADS);}
 		shadow_thread_create(sh+i);
 	}
 	printf("\n");
@@ -405,13 +376,13 @@ int main(int argc, char ** argv)
 	//
 	// create software shadowed threads
 	//
-	printf("Creating %i shadowed sw-threads: ",sw_threads);
+	printf("Creating %i shadowed sw-threads: ",args_info.swt_arg);
 	fflush(stdout);
-	for (i = hw_threads; i < hw_threads+sw_threads; i++)
+	for (i = args_info.hwt_arg; i < args_info.hwt_arg+args_info.swt_arg; i++)
 	{
-		printf(" %i",i-hw_threads);fflush(stdout);
-		shadow_set_threadcount(sh+i, sh_transmodal, sh_threadcount-sh_transmodal);
-		if(sh_transmodal==1){shadow_set_options(sh+i, TS_SW_LEADS);}
+		printf(" %i",i-args_info.hwt_arg);fflush(stdout);
+		shadow_set_threadcount(sh+i, args_info.shadow_transmodal_flag, (args_info.shadow_flag+1)-args_info.shadow_transmodal_flag);
+		if(args_info.shadow_transmodal_flag==1){shadow_set_options(sh+i, TS_SW_LEADS);}
 		shadow_thread_create(sh+i);
 	}
 	printf("\n");
@@ -421,9 +392,9 @@ int main(int argc, char ** argv)
 	reconos_init_autodetect();
 
 
-	printf("Creating %i hw-threads: ", hw_threads);
+	printf("Creating %i hw-threads: ", args_info.hwt_arg);
 	fflush(stdout);
-	for (i = 0; i < hw_threads; i++)
+	for (i = 0; i < args_info.hwt_arg; i++)
 	{
 	  printf(" %i",i);fflush(stdout);
 	  reconos_hwt_setresources(&(hwt[i]),res[i],2);
@@ -432,9 +403,9 @@ int main(int argc, char ** argv)
 	printf("\n");
 #endif // HOST_COMPILE
 	// init software threads
-	printf("Creating %i sw-threads: ",sw_threads);
+	printf("Creating %i sw-threads: ",args_info.swt_arg);
 	fflush(stdout);
-	for (i = 0; i < sw_threads; i++)
+	for (i = 0; i < args_info.swt_arg; i++)
 	{
 	  printf(" %i",i);fflush(stdout);
 	  pthread_attr_init(&swt_attr[i]);
@@ -445,7 +416,7 @@ int main(int argc, char ** argv)
 
 #ifdef SHADOWING
 	// Setup error injection; no error injection if error count is 0 :-)
-	//eif_setup(sh, error_count, seed);
+	//eif_setup(sh, args_info.error_count_arg, args_info.error_seed_arg);
 #endif
 	//print_mmu_stats();
 
@@ -481,7 +452,7 @@ int main(int argc, char ** argv)
 	// Transfer data to compute threads
 	//
 	unsigned int length = TO_WORDS(BLOCK_SIZE)*4;
-	switch ( thread_interface )
+	switch ( args_info.thread_interface_arg )
 	{
 	case TI_SHMEM:
 		//
@@ -522,16 +493,18 @@ int main(int argc, char ** argv)
 	}
 	printf("\n");
 
+#ifndef HOST_COMPILE
 	//
 	// Install permanent error in first Message Based HW Sort Thread
 	//
-	if (error_count) {
+	if (args_info.error_count_arg) {
 		// Lowest bit in data signals coming from  sorter will suffer a stuck-at-0 error
 		//reconos_faultinject(1, 0x00000001, 0x00000000);
 
 		// Disturb hwt state machine
 		reconos_faultinject(0, 0x00000001, 0x00000000);
 	}
+#endif
 
 	//
 	// Wait for results
@@ -539,7 +512,7 @@ int main(int argc, char ** argv)
 	printf("Waiting for %i blocks of data: ", TO_BLOCKS(buffer_size));
 	fflush(stdout);
 
-	switch ( thread_interface )
+	switch ( args_info.thread_interface_arg )
 	{
 	case TI_SHMEM:
 		//
@@ -593,7 +566,7 @@ int main(int argc, char ** argv)
 	}
 	data = recursive_merge( data, 
 				temp,
-				TO_WORDS(buffer_size), 
+				TO_WORDS(buffer_size),
 				TO_WORDS(BLOCK_SIZE), 
 				simple_merge 
 				);
@@ -642,7 +615,7 @@ int main(int argc, char ** argv)
 	fflush(stdout);
 
 //	printf("\n");
-	switch ( thread_interface )
+	switch ( args_info.thread_interface_arg )
 	{
 	case TI_SHMEM:
 		for (i=0; i<running_threads; i++)
@@ -691,12 +664,12 @@ int main(int argc, char ** argv)
 	printf("Waiting for error injection to finish...\n");
 	eif_join();
 #else
-	for (i=0; i<hw_threads; i++)
+	for (i=0; i<args_info.hwt_arg; i++)
 	{
 	  pthread_join(hwt[i].delegate,NULL);
 	}
 
-	for (i=0; i<sw_threads; i++)
+	for (i=0; i<args_info.swt_arg; i++)
 	{
 	  pthread_join(swt[i],NULL);
 	}
@@ -712,7 +685,7 @@ int main(int argc, char ** argv)
             "\tMerge data   : %lu ms\n"
             "\tCheck data   : %lu ms\n"
             "Total computation time (sort & merge): %lu ms\n",
-		TO_WORDS(buffer_size), hw_threads, sw_threads,
+		TO_WORDS(buffer_size), args_info.hwt_arg, args_info.swt_arg,
 		timer2ms(&t_generate), timer2ms(&t_sort), timer2ms(&t_merge), timer2ms(&t_check), timer2ms(&t_sort) + timer2ms(&t_merge) );
 #ifdef SHADOWING
 	shadow_dump_timestats_all();
@@ -723,7 +696,7 @@ int main(int argc, char ** argv)
 	//
 	// Deactivate Fault Injection
 	//
-	if (error_count) {
+	if (args_info.error_count_arg) {
 		reconos_faultinject(0, 0x00000000, 0x00000000);
 		reconos_faultinject(1, 0x00000000, 0x00000000);
 	}

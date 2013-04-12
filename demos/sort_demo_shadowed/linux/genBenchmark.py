@@ -92,7 +92,12 @@ ofiles = ["bench.txt"]
 
 def genSortDemoRuns (_runIdx, _runConf, _ofile, _threadInterface, _start_idx, _end_idx):
     for i in range(_start_idx, _end_idx):
-        cmdString = "./sort_demo " + str(_runConf[i][HWT]) + " " + str(_runConf[i][SWT]) + " " + str(_runConf[i][NB]) + " " + str(_threadInterface) + " >> " + _ofile + "\n"
+        cmdString = "./sort_demo " +\
+                    " --hwt " + str(_runConf[i][HWT]) +\
+                    " --swt " + str(_runConf[i][SWT]) +\
+                    " --blocks " + str(_runConf[i][NB]) +\
+                    " --thread-interface " + str(_threadInterface) +\
+                    " >> " + _ofile + "\n"
         f.write("if [ $STARTIDX -le " + str(_runIdx) + " ]; then \n") 
         f.write("echo -n \" " + str(_runIdx) + " " + cmdString+ "\"\n")
         f.write(cmdString)
@@ -104,7 +109,18 @@ def genSortDemoRuns (_runIdx, _runConf, _ofile, _threadInterface, _start_idx, _e
 
 def genSortDemoShadowedRuns (_runIdx, _runConf, _ofile, _threadInterface, _start_idx, _end_idx, _shadowed, _schedule, _transmodal=0):
     for i in range(_start_idx, _end_idx):
-        cmdString = "./sort_demo_shadowed " + str(_runConf[i][HWT]) + " " + str(_runConf[i][SWT]) + " " + str(_runConf[i][NB]) + " " + str(_threadInterface) + " " + str(_shadowed) + " " + str(_schedule) + " " + str(_transmodal) + " >> " + _ofile + "\n"
+        cmdString = "./sort_demo_shadowed " +\
+                    "--hwt " + str(_runConf[i][HWT]) +\
+                    " --swt " + str(_runConf[i][SWT]) +\
+                    " --blocks " + str(_runConf[i][NB]) +\
+                    " --thread-interface " + str(_threadInterface)
+        if  str(_shadowed) == 1:
+            cmdString += " --shadow " +\
+                         " --shadow-schedule" + str(_schedule)  
+            if str(_transmodal) == 1:
+                cmdString += " --shadow-transmodal"
+        cmdString +=  " >> " + _ofile + "\n"
+        
         f.write("if [ $STARTIDX -le " + str(_runIdx) + " ]; then \n")
         f.write("echo -n \" " + str(_runIdx) + " " + cmdString+ "\"\n")
         f.write(cmdString)
