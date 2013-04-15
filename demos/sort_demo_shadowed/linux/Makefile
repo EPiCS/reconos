@@ -13,9 +13,9 @@ host:
 #CC=$(HOST_CC)
 #CFLAGS=$(HOST_CFLAGS)
 
-LIBPATH = -L ../../../linux/reconos/libreconos-us -L ../../../linux/eif
-INCLUDEPATH = -I ../../../linux/reconos/libreconos-us -I ../../../linux/eif
-LDFLAGS = -leif -lreconos -lpthread -lm -lrt
+LIBPATH = -L ../../../linux/reconos/libreconos-us
+INCLUDEPATH = -I ../../../linux/reconos/libreconos-us
+LDFLAGS = -lreconos -lpthread -lm -lrt
 
 .PHONY: clean
 

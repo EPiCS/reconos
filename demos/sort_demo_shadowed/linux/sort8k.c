@@ -12,7 +12,6 @@
 
 #include "mbox.h"
 #include "rqueue.h"
-#include "eif.h"
 
 #include <limits.h>
 #include <stdio.h>
@@ -112,8 +111,6 @@ void *sort_thread_mbox(void* data)
     //
 
     SORT_DEBUG2("SORT8K: Address of buffer: %8p, size of buffer %lu\n", buffer, sizeof(buffer));
-    //eif_add(buffer, sizeof(buffer) , 100, 0, 10, SINGLE_BIT_FLIP, 0);
-    //eif_start();
     while ( 1 ) {
     	SORT_DEBUG3("SW Thread %lu, call %d: getting length from mailbox %p\n", self, call_nr, mb_start);
         length = mbox_get(mb_start);

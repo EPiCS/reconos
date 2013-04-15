@@ -21,7 +21,6 @@
 	#include "thread_shadowing.h"
 	//#include "thread_shadowing_subs.h"
 #endif
-#include "eif.h"
 #include "config.h"
 #include "merge.h"
 #include "data.h"
@@ -175,44 +174,11 @@ void sigsegv_handler(int sig, siginfo_t *siginfo, void * context){
     exit(32);
 }
 
-#ifdef SHADOWING
-
 //extern int pthread_attr_getstack(pthread_attr_t *attr, void **stackaddr, size_t *stacksize);
 //extern int pthread_attr_getstack (__const pthread_attr_t *__restrict __attr,
 //                                  void **__restrict __stackaddr,
 //                                  size_t *__restrict __stacksize);
 
-
-/*
- * @brief Sets up the error injection in compute threads stack.
- */
-void eif_setup( shadowedthread_t* shadows, unsigned int error_count, unsigned int seed)
-{
-	void* stack_address;
-	size_t stack_size;
-	extern int pthread_getattr_np(pthread_t thread, pthread_attr_t *attr);
-
-
-//	for(i=0; i< running_threads; i++){
-//		shadow_get_stack(shadows+i, 0, &stack_address, &stack_size);
-//		printf ("Shadowed Thread %i: stack address: %p stack size: %i\n",i, stack_address, stack_size);
-//	}
-//	exit(0);
-
-	pthread_attr_t main_attr;
-	pthread_getattr_np(pthread_self(),&main_attr);
-	pthread_attr_getstack(&main_attr, &stack_address, &stack_size);
-	printf("Main Thread Stack address: %8p  Stack size: %8zi\n", stack_address, stack_size);
-
-	shadow_get_stack(shadows+0, 0, &stack_address, &stack_size);
-	printf("Sort Thread Stack address: %8p  Stack size: %8zi\n", stack_address, stack_size);
-
-	eif_set_seed(seed);
-	eif_add_trans(stack_address+stack_size- 1024*1024, 1024*1024 , error_count, 0, 20, SINGLE_BIT_FLIP, 0);
-	//eif_add_trans(stack_address, stack_size , error_count, 0, 20, SINGLE_BIT_FLIP, 0);
-	eif_start();
-}
-#endif
 
 /**
  * @brief Used to limit the range of a variable: lower <= return value <= upper.
@@ -414,10 +380,6 @@ int main(int argc, char ** argv)
 	printf("\n");
 #endif // SHADOWING
 
-#ifdef SHADOWING
-	// Setup error injection; no error injection if error count is 0 :-)
-	//eif_setup(sh, args_info.error_count_arg, args_info.error_seed_arg);
-#endif
 	//print_mmu_stats();
 
 	// create pages and generate data
@@ -661,8 +623,6 @@ int main(int argc, char ** argv)
 	}
 	printf("\n");
 
-	printf("Waiting for error injection to finish...\n");
-	eif_join();
 #else
 	for (i=0; i<args_info.hwt_arg; i++)
 	{
