@@ -21,7 +21,7 @@
 
 static struct reconos_process reconos_proc;
 
-static void reconos_slot_reset(int num, int reset)
+void reconos_slot_reset(int num, int reset)
 {
 	int i;
 	uint32_t cmd, mask = 0;
