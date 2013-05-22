@@ -1,0 +1,222 @@
+Release 14.2 - libgen Xilinx EDK 14.2 Build EDK_P.28xd
+ (lin64)
+Copyright (c) 1995-2012 Xilinx, Inc.  All rights reserved.
+
+Command Line: libgen -hw ../edk_worker_hw_platform/system.xml -lp
+/home/meise/git -pe microblaze_0 -log libgen.log system.mss 
+
+
+Staging source files.
+Running DRCs.
+#--------------------------------------
+# device-tree BSP DRC...
+#--------------------------------------
+Running generate.
+#--------------------------------------
+# device-tree BSP generate...
+#--------------------------------------
+--- device tree generator version: v1.1 ---
+generating xilinx.dts
+Clock Port Summary:
+microblaze_0.CLK connected to clk_100_0000MHzMMCM0:
+    CLK_FREQ_HZ = 100000000
+microblaze_0.FSL0_S_CLK connected to fsl_v20_0a_FSL_S_Clk:
+    CLK_FREQ_HZ = WARNING: no frequency found!
+    CLK_INPORT = 
+    CLK_FACTOR = 
+microblaze_0.FSL0_M_CLK connected to fsl_v20_0b_FSL_M_Clk:
+    CLK_FREQ_HZ = WARNING: no frequency found!
+    CLK_INPORT = 
+    CLK_FACTOR = 
+microblaze_0.FSL1_S_CLK connected to fsl_v20_1a_FSL_S_Clk:
+    CLK_FREQ_HZ = WARNING: no frequency found!
+    CLK_INPORT = 
+    CLK_FACTOR = 
+microblaze_0.FSL1_M_CLK connected to fsl_v20_1b_FSL_M_Clk:
+    CLK_FREQ_HZ = WARNING: no frequency found!
+    CLK_INPORT = 
+    CLK_FACTOR = 
+microblaze_0.FSL2_S_CLK connected to fsl_v20_2a_FSL_S_Clk:
+    CLK_FREQ_HZ = WARNING: no frequency found!
+    CLK_INPORT = 
+    CLK_FACTOR = 
+microblaze_0.FSL2_M_CLK connected to fsl_v20_2b_FSL_M_Clk:
+    CLK_FREQ_HZ = WARNING: no frequency found!
+    CLK_INPORT = 
+    CLK_FACTOR = 
+microblaze_0.ICACHE_FSL_IN_CLK connected to microblaze_0_IXCL_FSL_S_Clk:
+    CLK_FREQ_HZ = WARNING: no frequency found!
+    CLK_INPORT = 
+    CLK_FACTOR = 
+microblaze_0.ICACHE_FSL_OUT_CLK connected to microblaze_0_IXCL_FSL_M_Clk:
+    CLK_FREQ_HZ = 100000000
+    CLK_INPORT = 
+    CLK_FACTOR = 
+microblaze_0.DCACHE_FSL_IN_CLK connected to microblaze_0_DXCL_FSL_S_Clk:
+    CLK_FREQ_HZ = WARNING: no frequency found!
+    CLK_INPORT = 
+    CLK_FACTOR = 
+microblaze_0.DCACHE_FSL_OUT_CLK connected to microblaze_0_DXCL_FSL_M_Clk:
+    CLK_FREQ_HZ = 100000000
+    CLK_INPORT = 
+    CLK_FACTOR = 
+mb_plb.PLB_Clk connected to clk_100_0000MHzMMCM0:
+    CLK_FREQ_HZ = 100000000
+rs232_uart_1.SPLB_Clk connected to clk_100_0000MHzMMCM0:
+    CLK_FREQ_HZ = 100000000
+ethernet_mac.SPLB_Clk connected to clk_100_0000MHzMMCM0:
+    CLK_FREQ_HZ = 100000000
+ddr3_sdram.MPMC_Clk0 connected to clk_200_0000MHzMMCM0:
+    CLK_FREQ_HZ = 200000000
+ddr3_sdram.MPMC_Clk_200MHz connected to clk_200_0000MHzMMCM0:
+    CLK_FREQ_HZ = 200000000
+ddr3_sdram.MPMC_Clk_Mem connected to clk_400_0000MHzMMCM0:
+    CLK_FREQ_HZ = 400000000
+ddr3_sdram.MPMC_Clk_Rd_Base connected to clk_400_0000MHzMMCM0_nobuf_varphase:
+    CLK_FREQ_HZ = 400000000
+ddr3_sdram.DDR3_Clk connected to fpga_0_DDR3_SDRAM_DDR3_Clk_pin:
+    CLK_FREQ_HZ = WARNING: no frequency found!
+    CLK_INPORT = 
+    CLK_FACTOR = 
+ddr3_sdram.DDR3_Clk_n connected to fpga_0_DDR3_SDRAM_DDR3_Clk_n_pin:
+    CLK_FREQ_HZ = WARNING: no frequency found!
+    CLK_INPORT = 
+    CLK_FACTOR = 
+ddr3_sdram.SPLB0_Clk connected to clk_100_0000MHzMMCM0:
+    CLK_FREQ_HZ = 100000000
+ddr3_sdram.FSL1_M_Clk connected to microblaze_0_IXCL_FSL_M_Clk:
+    CLK_FREQ_HZ = 100000000
+ddr3_sdram.FSL2_M_Clk connected to microblaze_0_DXCL_FSL_M_Clk:
+    CLK_FREQ_HZ = 100000000
+clock_generator_0.CLKIN connected to dcm_clk_s:
+    CLK_FREQ_HZ = 200000000
+clock_generator_0.CLKOUT0 connected to clk_100_0000MHzMMCM0:
+    CLK_FREQ_HZ = 100000000
+    CLK_INPORT = 
+    CLK_FACTOR = 
+clock_generator_0.CLKOUT1 connected to clk_200_0000MHzMMCM0:
+    CLK_FREQ_HZ = 200000000
+    CLK_INPORT = 
+    CLK_FACTOR = 
+clock_generator_0.CLKOUT2 connected to clk_400_0000MHzMMCM0:
+    CLK_FREQ_HZ = 400000000
+    CLK_INPORT = 
+    CLK_FACTOR = 
+clock_generator_0.CLKOUT3 connected to clk_400_0000MHzMMCM0_nobuf_varphase:
+    CLK_FREQ_HZ = 400000000
+    CLK_INPORT = 
+    CLK_FACTOR = 
+clock_generator_0.PSCLK connected to clk_200_0000MHzMMCM0:
+    CLK_FREQ_HZ = 200000000
+mdm_0.SPLB_Clk connected to clk_100_0000MHzMMCM0:
+    CLK_FREQ_HZ = 100000000
+mdm_0.Dbg_Clk_0 connected to mdm_0_MBDEBUG_0_Dbg_Clk:
+    CLK_FREQ_HZ = WARNING: no frequency found!
+    CLK_INPORT = 
+    CLK_FACTOR = 
+mdm_0.Dbg_Clk_1 connected to mdm_0_MBDEBUG_1_Dbg_Clk:
+    CLK_FREQ_HZ = WARNING: no frequency found!
+    CLK_INPORT = 
+    CLK_FACTOR = 
+proc_sys_reset_0.Slowest_sync_clk connected to clk_100_0000MHzMMCM0:
+    CLK_FREQ_HZ = 100000000
+xps_intc_0.SPLB_Clk connected to clk_100_0000MHzMMCM0:
+    CLK_FREQ_HZ = 100000000
+xps_timer_0.SPLB_Clk connected to clk_100_0000MHzMMCM0:
+    CLK_FREQ_HZ = 100000000
+fsl_v20_0a.FSL_Clk connected to clk_100_0000MHzMMCM0:
+    CLK_FREQ_HZ = 100000000
+fsl_v20_0b.FSL_Clk connected to clk_100_0000MHzMMCM0:
+    CLK_FREQ_HZ = 100000000
+fsl_v20_1b.FSL_Clk connected to clk_100_0000MHzMMCM0:
+    CLK_FREQ_HZ = 100000000
+fsl_v20_1a.FSL_Clk connected to clk_100_0000MHzMMCM0:
+    CLK_FREQ_HZ = 100000000
+fsl_v20_2a.FSL_Clk connected to clk_100_0000MHzMMCM0:
+    CLK_FREQ_HZ = 100000000
+fsl_v20_2b.FSL_Clk connected to clk_100_0000MHzMMCM0:
+    CLK_FREQ_HZ = 100000000
+fifo32_0b.FIFO32_S_Clk connected to clk_100_0000MHzMMCM0:
+    CLK_FREQ_HZ = 100000000
+fifo32_0b.FIFO32_M_Clk connected to clk_100_0000MHzMMCM0:
+    CLK_FREQ_HZ = 100000000
+fifo32_0a.FIFO32_S_Clk connected to clk_100_0000MHzMMCM0:
+    CLK_FREQ_HZ = 100000000
+fifo32_0a.FIFO32_M_Clk connected to clk_100_0000MHzMMCM0:
+    CLK_FREQ_HZ = 100000000
+fifo32_arbiter_0.Clk connected to clk_100_0000MHzMMCM0:
+    CLK_FREQ_HZ = 100000000
+fifo32_burst_converter_0.Clk connected to clk_100_0000MHzMMCM0:
+    CLK_FREQ_HZ = 100000000
+mmu_0.Clk connected to clk_100_0000MHzMMCM0:
+    CLK_FREQ_HZ = 100000000
+mmu_0.HWT_FIFO32_S_Clk connected to
+fifo32_burst_converter_0_SFIFO32_MEMCTRL_FIFO32_S_Clk:
+    CLK_FREQ_HZ = WARNING: no frequency found!
+    CLK_INPORT = 
+    CLK_FACTOR = 
+mmu_0.HWT_FIFO32_M_Clk connected to
+fifo32_burst_converter_0_MFIFO32_MEMCTRL_FIFO32_M_Clk:
+    CLK_FREQ_HZ = WARNING: no frequency found!
+    CLK_INPORT = 
+    CLK_FACTOR = 
+mmu_0.MEM_FIFO32_S_Clk connected to mmu_0_MEM_SFIFO32_FIFO32_S_Clk:
+    CLK_FREQ_HZ = WARNING: no frequency found!
+mmu_0.MEM_FIFO32_M_Clk connected to mmu_0_MEM_MFIFO32_FIFO32_M_Clk:
+    CLK_FREQ_HZ = WARNING: no frequency found!
+xps_mem_0.MPLB_Clk connected to clk_100_0000MHzMMCM0:
+    CLK_FREQ_HZ = 100000000
+proc_control_0.Clk connected to clk_100_0000MHzMMCM0:
+    CLK_FREQ_HZ = 100000000
+microblaze_1.CLK connected to clk_100_0000MHzMMCM0:
+    CLK_FREQ_HZ = 100000000
+microblaze_1.FSL0_S_CLK connected to fsl_v20_0b_FSL_S_Clk:
+    CLK_FREQ_HZ = WARNING: no frequency found!
+    CLK_INPORT = 
+    CLK_FACTOR = 
+microblaze_1.FSL0_M_CLK connected to fsl_v20_0a_FSL_M_Clk:
+    CLK_FREQ_HZ = WARNING: no frequency found!
+    CLK_INPORT = 
+    CLK_FACTOR = 
+bram_cntlr_0.LMB_Clk connected to clk_100_0000MHzMMCM0:
+    CLK_FREQ_HZ = 100000000
+bram_cntlr_0.BRAM_Clk_A connected to bram_cntlr_0_BRAM_PORT_BRAM_Clk:
+    CLK_FREQ_HZ = WARNING: no frequency found!
+    CLK_INPORT = 
+    CLK_FACTOR = 
+lmb_v10_0.LMB_Clk connected to clk_100_0000MHzMMCM0:
+    CLK_FREQ_HZ = 100000000
+lmb_v10_1.LMB_Clk connected to clk_100_0000MHzMMCM0:
+    CLK_FREQ_HZ = 100000000
+bram_block_0.BRAM_Clk_A connected to bram_cntlr_0_BRAM_PORT_BRAM_Clk:
+    CLK_FREQ_HZ = WARNING: no frequency found!
+bram_block_0.BRAM_Clk_B connected to bram_cntlr_1_BRAM_PORT_BRAM_Clk:
+    CLK_FREQ_HZ = WARNING: no frequency found!
+bram_cntlr_1.LMB_Clk connected to clk_100_0000MHzMMCM0:
+    CLK_FREQ_HZ = 100000000
+bram_cntlr_1.BRAM_Clk_A connected to bram_cntlr_1_BRAM_PORT_BRAM_Clk:
+    CLK_FREQ_HZ = WARNING: no frequency found!
+    CLK_INPORT = 
+    CLK_FACTOR = 
+mb_plb_1.PLB_Clk connected to clk_100_0000MHzMMCM0:
+    CLK_FREQ_HZ = 100000000
+xps_timer_1.SPLB_Clk connected to clk_100_0000MHzMMCM0:
+    CLK_FREQ_HZ = 100000000
+xps_intc_1.SPLB_Clk connected to clk_100_0000MHzMMCM0:
+    CLK_FREQ_HZ = 100000000
+Clock Frequency: 100000000
+IP connected to bus: mb_plb
+-master DPLB mb_plb microblaze_0
+-master IPLB mb_plb microblaze_0
+-master MPLB mb_plb xps_mem_0
+-slave SPLB mb_plb rs232_uart_1
+-slave SPLB mb_plb ethernet_mac
+-slave SPLB0 mb_plb ddr3_sdram
+-slave SPLB mb_plb xps_intc_0
+-slave SPLB mb_plb xps_timer_0
+{ethernet0 aliasref ethernet_mac 0} {serial1 aliasref rs232_uart_1 1}
+WARNING:EDK - : no console ip was specified.  This may prevent output from
+   appearing on the boot console.
+
+Running post_generate.
+Running execs_generate.

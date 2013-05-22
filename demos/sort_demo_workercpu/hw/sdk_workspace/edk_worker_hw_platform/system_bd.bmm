@@ -1,0 +1,59 @@
+// BMM LOC annotation file.
+//
+// Release 14.1 -  P.28xd, build 2.8 Mar 16, 2012
+// Copyright (c) 1995-2013 Xilinx, Inc.  All rights reserved.
+
+
+///////////////////////////////////////////////////////////////////////////////
+//
+// Processor 'microblaze_1', ID 100, memory map.
+//
+///////////////////////////////////////////////////////////////////////////////
+
+ADDRESS_MAP microblaze_0 MICROBLAZE 101
+
+    ///////////////////////////////////////////////////////////////////////////////
+    //
+    // Processor 'microblaze_1' address space 'bram_block_0_combined' 0x00000000:0x0000FFFF (64 KBytes).
+    //
+    ///////////////////////////////////////////////////////////////////////////////
+
+    ADDRESS_SPACE bram_block_1_combined RAMB32 [0x00000000:0x0000FFFF]
+        BUS_BLOCK
+            bram_block_1/bram_block_1/ramb36e1_0 RAMB32 [1:0] [0:16383] INPUT = bram_block_0_combined_0.mem PLACED = X1Y1;
+        END_BUS_BLOCK;
+    END_ADDRESS_SPACE;
+
+END_ADDRESS_MAP;
+
+ADDRESS_MAP microblaze_1 MICROBLAZE 100
+
+    ///////////////////////////////////////////////////////////////////////////////
+    //
+    // Processor 'microblaze_1' address space 'bram_block_0_combined' 0x00000000:0x0000FFFF (64 KBytes).
+    //
+    ///////////////////////////////////////////////////////////////////////////////
+
+    ADDRESS_SPACE bram_block_0_combined RAMB32 [0x00000000:0x0000FFFF]
+        BUS_BLOCK
+            bram_block_0/bram_block_0/ramb36e1_0 RAMB32 [31:30] [0:16383] INPUT = bram_block_0_combined_0.mem PLACED = X4Y3;
+            bram_block_0/bram_block_0/ramb36e1_1 RAMB32 [29:28] [0:16383] INPUT = bram_block_0_combined_1.mem PLACED = X4Y4;
+            bram_block_0/bram_block_0/ramb36e1_2 RAMB32 [27:26] [0:16383] INPUT = bram_block_0_combined_2.mem PLACED = X5Y2;
+            bram_block_0/bram_block_0/ramb36e1_3 RAMB32 [25:24] [0:16383] INPUT = bram_block_0_combined_3.mem PLACED = X2Y2;
+            bram_block_0/bram_block_0/ramb36e1_4 RAMB32 [23:22] [0:16383] INPUT = bram_block_0_combined_4.mem PLACED = X3Y4;
+            bram_block_0/bram_block_0/ramb36e1_5 RAMB32 [21:20] [0:16383] INPUT = bram_block_0_combined_5.mem PLACED = X4Y6;
+            bram_block_0/bram_block_0/ramb36e1_6 RAMB32 [19:18] [0:16383] INPUT = bram_block_0_combined_6.mem PLACED = X3Y3;
+            bram_block_0/bram_block_0/ramb36e1_7 RAMB32 [17:16] [0:16383] INPUT = bram_block_0_combined_7.mem PLACED = X3Y2;
+            bram_block_0/bram_block_0/ramb36e1_8 RAMB32 [15:14] [0:16383] INPUT = bram_block_0_combined_8.mem PLACED = X3Y7;
+            bram_block_0/bram_block_0/ramb36e1_9 RAMB32 [13:12] [0:16383] INPUT = bram_block_0_combined_9.mem PLACED = X3Y6;
+            bram_block_0/bram_block_0/ramb36e1_10 RAMB32 [11:10] [0:16383] INPUT = bram_block_0_combined_10.mem PLACED = X5Y6;
+            bram_block_0/bram_block_0/ramb36e1_11 RAMB32 [9:8] [0:16383] INPUT = bram_block_0_combined_11.mem PLACED = X3Y5;
+            bram_block_0/bram_block_0/ramb36e1_12 RAMB32 [7:6] [0:16383] INPUT = bram_block_0_combined_12.mem PLACED = X5Y4;
+            bram_block_0/bram_block_0/ramb36e1_13 RAMB32 [5:4] [0:16383] INPUT = bram_block_0_combined_13.mem PLACED = X5Y3;
+            bram_block_0/bram_block_0/ramb36e1_14 RAMB32 [3:2] [0:16383] INPUT = bram_block_0_combined_14.mem PLACED = X5Y5;
+            bram_block_0/bram_block_0/ramb36e1_15 RAMB32 [1:0] [0:16383] INPUT = bram_block_0_combined_15.mem PLACED = X4Y5;
+        END_BUS_BLOCK;
+    END_ADDRESS_SPACE;
+
+END_ADDRESS_MAP;
+

@@ -1,0 +1,3 @@
+PROCESSOR=microblaze_0
+REPOSITORIES=-lp /home/meise/git
+HWSPEC=../edk_worker_hw_platform/system.xml
