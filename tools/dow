@@ -11,7 +11,7 @@ DOW_ELF=$RECONOS/tools/download_executable.sh
 if [ -z $1 ]; then
 	echo "USAGE: dow bitstream.bit [jtag_chain_position]"
 	echo "             OR"
-	echo "       dow executable.elf"
+	echo "       dow executable.elf [cpu nr]"
 	echo ""
 	echo "Standard jtag chain position is 3 (XUP)"
 	exit 1
@@ -40,7 +40,7 @@ if [ "`file $1 | grep \"BIT\"`" ]; then
 	$DOW_BIT $1 $POS
 elif [ "`file $1 | grep \"ELF\"`" ]; then
 	echo "It's an executable!"
-	$DOW_ELF $1
+	$DOW_ELF $1 $2
 else
 	echo "Neither an executable nor a bitfile!"
 	exit 1
