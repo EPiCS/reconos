@@ -60,9 +60,23 @@ void fsl_write(int num, uint32_t value)
 	fsl_within_range_assert(num);
 	if (!fsl_already_open(num))
 		fsl_open(num);
-
+	//printf("fsl_write: slot %i value 0x%x\n", num, value);
 	/* XXX: @aagne: what about checking return values? ---DB */
 	ret = write(fsl_fd[num], &value, sizeof(value));
+	if (ret < 0)
+		whine("fsl_write error: %s\n", strerror(errno));
+}
+
+void fsl_write_block(int num, void * block_start, size_t byte_count)
+{
+	ssize_t ret;
+
+	fsl_within_range_assert(num);
+	if (!fsl_already_open(num))
+		fsl_open(num);
+	//printf("fsl_write: slot %i value 0x%x\n", num, value);
+	/* XXX: @aagne: what about checking return values? ---DB */
+	ret = write(fsl_fd[num], block_start, byte_count);
 	if (ret < 0)
 		whine("fsl_write error: %s\n", strerror(errno));
 }
@@ -80,6 +94,21 @@ uint32_t fsl_read(int num)
 	ret = read(fsl_fd[num], &value, sizeof(value));
 	if (ret < 0)
 		whine("fsl_read error: %s\n", strerror(errno));
-
+	//printf("fsl_read: slot %i value 0x%x\n", num, value);
 	return value;
+}
+
+void fsl_read_block(int num, void * block_start, size_t byte_count)
+{
+	ssize_t ret;
+
+	fsl_within_range_assert(num);
+	if (!fsl_already_open(num))
+		fsl_open(num);
+
+	/* XXX: @aagne: what about checking return values? ---DB */
+	ret = read(fsl_fd[num], block_start, byte_count);
+	if (ret < 0)
+		whine("fsl_read error: %s\n", strerror(errno));
+	//printf("fsl_read: slot %i value 0x%x\n", num, value);
 }
