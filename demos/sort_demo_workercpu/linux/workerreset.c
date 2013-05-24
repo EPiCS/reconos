@@ -26,16 +26,13 @@ void reconos_slot_reset(int num, int reset);
 
 int main(int argc, char ** argv)
 {
-	if (argc != 2){
-		printf("No arguments given!\n");
+	if (argc != 3){
+		printf("Too few arguments given! workerreset <slot> <resetstate>\n");
 		return 1;
 	}
-
-	int i=0;
-	for (i = 0; i<16; i++){
-		reconos_slot_reset(i, atoi(argv[1]));
-	}
-
+	printf ("Setting slot %i to %i\n", atoi(argv[1]), atoi(argv[2]));
+	reconos_init_autodetect();
+	reconos_slot_reset(atoi(argv[1]), atoi(argv[2]));
 
 	return 0;
 }

@@ -297,7 +297,7 @@ BEGIN fsl_v20
  PARAMETER HW_VER = 2.11.e
  PARAMETER C_USE_CONTROL = 0
  PORT FSL_Clk = clk_100_0000MHzMMCM0
- PORT SYS_Rst = proc_control_0_reset0
+ PORT SYS_Rst = proc_control_0_reconos_reset
  PORT FSL_Has_Data = fsl_v20_0a_FSL_Has_Data
 END
 
@@ -306,7 +306,7 @@ BEGIN fsl_v20
  PARAMETER HW_VER = 2.11.e
  PARAMETER C_USE_CONTROL = 0
  PORT FSL_Clk = clk_100_0000MHzMMCM0
- PORT SYS_Rst = proc_control_0_reset0
+ PORT SYS_Rst = proc_control_0_reconos_reset
 END
 
 BEGIN fsl_v20
@@ -572,6 +572,7 @@ BEGIN chipscope_ila
  PORT CHIPSCOPE_ILA_CONTROL = chipscope_icon_0_control0
  PORT CLK = clk_100_0000MHzMMCM0
  PORT DATA = sys_rst_s & mb_reset & sys_bus_reset & worker_0_reset_Bus_Struct_Reset & worker_0_reset_MB_Reset & proc_control_0_reconos_reset & proc_control_0_reset0 & proc_control_0_reset1  & proc_control_0_reset2 & proc_control_0_reset3 & proc_control_0_reset4 & proc_control_0_reset5 & proc_control_0_reset6 & proc_control_0_reset7 & proc_control_0_reset8 & proc_control_0_reset9 & proc_control_0_resetA & proc_control_0_resetB & proc_control_0_resetC & proc_control_0_resetD
+ PORT TRIG0 = sys_rst_s & mb_reset & sys_bus_reset & worker_0_reset_Bus_Struct_Reset & worker_0_reset_MB_Reset & proc_control_0_reconos_reset & proc_control_0_reset0 & proc_control_0_reset1  & proc_control_0_reset2 & proc_control_0_reset3 & proc_control_0_reset4 & proc_control_0_reset5 & proc_control_0_reset6 & proc_control_0_reset7 & proc_control_0_reset8 & proc_control_0_reset9 & proc_control_0_resetA & proc_control_0_resetB & proc_control_0_resetC & proc_control_0_resetD
 END
 
 BEGIN chipscope_icon

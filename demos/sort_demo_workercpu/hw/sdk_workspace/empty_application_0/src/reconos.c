@@ -14,7 +14,7 @@
 void mbox_put(struct mbox *mb, uint32_t msg){
 	uint32_t retval;
 	putfsl(OSIF_CMD_MBOX_PUT, OSIF_FSL);
-	putfsl(*mb, OSIF_FSL);
+	putfsl(mb->handle, OSIF_FSL);
 	putfsl(msg, OSIF_FSL);
 	getfsl(retval, OSIF_FSL);
 }
@@ -22,7 +22,7 @@ void mbox_put(struct mbox *mb, uint32_t msg){
 uint32_t mbox_get(struct mbox *mb){
 	uint32_t retval;
 	putfsl(OSIF_CMD_MBOX_GET, OSIF_FSL);
-	putfsl(*mb, OSIF_FSL);
+	putfsl(mb->handle, OSIF_FSL);
 	getfsl(retval, OSIF_FSL);
 	return retval;
 }
