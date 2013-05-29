@@ -181,6 +181,10 @@ void reconos_hwt_setresources(struct reconos_hwt *hwt,
 	hwt->num_resources = num_resources;
 }
 
+extern void reconos_hwt_setprogram(struct reconos_hwt *hwt, char * program_path){
+	hwt->program_path = program_path;
+}
+
 void reconos_hwt_setinitdata(struct reconos_hwt *hwt, void *init_data)
 {
 	hwt->init_data = init_data;
@@ -350,6 +354,62 @@ static void reconos_delegate_process_rqueue_send(struct reconos_hwt *hwt)
 	free(msg);
 }
 
+static void reconos_delegate_process_load_program(struct reconos_hwt *hwt){
+#define PROGRAM_FILE_OFFSET 0x800
+	int error;
+	struct stat stats;
+	off_t program_size;
+	FILE * program_file;
+	size_t elements_read;
+	error = stat(hwt->program_path, &stats);
+	uint32_t * program_buffer;
+
+	if (error){
+		whine("couldn't find program file %s\n", hwt->program_path);
+		goto cleanup;
+	}
+	program_size = stats.st_size;
+
+	program_file = fopen(hwt->program_path, "r");
+	if (!program_file){
+		whine("couldn't find program file %s\n", hwt->program_path);
+		goto cleanup;
+	}
+
+	program_buffer = malloc(program_size-PROGRAM_FILE_OFFSET);
+	if(!program_buffer){
+		whine("couldn't allocate buffer for program file %s of size %i\n", hwt->program_path, program_size);
+		goto cleanup;
+	}
+
+	error = fseek(program_file, PROGRAM_FILE_OFFSET , SEEK_SET);
+	if (error){
+		whine("couldn't seek in program file %s to %i \n", hwt->program_path, error);
+		goto cleanup;
+	}
+
+	elements_read = fread(program_buffer, program_size - PROGRAM_FILE_OFFSET, 1, program_file);
+	if (elements_read != 1){
+		whine("couldn't read program file %s. Tried to read %i bytes. fread() read %i elements.\n", hwt->program_path,program_size - PROGRAM_FILE_OFFSET, elements_read);
+		goto cleanup;
+	}
+
+	fsl_write(hwt->slot, program_size-PROGRAM_FILE_OFFSET);
+	fsl_write_block(hwt->slot, program_buffer, program_size-PROGRAM_FILE_OFFSET);
+
+/*	error = fsl_read(hwt->slot);
+	if ( error == 0xDEADBEEF){
+		printf("In Sync with bootloader!\n");
+	}else {
+		printf("Not in sync: 0x%x\n", error);
+	}
+	printf("Bootloader jumps to address 0x%x\n", fsl_read(hwt->slot) );
+*/
+cleanup:
+	free(program_buffer);
+
+}
+
 static void reconos_delegate_process_get_init_data(struct reconos_hwt *hwt)
 {
 	fsl_write(hwt->slot, (uint32_t) hwt->init_data);
@@ -404,10 +464,14 @@ static void *reconos_delegate_thread_entry(void *arg)
 		case RECONOS_CMD_THREAD_GET_INIT_DATA:
 			reconos_delegate_process_get_init_data(hwt);
 			break;
+		case RECONOS_CMD_THREAD_LOAD_PROGRAM:
+			reconos_delegate_process_load_program(hwt);
+			break;
 		case RECONOS_CMD_THREAD_EXIT:
 			return NULL;
 		default:
 			die();
+			break;
 		}
 	}
 

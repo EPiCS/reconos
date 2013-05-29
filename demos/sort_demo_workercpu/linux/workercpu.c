@@ -364,7 +364,9 @@ int main(int argc, char ** argv)
 
 	printf("sizeof(res)= %lu\n", sizeof(res)/sizeof(struct reconos_resource));
     reconos_hwt_setresources(&hwt,res,sizeof(res)/sizeof(struct reconos_resource));
+    reconos_hwt_setprogram(&hwt, "sort_demo_workercpu.bin");
     reconos_hwt_create(&hwt,WORKERCPU_SLOT,NULL);
+
 
     printf("HWT created, starting tests ...\n");
     test_success =
@@ -372,6 +374,7 @@ int main(int argc, char ** argv)
 	test_run(workercpu_tests) &&
 	test_teardown(workercpu_tests);
 
+//    sleep(1000000);
     return !test_success;
 }
 

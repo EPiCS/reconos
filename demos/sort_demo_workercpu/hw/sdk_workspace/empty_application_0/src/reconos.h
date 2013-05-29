@@ -34,6 +34,7 @@
 
 #define OSIF_CMD_THREAD_GET_INIT_DATA 0x000000A0
 #define OSIF_CMD_THREAD_EXIT          0x000000A2
+#define OSIF_CMD_THREAD_LOAD_PROGRAM	 0x000000A7 // From reconos.h
 
 /**
  * Struct is used as handle for resource on ReconOS main processor

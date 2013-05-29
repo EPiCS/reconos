@@ -24,8 +24,9 @@
 #define RECONOS_CMD_THREAD_EXIT			0x000000A2
 #define RECONOS_CMD_THREAD_YIELD		0x000000A3 // ToDo
 #define RECONOS_CMD_THREAD_RESUME		0x000000A4 // ToDo
-#define RECONOS_CMD_THREAD_LOAD_STATE		0x000000A5 // ToDo
-#define RECONOS_CMD_THREAD_STORE_STATE		0x000000A6 // ToDo
+#define RECONOS_CMD_THREAD_LOAD_STATE	0x000000A5 // ToDo
+#define RECONOS_CMD_THREAD_STORE_STATE	0x000000A6 // ToDo
+#define RECONOS_CMD_THREAD_LOAD_PROGRAM	0x000000A7
 
 #define RECONOS_CMD_SEM_POST			0x000000B0
 #define RECONOS_CMD_SEM_WAIT			0x000000B1
@@ -60,6 +61,7 @@ struct reconos_hwt {
 	struct reconos_resource* resources;
 	size_t num_resources;
 	void *init_data;
+	char * program_path;
 };
 
 #define SLOTS_MAX				16
@@ -94,6 +96,7 @@ extern void reconos_mmu_stats(uint32_t *tlb_hits, uint32_t *tlb_misses,
 extern void reconos_hwt_setresources(struct reconos_hwt *hwt,
 				     struct reconos_resource *res,
 				     size_t num_resources);
+extern void reconos_hwt_setprogram(struct reconos_hwt *hwt, char * program_path);
 extern void reconos_hwt_setinitdata(struct reconos_hwt *hwt, void *init_data);
 extern int reconos_hwt_create(struct reconos_hwt *hwt, int slot, void *arg);
 
