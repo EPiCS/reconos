@@ -65,10 +65,10 @@ int main(void)
 {
 	int sock, ret, run = 0;
 	char buff_sender[BUFFSIZE];
+	char buff_receiver[2 * BUFFSIZE];
 	char name[FBNAMSIZ];
-	int iterations = 10;
+	int iterations = 41;
 	int i = 0;
-	struct timeval start_time, end_time;
 
 	sock = socket(27, SOCK_RAW, 0);
 	if (sock < 0)
@@ -80,27 +80,32 @@ int main(void)
 
 	fprintf(stderr, "our instance: %s\n", name);
 	printf("our instance: %s\n", name);
-	printf("size: %lu\n", sizeof(buff_sender));	
 	preparebuff(buff_sender, run++);
 	
 	for (i = 0; i < iterations; i++) {
 
 		printbuff(buff_sender, sizeof(buff_sender));
-	retry:
+	retry_send:
 		ret = sendto(sock, buff_sender, sizeof(buff_sender), 0, NULL, 0);
 		if (ret == -1){
 			perror("sendto");
 			fprintf(stderr, "iteration: %d\n", i);
 			sleep(25);
-			gettimeofday(&start_time, NULL); //first time we fail anyway since the protocol stack is not yet built...
-			goto retry;
+			goto retry_send;
 		}
+		fprintf(stderr, "[echo:]##############waiting######################\n");
+	retry_rcv:
+		ret = recvfrom(sock, buff_receiver, sizeof(buff_receiver), 0, NULL, 0);
+		if (ret == -1){
+			perror("recvfrom");
+			sleep(5);
+			goto retry_rcv;
+		}
+		fprintf(stderr, "[echo:]##############received new message with len %d######################\n", ret);
+		printbuff(buff_receiver, ret);
 	}
 
-	gettimeofday(&end_time, NULL); //first time we fail anyway since the protocol stack is not yet built...
-	int delta = (end_time.tv_sec - start_time.tv_sec)*1000000 + (end_time.tv_usec - start_time.tv_usec);
-	printf("\ndone: start_time.tv_sec %d, tv_usec %d, end_time.tv_sec %d, tv_usec %d, delta in usec %d\n", (int)start_time.tv_sec, (int)start_time.tv_usec, (int)end_time.tv_sec, (int)end_time.tv_usec, (int)delta);
-	fprintf(stderr, "\n done: start_time.tv_sec %d, tv_usec %d, end_time.tv_sec %d, tv_usec %d, delta in usec %d\n", (int)start_time.tv_sec, (int)start_time.tv_usec, (int)end_time.tv_sec, (int)end_time.tv_usec, (int)delta);
 	close(sock);
 	return 0;
 }
+
