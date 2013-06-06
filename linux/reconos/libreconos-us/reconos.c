@@ -215,12 +215,19 @@ static void reconos_delegate_process_mbox_get(struct reconos_hwt *hwt)
 
 static void reconos_delegate_process_mbox_put(struct reconos_hwt *hwt)
 {
-	uint32_t handle = fsl_read(hwt->slot);
-	uint32_t arg0 = fsl_read(hwt->slot);
+	//uint32_t handle = fsl_read(hwt->slot);
+	//uint32_t arg0 = fsl_read(hwt->slot);
 
-	reconos_assert_type_and_res(hwt, handle, RECONOS_TYPE_MBOX);
+	struct {
+		uint32_t handle;
+		uint32_t arg0;
+	} params;
 
-	mbox_put(hwt->resources[handle].ptr, arg0);
+	fsl_read_block(hwt->slot, &params, 2*sizeof(uint32_t));
+
+	reconos_assert_type_and_res(hwt, params.handle, RECONOS_TYPE_MBOX);
+
+	mbox_put(hwt->resources[params.handle].ptr, params.arg0);
 	fsl_write(hwt->slot, 0);
 }
 
@@ -273,14 +280,20 @@ static void reconos_delegate_process_mutex_trylock(struct reconos_hwt *hwt)
 
 static void reconos_delegate_process_cond_wait(struct reconos_hwt *hwt)
 {
-	uint32_t handle = fsl_read(hwt->slot);
-	uint32_t handle2 = fsl_read(hwt->slot);
+	//uint32_t handle = fsl_read(hwt->slot);
+	//uint32_t handle2 = fsl_read(hwt->slot);
 
-	reconos_assert_type_and_res(hwt, handle, RECONOS_TYPE_COND);
-	reconos_assert_type_and_res(hwt, handle2, RECONOS_TYPE_MUTEX);
+	struct {
+		uint32_t handle;
+		uint32_t handle2;
+	} params;
+	fsl_read_block(hwt->slot, &params, 2*sizeof(uint32_t));
 
-	fsl_write(hwt->slot, pthread_cond_wait(hwt->resources[handle].ptr,
-					       hwt->resources[handle2].ptr));
+	reconos_assert_type_and_res(hwt, params.handle, RECONOS_TYPE_COND);
+	reconos_assert_type_and_res(hwt, params.handle2, RECONOS_TYPE_MUTEX);
+
+	fsl_write(hwt->slot, pthread_cond_wait(hwt->resources[params.handle].ptr,
+					       hwt->resources[params.handle2].ptr));
 }
 
 static void reconos_delegate_process_cond_signal(struct reconos_hwt *hwt)
@@ -305,51 +318,71 @@ static void reconos_delegate_process_cond_broadcast(struct reconos_hwt *hwt)
 
 static void reconos_delegate_process_rqueue_receive(struct reconos_hwt *hwt)
 {
-	int i;
+	//int i;
 	ssize_t res;
-	uint32_t handle, arg0, msg_size, *msg;
+	//uint32_t handle, arg0;
+	uint32_t msg_size, *msg;
 
-	handle = fsl_read(hwt->slot);
-	arg0 = fsl_read(hwt->slot);
+	struct {
+		uint32_t handle;
+		uint32_t arg0;
+	} params;
 
-	reconos_assert_type_and_res(hwt, handle, RECONOS_TYPE_RQ);
+	fsl_read_block(hwt->slot, &params, 2*sizeof(uint32_t));
 
-	msg_size = arg0;
-	msg = xmalloc_aligned(msg_size, sizeof(void *) * 8);
+	//handle = fsl_read(hwt->slot);
+	//arg0 = fsl_read(hwt->slot);
 
-	res = rq_receive(hwt->resources[handle].ptr, msg, msg_size);
+	reconos_assert_type_and_res(hwt, params.handle, RECONOS_TYPE_RQ);
+
+	msg_size = params.arg0;
+	msg = xmalloc_aligned(msg_size+sizeof(uint32_t), sizeof(void *) * 8);
+	msg[0] = msg_size;
+
+	res = rq_receive(hwt->resources[params.handle].ptr, msg+1, msg_size);
 	if (res <= 0 || res > msg_size) {
 		whine("rq_receive screwed up: %zd\n", res);
 		fsl_write(hwt->slot, 0);
 		goto out;
 	}
 
-	fsl_write(hwt->slot, (uint32_t) res);
-	/* FIXME: write data to hw thread */
-	for (i = 0; i < res / sizeof(uint32_t); ++i)
-		fsl_write(hwt->slot, msg[i]);
+	fsl_write_block(hwt->slot, msg, msg_size+sizeof(uint32_t));
+	//fsl_write(hwt->slot, (uint32_t) res);
+	///* FIXME: write data to hw thread */
+	//for (i = 0; i < res / sizeof(uint32_t); ++i)
+	//	fsl_write(hwt->slot, msg[i]);
 out:
 	free(msg);
 }
 
 static void reconos_delegate_process_rqueue_send(struct reconos_hwt *hwt)
 {
-	int i;
-	uint32_t handle, arg0, msg_size, *msg;
+	//int i;
+	//uint32_t handle, arg0;
+	uint32_t msg_size, *msg;
 
-	handle = fsl_read(hwt->slot);
-	arg0 = fsl_read(hwt->slot);
+	struct {
+		uint32_t handle;
+		uint32_t arg0;
+	} params;
 
-	reconos_assert_type_and_res(hwt, handle, RECONOS_TYPE_RQ);
+	fsl_read_block(hwt->slot, &params, 2*sizeof(uint32_t));
 
-	msg_size = arg0; 
+	//handle = fsl_read(hwt->slot);
+	//arg0 = fsl_read(hwt->slot);
+
+	reconos_assert_type_and_res(hwt, params.handle, RECONOS_TYPE_RQ);
+
+	msg_size = params.arg0;
 	msg = xmalloc_aligned(msg_size, sizeof(void *) * 8); 
 
-	/* FIXME: read data to hw thread */
-	for (i = 0; i < msg_size / sizeof(uint32_t); ++i)
-		msg[i] = fsl_read(hwt->slot);
+	///* FIXME: read data to hw thread */
+	//for (i = 0; i < msg_size / sizeof(uint32_t); ++i)
+	//	msg[i] = fsl_read(hwt->slot);
 
-	rq_send(hwt->resources[handle].ptr, msg, msg_size);
+	fsl_read_block(hwt->slot, msg, msg_size);
+
+	rq_send(hwt->resources[params.handle].ptr, msg, msg_size);
 	fsl_write(hwt->slot, 0);
 	free(msg);
 }
@@ -362,7 +395,7 @@ static void reconos_delegate_process_load_program(struct reconos_hwt *hwt){
 	FILE * program_file;
 	size_t elements_read;
 	error = stat(hwt->program_path, &stats);
-	uint32_t * program_buffer;
+	uint32_t * program_buffer = NULL;
 
 	if (error){
 		whine("couldn't find program file %s\n", hwt->program_path);
@@ -397,14 +430,6 @@ static void reconos_delegate_process_load_program(struct reconos_hwt *hwt){
 	fsl_write(hwt->slot, program_size-PROGRAM_FILE_OFFSET);
 	fsl_write_block(hwt->slot, program_buffer, program_size-PROGRAM_FILE_OFFSET);
 
-/*	error = fsl_read(hwt->slot);
-	if ( error == 0xDEADBEEF){
-		printf("In Sync with bootloader!\n");
-	}else {
-		printf("Not in sync: 0x%x\n", error);
-	}
-	printf("Bootloader jumps to address 0x%x\n", fsl_read(hwt->slot) );
-*/
 cleanup:
 	free(program_buffer);
 
