@@ -28,7 +28,7 @@ pthread_mutex_t mutex_send = 7;
 pthread_cond_t cond_recv = 8;
 pthread_cond_t cond_send = 9;
 
-#define REPETITIONS 8192
+#define REPETITIONS  14000 //8192
 
 #define BUFFER_SIZE REPETITIONS*sizeof(uint32_t)
 uint32_t buffer[BUFFER_SIZE/sizeof(uint32_t)];
@@ -75,32 +75,54 @@ bool test_echo_block(){
 
 bool test_mbox(){
 	uint32_t temp = 0;
-	temp = mbox_get(&mb_recv);
-	mbox_put(&mb_send, temp);
+	int i;
+	for ( i=0; i < REPETITIONS; i++){
+		temp = mbox_get(&mb_recv);
+	}
+	for ( i=0; i < REPETITIONS; i++){
+		mbox_put(&mb_send, temp);
+	}
 	return true;
 }
 
+#define RQUEUE_BUFFER_SIZE 1024
 bool test_rqueue(){
 	/*
 	 * No error handling here. Main processor will compare send and
 	 * received data and reveal discrepancies.
 	 */
-	(void) rq_receive(&rqueue_recv, buffer, BUFFER_SIZE);
-	rq_send(&rqueue_send, buffer, BUFFER_SIZE);
+	int i;
+	for (i=0; i< REPETITIONS; i++){
+		(void) rq_receive(&rqueue_recv, buffer, RQUEUE_BUFFER_SIZE);
+	}
+
+	for (i=0; i< REPETITIONS; i++){
+		rq_send(&rqueue_send, buffer, RQUEUE_BUFFER_SIZE);
+	}
 	return true;
 }
 
 bool test_sem() {
-	sem_wait(&sem_recv);
-	sem_post(&sem_send);
+	int i;
+	for (i=0; i< REPETITIONS; i++){
+		sem_wait(&sem_recv);
+/*	}
+	for (i=0; i< REPETITIONS; i++){
+*/		sem_post(&sem_send);
+	}
 	return true;
 }
 
 bool test_mutex() {
 	/*pthread_mutex_trylock(&mutex);*/
 	/*pthread_mutex_unlock(&mutex);*/
-	pthread_mutex_lock(&mutex_recv);
-	pthread_mutex_unlock(&mutex_send);
+	int i;
+	for (i=0; i< REPETITIONS; i++){
+		pthread_mutex_lock(&mutex_recv);
+/*	}
+	for (i=0; i< REPETITIONS; i++){
+*/		pthread_mutex_unlock(&mutex_send);
+	}
 	return true;
 }
 

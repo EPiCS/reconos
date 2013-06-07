@@ -28,7 +28,7 @@
 
 #define WORKERCPU_SLOT 0
 
-#define REPETITIONS 8192
+#define REPETITIONS 14000
 
 void reconos_slot_reset(int num, int reset);
 
@@ -36,7 +36,7 @@ bool echo_setup(){
 	return true;
 }
 bool echo_test(){
-	printf("\nBeginning Benchmark...\n");
+	printf("\n");
 	sleep(1); // wait until workercpu sent exit command to delegate thread
 	uint32_t input = 1337;
 	uint32_t output = 0;
@@ -68,7 +68,7 @@ bool echo_test(){
 	t_stop = gettime();
 	printf ("Echo Speed : Bytes: %i, Time (ms): %li\n", REPETITIONS*4, calc_timediff_ms( t_start, t_stop ));
 	printf ("Echo Speed : %f KB/s\n", ((double)REPETITIONS*4*1000) / ((double)calc_timediff_ms( t_start, t_stop ) * 1024));
-
+	printf("\n");
 	return true;
 
 }
@@ -80,7 +80,7 @@ bool echo_block_setup(){
 	return true;
 }
 bool echo_block_test(){
-	printf("\nBeginning Benchmark...\n");
+	printf("\n");
 	sleep(1); // wait until workercpu sent exit command to delegate thread
 	uint32_t input[REPETITIONS] = {1337};
 	uint32_t output[REPETITIONS] = {0};
@@ -110,6 +110,7 @@ bool echo_block_test(){
 	t_stop = gettime();
 	printf ("Echo Speed : Bytes: %i, Time (ms): %li\n", REPETITIONS*4, calc_timediff_ms( t_start, t_stop ));
 	printf ("Echo Speed : %f KB/s\n", ((double)REPETITIONS*4*1000) / ((double)calc_timediff_ms( t_start, t_stop ) * 1024));
+	printf("\n");
 
 	return true;
 
@@ -129,13 +130,10 @@ bool membench_setup(){
 }
 
 bool membench_test(){
-	printf("\nBeginning Benchmark...\n");
-
-
 	uint32_t temp=0;
 	timing_t t_start, t_stop;
 	int i;
-
+	printf("\n");
 	t_start = gettime();
 	memset(membench_output, 1337, MEMBENCH_WORD_COUNT*sizeof(uint32_t));
 	t_stop = gettime();
@@ -156,7 +154,7 @@ bool membench_test(){
 	t_stop = gettime();
 	printf ("Copy Speed : Bytes: %i, Time (ms): %li\n", MEMBENCH_WORD_COUNT*4, calc_timediff_ms( t_start, t_stop ));
 	printf ("Copy Speed : %f KB/s\n", ((double)MEMBENCH_WORD_COUNT*4*1000) / ((double)calc_timediff_ms( t_start, t_stop ) * 1024));
-
+	printf("\n");
 	return true;
 #undef MEMBENCH_WORD_COUNT
 }
@@ -178,12 +176,27 @@ bool mbox_test(){
 	uint32_t input = 1337;
 	uint32_t output;
 
-	printf("TEST_MBOX: putting %u into mbox.\n", input);
+	timing_t t_start, t_stop;
+	int i;
 
-	mbox_put( &mb_send, input );
-	printf("TEST_MBOX:  in between...\n");
-	output = mbox_get( &mb_recv );
-	printf("TEST_MBOX: read %u from mbox.\n", output);
+	printf("\n");
+	t_start = gettime();
+	for ( i=0; i<REPETITIONS; i++){
+		mbox_put( &mb_send, input );
+	}
+	t_stop = gettime();
+	printf ("Host put, Slave get : Repetitions: %i, Time (ms): %li\n", REPETITIONS, calc_timediff_ms( t_start, t_stop ));
+	printf ("put/gets speed : %f per second\n", ((double)REPETITIONS*1000) / ((double)calc_timediff_ms( t_start, t_stop )));
+
+
+	t_start = gettime();
+	for ( i=0; i<REPETITIONS; i++){
+		output = mbox_get( &mb_recv );
+	}
+	t_stop = gettime();
+	printf ("Host get, Slave out : Repetitions: %i, Time (ms): %li\n", REPETITIONS, calc_timediff_ms( t_start, t_stop ));
+	printf ("get/puts speed : %f per second\n", ((double)REPETITIONS*1000) / ((double)calc_timediff_ms( t_start, t_stop )));
+	printf("\n");
 
 	return output == input;
 }
@@ -195,9 +208,9 @@ bool mbox_teardown(){
 
 rqueue rqueue_send;
 rqueue rqueue_recv;
-#define BUFFER_SIZE REPETITIONS*sizeof(uint32_t)
-uint32_t send_buffer[BUFFER_SIZE/sizeof(uint32_t)];
-uint32_t recv_buffer[BUFFER_SIZE/sizeof(uint32_t)];
+#define RQUEUE_BUFFER_SIZE 1024 //bytes
+uint32_t send_buffer[RQUEUE_BUFFER_SIZE/sizeof(uint32_t)];
+uint32_t recv_buffer[RQUEUE_BUFFER_SIZE/sizeof(uint32_t)];
 
 bool rqueue_setup(){
 	rq_init( &rqueue_send, 1 );
@@ -205,15 +218,30 @@ bool rqueue_setup(){
 	return true;
 }
 bool rqueue_test(){
-	memset(send_buffer, 1337, BUFFER_SIZE);
-	memset(recv_buffer, 1337, BUFFER_SIZE);
-	//printf("TEST_RQUEUE: sending %u via rqueue.\n", send_buffer[0]);
-	rq_send( &rqueue_send, send_buffer, BUFFER_SIZE );
-	//printf("TEST_RQUEUE: sent.\n");
-	rq_receive( &rqueue_recv, recv_buffer, BUFFER_SIZE );
-	//printf("TEST_RQUEUE: received %u via rqueue.\n", recv_buffer[0]);
+	timing_t t_start, t_stop;
+	int i;
 
-	return memcmp(send_buffer, recv_buffer, BUFFER_SIZE) == 0;
+	memset(send_buffer, 1337, RQUEUE_BUFFER_SIZE);
+	memset(recv_buffer, 1337, RQUEUE_BUFFER_SIZE);
+	printf("\n");
+	printf("Buffer size: %i\n", RQUEUE_BUFFER_SIZE);
+	t_start = gettime();
+	for ( i=0; i<REPETITIONS; i++){
+		rq_send( &rqueue_send, send_buffer, RQUEUE_BUFFER_SIZE );
+	}
+	t_stop = gettime();
+	printf ("Host send, Slave receive : Repetitions: %i, Time (ms): %li\n", REPETITIONS, calc_timediff_ms( t_start, t_stop ));
+	printf ("send/receives speed : %f per second\n", ((double)REPETITIONS*1000) / ((double)calc_timediff_ms( t_start, t_stop )));
+
+	t_start = gettime();
+	for ( i=0; i<REPETITIONS; i++){
+		rq_receive( &rqueue_recv, recv_buffer, RQUEUE_BUFFER_SIZE );
+	}
+	t_stop = gettime();
+	printf ("Host receive, Slave send : Repetitions: %i, Time (ms): %li\n", REPETITIONS, calc_timediff_ms( t_start, t_stop ));
+	printf ("receive/sends speed : %f per second\n", ((double)REPETITIONS*1000) / ((double)calc_timediff_ms( t_start, t_stop )));
+	printf("\n");
+	return memcmp(send_buffer, recv_buffer, RQUEUE_BUFFER_SIZE) == 0;
 }
 bool rqueue_teardown(){
 	rq_close( &rqueue_send );
@@ -229,10 +257,27 @@ bool sem_setup(){
 	return true;
 }
 bool sem_test() {
-	//printf("TEST_SEM: Posting semaphore, then waiting for another...\n");
-	sem_post( &sem_send );
-	sem_wait( &sem_recv );
-	//printf("TEST_SEM: Got semaphore!\n");
+	timing_t t_start, t_stop;
+	int i;
+
+	printf("\n");
+	t_start = gettime();
+	for ( i=0; i<REPETITIONS; i++){
+		sem_post( &sem_send );
+/*	}
+	t_stop = gettime();
+	printf ("Host post, Slave wait : Repetitions: %i, Time (ms): %li\n", REPETITIONS, calc_timediff_ms( t_start, t_stop ));
+	printf ("post/wait speed : %f per second\n", ((double)REPETITIONS*1000) / ((double)calc_timediff_ms( t_start, t_stop )));
+
+	t_start = gettime();
+	for ( i=0; i<REPETITIONS; i++){
+*/		sem_wait( &sem_recv );
+	}
+	t_stop = gettime();
+	printf ("Host wait, Slave post : Repetitions: %i, Time (ms): %li\n", REPETITIONS, calc_timediff_ms( t_start, t_stop ));
+	printf ("wait/posts speed : %f per second\n", ((double)REPETITIONS*1000) / ((double)calc_timediff_ms( t_start, t_stop )));
+	printf("\n");
+
 	return true;
 }
 bool sem_teardown(){
@@ -251,10 +296,26 @@ bool mutex_setup(){
 	return true;
 }
 bool mutex_test() {
-	//printf("TEST_MUTEX: first unlocking mutex, then trying to lock another one.\n");
-	pthread_mutex_unlock( &mutex_send );
-	pthread_mutex_lock( &mutex_recv );
-	//printf("TEST_MUTEX: Got mutex lock!\n");
+	timing_t t_start, t_stop;
+	int i;
+
+	printf("\n");
+	t_start = gettime();
+	for ( i=0; i<REPETITIONS; i++){
+		pthread_mutex_unlock( &mutex_send );
+/*	}
+	t_stop = gettime();
+	printf ("Host unlock, Slave lock : Repetitions: %i, Time (ms): %li\n", REPETITIONS, calc_timediff_ms( t_start, t_stop ));
+	printf ("unlock/lock speed : %f per second\n", ((double)REPETITIONS*1000) / ((double)calc_timediff_ms( t_start, t_stop )));
+
+	t_start = gettime();
+	for ( i=0; i<REPETITIONS; i++){
+*/		pthread_mutex_lock( &mutex_recv );
+	}
+	t_stop = gettime();
+	printf ("Host lock, Slave unlock : Repetitions: %i, Time (ms): %li\n", REPETITIONS, calc_timediff_ms( t_start, t_stop ));
+	printf ("lock/unlock speed : %f per second\n", ((double)REPETITIONS*1000) / ((double)calc_timediff_ms( t_start, t_stop )));
+	printf("\n");
 	return true;
 }
 bool mutex_teardown(){
