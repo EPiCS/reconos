@@ -10,9 +10,7 @@ insmod fb_pflana.ko
 ./fbctl add fb1 ch.ethz.csg.dummy
 ./fbctl flag eth1 hw
 ./echo 2> output.txt &   #-> x
-./fbctl bind x eth1
-./fbctl set x iface=lo
-./fbctl unbind x eth1
-./fbctl bind fb1 eth1
 ./fbctl bind x fb1
-./fbctl flag fb1 hw
+./fbctl bind fb1 eth1
+./fbctl set x iface=lo
+

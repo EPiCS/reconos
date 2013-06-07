@@ -12,7 +12,7 @@
 #include <linux/prefetch.h>
 #include <linux/slab.h>
 #include <linux/seq_file.h>
-
+#include <linux/vmalloc.h>
 #include "xt_fblock.h"
 #include "xt_engine.h"
 
