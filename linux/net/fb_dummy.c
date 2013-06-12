@@ -49,6 +49,8 @@ static int fb_dummy_netrx(const struct fblock * const fb,
 	unsigned int seq;
 	struct fb_dummy_priv *fb_priv;
 //	int i = 0;
+//	printk(KERN_INFO "[fb_dummy] netrx 1\n");
+
 	fb_priv = rcu_dereference_raw(fb->private_data);
 	do {
 		seq = read_seqbegin(&fb_priv->lock);
@@ -66,6 +68,7 @@ static int fb_dummy_netrx(const struct fblock * const fb,
 		kfree_skb(skb);
 		return PPE_DROPPED;
 	}
+//		printk(KERN_INFO "[fb_dummy] netrx 2\n");
 
 	return PPE_SUCCESS;
 }

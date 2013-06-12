@@ -74,19 +74,26 @@ static int fb_pflana_netrx(const struct fblock * const fb,
 	struct sock *sk;
 	struct fb_pflana_priv *fb_priv;
 	struct pflana_ctl *ctlhdr;
+	
+	printk(KERN_INFO "[fb_pf_lana] netrx\n");
 
 	fb_priv = rcu_dereference_raw(fb->private_data);
 
 	ctlhdr = (struct pflana_ctl *) skb->data;
 	skb_pull(skb, sizeof(*ctlhdr));
 
+	printk(KERN_INFO "[fb_pf_lana] type: %x, data type: %x\n", ctlhdr->type, PFLANA_CTL_TYPE_DATA);
 	if (ctlhdr->type == PFLANA_CTL_TYPE_CONF) {
+		printk(KERN_INFO "[fb_pf_lana] netrx config\n");
 		packet_sw_to_configd(skb);
 		goto out;
 	} else if (ctlhdr->type != PFLANA_CTL_TYPE_DATA) {
+		printk(KERN_INFO "[fb_pf_lana] netrx no data -> drop\n");
 		kfree(skb);
 		return PPE_DROPPED;
 	}
+
+	printk(KERN_INFO "[fb_pf_lana] netrx data\n");
 
 	sk = &fb_priv->sock_self->sk;
 	if (skb_shared(skb)) {
@@ -413,6 +420,8 @@ static int lana_proto_recvmsg(struct kiocb *iocb, struct sock *sk,
 	if (!skb) {
 		return -EAGAIN;
 	}
+	printk(KERN_INFO "[fb_pflana] rx packet received\n");			
+
 	atomic_sub(skb->len, &fb_priv->backlog_used);
 
 	msg->msg_namelen = 0;

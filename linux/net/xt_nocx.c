@@ -275,8 +275,8 @@ static int hwif_hw_to_sw_worker_thread(void *arg)
 	//	npkt = (struct noc_pkt *) pkt_start;
 		
 //		npkt->payload = pkt_start + off;
-		for(i = 0; i < 32; i = i+2)
-			printk(KERN_INFO "[xt_nocx] %x %x", npkt.payload[i], npkt.payload[i+1]);
+//		for(i = 0; i < 32; i = i+2)
+//			printk(KERN_INFO "[xt_nocx] %x %x", npkt.payload[i], npkt.payload[i+1]);
 	//	for(i = 0; i < 32; i = i+2)
 	//		printk(KERN_INFO "[xt_nocx] %x %x", shared_mem_h2s[i], shared_mem_h2s[i+1]);
 

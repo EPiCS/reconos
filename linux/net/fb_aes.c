@@ -22,7 +22,8 @@ struct fb_aes_priv {
 	seqlock_t lock;
 	uint8_t *key;
 	uint8_t key_bits;
-	int nrounds;
+	int nrounds_egress;
+	int nrounds_ingress;
 	size_t len;
 	unsigned long *rk;
 	rwlock_t klock;
@@ -36,10 +37,14 @@ static int fb_aes_netrx(const struct fblock * const fb,
 	unsigned int seq;
 	unsigned int padding;
 	struct fb_aes_priv *fb_priv;
-	size_t i = 0;
+	size_t i = 0, z = 0;
 	unsigned char ciphertext[16];
+	unsigned char plaintext[16];
+
 	//we don't have jumbo packets.	
-	u16 pktlen = (u16)skb->len;
+	u16 pktlen = 0; //(u16)skb->len;
+	printk(KERN_INFO "[fb_aes] packet len orig = %d\n", skb->len);
+
 	fb_priv = rcu_dereference_raw(fb->private_data);
 	do {
 		seq = read_seqbegin(&fb_priv->lock);
@@ -49,22 +54,78 @@ static int fb_aes_netrx(const struct fblock * const fb,
 	} while (read_seqretry(&fb_priv->lock, seq));
 
 	read_lock(&fb_priv->klock);
+	printk(KERN_INFO "[fb_aes] packet len orig = %d\n", skb->len);
 	
-	//we need to pad to 16 bytes
-	//for hardware compatability this is done by setting the last two bytes to the actual packet len.
-	//reserve space for the padding:
-	skb_put(skb,2);
-	//reserve space for the padding
-	padding = skb->len % 16;
-	skb_put(skb, padding);
-	//write len to buffer
-	memcpy(&skb->data[skb->len - 2], &pktlen, 2);
-//	skb->data[skb->len - 1] = (unsigned char) padding; //last byte is amount of padding;
-	
-	//here we do the encryption
-	for (i = 0; i < skb->len; i += 16){
-		rijndaelEncrypt(fb_priv->rk, fb_priv->nrounds, skb->data + i, ciphertext);
-		memcpy(skb->data + i, ciphertext, 16);
+	if(*dir == TYPE_EGRESS){
+		printk(KERN_INFO "[fb_aes] EGRESS packet \n");
+
+		pktlen = (u16)skb->len;
+		//we need to pad to 16 bytes
+		//for hardware compatability this is done by setting the last two bytes to the actual packet len.
+		//reserve space for the padding:
+
+		skb_put(skb,2);
+		//reserve space for the padding
+		printk(KERN_INFO "[fb_aes] packet len with len = %d\n", skb->len);
+
+		padding = 16 - (skb->len % 16);
+		skb_put(skb, padding);
+		//write len to buffer
+		memcpy(&skb->data[skb->len - 2], &pktlen, 2);
+//		skb->data[skb->len - 1] = (unsigned char) padding; //last byte is amount of padding;
+		printk(KERN_INFO "[fb_aes] packet len tot = %d\n", skb->len);
+
+/*		plaintext[0] = 0x6b;
+		plaintext[1] = 0xc1;
+		plaintext[2] = 0xbe;
+		plaintext[3] = 0xe2;
+		plaintext[4] = 0x2e;
+		plaintext[5] = 0x40;
+		plaintext[6] = 0x9f;
+		plaintext[7] = 0x96;
+		plaintext[8] = 0xe9;
+		plaintext[9] = 0x3d;
+		plaintext[10] = 0x7e;
+		plaintext[11] = 0x11;
+		plaintext[12] = 0x73;
+		plaintext[13] = 0x93;
+		plaintext[14] = 0x17;
+		plaintext[15] = 0x2a;
+*/
+		//here we do the encryption
+		for (i = 0; i < skb->len; i += 16){
+		//	memcpy(plaintext, skb->data + i, 16);
+			rijndaelEncrypt(fb_priv->rk, fb_priv->nrounds_egress, skb->data + i, ciphertext);
+		//	rijndaelEncrypt(fb_priv->rk, fb_priv->nrounds_egress, plaintext , ciphertext);
+		//	for (z = 0; z < 16; z++){
+		//		printk(KERN_INFO "[fb_aes] plain: %x, cypher: %x\n", plaintext[z], ciphertext[z]);
+		//	}
+			memcpy(skb->data + i, ciphertext, 16);
+
+		}
+	}
+	else if(*dir == TYPE_INGRESS){
+		printk(KERN_INFO "[fb_aes] INGRESS packet \n");
+
+		
+		for (i = 0; i < skb->len; i += 16){
+			rijndaelDecrypt(fb_priv->rk, fb_priv->nrounds_ingress, skb->data + i, plaintext);
+		//	for (z = 0; z < 16; z++){
+		//		printk(KERN_INFO "[fb_aes] plain: %x, cypher: %x\n", plaintext[z], (skb->data + i)[z]);
+		//	}
+
+			memcpy(skb->data + i, plaintext, 16);
+		}
+
+		//find the actual data len and trim the buffer.
+		memcpy(&pktlen, &skb->data[skb->len - 2], 2);
+		printk(KERN_INFO "[fb_aes] INGRESS received packet len %d \n", pktlen);
+
+		skb_trim(skb, pktlen);
+	}
+	else{
+		printk(KERN_INFO "[fb_aes] drop packet. Unknown direction\n");
+		goto drop;
 	}
 
 	read_unlock(&fb_priv->klock);
@@ -162,15 +223,35 @@ static ssize_t fb_aes_proc_write(struct file *file, const char __user * ubuff,
 		printk(KERN_ERR "could not copy user buffer\n");
 		return -EIO;
 	}
-
+	
+	//overwrite key
+//	memset (fb_priv->key, 0x3c, 16);
+	fb_priv->key[0] = 0x2b;
+	fb_priv->key[1] = 0x7e;
+	fb_priv->key[2] = 0x15;
+	fb_priv->key[3] = 0x16;
+	fb_priv->key[4] = 0x28;
+	fb_priv->key[5] = 0xae;
+	fb_priv->key[6] = 0xd2;
+	fb_priv->key[7] = 0xa6;
+	fb_priv->key[8] = 0xab;
+	fb_priv->key[9] = 0xf7;
+	fb_priv->key[10] = 0x15;
+	fb_priv->key[11] = 0x88;
+	fb_priv->key[12] = 0x09;
+	fb_priv->key[13] = 0xcf;
+	fb_priv->key[14] = 0x4f;
+	fb_priv->key[15] = 0x3c;
+	
 	//setup key
 	printk(KERN_ERR "count %d\n", count);
 	fb_priv->key_bits = count * 8;
 	printk(KERN_ERR "key_bits %d\n", fb_priv->key_bits);
 
 	fb_priv->rk = kmalloc(RKLENGTH(fb_priv->key_bits)*sizeof(long), GFP_KERNEL);
-	fb_priv->nrounds = rijndaelSetupEncrypt(fb_priv->rk, fb_priv->key, fb_priv->key_bits);	
-	
+//	fb_priv->nrounds_egress = rijndaelSetupEncrypt(fb_priv->rk, fb_priv->key, fb_priv->key_bits);	
+	fb_priv->nrounds_ingress = rijndaelSetupDecrypt(fb_priv->rk, fb_priv->key, fb_priv->key_bits);	
+
 	write_unlock(&fb_priv->klock);
 
 	return count;
