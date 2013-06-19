@@ -1,6 +1,7 @@
 /*
  * Copyright 2012 Andreas Agne <agne@upb.de>
  * Copyright 2012 Daniel Borkmann <dborkma@tik.ee.ethz.ch>
+ * Copyright 2013 Sebastian Meisner <sebastian.meisner@upb.de>
  */
 
 #include <linux/sched.h>
@@ -19,6 +20,10 @@
 #define FSL_MAX		16
 #define FSL_MAX_NAMSIZ	64
 
+#define C_USE_EXTENDED_FSL_INSTR 0
+#define WRITE_BUFFER_SIZE 128 //Bytes
+#define READ_BUFFER_SIZE 256  //Bytes
+
 struct fsl_dev {
 	int irq;
 	unsigned int fsl_num;
@@ -35,9 +40,18 @@ static int fsl_interrupts[FSL_MAX] = {
 module_param_array(fsl_interrupts, int, NULL, S_IRUGO | S_IWUSR);
 
 /* Returns: 0 - ok, 1 - no data available, 2 - error */
+
 static int __must_check nputfsl(int id, int val)
 {
 	int ret;
+#if C_USE_EXTENDED_FSL_INSTR
+        if (id<0  || id > 16 ){ return 2;}
+       
+        asm volatile ("nputd\t%0,%1" :: "d" (val), "d" (id));
+        asm volatile ("addic\t%0,r0,0"  : "=d" (ret));
+               
+        return ret;
+#else
 	switch (id) {
 	case 0x0:
 		asm volatile ("nput\t%0,rfsl0" :: "d" (val));
@@ -107,12 +121,21 @@ static int __must_check nputfsl(int id, int val)
 		return 2;
 	}
 	return ret;
+#endif
 }
 
 /* Returns: 0 - ok, 1 - no data available, 2 - error */
 static int __must_check ngetfsl(int id, int *val)
 {
 	int ret;
+	
+#if C_USE_EXTENDED_FSL_INSTR
+        if (id<0  || id > 16 ){ return 2;}
+        
+        asm volatile ("ngetd\t%0,%1" : "=d" (*val): "d" (id));
+        asm volatile ("addic\t%0,r0,0"  : "=d" (ret));
+        return ret;
+#else
 	switch (id) {
 	case 0x0:
 		asm volatile ("nget\t%0,rfsl0" : "=d" (*val));
@@ -182,6 +205,7 @@ static int __must_check ngetfsl(int id, int *val)
 		return 2;
 	}
 	return ret;
+#endif
 }
 
 static int fsl_open(struct inode *inode, struct file *filp)
@@ -215,7 +239,10 @@ static struct fsl_dev *fsl_get_dev_by_num(int num)
 static ssize_t fsl_do_read(int devnum, char __user *ubuf, char *kbuf,
 			   size_t count, int nonblock)
 {
-	int data, ret, num_words, i;
+	int data[READ_BUFFER_SIZE/sizeof(uint32_t)];
+	int ret, num_words, i;
+	int remaining_bytes, copied_bytes;
+	
 	struct fsl_dev *dev = fsl_get_dev_by_num(devnum);
 
 	if (count % sizeof(uint32_t) != 0 || !dev)
@@ -225,12 +252,16 @@ static ssize_t fsl_do_read(int devnum, char __user *ubuf, char *kbuf,
 	if (num_words == 0)
 		return 0;
 
-	for (i = 0; i < num_words; i++) {
-		ret = ngetfsl(dev->fsl_num, &data);
+	remaining_bytes = count;
+	while (remaining_bytes > 0 ){
+	  copied_bytes = remaining_bytes > READ_BUFFER_SIZE ? READ_BUFFER_SIZE : remaining_bytes;
+	  
+	  for (i = 0; i < copied_bytes/sizeof(uint32_t); i++) {
+		ret = ngetfsl(dev->fsl_num, &data[i]);
 		if (ret) {
 			atomic_set(&dev->irq_count, 0);
 			if (nonblock)
-				return i * sizeof(uint32_t);
+				return i * sizeof(uint32_t)+(count - remaining_bytes);
 			if (!dev->irq_enabled) {
 				dev->irq_enabled = 1;
 				enable_irq(dev->irq);
@@ -242,19 +273,22 @@ static ssize_t fsl_do_read(int devnum, char __user *ubuf, char *kbuf,
 			i--;
 			continue;
 		}
-
-		if (kbuf) {
-			memcpy(kbuf + sizeof(uint32_t) * i, &data,
-			       sizeof(uint32_t));
-		} else if (ubuf) {
-			if (copy_to_user(ubuf + sizeof(uint32_t) * i,
-					 &data, sizeof(uint32_t)))
-				return -EFAULT;
-		} else {
-			BUG();
-		}
+	  }
+	  if (kbuf) {
+		  memcpy(kbuf, data, copied_bytes);
+		  kbuf += copied_bytes/sizeof(char);
+	  } else if (ubuf) {
+		  if (copy_to_user(ubuf , data, copied_bytes)){
+		     return -EFAULT;
+		  } else {
+		    ubuf += copied_bytes/sizeof(char);
+		  }
+	  } else {
+		  BUG();
+	  }
+	  remaining_bytes -= copied_bytes;  
 	}
-
+	
 	return count;
 }
 
@@ -297,7 +331,9 @@ static ssize_t fsl_read(struct file *filp, char __user *buf,
 static ssize_t fsl_do_write(int devnum, const char __user *ubuf,
 			    const char *kbuf, size_t count)
 {
-	int data, ret, num_words, i;
+	int data[WRITE_BUFFER_SIZE/sizeof(uint32_t)];
+	int ret, num_words, i;
+	int remaining_bytes, copied_bytes;
 	struct fsl_dev *dev = fsl_get_dev_by_num(devnum);
 
 	if (count % sizeof(uint32_t) != 0)
@@ -307,23 +343,30 @@ static ssize_t fsl_do_write(int devnum, const char __user *ubuf,
 	if (num_words == 0)
 		return 0;
 
-	for (i = 0; i < num_words; i++) {
-		if (kbuf) {
-			memcpy(&data, kbuf + sizeof(uint32_t) * i,
-			       sizeof(uint32_t));
-		} else if (ubuf) {
-			if (copy_from_user(&data, ubuf + sizeof(uint32_t) * i,
-					   sizeof(uint32_t)))
-				return -EFAULT;
-		} else {
-			BUG();
-		}
-
-		ret = nputfsl(dev->fsl_num, data);
-		if (ret)
-			return i * sizeof(uint32_t);
+	remaining_bytes = count;
+	
+	while(remaining_bytes > 0){
+	  copied_bytes = remaining_bytes > WRITE_BUFFER_SIZE ? WRITE_BUFFER_SIZE : remaining_bytes;
+	  if (kbuf) {
+		  memcpy(data, kbuf, copied_bytes);
+		  kbuf += copied_bytes/sizeof(char);
+	  } else if (ubuf) {
+		  if (copy_from_user(data, ubuf , copied_bytes) ){
+			  return -EFAULT;
+		  } else {
+		    ubuf += copied_bytes/sizeof(char);
+		  }
+	  } else {
+		  BUG();
+	  }
+	  
+	  for (i = 0; i < copied_bytes/sizeof(uint32_t); i++) {
+		  ret = nputfsl(dev->fsl_num, data[i]);
+		  if (ret)
+			  return i * sizeof(uint32_t)+(count - remaining_bytes);
+	  }
+	  remaining_bytes -= copied_bytes;
 	}
-
 	return count;
 }
 
