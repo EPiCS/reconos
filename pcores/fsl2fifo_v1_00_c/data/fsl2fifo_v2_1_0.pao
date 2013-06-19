@@ -1,0 +1,3 @@
+lib proc_common_v3_00_a  proc_common_pkg vhdl
+lib reconos_v3_00_b reconos_pkg vhdl
+lib fsl2fifo_v1_00_c fsl2fifo vhdl
