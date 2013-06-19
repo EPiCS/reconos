@@ -25,38 +25,38 @@ endif
 
 # Add inputs and outputs from these tool invocations to the build variables 
 ELFSIZE += \
-empty_application_0.elf.size \
+srec_bootloader_0.elf.size \
 
 ELFCHECK += \
-empty_application_0.elf.elfcheck \
+srec_bootloader_0.elf.elfcheck \
 
 
 # All Target
-all: empty_application_0.elf secondary-outputs
+all: srec_bootloader_0.elf secondary-outputs
 
 # Tool invocations
-empty_application_0.elf: $(OBJS) ../src/lscript.ld $(USER_OBJS)
+srec_bootloader_0.elf: $(OBJS) ../src/lscript.ld $(USER_OBJS)
 	@echo Building target: $@
 	@echo Invoking: MicroBlaze gcc linker
-	mb-gcc -Wl,--no-relax -L"/home/meise/git/reconos_epics/demos/sort_demo_workercpu/hw/sdk_workspace/libreconos/src" -Wl,-T -Wl,../src/lscript.ld -L../../workercpu_thread/microblaze_1/lib -mxl-barrel-shift -mxl-pattern-compare -mno-xl-soft-div -mcpu=v8.40.a -mno-xl-soft-mul -o"empty_application_0.elf" $(OBJS) $(USER_OBJS) $(LIBS)
+	mb-gcc -Wl,--no-relax -Wl,-T -Wl,../src/lscript.ld -L../../workercpu_thread/microblaze_1/lib -mxl-barrel-shift -mxl-pattern-compare -mno-xl-soft-div -mcpu=v8.40.a -mno-xl-soft-mul -o"srec_bootloader_0.elf" $(OBJS) $(USER_OBJS) $(LIBS)
 	@echo Finished building target: $@
 	@echo ' '
 
-empty_application_0.elf.size: empty_application_0.elf
+srec_bootloader_0.elf.size: srec_bootloader_0.elf
 	@echo Invoking: MicroBlaze Print Size
-	mb-size empty_application_0.elf  |tee "empty_application_0.elf.size"
+	mb-size srec_bootloader_0.elf  |tee "srec_bootloader_0.elf.size"
 	@echo Finished building: $@
 	@echo ' '
 
-empty_application_0.elf.elfcheck: empty_application_0.elf
+srec_bootloader_0.elf.elfcheck: srec_bootloader_0.elf
 	@echo Invoking: Xilinx ELF Check
-	elfcheck empty_application_0.elf -hw ../../edk_worker_hw_platform/system.xml -pe microblaze_1  |tee "empty_application_0.elf.elfcheck"
+	elfcheck srec_bootloader_0.elf -hw ../../edk_worker_hw_platform/system.xml -pe microblaze_1  |tee "srec_bootloader_0.elf.elfcheck"
 	@echo Finished building: $@
 	@echo ' '
 
 # Other Targets
 clean:
-	-$(RM) $(OBJS)$(C_DEPS)$(EXECUTABLES)$(ELFSIZE)$(ELFCHECK)$(S_UPPER_DEPS) empty_application_0.elf
+	-$(RM) $(OBJS)$(C_DEPS)$(EXECUTABLES)$(ELFSIZE)$(ELFCHECK)$(S_UPPER_DEPS) srec_bootloader_0.elf
 	-@echo ' '
 
 secondary-outputs: $(ELFSIZE) $(ELFCHECK)

@@ -25,38 +25,38 @@ endif
 
 # Add inputs and outputs from these tool invocations to the build variables 
 ELFSIZE += \
-empty_application_0.elf.size \
+bootloader.elf.size \
 
 ELFCHECK += \
-empty_application_0.elf.elfcheck \
+bootloader.elf.elfcheck \
 
 
 # All Target
-all: empty_application_0.elf secondary-outputs
+all: bootloader.elf secondary-outputs
 
 # Tool invocations
-empty_application_0.elf: $(OBJS) ../src/lscript.ld $(USER_OBJS)
+bootloader.elf: $(OBJS) ../src/lscript.ld $(USER_OBJS)
 	@echo Building target: $@
 	@echo Invoking: MicroBlaze gcc linker
-	mb-gcc -Wl,--no-relax -L"/home/meise/git/reconos_epics/demos/sort_demo_workercpu/hw/sdk_workspace/libreconos/src" -Wl,-T -Wl,../src/lscript.ld -L../../workercpu_thread/microblaze_1/lib -mxl-barrel-shift -mxl-pattern-compare -mno-xl-soft-div -mcpu=v8.40.a -mno-xl-soft-mul -o"empty_application_0.elf" $(OBJS) $(USER_OBJS) $(LIBS)
+	mb-gcc -nostartfiles -Wl,--no-relax -Wl,-T -Wl,../src/lscript.ld -L../../workercpu_thread/microblaze_1/lib -mxl-barrel-shift -mxl-pattern-compare -mno-xl-soft-div -mcpu=v8.40.a -mno-xl-soft-mul -o"bootloader.elf" $(OBJS) $(USER_OBJS) $(LIBS)
 	@echo Finished building target: $@
 	@echo ' '
 
-empty_application_0.elf.size: empty_application_0.elf
+bootloader.elf.size: bootloader.elf
 	@echo Invoking: MicroBlaze Print Size
-	mb-size empty_application_0.elf  |tee "empty_application_0.elf.size"
+	mb-size bootloader.elf  |tee "bootloader.elf.size"
 	@echo Finished building: $@
 	@echo ' '
 
-empty_application_0.elf.elfcheck: empty_application_0.elf
+bootloader.elf.elfcheck: bootloader.elf
 	@echo Invoking: Xilinx ELF Check
-	elfcheck empty_application_0.elf -hw ../../edk_worker_hw_platform/system.xml -pe microblaze_1  |tee "empty_application_0.elf.elfcheck"
+	elfcheck bootloader.elf -hw ../../edk_worker_hw_platform/system.xml -pe microblaze_1  |tee "bootloader.elf.elfcheck"
 	@echo Finished building: $@
 	@echo ' '
 
 # Other Targets
 clean:
-	-$(RM) $(OBJS)$(C_DEPS)$(EXECUTABLES)$(ELFSIZE)$(ELFCHECK)$(S_UPPER_DEPS) empty_application_0.elf
+	-$(RM) $(OBJS)$(C_DEPS)$(EXECUTABLES)$(ELFSIZE)$(ELFCHECK)$(S_UPPER_DEPS) bootloader.elf
 	-@echo ' '
 
 secondary-outputs: $(ELFSIZE) $(ELFCHECK)

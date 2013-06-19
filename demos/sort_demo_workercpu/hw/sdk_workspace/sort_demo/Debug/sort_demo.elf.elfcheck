@@ -1,0 +1,9 @@
+elfcheck
+Xilinx EDK 14.2 Build EDK_P.28xd
+Copyright (c) 1995-2012 Xilinx, Inc.  All rights reserved.
+
+Command Line: elfcheck -hw ../../edk_worker_hw_platform/system.xml -pe
+microblaze_0 sort_demo.elf 
+
+ELF file	: sort_demo.elf
+elfcheck passed.
