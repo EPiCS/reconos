@@ -1,20 +1,20 @@
 #!/bin/bash
 
 BASE_DESIGN="ml605_linux_13.3"
-HWTS="hwt_sort_demo_v1_00_c\
-      hwt_sort_demo_v1_00_c\
-      hwt_sort_demo_v1_00_c\
-      hwt_sort_demo_v1_00_c\
-      hwt_sort_demo_v1_00_c\
-      hwt_sort_demo_v1_00_c\
-      hwt_sort_demo_v1_00_c\
-      hwt_sort_demo_v1_00_c\
-      hwt_sort_demo_v1_00_c\
-      hwt_sort_demo_v1_00_c\
-      hwt_sort_demo_v1_00_c\
-      hwt_sort_demo_v1_00_c\
-      hwt_sort_demo_v1_00_c\
-      hwt_sort_demo_v1_00_c"
+HWTS="microblaze_v8_40_a \
+      microblaze_v8_40_a \
+      microblaze_v8_40_a \
+      microblaze_v8_40_a \
+      microblaze_v8_40_a \
+      microblaze_v8_40_a \
+      microblaze_v8_40_a" # \
+#      microblaze_v8_40_a \
+#      microblaze_v8_40_a \
+#      microblaze_v8_40_a \
+#      microblaze_v8_40_a \
+#      microblaze_v8_40_a \
+#      microblaze_v8_40_a \
+#      microblaze_v8_40_a"
 
 
 if [ -z "$RECONOS" ]
