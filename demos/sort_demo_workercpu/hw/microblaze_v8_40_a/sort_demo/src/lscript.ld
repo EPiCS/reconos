@@ -17,7 +17,7 @@ _HEAP_SIZE = DEFINED(_HEAP_SIZE) ? _HEAP_SIZE : 0x400;
 
 MEMORY
 {
-   ddr3_sdram_MPMC_BASEADDR : ORIGIN = 0x00000050, LENGTH = 0x0FFFFFB0
+   ddr3_sdram_MPMC_BASEADDR : ORIGIN = 0x00000800, LENGTH = 0x0000F800
 }
 
 /* Specify the default entry point to the program */

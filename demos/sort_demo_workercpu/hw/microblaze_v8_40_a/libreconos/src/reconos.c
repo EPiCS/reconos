@@ -137,6 +137,12 @@ void pthread_exit(void *retval){
 	exit(0);
 }
 
+void pthread_yield(){
+	uint32_t retval;
+	putfsl(OSIF_CMD_THREAD_YIELD, OSIF_FSL);
+	getfsl(retval, OSIF_FSL);
+}
+
 /**
  * Return pointer into main memory, where init data is stored.
  */

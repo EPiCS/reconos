@@ -38,7 +38,7 @@ all: empty_application_0.elf secondary-outputs
 empty_application_0.elf: $(OBJS) ../src/lscript.ld $(USER_OBJS)
 	@echo Building target: $@
 	@echo Invoking: MicroBlaze gcc linker
-	mb-gcc -Wl,--no-relax -L"/home/meise/git/reconos_epics/demos/sort_demo_workercpu/hw/sdk_workspace/libreconos/src" -Wl,-T -Wl,../src/lscript.ld -L../../workercpu_thread/microblaze_1/lib -mxl-barrel-shift -mxl-pattern-compare -mno-xl-soft-div -mcpu=v8.40.a -mno-xl-soft-mul -o"empty_application_0.elf" $(OBJS) $(USER_OBJS) $(LIBS)
+	mb-gcc -Wl,--no-relax -L"/home/meise/git/reconos_epics/demos/sort_demo_workercpu/hw/microblaze_v8_40_a/libreconos/src" -Wl,-T -Wl,../src/lscript.ld -L../../workercpu_thread/microblaze_1/lib -mxl-barrel-shift -mxl-pattern-compare -mno-xl-soft-div -mcpu=v8.40.a -mno-xl-soft-mul -o"empty_application_0.elf" $(OBJS) $(USER_OBJS) $(LIBS)
 	@echo Finished building target: $@
 	@echo ' '
 

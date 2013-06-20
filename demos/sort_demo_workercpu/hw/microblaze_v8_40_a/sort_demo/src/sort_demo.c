@@ -23,6 +23,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <limits.h>
 #include <mb_interface.h>
 #include "reconos.h"
 #include "bubblesort.h"
@@ -34,19 +35,24 @@ rqueue rqueue_send = 1;
 
 #define BUFFER_SIZE_WORDS 2048
 unsigned int buffer[BUFFER_SIZE_WORDS];
+uint32_t length;
 
-int main()
-{
+int main() {
 
-	while (1){
-		(void) rq_receive(&rqueue_recv, (uint32_t*) buffer, BUFFER_SIZE_WORDS*sizeof(unsigned int));
+	while (1) {
+		(void) rq_receive(&rqueue_recv, &length, sizeof(uint32_t));
 
-		bubblesort( (unsigned int*) buffer, BUFFER_SIZE_WORDS);
+		if (length == UINT_MAX) {
+			pthread_exit(NULL);
+		}
 
-		rq_send(&rqueue_send, (uint32_t*) buffer, BUFFER_SIZE_WORDS*sizeof(unsigned int));
+		(void) rq_receive(&rqueue_recv, (uint32_t*) buffer, length);
+
+		bubblesort(buffer, length/sizeof(uint32_t));
+
+		rq_send(&rqueue_send, (uint32_t*) buffer, length);
 
 	}
 
-
-    return 0;
+	return 0;
 }

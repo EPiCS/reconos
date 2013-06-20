@@ -34,6 +34,7 @@
 
 #define OSIF_CMD_THREAD_GET_INIT_DATA 0x000000A0
 #define OSIF_CMD_THREAD_EXIT          0x000000A2
+#define OSIF_CMD_THREAD_YIELD		0x000000A3
 #define OSIF_CMD_THREAD_LOAD_PROGRAM	 0x000000A7 // From reconos.h
 
 /**
@@ -65,6 +66,7 @@ extern int pthread_cond_signal (pthread_cond_t *__cond);
 extern int pthread_cond_broadcast (pthread_cond_t *__cond);
 
 extern void pthread_exit(void *retval);
+extern void pthread_yield();
 
 extern void * reconos_get_init_data();
 
