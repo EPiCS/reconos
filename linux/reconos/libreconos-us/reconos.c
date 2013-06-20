@@ -199,8 +199,8 @@ void reconos_hwt_setresources(struct reconos_hwt *hwt,
 	hwt->num_resources = num_resources;
 }
 
-extern void reconos_hwt_setprogram(struct reconos_hwt *hwt, char * program_path){
-	hwt->program_path = program_path;
+extern void reconos_hwt_setprogram(struct reconos_hwt *hwt, const char * program_path){
+	hwt->program_path = (char *) program_path;
 }
 
 void reconos_hwt_setinitdata(struct reconos_hwt *hwt, void *init_data)

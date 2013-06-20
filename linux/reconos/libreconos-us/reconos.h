@@ -97,7 +97,7 @@ extern void reconos_faultinject(unsigned char channel, long int sa0, long int sa
 extern void reconos_hwt_setresources(struct reconos_hwt *hwt,
 				     struct reconos_resource *res,
 				     size_t num_resources);
-extern void reconos_hwt_setprogram(struct reconos_hwt *hwt, char * program_path);
+extern void reconos_hwt_setprogram(struct reconos_hwt *hwt, const char * program_path);
 extern void reconos_hwt_setinitdata(struct reconos_hwt *hwt, void *init_data);
 extern int reconos_hwt_create(struct reconos_hwt *hwt, int slot, void *arg);
 

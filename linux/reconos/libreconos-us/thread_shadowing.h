@@ -154,6 +154,7 @@ int shadow_set_resources(shadowedthread_t *sh, struct reconos_resource * res,
 int shadow_set_options(shadowedthread_t *sh, uint32_t options);
 int shadow_set_threadcount(shadowedthread_t *sh, uint8_t hw, uint8_t sw);
 int shadow_set_hwslots(shadowedthread_t *sh, uint8_t hwt, uint8_t hwslot);
+int shadow_set_program(shadowedthread_t *sh, const char* progname);
 int shadow_set_initdata(shadowedthread_t *sh, void* init_data);
 int shadow_check_configuration(shadowedthread_t *sh);
 

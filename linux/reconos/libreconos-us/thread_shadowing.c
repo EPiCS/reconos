@@ -618,6 +618,15 @@ int shadow_set_hwslots(shadowedthread_t *sh, uint8_t hwt, uint8_t hwslot) {
 	}
 }
 
+int shadow_set_program(shadowedthread_t *sh, const char* progname){
+	assert(sh);
+	int i;
+	for (i=0; i< TS_MAX_REDUNDANT_THREADS; i++){
+		reconos_hwt_setprogram(&sh->hw_thread[i], progname);
+	}
+	return true;
+}
+
 int shadow_set_initdata(shadowedthread_t *sh, void* init_data) {
 	assert(sh);
 
