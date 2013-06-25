@@ -1,20 +1,20 @@
 #!/bin/bash
 
 BASE_DESIGN="ml605_linux_13.3"
-HWTS="hwt_sort_demo_v1_00_c\
-      hwt_sort_demo_v1_00_c\
-      hwt_sort_demo_v1_00_c\
-      hwt_sort_demo_v1_00_c\
-      hwt_sort_demo_v1_00_c\
-      hwt_sort_demo_v1_00_c\
-      hwt_sort_demo_v1_00_c\
-      hwt_sort_demo_v1_00_c\
-      hwt_sort_demo_v1_00_c\
-      hwt_sort_demo_v1_00_c\
-      hwt_sort_demo_v1_00_c\
-      hwt_sort_demo_v1_00_c\
-      hwt_sort_demo_v1_00_c\
-      hwt_sort_demo_v1_00_c"
+HWTS="hwt_sort_demo_tav_v1_00_v\
+      hwt_sort_demo_tav_v1_00_v\
+      hwt_sort_demo_tav_v1_00_v\
+      hwt_sort_demo_tav_v1_00_v\
+      hwt_sort_demo_tav_v1_00_v\
+      hwt_sort_demo_tav_v1_00_v\
+      hwt_sort_demo_tav_v1_00_v\
+      hwt_sort_demo_tav_v1_00_v\
+      hwt_sort_demo_tav_v1_00_v\
+      hwt_sort_demo_tav_v1_00_v\
+      hwt_sort_demo_tav_v1_00_v\
+      hwt_sort_demo_tav_v1_00_v\
+      hwt_sort_demo_tav_v1_00_v\
+      hwt_sort_demo_tav_v1_00_v"
 
 
 if [ -z "$RECONOS" ]
@@ -24,7 +24,7 @@ then
 fi
 
 
-EDKDIR="edk_linux"
+EDKDIR="edk_linux_tav"
 
 # copy base design
 cp -r $RECONOS/designs/$BASE_DESIGN $EDKDIR
