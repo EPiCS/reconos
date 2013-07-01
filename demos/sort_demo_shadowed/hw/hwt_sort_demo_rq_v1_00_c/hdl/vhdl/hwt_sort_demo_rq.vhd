@@ -192,16 +192,25 @@ begin
 			osif_reset(o_osif);
 			memif_reset(o_memif);
 			ram_reset(o_ram);
-			state <= STATE_GET_LENGTH;
+			state <= STATE_THREAD_YIELD;
 			done  := False;
 			data_len <= (others => '0');
 			result <= (others => '0');
 			sort_start <= '0';
 		elsif rising_edge(clk) then
 			case state is
-
-				-- get data length via reconos queue
-				when STATE_GET_LENGTH =>
+		-- signal to runtime system we don't have any state now and are ready to be replaced
+                -- with another thread
+                when STATE_THREAD_YIELD =>
+                  -- return value is stored to data_len, because it is not needed and data_len will 
+                  -- be overwritten in next state.
+                  osif_thread_yield(i_osif, o_osif, data_len, done);
+                  if done then
+                    state <= STATE_GET_LENGTH;
+                  end if;
+                  
+		-- get data length via reconos queue
+		when STATE_GET_LENGTH =>
                     osif_rq_receive (i_osif, o_osif, i_ram, o_ram, RQ_RECV, X"00000004", X"00000000", result, done);
 					if done then
                       o_ram.addr <= (others => '0');
@@ -245,18 +254,8 @@ begin
 					if done then 
                         state <= STATE_THREAD_YIELD;
                     end if;
-        
-                -- signal to runtime system we don't have any state now and are ready to be replaced
-                -- with another thread
-                when STATE_THREAD_YIELD =>
-                  -- return value is stored to data_len, because it is not needed and data_len will 
-                  -- be overwritten in next state.
-                  osif_thread_yield(i_osif, o_osif, data_len, done);
-                  if done then
-                    state <= STATE_GET_LENGTH;
-                  end if;
                 
-				        -- thread exit
+	        -- thread exit
                 when STATE_THREAD_EXIT =>
 		          osif_thread_exit(i_osif,o_osif);
 			

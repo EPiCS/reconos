@@ -733,7 +733,7 @@ void sh_unlock(shadowedthread_t *sh) {
  */
 int is_leading_thread(shadowedthread_t *sh, pthread_t this){
 	// If there are HWT, then they come first in the sh->threads array.
-	// In transmodal case, we assume one HWT and one SWT. Therfore HWT will be at
+	// In transmodal case, we assume one HWT and one SWT. Therefore HWT will be at
 	// sh->threads[0] and SWT will be at sh->threads[1]
 	if(sh->options & TS_HW_LEADS){
 		return sh->threads[0] == this;
@@ -827,7 +827,7 @@ void shadow_error_abort(shadowedthread_t * sh, int error, func_call_t * a, func_
 	printf("# ERROR: Thread ID %lu,  %s\n",tid, func_call_strerror(error));
 	printf("# a: "); func_call_dump(a);
 	printf("# b: "); func_call_dump(b);
-	printf("# Detected after: %lu us\n", timer2us(&diff));
+	printf("# Detected after: %ld us\n", timer2us(&diff));
 	printf("#################################################\n");
 	if ( error != FC_ERR_NONE){
 		exit(FC_EXIT_CODE);

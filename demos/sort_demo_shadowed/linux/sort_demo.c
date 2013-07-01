@@ -247,7 +247,9 @@ int main(int argc, char ** argv) {
 	const int shmem_slots[] = { 0, 1, 2, 3 };
 	const int mbox_slots[] = { 4, 5, 6, 7 };
 	//const int rqueue_slots[] = {8,9,10,11}; // mixed configuration
-	const int rqueue_slots[] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13 }; //rqueue only configuration
+	//const int rqueue_slots[] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13 }; //rqueue only configuration
+	const int rqueue_slots[] = { 7, 8, 9, 10, 11, 12, 13 };
+	const int workercpu_slots[] = { 0, 1, 2, 3, 4, 5, 6 };
 	const int * actual_slot_map = NULL;
 
 	//
@@ -320,10 +322,14 @@ int main(int argc, char ** argv) {
 		shadow_init( sh+i );
 		shadow_set_resources( sh+i, res[i], 2 );
 		shadow_set_program( sh+i , worker_progname);
-		for (j=0; j< (args_info.shadow_flag+1); j++)
-		{
-			shadow_set_hwslots(sh+i, j, actual_slot_map[(i*(args_info.shadow_flag+1))+j]);
-		}
+		/*
+		 for (j=0; j< (args_info.shadow_flag+1); j++)
+		 {
+		 args_info.shadow_transmodal_flag
+		 args_info.shadow_flag
+		 shadow_set_hwslots(sh+i, j, actual_slot_map[(i*(args_info.shadow_flag+1))+j]);
+		 }
+		 */
 		shadow_set_swthread( sh+i, actual_sort_thread );
 		if(args_info.shadow_schedule_arg==0) {shadow_set_options(sh+i, TS_MANUAL_SCHEDULE);}
 	}
@@ -339,8 +345,18 @@ int main(int argc, char ** argv) {
 	for (i = 0; i < args_info.hwt_arg; i++)
 	{
 		printf(" %i",i);fflush(stdout);
-		shadow_set_threadcount(sh+i, (args_info.shadow_flag+1) - args_info.shadow_transmodal_flag, args_info.shadow_transmodal_flag);
-		if(args_info.shadow_transmodal_flag==1) {shadow_set_options(sh+i, TS_HW_LEADS);}
+		shadow_set_threadcount(sh+i, (args_info.shadow_flag+1), 0);
+		//if(args_info.shadow_transmodal_flag==1) {shadow_set_options(sh+i, TS_HW_LEADS);}
+		for (j=0; j< (args_info.shadow_flag+1); j++)
+		{
+			if ( j == 1 && args_info.shadow_transmodal_flag == 1) {
+				shadow_set_hwslots(sh+i, j, workercpu_slots[(i*(args_info.shadow_flag+1))+j]);
+				printf("Set thread %d.%d to slot %d\n", i,j, workercpu_slots[(i*(args_info.shadow_flag+1))+j]);
+			} else {
+				shadow_set_hwslots(sh+i, j, actual_slot_map[(i*(args_info.shadow_flag+1))+j]);
+				printf("Set thread %d.%d to slot %d\n", i,j, actual_slot_map[(i*(args_info.shadow_flag+1))+j]);
+			}
+		}
 		shadow_thread_create(sh+i);
 	}
 	printf("\n");
@@ -348,16 +364,32 @@ int main(int argc, char ** argv) {
 	//
 	// create software shadowed threads
 	//
+
 	printf("Creating %i shadowed sw-threads: ",args_info.swt_arg);
 	fflush(stdout);
+
 	for (i = args_info.hwt_arg; i < args_info.hwt_arg+args_info.swt_arg; i++)
 	{
 		printf(" %i",i-args_info.hwt_arg);fflush(stdout);
-		shadow_set_threadcount(sh+i, args_info.shadow_transmodal_flag, (args_info.shadow_flag+1)-args_info.shadow_transmodal_flag);
-		if(args_info.shadow_transmodal_flag==1) {shadow_set_options(sh+i, TS_SW_LEADS);}
+		shadow_set_threadcount(sh+i, (args_info.shadow_flag+1), 0);
+		for (j=0; j< (args_info.shadow_flag+1); j++)
+		{
+			if ( j == 1 && args_info.shadow_transmodal_flag == 1) {
+				shadow_set_hwslots(sh+i, j, actual_slot_map[((i-args_info.hwt_arg)*(args_info.shadow_flag+1))+j]);
+				printf("Set thread %d.%d to slot %d\n", i,j, actual_slot_map[((i-args_info.hwt_arg)*(args_info.shadow_flag+1))+j]);
+			} else {
+				shadow_set_hwslots(sh+i, j, workercpu_slots[((i-args_info.hwt_arg)*(args_info.shadow_flag+1))+j]);
+				printf("Set thread %d.%d to slot %d\n", i,j, workercpu_slots[((i-args_info.hwt_arg)*(args_info.shadow_flag+1))+j]);
+			}
+		}
+		/*		shadow_set_threadcount(sh+i, args_info.shadow_transmodal_flag, (args_info.shadow_flag+1)-args_info.shadow_transmodal_flag);
+		 if(args_info.shadow_transmodal_flag==1) {shadow_set_options(sh+i, TS_SW_LEADS);}
+		 */
 		shadow_thread_create(sh+i);
+
 	}
 	printf("\n");
+
 #else // not SHADOWING
 #ifndef HOST_COMPILE
 	// init reconos and communication resources
@@ -377,13 +409,24 @@ int main(int argc, char ** argv) {
 	// init software threads
 	printf("Creating %i sw-threads: ", args_info.swt_arg);
 	fflush(stdout);
-	for (i = 0; i < args_info.swt_arg; i++) {
+	for (i = args_info.hwt_arg; i < args_info.swt_arg + args_info.hwt_arg;
+			i++) {
 		printf(" %i", i);
 		fflush(stdout);
-		pthread_attr_init(&swt_attr[i]);
-		pthread_create(&swt[i], &swt_attr[i], actual_sort_thread,
-				(void*) res[i]);
+		reconos_hwt_setresources(&(hwt[i]), res[i], 2);
+		reconos_hwt_setprogram(&(hwt[i]), worker_progname);
+		reconos_hwt_create(&(hwt[i]), workercpu_slots[i - args_info.hwt_arg],
+				NULL);
 	}
+	/*
+	 for (i = 0; i < args_info.swt_arg; i++) {
+	 printf(" %i", i);
+	 fflush(stdout);
+	 pthread_attr_init(&swt_attr[i]);
+	 pthread_create(&swt[i], &swt_attr[i], actual_sort_thread,
+	 (void*) res[i]);
+	 }
+	 */
 	printf("\n");
 #endif // SHADOWING
 	//print_mmu_stats();

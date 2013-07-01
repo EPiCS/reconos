@@ -62,7 +62,8 @@ void shadow_schedule_init() {
 void shadow_schedule_dump(shadowedthread_t *shadow_list_head) {
 	shadowedthread_t *current = shadow_list_head;
 	int semval = 1337;
-	printf("SCHED: ");
+	pthread_t this = pthread_self();
+	printf("SCHED Thread %8lu: ", this);
 	while (current) {
 		sem_getvalue(&current->sh_wait_sem, &semval);
 		printf("TID: %lu status:%s sem_cnt:%i; ",
@@ -97,7 +98,7 @@ void shadow_schedule(shadowedthread_t *this_shadow,  uint32 flags) {
 	pthread_mutex_lock(&shadow_schedule_mutex);
 
 	shadowedthread_t *current = shadow_list_head;
-
+	int semval;
 	if (flags & SCHED_FLAG_INIT) {
 		SCHED_DEBUG("Just checking if at least one thread is active...\n");
 
@@ -117,7 +118,8 @@ void shadow_schedule(shadowedthread_t *this_shadow,  uint32 flags) {
 			if ( !(current->options & TS_MANUAL_SCHEDULE) ){
 				SCHED_DEBUG1("TID %lu set to active\n", current->threads[0]);
 				shadow_set_state(current, TS_ACTIVE);
-				sem_post(&current->sh_wait_sem);
+				sem_getvalue(&current->sh_wait_sem, &semval);
+				if(semval < 1){sem_post(&current->sh_wait_sem);}
 				break;
 			} else {
 				current = current->next;
@@ -159,8 +161,8 @@ void shadow_schedule(shadowedthread_t *this_shadow,  uint32 flags) {
 					break;
 				}
 				if ( current == this_shadow) {
-					// we looped through the list and ended up here again, so there is now other thread to activate.
-					// Therefor we stay activated.
+					// we looped through the list and ended up here again, so there is no other thread to activate.
+					// Therefore we stay activated.
 					SCHED_DEBUG1("RR: TID %lu keeps state active\n",	current->threads[0]);
 					shadow_set_state(this_shadow, TS_ACTIVE);
 					sem_post(&this_shadow->sh_wait_sem);

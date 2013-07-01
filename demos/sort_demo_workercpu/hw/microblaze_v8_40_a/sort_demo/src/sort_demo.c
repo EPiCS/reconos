@@ -40,6 +40,7 @@ uint32_t length;
 int main() {
 
 	while (1) {
+		pthread_yield();
 		(void) rq_receive(&rqueue_recv, &length, sizeof(uint32_t));
 
 		if (length == UINT_MAX) {

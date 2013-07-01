@@ -30,21 +30,23 @@ runConf = [
 #    (0,2,8),
 #    (0,2,16),
 #    (0,2,32),
-#    (0,2,64),
+    (0,2,64),
 #    (0,3,3),
 #    (0,3,8),
 #    (0,3,16),
 #    (0,3,32),
-#    (0,3,64),
+    (0,3,64),
 #    (0,4,4),
 #    (0,4,8),
 #    (0,4,16),
 #    (0,4,32),
 #    (0,4,64),
-#    (0,8,8),
-#    (0,8,16),
-#    (0,8,32),
-#    (0,8,64),
+#    (0,5,64),
+#    (0,6,64),
+#    (0,7,8),
+#    (0,7,16),
+#    (0,7,32),
+#    (0,7,64),
             
     #hw only            
 #    (1,0,1),
@@ -66,20 +68,20 @@ runConf = [
 #    (4,0,8),
 #    (4,0,16),
 #    (4,0,32),
-     (4,0,64),
+ #    (4,0,64),
     
 #    (5,0,2),
 #    (5,0,16),
 #    (5,0,32),
-     (5,0,64),
+ #    (5,0,64),
 #    (6,0,2),
 #    (6,0,16),
 #    (6,0,32),
-     (6,0,64),
+  #   (6,0,64),
 #    (7,0,7),
 #    (7,0,16),
 #    (7,0,32),
-     (7,0,64),
+   #  (7,0,64),
     ]
 
 
@@ -114,10 +116,10 @@ def genSortDemoShadowedRuns (_runIdx, _runConf, _ofile, _threadInterface, _start
                     " --swt " + str(_runConf[i][SWT]) +\
                     " --blocks " + str(_runConf[i][NB]) +\
                     " --thread-interface " + str(_threadInterface)
-        if  str(_shadowed) == 1:
+        if  _shadowed > 1:
             cmdString += " --shadow " +\
-                         " --shadow-schedule" + str(_schedule)  
-            if str(_transmodal) == 1:
+                         " --shadow-schedule " + str(_schedule)  
+            if _transmodal >= 1:
                 cmdString += " --shadow-transmodal"
         cmdString +=  " >> " + _ofile + "\n"
         

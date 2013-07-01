@@ -24,6 +24,7 @@
 
 #include "mbox.h"
 #include "rqueue.h"
+#include "timing.h"
 #include "func_call.h"
 #include "thread_shadowing_schedule.h"
 #include "thread_shadowing.h"
@@ -61,6 +62,7 @@ extern shadowedthread_t *shadow_list_head;
 	shadowedthread_t *sh; \
 	func_call_t func_call_tuo;\
 	func_call_t func_call_sh;\
+	timing_t t_start, t_stop, t_duration;\
 	bool is_shadowed = false; \
 	bool is_leading = false;\
 	shadow_state_t status = TS_INACTIVE;\
@@ -76,6 +78,8 @@ extern shadowedthread_t *shadow_list_head;
 	}\
     if( is_shadowed ){ \
     	func_call_new(&func_call_tuo, __FUNCTION__);\
+    	t_start = gettime();\
+    	printf("Thread %lu called function %s at %ld s %ld us\n", (unsigned long)this, __FUNCTION__, t_start.tv_sec, t_start.tv_usec); \
     	/* func_call_tuo is not initialized, because we get a valid one via shadow_func_call_pop. */\
     }\
 
@@ -92,14 +96,20 @@ extern shadowedthread_t *shadow_list_head;
 //
 #define SHADOW_PROLOGUE \
     if( is_shadowed && !is_leading ) { \
+    		t_start = gettime();\
     		shadow_func_call_pop(sh, &func_call_sh);\
+    		t_stop = gettime();\
+    		timerdiff(&t_stop, &t_start, &t_duration);\
     		SUBS_DEBUG2("Thread %8lu %s() popping from fifo: ", this, __FUNCTION__); \
     		/*func_call_dump(&func_call_sh)*/;\
     		timing_t diff = func_call_timediff_us(&func_call_sh, &func_call_tuo );\
-    		if ( timercmp(&diff,&sh->max_error_detection_latency, >)) { sh->max_error_detection_latency = diff;}\
-    		if ( timercmp(&diff,&sh->min_error_detection_latency, <)) { sh->min_error_detection_latency = diff;}\
-    		timeradd(&sh->sum_error_detection_latency, &diff, &sh->sum_error_detection_latency);\
-    		sh->cnt_error_detection_latency++;\
+    		printf("Shadow %lu of thread %lu Latency of function %s : %ld s %ld us, waited for func_call_pop: %ld s %ld us\n", (unsigned long)this, sh->threads[0] ,__FUNCTION__, diff.tv_sec, diff.tv_usec, t_duration.tv_sec, t_duration.tv_usec); \
+    		if (strcmp(__FUNCTION__, "ts_yield") != 0){\
+    			if ( timercmp(&diff,&sh->max_error_detection_latency, >)) { sh->max_error_detection_latency = diff;}\
+    			if ( timercmp(&diff,&sh->min_error_detection_latency, <)) { sh->min_error_detection_latency = diff;}\
+    			timeradd(&sh->sum_error_detection_latency, &diff, &sh->sum_error_detection_latency);\
+    			sh->cnt_error_detection_latency++;\
+    		}\
     		int error = func_call_compare(&func_call_tuo, &func_call_sh);\
     		if( error != FC_ERR_NONE) {\
     			shadow_error(sh, error, &func_call_tuo, &func_call_sh);\
@@ -175,6 +185,7 @@ void ts_yield(){
 
 	if(is_shadowed && is_leading ){ /* Warning: Reusing variables from SHADOW_PROLOGUE */
 		shadow_schedule( sh,  SCHED_FLAG_NONE );
+		status = shadow_get_state(sh); // Schedule may have altered our status. Update local variable.
 	}
 
 	SHADOW_EPILOGUE(BLOCKING);
