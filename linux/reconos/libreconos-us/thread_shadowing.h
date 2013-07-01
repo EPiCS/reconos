@@ -127,6 +127,9 @@ typedef struct shadowedthread {
 	timing_t sum_error_detection_latency; // sum/cnt = average!
 	long     cnt_error_detection_latency;
 
+	uint32_t ts_inactive_cycles;
+	uint32_t ts_preactive_cycles;
+	uint32_t ts_active_cycles;
 
 	//
 	// List housekeeping
@@ -173,6 +176,8 @@ void* shadow_starter(void* data);
 //
 // Debugging
 //
+void shadow_dump_cyclestats(shadowedthread_t *sh);
+void shadow_dump_cyclestats_all();
 void shadow_dump_timestats(shadowedthread_t *sh);
 void shadow_dump_timestats_all();
 void shadow_dump(shadowedthread_t *sh);

@@ -693,6 +693,7 @@ int main(int argc, char ** argv) {
 			timer2ms(&t_check), timer2ms(&t_sort) + timer2ms(&t_merge));
 #ifdef SHADOWING
 	shadow_dump_timestats_all();
+	shadow_dump_cyclestats_all();
 #endif
 	free(data);
 	free(copy);

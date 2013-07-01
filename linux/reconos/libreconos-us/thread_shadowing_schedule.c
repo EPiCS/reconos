@@ -86,41 +86,14 @@ void shadow_schedule_dump(shadowedthread_t *shadow_list_head) {
 //
 // First implementation: Shadow all threads in a round robin style.
 // @param shadow_list_head To schedule the shadow threads we need access to the list of shadowed threads.
-// @param flags Modifies behaviour of scheduling. Allowed flags start with SCHED_FLAG_ and currently comprise:
-//				SCHED_FLAG_NONE Default behaviour; makes next shadow thread runnable
-//				SCHED_FLAG_INIT Used in shadow_thread_create; make sure exactly one shadow thread, which is not manually scheduled, will run
+// @param flags Unused at the moment
 void shadow_schedule(shadowedthread_t *this_shadow,  uint32 flags) {
 	SCHED_DEBUG("Scheduler called...\n");
 
 	shadowedthread_t *current = shadow_list_head;
+	int active_count=0;
 	int semval;
-	if (flags & SCHED_FLAG_INIT) {
-		SCHED_DEBUG("Just checking if at least one thread is active...\n");
-
-		// Make sure one shadow thread is active
-		// 1st: set every non manually scheduled thread to inactive
-		// 2nd: set first not manually scheduled thread to active
-		current = shadow_list_head;
-		while (current) {
-			if ( !(current->options & TS_MANUAL_SCHEDULE) ){
-				shadow_set_state(current, TS_INACTIVE);
-				SCHED_DEBUG1("TID %lu\n set to inactive", current->threads[0]);
-			}
-			current = current->next;
-		}
-		current = shadow_list_head;
-		while (current) {
-			if ( !(current->options & TS_MANUAL_SCHEDULE) ){
-				SCHED_DEBUG1("TID %lu set to active\n", current->threads[0]);
-				shadow_set_state(current, TS_ACTIVE);
-				sem_getvalue(&current->sh_wait_sem, &semval);
-				if(semval < 1){sem_post(&current->sh_wait_sem);}
-				break;
-			} else {
-				current = current->next;
-			}
-		}
-	} else if (!(this_shadow->options & TS_MANUAL_SCHEDULE)) {
+	if (!(this_shadow->options & TS_MANUAL_SCHEDULE)) {
 		// Default behaviour: Round robin schedule
 		// State Machine: Only reschedule if this is an active thread
 		// The three states {TS_INACTIVE, TS_PREACTIVE, TS_ACTIVE} are needed, because we modify state of another thread.
@@ -129,19 +102,40 @@ void shadow_schedule(shadowedthread_t *this_shadow,  uint32 flags) {
 		// point and set its own state from TS_PREACTIVE to TS_ACTIVE, thus activating the shadow.
 		switch(shadow_get_state(this_shadow)){
 			case TS_INACTIVE:
-				SCHED_DEBUG1("RR: TID %lu doing nothing\n", this_shadow->threads[0]);
-				break; // Do nothing
+
+				SCHED_DEBUG1("RR: TID %lu checking at least one thread is active\n", this_shadow->threads[0]);
+				current = shadow_list_head;
+				while (current) {
+					if ( !(current->options & TS_MANUAL_SCHEDULE) &&
+						(shadow_get_state(current) == TS_ACTIVE || shadow_get_state(current) == TS_PREACTIVE))
+					{
+						active_count++;
+					}
+					current = current->next;
+				}
+				if (active_count == 0){
+					shadow_set_state(this_shadow, TS_ACTIVE);
+					sem_getvalue(&this_shadow->sh_wait_sem, &semval);
+					if(semval < 1){sem_post(&this_shadow->sh_wait_sem);}
+					this_shadow->ts_active_cycles++;
+				} else {
+					this_shadow->ts_inactive_cycles++;
+				}
+				break;
 
 			case TS_PREACTIVE:
 				SCHED_DEBUG1("RR: TID %lu set to active\n", this_shadow->threads[0]);
 				shadow_set_state(this_shadow, TS_ACTIVE);
-				sem_post(&this_shadow->sh_wait_sem);
+				sem_getvalue(&this_shadow->sh_wait_sem, &semval);
+				if(semval < 1){sem_post(&this_shadow->sh_wait_sem);}
+				this_shadow->ts_active_cycles++;
 				break;
 
 			case TS_ACTIVE:
 				shadow_set_state(this_shadow, TS_INACTIVE);
+				this_shadow->ts_inactive_cycles++;
+
 				// find next thread to schedule
-				//@TODO: What about locking?
 				current = this_shadow->next;
 				while ( current != this_shadow){
 					if (current == NULL){
@@ -153,6 +147,7 @@ void shadow_schedule(shadowedthread_t *this_shadow,  uint32 flags) {
 					}
 					SCHED_DEBUG1("RR: TID %lu set to preactive\n",	current->threads[0]);
 					shadow_set_state(current, TS_PREACTIVE);
+					current->ts_preactive_cycles++;
 					break;
 				}
 				if ( current == this_shadow) {
@@ -160,12 +155,18 @@ void shadow_schedule(shadowedthread_t *this_shadow,  uint32 flags) {
 					// Therefore we stay activated.
 					SCHED_DEBUG1("RR: TID %lu keeps state active\n",	current->threads[0]);
 					shadow_set_state(this_shadow, TS_ACTIVE);
-					sem_post(&this_shadow->sh_wait_sem);
+					sem_getvalue(&this_shadow->sh_wait_sem, &semval);
+					if(semval < 1){sem_post(&this_shadow->sh_wait_sem);}
+					this_shadow->ts_inactive_cycles--;
+					this_shadow->ts_active_cycles++;
 				}
 				break;
 		}
 	}  else if ( this_shadow->options & TS_MANUAL_SCHEDULE ) {
-		sem_post(&this_shadow->sh_wait_sem);
+		shadow_set_state(this_shadow, TS_ACTIVE);
+		sem_getvalue(&this_shadow->sh_wait_sem, &semval);
+		if(semval < 1){sem_post(&this_shadow->sh_wait_sem);}
+		this_shadow->ts_active_cycles++;
 	}
 	shadow_schedule_dump(shadow_list_head);
 

@@ -364,7 +364,7 @@ void shadow_init(shadowedthread_t *sh) {
 	if (error) {
 		perror("sem_init failed!");
 	}
-	sh->sh_status = TS_ACTIVE;
+	sh->sh_status = TS_INACTIVE;
 	fifo_init(&(sh->func_calls), 1, sizeof(func_call_t));
 	sh->error_handler = shadow_error_abort;
 
@@ -457,6 +457,37 @@ void* shadow_starter(void* data){
 	TS_DEBUG("Leaving shadow starter, calling actual worker function.\n");
 	return sh->sw_thread(sh->resources);
 
+}
+void shadow_dump_cyclestats(shadowedthread_t *sh){
+	assert(sh);
+	printf("Cycle Stats of shadowed thread %p: inactive: %4lu, preactive: %4lu, active: %4lu\n",
+			sh,
+			(unsigned long) sh->ts_inactive_cycles,
+			(unsigned long) sh->ts_preactive_cycles,
+			(unsigned long) sh->ts_active_cycles);
+}
+
+void shadow_dump_cyclestats_all(){
+	shadowedthread_t * current = shadow_list_head;
+	uint32_t active_cycles=0;
+	uint32_t preactive_cycles=0;
+	uint32_t inactive_cycles=0;
+	uint32_t thread_count=0;
+
+	while(current){
+		active_cycles += current->ts_active_cycles;
+		preactive_cycles += current->ts_preactive_cycles;
+		inactive_cycles += current->ts_inactive_cycles;
+		thread_count++;
+
+		shadow_dump_cyclestats(current);
+		current = current->next;
+	}
+
+	printf("Cycle Stats Summary: inactive: %3f, preactive: %3f, active: %3f\n",
+			(double)inactive_cycles/(double)thread_count,
+			(double)preactive_cycles/(double)thread_count,
+			(double)active_cycles/(double)thread_count);
 }
 
 void shadow_dump_timestats(shadowedthread_t *sh){
@@ -850,13 +881,6 @@ void shadow_thread_create(shadowedthread_t * sh) // Init data passed to worker t
 	shadow_list_add(sh);
 	//shadow_dump(sh);
 
-	//
-	// Calculate first schedule according to reliability demands and available resources.
-	//
-	TS_DEBUG("Calling Scheduler \n");
-	shadow_schedule(sh, SCHED_FLAG_INIT);
-	//shadow_dump(sh);
-	TS_DEBUG1("\tScheduler decided for %d sw threads \n", sh->num_sw_threads);TS_DEBUG1("\tScheduler decided for %d hw threads \n", sh->num_hw_threads);TS_DEBUG1("\tRunning sw threads: %d \n", sh->running_num_sw_threads);TS_DEBUG1("\tRunning hw threads: %d \n", sh->running_num_hw_threads);
 
 	//
 	// Activate new threads, deactivate unneeded ones.
