@@ -145,8 +145,7 @@ static int shadow_list_add(shadowedthread_t * sh) {
 	shadowedthread_t *lh = shadow_list_head;
 
 	assert(sh);
-	//"sh == NULL");
-	ts_lock();
+
 	if (shadow_list_head == NULL) {
 		shadow_list_head = sh;
 	} else {
@@ -156,7 +155,6 @@ static int shadow_list_add(shadowedthread_t * sh) {
 		lh->next = sh;
 		sh->next = NULL;
 	}
-	ts_unlock();
 	return true;
 }
 
@@ -362,10 +360,6 @@ void shadow_init(shadowedthread_t *sh) {
 	memset(sh, 0, sizeof(shadowedthread_t));
 
 	// Now define the exceptions...
-	error = pthread_mutex_init(&sh->mutex, NULL);
-	if (error) {
-		perror("mutex_init failed!");
-	}
 	error = sem_init(&sh->sh_wait_sem, 0, 0);
 	if (error) {
 		perror("sem_init failed!");
@@ -718,15 +712,6 @@ void ts_unlock() {
 	pthread_mutex_unlock(&ts_mutex);
 }
 
-// Lock a shadow structure
-void sh_lock(shadowedthread_t *sh) {
-	pthread_mutex_lock(&sh->mutex);
-}
-
-// Unlock a shadow structure
-void sh_unlock(shadowedthread_t *sh) {
-	pthread_mutex_unlock(&sh->mutex);
-}
 
 /**
  * @brief Returns true if the calling thread is the leading thread.
@@ -851,6 +836,8 @@ void shadow_thread_create(shadowedthread_t * sh) // Init data passed to worker t
 	assert(sh);
 	assert(shadow_check_configuration(sh));
 
+	ts_lock();
+
 	//
 	// If first call, init the shadow system itself
 	//
@@ -877,6 +864,8 @@ void shadow_thread_create(shadowedthread_t * sh) // Init data passed to worker t
 	TS_DEBUG("Activating Threads \n");
 	shadow_set_threads(sh);
 	//shadow_dump(sh);
+
+	ts_unlock();
 }
 
 int shadow_join(shadowedthread_t * sh, void **value_ptr) {

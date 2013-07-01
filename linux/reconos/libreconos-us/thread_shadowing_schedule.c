@@ -46,10 +46,6 @@
 //
 extern shadowedthread_t *shadow_list_head;
 
-// shadow_schedule() will be called by different threads, so we have to 
-// protect our own data structures against concurrent access.
-static pthread_mutex_t shadow_schedule_mutex = PTHREAD_MUTEX_INITIALIZER;
-
 //
 // Inits global data structures of the shadow scheduler
 void shadow_schedule_init() {
@@ -95,7 +91,6 @@ void shadow_schedule_dump(shadowedthread_t *shadow_list_head) {
 //				SCHED_FLAG_INIT Used in shadow_thread_create; make sure exactly one shadow thread, which is not manually scheduled, will run
 void shadow_schedule(shadowedthread_t *this_shadow,  uint32 flags) {
 	SCHED_DEBUG("Scheduler called...\n");
-	pthread_mutex_lock(&shadow_schedule_mutex);
 
 	shadowedthread_t *current = shadow_list_head;
 	int semval;
@@ -173,6 +168,6 @@ void shadow_schedule(shadowedthread_t *this_shadow,  uint32 flags) {
 		sem_post(&this_shadow->sh_wait_sem);
 	}
 	shadow_schedule_dump(shadow_list_head);
-	pthread_mutex_unlock(&shadow_schedule_mutex);
+
 	SCHED_DEBUG("Scheduler leaving...\n");
 }

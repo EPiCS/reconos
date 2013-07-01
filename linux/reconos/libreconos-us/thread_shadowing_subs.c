@@ -184,7 +184,9 @@ void ts_yield(){
 	SUBS_DEBUG1("Thread %8lu calling function pthread_yield()\n", pthread_self());
 
 	if(is_shadowed && is_leading ){ /* Warning: Reusing variables from SHADOW_PROLOGUE */
+		ts_lock();
 		shadow_schedule( sh,  SCHED_FLAG_NONE );
+		ts_unlock();
 		status = shadow_get_state(sh); // Schedule may have altered our status. Update local variable.
 	}
 

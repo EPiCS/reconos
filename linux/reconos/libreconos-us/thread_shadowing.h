@@ -69,11 +69,6 @@ struct shadowedthread;
 //forward declaration
 typedef struct shadowedthread {
 	//
-	// Struct mutex: protects all fields except "next", which is protected by global ts_mutex.
-	//
-	pthread_mutex_t mutex;
-
-	//
 	// general configuration
 	//
 	uint32_t options; // MANUAL_SCHEDULE, SYNCHRONIZED
