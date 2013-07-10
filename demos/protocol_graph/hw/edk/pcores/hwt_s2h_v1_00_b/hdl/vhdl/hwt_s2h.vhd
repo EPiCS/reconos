@@ -416,7 +416,8 @@ begin
 				end if;
 			when STATE_SEND_DATA_4 =>
 				if tx_ll_dst_rdy = '1' then
-					if (payload_count + 8) = unsigned(total_packet_len) then
+					if (payload_count + 8) >= unsigned(total_packet_len) then
+						payload_count <= payload_count + 4;
 						sending_state <= STATE_SEND_EOF_1;
 						tx_data_word <= i_RAMData_sender;
 						tx_ll_data <= i_RAMData_sender(0 to 7);
@@ -425,17 +426,30 @@ begin
 						sending_state <= STATE_SEND_DATA_1;
 						tx_data_word <= i_RAMData_sender;
 						tx_ll_data <= i_RAMData_sender(0 to 7);
-					end if;		
+					end if;	
+					if (payload_count + 5) = unsigned(total_packet_len) then
+						sending_state <= STATE_SEND_EOF_4;
+						tx_ll_eof <= '1';
+					end if;	
 				end if;
 			when STATE_SEND_EOF_1 => 
 				if tx_ll_dst_rdy = '1' then
 					sending_state <= STATE_SEND_EOF_2;
 					tx_ll_data <= tx_data_word(8 to 15);
+					if (payload_count + 2) = unsigned(total_packet_len) then
+						sending_state <= STATE_SEND_EOF_4;
+						tx_ll_eof <= '1';
+					end if;
 				end if;
 			when STATE_SEND_EOF_2 => 
 				if tx_ll_dst_rdy = '1' then
 					sending_state <= STATE_SEND_EOF_3;
 					tx_ll_data <= tx_data_word(16 to 23);
+					if (payload_count + 3) = unsigned(total_packet_len) then
+						sending_state <= STATE_SEND_EOF_4;
+						tx_ll_eof <= '1';
+					end if;
+
 				end if;
 			when STATE_SEND_EOF_3 =>
 				if tx_ll_dst_rdy = '1' then
@@ -569,7 +583,7 @@ begin
 					end if;
 
 				when STATE_READ =>
-					memif_read(i_ram,o_ram,i_memif,o_memif, base_addr, X"00000000", len(23 downto 0), done); --len(23 downto 0), done);
+					memif_read(i_ram,o_ram,i_memif,o_memif, base_addr, X"00000000", unsigned(len(23 downto 0)) + 4, done); --add 4, testing and doesnt hurt
 					if done then
 						state <= STATE_WAIT;
 					end if;

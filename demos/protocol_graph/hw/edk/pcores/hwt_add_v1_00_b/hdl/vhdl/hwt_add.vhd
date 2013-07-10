@@ -242,7 +242,7 @@ FIFO32_M_Wr
 --simply forward everything...
 tx_ll_src_rdy <= rx_ll_src_rdy;
 tx_ll_data(7 downto 1) <= rx_ll_data(7 downto 1);
-tx_ll_data(0) <= not rx_ll_data(0);
+tx_ll_data(0) <= rx_ll_data(0); --not rx_ll_data(0);
 tx_ll_sof <= rx_ll_sof;
 tx_ll_eof <= rx_ll_eof;
 rx_ll_dst_rdy <= tx_ll_dst_rdy;

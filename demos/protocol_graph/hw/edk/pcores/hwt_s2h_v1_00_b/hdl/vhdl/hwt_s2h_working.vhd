@@ -110,10 +110,10 @@ architecture implementation of hwt_s2h is
 	--signal sending_state		: sending_state_t;
 	--signal sending_state_next	: sending_state_t;
 
-	type SENDING_STATE_TYPE_T is (STATE_IDLE, STATE_READ_LEN_WAIT_A, STATE_WAIT_IDP_A, STATE_READ_LEN,STATE_WAIT_SOF,
+	type SENDING_STATE_TYPE_T is (STATE_IDLE, STATE_READ_LEN_WAIT_A, STATE_WAIT_IDP_A, STATE_READ_LEN,STATE_SRCIDP, STATE_DSTIDP, STATE_WAIT_SOF,
 						STATE_SEND_SOF, STATE_SEND_SECOND, STATE_SEND_THIRD, STATE_SEND_FOURTH, 
 						STATE_SEND_DATA_1, STATE_SEND_DATA_2, STATE_SEND_DATA_3, STATE_SEND_DATA_4,
-						 STATE_SEND_EOF_1, STATE_SEND_EOF_2, STATE_SEND_EOF_3, STATE_SEND_EOF_4
+						 STATE_SEND_EOF_1, STATE_SEND_EOF_2, STATE_SEND_EOF_3, STATE_SEND_EOF_4, STATE_WAIT
 	);
 
 	signal sending_state : SENDING_STATE_TYPE_T;
@@ -144,11 +144,13 @@ architecture implementation of hwt_s2h is
 	signal payload_count : integer range 0 to 1500;
 	signal payload_count_next : integer range 0 to 1500;
 
-	signal destination	: std_logic_vector(5 downto 0);
+	--signal destination	: std_logic_vector(0 to 5);
+	signal global_addr : std_logic_vector(0 to 3);
+	signal local_addr : std_logic_vector(0 to 1);
 	signal data_ready : std_logic;
 	signal packets_sent : std_logic;
 	
-	signal total_packet_len : std_logic_vector(31 downto 0);
+	signal total_packet_len : std_logic_vector(15 downto 0);
 	signal debug_packet_len : std_logic_vector(31 downto 0);
 	signal debug_packet_len2 : std_logic_vector(31 downto 0);
 	
@@ -158,6 +160,11 @@ architecture implementation of hwt_s2h is
 	signal base_addr_answer : std_logic_vector(31 downto 0);
 	signal len		: std_logic_vector(31 downto 0);
 	signal data_from_ram : std_logic_vector(31 downto 0);
+	signal direction : std_logic;
+	signal priority : std_logic_vector(0to 1);
+	signal latencyCritical : std_logic;
+	signal srcIdp : std_logic_vector(0 to 31);
+	signal dstIdp : std_logic_vector(0 to 31);
 begin
 	
 
@@ -197,15 +204,15 @@ begin
 		-- Decoded values of the packet
 		noc_tx_sof  			=> tx_ll_sof, 		
 		noc_tx_eof  			=> tx_ll_eof,
-		noc_tx_data	 		=> tx_ll_data,		
+		noc_tx_data	 			=> tx_ll_data,		
 		noc_tx_src_rdy 	 		=> tx_ll_src_rdy,		
-		noc_tx_globalAddress  		=> destination(5 downto 2), --"0000",--(others => '0'), --6 bits--(0:send it to hw/sw)		
-		noc_tx_localAddress  		=> destination(1 downto 0), --"01",-- (others  => '0'), --2 bits		
-		noc_tx_direction 	 	=> '0',		
-		noc_tx_priority 	 	=> (others  => '0'),		
-		noc_tx_latencyCritical  	=> '0',	
-		noc_tx_srcIdp 			=> (others  => '0'),	
-		noc_tx_dstIdp 			=> (others  => '0'),
+		noc_tx_globalAddress  	=> global_addr, --destination(5 downto 2), --"0000",--(others => '0'), --6 bits--(0:send it to hw/sw)		
+		noc_tx_localAddress 	=> local_addr, --destination(1 downto 0), --"01",-- (others  => '0'), --2 bits		
+		noc_tx_direction 	 	=> direction, 		
+		noc_tx_priority 	 	=> priority,		
+		noc_tx_latencyCritical 	=> latencyCritical,	
+		noc_tx_srcIdp 			=> srcIdp,	
+		noc_tx_dstIdp 			=> dstIdp,
 		noc_tx_dst_rdy	 		=> tx_ll_dst_rdy
 	);
 	
@@ -285,8 +292,8 @@ begin
 	rx_ll_dst_rdy_local <= '1';
 
 	--for now we send everything to destination 0
-	destination(5 downto 2) <= "0001"; --(others => '0');
-	destination(1 downto 0) <= "01"; --back to sw
+--	destination(5 downto 2) <= "0001"; --(others => '0');
+--	destination(1 downto 0) <= "00"; --back to sw
 	
 	--TODO: copy the state machine sort_proc from bubble_sorter here and use its structure!
 	sending_from_ram : process (OSFSL_Clk, rst)
@@ -304,6 +311,13 @@ begin
 			packets_sent <= '0';	
 		--	debug_packet_len <= (others => '0');				
 			debug_packet_len2 <= (others => '0');		
+			global_addr  <= (others  => '0');
+			local_addr  <= (others  => '0');
+			priority  <= (others  => '0');
+			direction  <= '0';
+			latencycritical  <= '0';
+			srcIdp  <= (others  => '0');
+			dstIdp  <= (others  => '0');
 						
 		elsif rising_edge(OSFSL_Clk) then
 			--default assignement
@@ -316,105 +330,134 @@ begin
 			when STATE_IDLE =>
 				tx_ll_src_rdy <= '0';
 				payload_count <= 0;
-				o_RAMAddr_sender <= (others => '0'); -- ADDRESS OF LEN is always 0
+				o_RAMAddr_sender <= (others => '0'); 			-- Addr 0
 				if data_ready = '1' then
 					sending_state <= STATE_READ_LEN_WAIT_A;
 				end if;
 			when STATE_READ_LEN_WAIT_A =>
 				tx_ll_src_rdy <= '0';
-				--o_RAMAddr_sender <= o_RAMAddr_sender + 1;
-				sending_state <= STATE_WAIT_IDP_A;
-			when STATE_WAIT_IDP_A =>
-				tx_ll_src_rdy <= '0';
-				o_RAMAddr_sender <= o_RAMAddr_sender + 1;
+				o_RAMAddr_sender <= o_RAMAddr_sender + 1;		-- Addr 1
 				sending_state <= STATE_READ_LEN;
+			--when STATE_WAIT_IDP_A =>
+			--	tx_ll_src_rdy <= '0';
+			--	o_RAMAddr_sender <= o_RAMAddr_sender + 1;		-- Addr 2
+			--	sending_state <= STATE_READ_LEN;
 			--	debug_packet_len <= i_RAMData_sender;
 			when STATE_READ_LEN =>
+				o_RAMAddr_sender <= o_RAMAddr_sender + 1;		-- Addr 0 valid, Addr 2
 				tx_ll_src_rdy <= '0';
-				total_packet_len <=  i_RAMData_sender; --X"00000040"; --i_RAMData_sender;	--length is ready
+			--	total_packet_len <=  i_RAMData_sender; --X"00000040"; --i_RAMData_sender;	--length is ready
 				debug_packet_len2 <= i_RAMData_sender;
-				sending_state <= STATE_WAIT_SOF;
+				global_addr  <= i_RAMData_sender(0 to 3);
+				local_addr  <= i_RAMData_sender(4 to 5);
+				priority  <= i_RAMData_sender(6 to 7);
+				direction  <= i_RAMData_sender(8);
+				latencyCritical  <= i_RAMData_sender(9);
+				total_packet_len  <= i_RAMData_sender(16 to 31);
+				sending_state <= STATE_SRCIDP;
 				--sending_state <= STATE_IDLE;
-				packets_sent <= '1';
-			when STATE_WAIT_SOF =>
+				--packets_sent <= '1';
+				
+			when STATE_SRCIDP =>
+				o_RAMAddr_sender <= o_RAMAddr_sender + 1;		 -- Addr 1 valid, Addr 3
+				tx_ll_src_rdy <= '0';
+				srcIDP  <= i_RAMData_sender;
+				sending_state <= STATE_DSTIDP;
+				
+			when STATE_DSTIDP =>
+		--		o_RAMAddr_sender <= o_RAMAddr_sender + 1;		-- Addr 2 valid
 				tx_ll_src_rdy <= '0';
 				sending_state <= STATE_SEND_SOF;
+				dstIDP  <= i_RAMData_sender;
+				
 				
 			when STATE_SEND_SOF =>
-				tx_data_word <= i_RAMData_sender;
+				tx_data_word <= i_RAMData_sender;				-- Addr 3 valid
 			--	debug_packet_len <= i_RAMData_sender;
 				tx_ll_data <= i_RAMData_sender(0 to 7); --X"FF"; --i_RAMData_sender(0 to 7);
 				tx_ll_sof <= '1';
 				if tx_ll_dst_rdy = '1' then
 					sending_state <= STATE_SEND_SECOND;
+					tx_ll_data <= tx_data_word(8 to 15);
 				end if;
 			when STATE_SEND_SECOND => 
-				tx_ll_data <= tx_data_word(8 to 15);
-				o_RAMAddr_sender <= o_RAMAddr_sender + 1;
 				if tx_ll_dst_rdy = '1' then
+					o_RAMAddr_sender <= o_RAMAddr_sender + 1;
+					tx_ll_data <= tx_data_word(16 to 23);
 					sending_state <= STATE_SEND_THIRD;
 				end if;
 			when STATE_SEND_THIRD =>
-				tx_ll_data <= tx_data_word(16 to 23);
 				if tx_ll_dst_rdy = '1' then
+					tx_ll_data <= tx_data_word(24 to 31);
 					sending_state <= STATE_SEND_FOURTH;
 				end if;
 			when STATE_SEND_FOURTH =>
-				tx_ll_data <= tx_data_word(24 to 31);
 				if tx_ll_dst_rdy = '1' then
 					sending_state <= STATE_SEND_DATA_1;
 					payload_count <= 4;
+					tx_data_word <= i_RAMData_sender;
+					tx_ll_data <= i_RAMData_sender(0 to 7);
 				end if;
 			when STATE_SEND_DATA_1 =>
-				tx_data_word <= i_RAMData_sender;
-				tx_ll_data <= i_RAMData_sender(0 to 7);
 				if tx_ll_dst_rdy = '1' then
 					sending_state <= STATE_SEND_DATA_2;
+					tx_ll_data <= tx_data_word(8 to 15);
 				end if;
 			when STATE_SEND_DATA_2 =>
-				tx_ll_data <= tx_data_word(8 to 15);
-				o_RAMAddr_sender <= o_RAMAddr_sender + 1;
-				if tx_ll_dst_rdy = '1' then
-					sending_state <= STATE_SEND_DATA_3;
+				if tx_ll_dst_rdy = '1' then			
+					o_RAMAddr_sender <= o_RAMAddr_sender + 1;
+					sending_state <= STATE_SEND_DATA_3;				
+					tx_ll_data <= tx_data_word(16 to 23);	
 				end if;
 			when STATE_SEND_DATA_3 =>
-				tx_ll_data <= tx_data_word(16 to 23);
 				if tx_ll_dst_rdy = '1' then
 					sending_state <= STATE_SEND_DATA_4;
+					tx_ll_data <= tx_data_word(24 to 31);
 				end if;
 			when STATE_SEND_DATA_4 =>
-				tx_ll_data <= tx_data_word(24 to 31);
 				if tx_ll_dst_rdy = '1' then
 					if (payload_count + 8) = unsigned(total_packet_len) then
 						sending_state <= STATE_SEND_EOF_1;
+						tx_data_word <= i_RAMData_sender;
+						tx_ll_data <= i_RAMData_sender(0 to 7);
 					else
 						payload_count <= payload_count + 4;
 						sending_state <= STATE_SEND_DATA_1;
+						tx_data_word <= i_RAMData_sender;
+						tx_ll_data <= i_RAMData_sender(0 to 7);
 					end if;		
 				end if;
 			when STATE_SEND_EOF_1 => 
-				tx_data_word <= i_RAMData_sender;
-				tx_ll_data <= i_RAMData_sender(0 to 7);
 				if tx_ll_dst_rdy = '1' then
 					sending_state <= STATE_SEND_EOF_2;
+					tx_ll_data <= tx_data_word(8 to 15);
 				end if;
 			when STATE_SEND_EOF_2 => 
-				tx_ll_data <= tx_data_word(8 to 15);
 				if tx_ll_dst_rdy = '1' then
 					sending_state <= STATE_SEND_EOF_3;
+					tx_ll_data <= tx_data_word(16 to 23);
 				end if;
 			when STATE_SEND_EOF_3 =>
-				tx_ll_data <= tx_data_word(16 to 23);
 				if tx_ll_dst_rdy = '1' then
 					sending_state <= STATE_SEND_EOF_4;
+					tx_ll_data <= tx_data_word(24 to 31);
+					tx_ll_eof <= '1';
 				end if;
 			when STATE_SEND_EOF_4 =>
-				tx_ll_data <= tx_data_word(24 to 31);
-				tx_ll_eof <= '1';
 				if tx_ll_dst_rdy = '1' then
-					sending_state <= STATE_IDLE;
-					packets_sent <= '1';
+					if unsigned(o_RAMAddr_sender + 1) >= unsigned(len(16 downto 2)) then -- = should be enough, but just to be sure ...
+						-- we sent all packets in this batch
+						sending_state <= STATE_WAIT; --mir ist unklar, wie ich aus einem geclockten process signale und nicht register raussende => .
+						packets_sent <= '1';
+					else
+						sending_state  <= STATE_READ_LEN_WAIT_A;
+						tx_ll_src_rdy <= '0';
+						payload_count <= 0;
+						o_RAMAddr_sender <= o_RAMAddr_sender + 1;
+					end if;
 				end if;
+			when STATE_WAIT =>
+					sending_state <= STATE_IDLE;
 			when others => 
 				sending_state <= STATE_IDLE;
 				tx_ll_src_rdy <= '0';
@@ -535,6 +578,8 @@ begin
 					data_ready <= '1';
 					if packets_sent = '1' then
 						state <= STATE_PUT; --STATE_WRITE;
+						data_ready <= '0';
+						len  <= (others  => '0');
 					end if;
 					
 --				when STATE_WRITE =>
@@ -550,7 +595,9 @@ begin
 					
 				-- Echo the data
 				when STATE_PUT =>
-					osif_mbox_put(i_osif, o_osif, MBOX_SEND, total_packet_len, ignore, done);
+					osif_mbox_put(i_osif, o_osif, MBOX_SEND, X"0000" & total_packet_len, ignore, done);
+				--	osif_mbox_put(i_osif, o_osif, MBOX_SEND, len, ignore, done);
+
 					if done then state <= STATE_GET_LEN; end if;
 				
 --				when STATE_PUT2 =>
