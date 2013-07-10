@@ -432,8 +432,8 @@ BEGIN hwt_ethernet_test
 # PORT tx_ll_dst_rdy = tx_ll_dst_rdy
 END
 
-BEGIN hwt_add
- PARAMETER INSTANCE = hwt_add_1
+BEGIN hwt_aes
+ PARAMETER INSTANCE = hwt_aes_1
  PARAMETER HW_VER = v1.00.b
 # PARAMETER destination = 0b000001
 # PARAMETER sender = 0 
