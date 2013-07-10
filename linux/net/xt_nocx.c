@@ -171,7 +171,8 @@ static struct sk_buff *noc_pkt_to_skb(struct noc_pkt *npkt)
 	//	write_path_to_skb(skb, !npkt->direction);
 	//	write_next_idp_to_skb(skb, npkt->dst_idp, npkt->src_idp);
 		write_path_to_skb(skb, TYPE_INGRESS);
-		write_next_idp_to_skb(skb, 1, 2);
+	//	write_next_idp_to_skb(skb, 1, 2);
+		write_next_idp_to_skb(skb, 2, 3);
 //		DEBUG(printk(KERN_INFO "[xt_nocx] noc_pkt_to_skb3:\n"));
 
 	}
@@ -200,6 +201,27 @@ static int noc_sendpkt(struct noc_pkt *npkt)
 		printk(KERN_INFO "%x ", val);
 	}
 */
+
+/*	
+		shared_mem_s2h[12] = 0x6b;
+		shared_mem_s2h[13] = 0xc1;
+		shared_mem_s2h[14] = 0xbe;
+		shared_mem_s2h[15] = 0xe2;
+		shared_mem_s2h[16] = 0x2e;
+		shared_mem_s2h[17] = 0x40;
+		shared_mem_s2h[18] = 0x9f;
+		shared_mem_s2h[19] = 0x96;
+		shared_mem_s2h[20] = 0xe9;
+		shared_mem_s2h[21] = 0x3d;
+		shared_mem_s2h[22] = 0x7e;
+		shared_mem_s2h[23] = 0x11;
+		shared_mem_s2h[24] = 0x73;
+		shared_mem_s2h[25] = 0x93;
+		shared_mem_s2h[26] = 0x17;
+		shared_mem_s2h[27] = 0x2a;
+
+*/
+
 	printk(KERN_ERR "current total length: %d off %d\n", total_len, off);
 //	if (total_len > 2580){
 	if (total_len > 64){
@@ -277,8 +299,8 @@ static int hwif_hw_to_sw_worker_thread(void *arg)
 //		npkt->payload = pkt_start + off;
 //		for(i = 0; i < 32; i = i+2)
 //			printk(KERN_INFO "[xt_nocx] %x %x", npkt.payload[i], npkt.payload[i+1]);
-	//	for(i = 0; i < 32; i = i+2)
-	//		printk(KERN_INFO "[xt_nocx] %x %x", shared_mem_h2s[i], shared_mem_h2s[i+1]);
+		for(i = 0; i < 32; i = i+2)
+			printk(KERN_INFO "[xt_nocx] %x %x", shared_mem_h2s[i], shared_mem_h2s[i+1]);
 
 		//for now, as long as the hw uses a different pkt format...
 	//	DEBUG(printk(KERN_INFO "[xt_nocx]: got npkt from hw: first payload: %x\n", npkt.payload[0]));
@@ -366,15 +388,14 @@ static int reconos_noc_init(void)
 
 
 	/* setup AES slot. Note, this should be done by a controller */
-#ifdef AES_CONFIGURED
+//#ifdef AES_CONFIGURED
 	u32 config_data_start=1;
 	u32 config_rcv=0;
 	u32 config_data_mode=0;	//"....1100"=12=mode128, mode192=13, mode256=14,15
-
-	u32 config_data_key0=50462976;	//X"03020100"
-	u32 config_data_key1=117835012;	//X"07060504"
-	u32 config_data_key2=185207048;	//X"0b0a0908"
-	u32 config_data_key3=252579084;	//X"0f0e0d0c"
+	u32 config_data_key0=0x16157e2b; // 50462976;	//X"03020100"
+	u32 config_data_key1=0xa6d2ae28; //117835012;	//X"07060504"
+	u32 config_data_key2=0x8815f7ab; //185207048;	//X"0b0a0908"
+	u32 config_data_key3=0x3c4fcf09; //252579084;	//X"0f0e0d0c"
 
 	u32 config_data_key4=319951120;	//X"13121110"
 	u32 config_data_key5=387323156;	//X"17161514"
@@ -395,7 +416,7 @@ static int reconos_noc_init(void)
 	mbox_put(&noc[AES_SLOT].mb_put, config_data_key7);
 	config_rcv=mbox_get(&noc[AES_SLOT].mb_get);
 	printk(KERN_INFO "[lana] noc setup hw aes\n");
-#endif
+//#endif
 	return 0;
 }
 
