@@ -58,7 +58,9 @@ architecture Behavioral of matrixmultiplier is
 		STATE_IDLE,
 		STATE_LOAD,
 		STATE_LOAD_WAIT,
-		STATE_MUL,
+		STATE_SUM,
+		STATE_DELAY_1,
+		STATE_DELAY_2,
 		STATE_STORE,
 		STATE_STORE_WAIT,
 		STATE_FINISH_CYCLE
@@ -67,6 +69,9 @@ architecture Behavioral of matrixmultiplier is
 	signal state	: STATE_TYPE;
 	
 	signal temp		: std_logic_vector(0 to G_RAM_DATA_WIDTH-1);
+	signal prod,delay            : std_logic_vector(0 to G_RAM_DATA_WIDTH-1);
+
+	
 begin
 	
 	multiply : process(clk, reset, start) is
@@ -86,7 +91,7 @@ begin
 		elsif (clk'event and clk = '1') then
 			o_RAM_C_WE <= '0';
 			o_RAM_C_Data <= (others=>'0');
-			
+
 			case state is
 				when STATE_IDLE =>
 					done <= '0';
@@ -102,15 +107,21 @@ begin
 					k := k + 1;
 					state <= STATE_LOAD_WAIT;
 				when STATE_LOAD_WAIT =>
-					state <= STATE_MUL;
-				when STATE_MUL =>
-					temp <= temp + conv_std_logic_vector(signed(i_RAM_A_Data)*signed(i_RAM_B_Data), G_RAM_DATA_WIDTH);
+					state <= STATE_DELAY_1;
+				when STATE_DELAY_1 =>
+					state <= STATE_DELAY_2;
+				when STATE_DELAY_2 =>
+					state <= STATE_SUM;
+				when STATE_SUM =>
+					
+					temp <= temp + prod;
 					if (k = G_LINE_LEN_MATRIX) then
 						k := 0;
 						state <= STATE_STORE;
 					else
 						state <= STATE_LOAD;
 					end if;
+
 				when STATE_STORE =>
 					o_RAM_C_Addr <= conv_std_logic_vector(integer(j), G_RAM_ADDR_WIDTH_MATRIX_A_C);
 					o_RAM_C_WE <= '1';
@@ -131,6 +142,14 @@ begin
 						state	<= STATE_LOAD;
 					end if;
 			end case;
+		end if;
+	end process;
+
+	process (clk)
+	begin
+		if clk'event and clk = '1' then
+			delay <= conv_std_logic_vector(signed(i_RAM_A_Data)*signed(i_RAM_B_Data),G_RAM_DATA_WIDTH);
+			prod <= delay;
 		end if;
 	end process;
 
