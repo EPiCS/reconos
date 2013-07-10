@@ -19,7 +19,9 @@
 #define SOCK_ADDR "/tmp/configdsock"
 #define MAX_PROPS 32
 //#define MTU	63
-#define MTU	999
+//#define MTU	999
+#define MTU     1001
+
 
 int main(int argc, char **argv)
 {
