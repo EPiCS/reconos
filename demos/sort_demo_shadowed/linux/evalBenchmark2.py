@@ -91,6 +91,17 @@ if __name__ == "__main__":
             detlat_avg = splittedLine[15]
             detlat_max = string.strip(splittedLine[17])
         
+        # Cycles analysis: How many application cylces have been shadowed, how many haven't been?
+        # Cycle Stats Summary: inactive: 0.000000, preactive: 0.000000, active: 22.333333
+        if type == "shadow":
+            while not re.match("Cycle Stats Summary:", line):
+                line=f.readline()
+                if len(line) == 0: break
+            if len(line) == 0: break
+            splittedLine = re.split(" |,",line)
+            inactive_cycles = splittedLine[4]
+            preactive_cycles = splittedLine[7]
+            active_cycles = string.strip(splittedLine[10])
         
         # old style csv output for every single run
         #print( ", ".join([type, interface, hwt, swt, blocks, shadowing, runtime]))
@@ -108,6 +119,9 @@ if __name__ == "__main__":
             summary[key][subtype+'_detlat_min'] = detlat_min
             summary[key][subtype+'_detlat_avg'] = detlat_avg
             summary[key][subtype+'_detlat_max'] = detlat_max
+            summary[key][subtype+'_inactive_cycles'] = inactive_cycles
+            summary[key][subtype+'_preactive_cycles'] = preactive_cycles
+            summary[key][subtype+'_active_cycles'] = active_cycles
         #(runtime, dot_min, dot_avg, dot_max, detlat_min, detlat_avg, detlat_max) 
         
         # read in next line before looping
@@ -116,18 +130,18 @@ if __name__ == "__main__":
     print("# interface, hwt,swt, blocks,"+\
            "runtime normal (ms),"+\
            "runtime shadowoff (ms),"+\
-           "runtime shadowon (ms),dot_min (us), dot_avg (us), dot_max (us), detlat_min (us), detlat_avg (us), detlat_max (us),"+\
-           "runtime shadowrr (ms), dot_min (us), dot_avg (us), dot_max (us), detlat_min (us), detlat_avg (us), detlat_max (us),"+\
-           "runtime shadowon_tm (ms),dot_min (us), dot_avg (us), dot_max (us), detlat_min (us), detlat_avg (us), detlat_max (us),"+\
-           "runtime shadowrr_tm (ms), dot_min (us), dot_avg (us), dot_max (us), detlat_min (us), detlat_avg (us), detlat_max (us)")
+           "runtime shadowon (ms),dot_min (us), dot_avg (us), dot_max (us), detlat_min (us), detlat_avg (us), detlat_max (us), inactive_cycles, preactive_cycles, active_cycles,"+\
+           "runtime shadowrr (ms), dot_min (us), dot_avg (us), dot_max (us), detlat_min (us), detlat_avg (us), detlat_max (us), inactive_cycles, preactive_cycles, active_cycles,"+\
+           "runtime shadowon_tm (ms),dot_min (us), dot_avg (us), dot_max (us), detlat_min (us), detlat_avg (us), detlat_max (us), inactive_cycles, preactive_cycles, active_cycles,"+\
+           "runtime shadowrr_tm (ms), dot_min (us), dot_avg (us), dot_max (us), detlat_min (us), detlat_avg (us), detlat_max (us),  inactive_cycles, preactive_cycles, active_cycles")
     for k,v in sorted(summary.items()):
         record = k
         for t in ['normal', 
                   'shadowoff', 
-                  'shadowon', "on_dot_min", "on_dot_avg", "on_dot_max", "on_detlat_min", "on_detlat_avg", "on_detlat_max",
-                  'shadowrr', "rr_dot_min", "rr_dot_avg", "rr_dot_max", "rr_detlat_min", "rr_detlat_avg", "rr_detlat_max",
-                  'shadowon_tm', "on_tm_dot_min", "on_tm_dot_avg", "on_tm_dot_max", "on_tm_detlat_min", "on_tm_detlat_avg", "on_tm_detlat_max",
-                  'shadowrr_tm', "rr_tm_dot_min", "rr_tm_dot_avg", "rr_tm_dot_max", "rr_tm_detlat_min", "rr_tm_detlat_avg", "rr_tm_detlat_max"] :       
+                  'shadowon', "on_dot_min", "on_dot_avg", "on_dot_max", "on_detlat_min", "on_detlat_avg", "on_detlat_max", "on_inactive_cycles", "on_preactive_cycles", "on_active_cycles",
+                  'shadowrr', "rr_dot_min", "rr_dot_avg", "rr_dot_max", "rr_detlat_min", "rr_detlat_avg", "rr_detlat_max", "rr_inactive_cycles", "rr_preactive_cycles", "rr_active_cycles",
+                  'shadowon_tm', "on_tm_dot_min", "on_tm_dot_avg", "on_tm_dot_max", "on_tm_detlat_min", "on_tm_detlat_avg", "on_tm_detlat_max", "on_tm_inactive_cycles", "on_tm_preactive_cycles", "on_tm_active_cycles",
+                  'shadowrr_tm', "rr_tm_dot_min", "rr_tm_dot_avg", "rr_tm_dot_max", "rr_tm_detlat_min", "rr_tm_detlat_avg", "rr_tm_detlat_max", "rr_tm_inactive_cycles", "rr_tm_preactive_cycles", "rr_tm_active_cycles"] :       
             record += ", "
             if v.has_key(t): record +=  v[t]
         print (record)
