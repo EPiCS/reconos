@@ -96,6 +96,7 @@ void fsl_write_block(int num, void * block_start, size_t byte_count)
 	//printf("fsl_write: slot %i value 0x%x\n", num, value);
 	/* XXX: @aagne: what about checking return values? ---DB */
 	ret = write(fsl_fd[num], block_start, byte_count);
+	FSL_DEBUG3("Thread %8li Wrote Block from FSL%2.2i: %li bytes\n",pthread_self(), num, byte_count);
 	if (ret < 0)
 		whine("fsl_write error: %s\n", strerror(errno));
 }
@@ -111,7 +112,7 @@ uint32_t fsl_read(int num)
 
 	/* XXX: @aagne: what about checking return values? ---DB */
 	ret = read(fsl_fd[num], &value, sizeof(value));
-	FSL_DEBUG3("Thread %8li Read from FSL%2.2i: 0x%8.8x\n",pthread_self, num, value);
+	FSL_DEBUG3("Thread %8li Read from FSL%2.2i: 0x%8.8x\n",pthread_self(), num, value);
 	if (ret < 0)
 		whine("fsl_read error: %s\n", strerror(errno));
 	//printf("fsl_read: slot %i value 0x%x\n", num, value);
@@ -128,6 +129,7 @@ void fsl_read_block(int num, void * block_start, size_t byte_count)
 
 	/* XXX: @aagne: what about checking return values? ---DB */
 	ret = read(fsl_fd[num], block_start, byte_count);
+	FSL_DEBUG3("Thread %8li Read Block from FSL%2.2i: %li bytes\n",pthread_self(), num, byte_count);
 	if (ret < 0)
 		whine("fsl_read error: %s\n", strerror(errno));
 	//printf("fsl_read: slot %i value 0x%x\n", num, value);
