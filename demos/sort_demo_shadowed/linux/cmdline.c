@@ -37,7 +37,9 @@ const char *gengetopt_args_info_detailed_help[] = {
   "  -V, --version                 Print version and exit",
   "  -h, --hwt=number              Number of HW Threads used to sort given amount \n                                  of data.",
   "  -s, --swt=number              Number of SW Threads used to sort given amount \n                                  of data.",
-  "  -b, --blocks=number           Number of blocks to sort. Currently one block \n                                  is 8KB big.",
+  "  -m, --mt=number               Number of MainCPU Threads used to sort given \n                                  amount of data.  (default=`0')",
+  "  -b, --blocks=number           Number of blocks to sort. Per default one block \n                                  is 8KB big.",
+  "  -l, --blocksize=number        Size of a block in bytes. Per default one block \n                                  is 8KB big.  (default=`8192')",
   "  -t, --thread-interface=number Which interface shall be used to communicate \n                                  with worker threads?  (possible values=\"0\", \n                                  \"1\", \"2\" default=`0')",
   "  0= SHMEM, 1= MBOX, 2= RQUEUE",
   "\nShadowing Options:",
@@ -62,8 +64,8 @@ init_help_array(void)
   gengetopt_args_info_help[4] = gengetopt_args_info_detailed_help[4];
   gengetopt_args_info_help[5] = gengetopt_args_info_detailed_help[5];
   gengetopt_args_info_help[6] = gengetopt_args_info_detailed_help[6];
-  gengetopt_args_info_help[7] = gengetopt_args_info_detailed_help[8];
-  gengetopt_args_info_help[8] = gengetopt_args_info_detailed_help[9];
+  gengetopt_args_info_help[7] = gengetopt_args_info_detailed_help[7];
+  gengetopt_args_info_help[8] = gengetopt_args_info_detailed_help[8];
   gengetopt_args_info_help[9] = gengetopt_args_info_detailed_help[10];
   gengetopt_args_info_help[10] = gengetopt_args_info_detailed_help[11];
   gengetopt_args_info_help[11] = gengetopt_args_info_detailed_help[12];
@@ -71,11 +73,13 @@ init_help_array(void)
   gengetopt_args_info_help[13] = gengetopt_args_info_detailed_help[14];
   gengetopt_args_info_help[14] = gengetopt_args_info_detailed_help[15];
   gengetopt_args_info_help[15] = gengetopt_args_info_detailed_help[16];
-  gengetopt_args_info_help[16] = 0; 
+  gengetopt_args_info_help[16] = gengetopt_args_info_detailed_help[17];
+  gengetopt_args_info_help[17] = gengetopt_args_info_detailed_help[18];
+  gengetopt_args_info_help[18] = 0; 
   
 }
 
-const char *gengetopt_args_info_help[17];
+const char *gengetopt_args_info_help[19];
 
 typedef enum {ARG_NO
   , ARG_FLAG
@@ -108,7 +112,9 @@ void clear_given (struct gengetopt_args_info *args_info)
   args_info->version_given = 0 ;
   args_info->hwt_given = 0 ;
   args_info->swt_given = 0 ;
+  args_info->mt_given = 0 ;
   args_info->blocks_given = 0 ;
+  args_info->blocksize_given = 0 ;
   args_info->thread_interface_given = 0 ;
   args_info->shadow_given = 0 ;
   args_info->shadow_schedule_given = 0 ;
@@ -123,7 +129,11 @@ void clear_args (struct gengetopt_args_info *args_info)
   FIX_UNUSED (args_info);
   args_info->hwt_orig = NULL;
   args_info->swt_orig = NULL;
+  args_info->mt_arg = 0;
+  args_info->mt_orig = NULL;
   args_info->blocks_orig = NULL;
+  args_info->blocksize_arg = 8192;
+  args_info->blocksize_orig = NULL;
   args_info->thread_interface_arg = 0;
   args_info->thread_interface_orig = NULL;
   args_info->shadow_flag = 0;
@@ -145,13 +155,15 @@ void init_args_info(struct gengetopt_args_info *args_info)
   args_info->version_help = gengetopt_args_info_detailed_help[2] ;
   args_info->hwt_help = gengetopt_args_info_detailed_help[3] ;
   args_info->swt_help = gengetopt_args_info_detailed_help[4] ;
-  args_info->blocks_help = gengetopt_args_info_detailed_help[5] ;
-  args_info->thread_interface_help = gengetopt_args_info_detailed_help[6] ;
-  args_info->shadow_help = gengetopt_args_info_detailed_help[10] ;
-  args_info->shadow_schedule_help = gengetopt_args_info_detailed_help[11] ;
-  args_info->shadow_transmodal_help = gengetopt_args_info_detailed_help[12] ;
-  args_info->error_count_help = gengetopt_args_info_detailed_help[15] ;
-  args_info->error_seed_help = gengetopt_args_info_detailed_help[16] ;
+  args_info->mt_help = gengetopt_args_info_detailed_help[5] ;
+  args_info->blocks_help = gengetopt_args_info_detailed_help[6] ;
+  args_info->blocksize_help = gengetopt_args_info_detailed_help[7] ;
+  args_info->thread_interface_help = gengetopt_args_info_detailed_help[8] ;
+  args_info->shadow_help = gengetopt_args_info_detailed_help[12] ;
+  args_info->shadow_schedule_help = gengetopt_args_info_detailed_help[13] ;
+  args_info->shadow_transmodal_help = gengetopt_args_info_detailed_help[14] ;
+  args_info->error_count_help = gengetopt_args_info_detailed_help[17] ;
+  args_info->error_seed_help = gengetopt_args_info_detailed_help[18] ;
   
 }
 
@@ -243,7 +255,9 @@ cmdline_parser_release (struct gengetopt_args_info *args_info)
 
   free_string_field (&(args_info->hwt_orig));
   free_string_field (&(args_info->swt_orig));
+  free_string_field (&(args_info->mt_orig));
   free_string_field (&(args_info->blocks_orig));
+  free_string_field (&(args_info->blocksize_orig));
   free_string_field (&(args_info->thread_interface_orig));
   free_string_field (&(args_info->shadow_schedule_orig));
   free_string_field (&(args_info->error_count_orig));
@@ -329,8 +343,12 @@ cmdline_parser_dump(FILE *outfile, struct gengetopt_args_info *args_info)
     write_into_file(outfile, "hwt", args_info->hwt_orig, 0);
   if (args_info->swt_given)
     write_into_file(outfile, "swt", args_info->swt_orig, 0);
+  if (args_info->mt_given)
+    write_into_file(outfile, "mt", args_info->mt_orig, 0);
   if (args_info->blocks_given)
     write_into_file(outfile, "blocks", args_info->blocks_orig, 0);
+  if (args_info->blocksize_given)
+    write_into_file(outfile, "blocksize", args_info->blocksize_orig, 0);
   if (args_info->thread_interface_given)
     write_into_file(outfile, "thread-interface", args_info->thread_interface_orig, cmdline_parser_thread_interface_values);
   if (args_info->shadow_given)
@@ -649,7 +667,9 @@ cmdline_parser_internal (
         { "version",	0, NULL, 'V' },
         { "hwt",	1, NULL, 'h' },
         { "swt",	1, NULL, 's' },
+        { "mt",	1, NULL, 'm' },
         { "blocks",	1, NULL, 'b' },
+        { "blocksize",	1, NULL, 'l' },
         { "thread-interface",	1, NULL, 't' },
         { "shadow",	0, NULL, 'a' },
         { "shadow-schedule",	1, NULL, 'c' },
@@ -659,7 +679,7 @@ cmdline_parser_internal (
         { 0,  0, 0, 0 }
       };
 
-      c = getopt_long (argc, argv, "Vh:s:b:t:ac:r", long_options, &option_index);
+      c = getopt_long (argc, argv, "Vh:s:m:b:l:t:ac:r", long_options, &option_index);
 
       if (c == -1) break;	/* Exit from `while (1)' loop.  */
 
@@ -694,7 +714,19 @@ cmdline_parser_internal (
             goto failure;
         
           break;
-        case 'b':	/* Number of blocks to sort. Currently one block is 8KB big..  */
+        case 'm':	/* Number of MainCPU Threads used to sort given amount of data..  */
+        
+        
+          if (update_arg( (void *)&(args_info->mt_arg), 
+               &(args_info->mt_orig), &(args_info->mt_given),
+              &(local_args_info.mt_given), optarg, 0, "0", ARG_INT,
+              check_ambiguity, override, 0, 0,
+              "mt", 'm',
+              additional_error))
+            goto failure;
+        
+          break;
+        case 'b':	/* Number of blocks to sort. Per default one block is 8KB big..  */
         
         
           if (update_arg( (void *)&(args_info->blocks_arg), 
@@ -702,6 +734,18 @@ cmdline_parser_internal (
               &(local_args_info.blocks_given), optarg, 0, 0, ARG_INT,
               check_ambiguity, override, 0, 0,
               "blocks", 'b',
+              additional_error))
+            goto failure;
+        
+          break;
+        case 'l':	/* Size of a block in bytes. Per default one block is 8KB big..  */
+        
+        
+          if (update_arg( (void *)&(args_info->blocksize_arg), 
+               &(args_info->blocksize_orig), &(args_info->blocksize_given),
+              &(local_args_info.blocksize_given), optarg, 0, "8192", ARG_INT,
+              check_ambiguity, override, 0, 0,
+              "blocksize", 'l',
               additional_error))
             goto failure;
         

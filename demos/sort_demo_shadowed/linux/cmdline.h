@@ -46,9 +46,15 @@ struct gengetopt_args_info
   int swt_arg;	/**< @brief Number of SW Threads used to sort given amount of data..  */
   char * swt_orig;	/**< @brief Number of SW Threads used to sort given amount of data. original value given at command line.  */
   const char *swt_help; /**< @brief Number of SW Threads used to sort given amount of data. help description.  */
-  int blocks_arg;	/**< @brief Number of blocks to sort. Currently one block is 8KB big..  */
-  char * blocks_orig;	/**< @brief Number of blocks to sort. Currently one block is 8KB big. original value given at command line.  */
-  const char *blocks_help; /**< @brief Number of blocks to sort. Currently one block is 8KB big. help description.  */
+  int mt_arg;	/**< @brief Number of MainCPU Threads used to sort given amount of data. (default='0').  */
+  char * mt_orig;	/**< @brief Number of MainCPU Threads used to sort given amount of data. original value given at command line.  */
+  const char *mt_help; /**< @brief Number of MainCPU Threads used to sort given amount of data. help description.  */
+  int blocks_arg;	/**< @brief Number of blocks to sort. Per default one block is 8KB big..  */
+  char * blocks_orig;	/**< @brief Number of blocks to sort. Per default one block is 8KB big. original value given at command line.  */
+  const char *blocks_help; /**< @brief Number of blocks to sort. Per default one block is 8KB big. help description.  */
+  int blocksize_arg;	/**< @brief Size of a block in bytes. Per default one block is 8KB big. (default='8192').  */
+  char * blocksize_orig;	/**< @brief Size of a block in bytes. Per default one block is 8KB big. original value given at command line.  */
+  const char *blocksize_help; /**< @brief Size of a block in bytes. Per default one block is 8KB big. help description.  */
   int thread_interface_arg;	/**< @brief Which interface shall be used to communicate with worker threads? (default='0').  */
   char * thread_interface_orig;	/**< @brief Which interface shall be used to communicate with worker threads? original value given at command line.  */
   const char *thread_interface_help; /**< @brief Which interface shall be used to communicate with worker threads? help description.  */
@@ -71,7 +77,9 @@ struct gengetopt_args_info
   unsigned int version_given ;	/**< @brief Whether version was given.  */
   unsigned int hwt_given ;	/**< @brief Whether hwt was given.  */
   unsigned int swt_given ;	/**< @brief Whether swt was given.  */
+  unsigned int mt_given ;	/**< @brief Whether mt was given.  */
   unsigned int blocks_given ;	/**< @brief Whether blocks was given.  */
+  unsigned int blocksize_given ;	/**< @brief Whether blocksize was given.  */
   unsigned int thread_interface_given ;	/**< @brief Whether thread-interface was given.  */
   unsigned int shadow_given ;	/**< @brief Whether shadow was given.  */
   unsigned int shadow_schedule_given ;	/**< @brief Whether shadow-schedule was given.  */

@@ -14,8 +14,8 @@
 
 library IEEE;
 use IEEE.STD_LOGIC_1164.all;
-use IEEE.STD_LOGIC_ARITH.all;
-use IEEE.STD_LOGIC_UNSIGNED.all;
+--use IEEE.STD_LOGIC_ARITH.all;
+--use IEEE.STD_LOGIC_UNSIGNED.all;
 use IEEE.NUMERIC_STD.all;
 
 ---- Uncomment the following library declaration if instantiating
@@ -26,7 +26,7 @@ use IEEE.NUMERIC_STD.all;
 entity bubble_sorter is
 
   generic (
-    G_LEN    : integer := 2048;         -- number of words to sort
+    G_LEN    : integer := 2048;         -- maximum number of words to sort
     G_AWIDTH : integer := 11;           -- in bits
     G_DWIDTH : integer := 32            -- in bits
     );
@@ -41,6 +41,7 @@ entity bubble_sorter is
     i_RAMData : in  std_logic_vector(0 to G_DWIDTH-1);
     o_RAMWE   : out std_logic;
     start     : in  std_logic;
+    len       : in  std_logic_vector(0 to G_AWIDTH-1);
     done      : out std_logic
     );
 end bubble_sorter;
@@ -95,8 +96,8 @@ begin
         when STATE_IDLE        =>
           done      <= '0';
           ptr       <= 0;
-          ptr_max   <= G_LEN-1;
-          ptr_max_new := G_LEN-1;
+          ptr_max   <= to_integer(unsigned(len));--G_LEN-1;
+          ptr_max_new := to_integer(unsigned(len));--G_LEN-1;
           o_RAMData <= (others => '0');
           o_RAMWE   <= '0';
           swapped   <= false;

@@ -40,6 +40,7 @@ end entity;
 
 architecture implementation of hwt_sort_demo is
 	type STATE_TYPE is (
+          STATE_GET_LEN,
 					STATE_GET_ADDR,STATE_READ,STATE_SORTING,
 					STATE_WRITE,STATE_ACK,STATE_THREAD_EXIT);
 
@@ -59,6 +60,7 @@ architecture implementation of hwt_sort_demo is
 			i_RAMData : in  std_logic_vector(0 to G_DWIDTH-1);
 			o_RAMWE   : out std_logic;
 			start     : in  std_logic;
+      len       : in  std_logic_vector(0 to G_AWIDTH-1);
 			done      : out std_logic
 		);
   	end component;
@@ -76,8 +78,10 @@ architecture implementation of hwt_sort_demo is
 	constant MBOX_RECV  : std_logic_vector(C_FSL_WIDTH-1 downto 0) := x"00000000";
 	constant MBOX_SEND  : std_logic_vector(C_FSL_WIDTH-1 downto 0) := x"00000001";
 
+  signal temp     : std_logic_vector(31 downto 0);
 	signal addr     : std_logic_vector(31 downto 0);
-	signal len      : std_logic_vector(23 downto 0);
+	signal len_sorter      : std_logic_vector(0 to C_LOCAL_RAM_ADDRESS_WIDTH-1) := (others => '0'); -- length in words of data
+  signal len_reconos     : std_logic_vector(31 downto 0) := (others => '0'); -- length in words of data
 	signal state    : STATE_TYPE;
 	signal i_osif   : i_osif_t;
 	signal o_osif   : o_osif_t;
@@ -104,7 +108,8 @@ architecture implementation of hwt_sort_demo is
 	signal ignore   : std_logic_vector(C_FSL_WIDTH-1 downto 0);
 
 	signal sort_start : std_logic := '0';
-	signal sort_done  : std_logic := '0';
+	signal sort_done  : std_logic := '0';  
+  
 begin
 	
 	-- local dual-port RAM
@@ -132,6 +137,14 @@ begin
 	
 
 	-- instantiate bubble_sorter module
+  len_sort_proc: process  (len_reconos) is
+    variable len : std_logic_vector(31 downto 0);
+  begin
+    len := len_reconos-1;
+    len_sorter <= len(C_LOCAL_RAM_ADDRESS_WIDTH-1 downto 0);
+  end process;
+  
+  
 	sorter_i : bubble_sorter
 		generic map (
 			G_LEN     => C_LOCAL_RAM_SIZE,
@@ -146,6 +159,7 @@ begin
 			i_RAMData => i_RAMData_sorter,
 			o_RAMWE   => o_RAMWE_sorter,
 			start     => sort_start,
+      len       => len_sorter,
 			done      => sort_done
 	);
 
@@ -191,30 +205,39 @@ begin
 			osif_reset(o_osif);
 			memif_reset(o_memif);
 			ram_reset(o_ram);
-			state <= STATE_GET_ADDR;
+			state <= STATE_GET_LEN;
 			done  := False;
 			addr <= (others => '0');
-			len <= (others => '0');
+			len_reconos <= (others => '0');
 			sort_start <= '0';
 		elsif rising_edge(clk) then
 			case state is
 
-				-- get address via mbox: the data will be copied from this address to the local ram in the next states
-				when STATE_GET_ADDR =>
-					osif_mbox_get(i_osif, o_osif, MBOX_RECV, addr, done);
+        -- get length via mbox: the amount of data in words to be sorted, will be saved in a local register
+				when STATE_GET_LEN =>
+					osif_mbox_get(i_osif, o_osif, MBOX_RECV, temp, done);
 					if done then
-						if (addr = X"FFFFFFFF") then
+						if (temp = X"FFFFFFFF") then
 							state <= STATE_THREAD_EXIT;
 						else
-							len               <= conv_std_logic_vector(C_LOCAL_RAM_SIZE_IN_BYTES,24);
-							addr              <= addr(31 downto 2) & "00";
-							state             <= STATE_READ;
+							len_reconos       <= temp;
+							state             <= STATE_GET_ADDR;
 						end if;
+					end if;
+          
+				-- get address via mbox: the data will be copied from this address to the local ram in the next states
+				when STATE_GET_ADDR =>
+					osif_mbox_get(i_osif, o_osif, MBOX_RECV, temp, done);
+					if done then
+						addr              <= temp(31 downto 2) & "00";
+						state             <= STATE_READ;						
 					end if;
 				
 				-- copy data from main memory to local memory
+        -- len_reconos is shifted 2 bits to the left, as len_reconos contains length in words, but
+        -- memif_read expects it to be in bytes
 				when STATE_READ =>
-					memif_read(i_ram,o_ram,i_memif,o_memif,addr,X"00000000",len,done);
+					memif_read(i_ram,o_ram,i_memif,o_memif,addr,X"00000000", len_reconos(21 downto 0) & "00" ,done);
 					if done then
 						sort_start <= '1';
 						state <= STATE_SORTING;
@@ -223,16 +246,15 @@ begin
 				-- sort the words in local RAM
 				when STATE_SORTING =>
 					sort_start <= '0';
-					--o_ram.addr <= (others => '0');
 					if sort_done = '1' then
-						len    <= conv_std_logic_vector(C_LOCAL_RAM_SIZE_IN_BYTES,24);
-						--state  <= STATE_WRITE_REQ;
 						state  <= STATE_WRITE;
 					end if;
 					
 				-- copy data from local memory to main memory
+        -- len_reconos is shifted 2 bits to the left, as len_reconos contains length in words, but
+        -- memif_read expects it to be in bytes
 				when STATE_WRITE =>
-					memif_write(i_ram,o_ram,i_memif,o_memif,X"00000000",addr,len,done);
+					memif_write(i_ram,o_ram,i_memif,o_memif,X"00000000",addr,len_reconos(21 downto 0) & "00" ,done);
 					if done then
 						state <= STATE_ACK;
 					end if;
@@ -240,7 +262,7 @@ begin
 				-- send mbox that signals that the sorting is finished
 				when STATE_ACK =>
 					osif_mbox_put(i_osif, o_osif, MBOX_SEND, addr, ignore, done);
-					if done then state <= STATE_GET_ADDR; end if;
+					if done then state <= STATE_GET_LEN; end if;
 
 				-- thread exit
 				when STATE_THREAD_EXIT =>

@@ -20,8 +20,12 @@ option "hwt" h "Number of HW Threads used to sort given amount of data."
 	int typestr="number" required
 option "swt" s "Number of SW Threads used to sort given amount of data." 
 	int typestr="number" required
-option "blocks" b "Number of blocks to sort. Currently one block is 8KB big." 
+option "mt" m "Number of MainCPU Threads used to sort given amount of data." 
+	int typestr="number" default="0" optional	
+option "blocks" b "Number of blocks to sort. Per default one block is 8KB big." 
 	int typestr="number" required
+option "blocksize" l "Size of a block in bytes. Per default one block is 8KB big." 
+	int typestr="number" default="8192" optional	
 option "thread-interface" t "Which interface shall be used to communicate with worker threads?" 
 	int typestr="number" default="0" optional values="0","1","2"
 	details="0= SHMEM, 1= MBOX, 2= RQUEUE"

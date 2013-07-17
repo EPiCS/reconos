@@ -41,7 +41,8 @@
 void *sort_thread_shmem(void* data)
 {
 	static int call_nr = 0;
-    unsigned int ret;
+	unsigned int length; // number of words to sort
+    unsigned int address;
     unsigned int dummy = 23;
     struct reconos_resource *res  = (struct reconos_resource*) data;
     struct mbox *mb_start = res[0].ptr;
@@ -52,30 +53,31 @@ void *sort_thread_shmem(void* data)
     SORT_DEBUG4("SW Thread %lu, call %d: Started with mailbox addresses %p and %p ...\n", self, call_nr,  mb_start, mb_stop);
     while ( 1 ) {
     	SORT_DEBUG3("SW Thread %lu, call %d: getting buffer address from mailbox %p\n", self, call_nr, mb_start);
-        ret = mbox_get(mb_start);
+        length = mbox_get(mb_start);
 		//printf("SW Thread %lu: Got address %p from mailbox %p.\n", self, (void*)ret, mb_start);
-		if (ret == UINT_MAX)
+		if (length == UINT_MAX)
 		{
 		  SORT_DEBUG3("SW Thread %lu, call %d: Got exit command from mailbox %p.\n", self, call_nr, mb_start);
 		  mbox_put(mb_stop, dummy);
 		  pthread_exit((void*)0);
 		}
-		else
-		{
-		  SORT_DEBUG3("SW Thread %lu, call %d: starting bubblesort on pointer %p\n", self, call_nr, (unsigned int*)ret);
+
+		address = mbox_get(mb_start);
+
+		SORT_DEBUG3("SW Thread %lu, call %d: starting bubblesort on pointer %p\n", self, call_nr, (unsigned int*)address);
 #ifdef BENCHMARK
-		  timing_t start, stop;
-		  ms_t bubblesort_time;
-		  start = gettime();
+		timing_t start, stop;
+		ms_t bubblesort_time;
+		start = gettime();
 #endif
-		  bubblesort( (unsigned int*) ret, N);
+		bubblesort( (unsigned int*) address, length);
 #ifdef BENCHMARK
-		  stop = gettime();
-		  bubblesort_time = calc_timediff_ms(start, stop);
-		  printf("bubblesort time: %lu ms\n", bubblesort_time);
+		stop = gettime();
+		bubblesort_time = calc_timediff_ms(start, stop);
+		printf("bubblesort time: %lu ms\n", bubblesort_time);
 #endif
-		  mbox_put(mb_stop, dummy);
-		}
+		mbox_put(mb_stop, dummy);
+
 		SORT_DEBUG3("SW Thread %lu, call %d: putting acknowledgement into mailbox %p\n", self, call_nr, mb_stop);
         call_nr++;
     }
