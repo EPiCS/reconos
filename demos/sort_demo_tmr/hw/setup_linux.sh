@@ -1,20 +1,20 @@
 #!/bin/bash
 
 BASE_DESIGN="ml605_linux_13.3"
-HWTS="hwt_sort_demo_v1_00_c\
-      hwt_sort_demo_v1_00_c\
-      hwt_sort_demo_v1_00_c\
-      hwt_sort_demo_v1_00_c\
-      hwt_sort_demo_v1_00_c\
-      hwt_sort_demo_v1_00_c\
-      hwt_sort_demo_v1_00_c\
-      hwt_sort_demo_v1_00_c\
-      hwt_sort_demo_v1_00_c\
-      hwt_sort_demo_v1_00_c\
-      hwt_sort_demo_v1_00_c\
-      hwt_sort_demo_v1_00_c\
-      hwt_sort_demo_v1_00_c\
-      hwt_sort_demo_v1_00_c"
+HWTS="hwt_sort_demo_v1_00_n\
+      hwt_sort_demo_v1_00_n\
+      hwt_sort_demo_v1_00_n\
+      hwt_sort_demo_v1_00_n\
+      hwt_sort_demo_v1_00_n\
+      hwt_sort_demo_v1_00_n\
+      hwt_sort_demo_v1_00_n\
+      hwt_sort_demo_v1_00_n\
+      hwt_sort_demo_v1_00_n\
+      hwt_sort_demo_v1_00_n\
+      hwt_sort_demo_v1_00_n\
+      hwt_sort_demo_v1_00_n\
+      hwt_sort_demo_v1_00_n\
+      hwt_sort_demo_v1_00_n"
 
 
 if [ -z "$RECONOS" ]
