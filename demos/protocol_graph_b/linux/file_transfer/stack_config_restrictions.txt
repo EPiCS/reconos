@@ -1,0 +1,3 @@
+x :: ch.ethz.csg.pf_lana;
+b :: ch.ethz.csg.dummy;
+x ^ { b };

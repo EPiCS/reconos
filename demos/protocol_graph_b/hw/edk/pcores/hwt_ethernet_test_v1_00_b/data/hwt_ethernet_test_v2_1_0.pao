@@ -1,0 +1,25 @@
+##############################################################################
+## Filename:          hwt_ethernet_test_v2_1_0.pao
+## Description:       Empty hardware thread template
+## Date:              Tue Sep 13 12:47:26 2011 (by Create and Import Peripheral Wizard)
+##############################################################################
+
+lib proc_common_v3_00_a  proc_common_pkg vhdl
+lib reconos_v3_00_b reconos_pkg vhdl
+lib ana_v1_00_a anaPkg vhdl
+lib ana_v1_00_a ../../../ana_v1_00_a/hdl/vhdl/packetDecoder.vhd vhdl
+lib ana_v1_00_a ../../../ana_v1_00_a/hdl/vhdl/packetEncoder.vhd vhdl
+lib hwt_ethernet_test_v1_00_b physical/v6_gtxwizard_gtx vhdl
+lib hwt_ethernet_test_v1_00_b physical/v6_gtxwizard vhdl
+lib hwt_ethernet_test_v1_00_b physical/rx_elastic_buffer vhdl
+lib hwt_ethernet_test_v1_00_b physical/v6_gtxwizard_top vhdl
+lib hwt_ethernet_test_v1_00_b client/fifo/tx_client_fifo_8 vhdl
+lib hwt_ethernet_test_v1_00_b client/fifo/rx_client_fifo_8 vhdl
+lib hwt_ethernet_test_v1_00_b client/fifo/eth_fifo_8 vhdl
+lib hwt_ethernet_test_v1_00_b v6_emac_v1_4 vhdl
+lib hwt_ethernet_test_v1_00_b v6_emac_v1_4_block vhdl
+lib hwt_ethernet_test_v1_00_b v6_emac_v1_4_locallink vhdl
+lib hwt_ethernet_test_v1_00_b eth_wrapper vhdl
+lib hwt_ethernet_test_v1_00_b hwt_ethernet_test vhdl
+
+

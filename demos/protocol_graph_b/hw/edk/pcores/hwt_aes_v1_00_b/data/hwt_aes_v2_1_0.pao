@@ -1,0 +1,27 @@
+##############################################################################
+## Filename:          hwt_add_v2_1_0.pao
+## Description:       Empty hardware thread template
+## Date:              Tue Sep 13 12:47:26 2011 (by Create and Import Peripheral Wizard)
+##############################################################################
+
+lib proc_common_v3_00_a  proc_common_pkg vhdl
+lib reconos_v3_00_b reconos_pkg vhdl
+lib ana_v1_00_a anaPkg vhdl
+lib yyang_v1_00_a yyangPkg vhdl
+lib ana_v1_00_a ../../../ana_v1_00_a/hdl/vhdl/packetDecoder.vhd vhdl
+lib ana_v1_00_a ../../../ana_v1_00_a/hdl/vhdl/packetEncoder.vhd vhdl
+lib yyang_v1_00_a ../../../yyang_v1_00_a/hdl/vhdl/addKey.vhd vhdl
+lib yyang_v1_00_a ../../../yyang_v1_00_a/hdl/vhdl/aesCore.vhd vhdl
+lib yyang_v1_00_a ../../../yyang_v1_00_a/hdl/vhdl/control.vhd vhdl
+lib yyang_v1_00_a ../../../yyang_v1_00_a/hdl/vhdl/encryptionBlock.vhd vhdl
+lib yyang_v1_00_a ../../../yyang_v1_00_a/hdl/vhdl/keyExpansion.vhd vhdl
+lib yyang_v1_00_a ../../../yyang_v1_00_a/hdl/vhdl/mixCol.vhd vhdl
+lib yyang_v1_00_a ../../../yyang_v1_00_a/hdl/vhdl/readStage.vhd vhdl
+lib yyang_v1_00_a ../../../yyang_v1_00_a/hdl/vhdl/sendStage.vhd vhdl
+lib yyang_v1_00_a ../../../yyang_v1_00_a/hdl/vhdl/sboxMatrix.vhd vhdl
+lib yyang_v1_00_a ../../../yyang_v1_00_a/hdl/vhdl/sbox.vhd vhdl
+lib yyang_v1_00_a ../../../yyang_v1_00_a/hdl/vhdl/keyBak.vhd vhdl
+lib hwt_aes_v1_00_b hwt_aes vhdl
+
+
+
