@@ -1,6 +1,9 @@
 
  PARAMETER VERSION = 2.1.0
 
+ # Fix for newer SO-DIMM / external memory.
+ # See http://www.xilinx.com/support/answers/44814.htm
+ PORT fpga_0_DDR2_SDRAM_DIMM0_DDR2_RowAddr_pin_13 = fpga_0_DDR2_SDRAM_DIMM0_DDR2_RowAddr_pin_13, DIR = O
 
  PORT fpga_0_RS232_Uart_1_RX_pin = fpga_0_RS232_Uart_1_RX_pin, DIR = I
  PORT fpga_0_RS232_Uart_1_TX_pin = fpga_0_RS232_Uart_1_TX_pin, DIR = O
@@ -294,6 +297,17 @@ BEGIN xps_intc
  BUS_INTERFACE SPLB = mb_plb
  PORT Intr = xps_timer_0_Interrupt & xps_hwicap_0_IP2INTC_Irpt & RS232_Uart_1_Interrupt & gnd2int_0_gnd15 & gnd2int_0_gnd14 & gnd2int_0_gnd13 & gnd2int_0_gnd12 & gnd2int_0_gnd11 & gnd2int_0_gnd10 & gnd2int_0_gnd9 & gnd2int_0_gnd8 & gnd2int_0_gnd7 & gnd2int_0_gnd6 & fsl_v20_5a_FSL_Has_Data & fsl_v20_4a_FSL_Has_Data & fsl_v20_3a_FSL_Has_Data & fsl_v20_2a_FSL_Has_Data & fsl_v20_1a_FSL_Has_Data & fsl_v20_0a_FSL_Has_Data & xps_sysace_0_SysACE_IRQ
  PORT Irq = microblaze_0_Interrupt
+END
+
+# Fix for newer SO-DIMM / external memory.
+# See http://www.xilinx.com/support/answers/44814.htm
+BEGIN util_reduced_logic
+ PARAMETER INSTANCE = AND_Gate
+ PARAMETER C_OPERATION = and
+ PARAMETER C_SIZE = 2
+ PARAMETER HW_VER = 1.00.a
+ PORT Op1 = 0b0 & 0b0
+ PORT Res = fpga_0_DDR2_SDRAM_DIMM0_DDR2_RowAddr_pin_13
 END
 
 BEGIN xps_timer
