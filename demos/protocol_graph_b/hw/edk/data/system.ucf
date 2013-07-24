@@ -1,4 +1,9 @@
 #  Virtex 6 ML605 Evaluation Platform
+
+# Fix for newer SO-DIMM / external memory.
+# See http://www.xilinx.com/support/answers/44814.htm
+Net fpga_0_DDR2_SDRAM_DIMM0_DDR2_RowAddr_pin_13 LOC=J15 |IOSTANDARD = SSTL15;
+
 Net fpga_0_RS232_Uart_1_RX_pin LOC = J24  |  IOSTANDARD=LVCMOS25;
 Net fpga_0_RS232_Uart_1_TX_pin LOC = J25  |  IOSTANDARD=LVCMOS25;
 #Net fpga_0_LEDs_8Bit_GPIO_IO_pin<0> LOC = AC22  |  IOSTANDARD=LVCMOS25;
