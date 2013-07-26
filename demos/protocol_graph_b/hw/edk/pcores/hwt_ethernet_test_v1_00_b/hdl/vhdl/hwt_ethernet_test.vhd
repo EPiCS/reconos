@@ -82,7 +82,7 @@ entity hwt_ethernet_test is
 end hwt_ethernet_test;
 
 architecture implementation of hwt_ethernet_test is
-	type STATE_TYPE is ( STATE_GET, STATE_PUT, STATE_PUT2, STATE_THREAD_EXIT );
+	type STATE_TYPE is ( STATE_GET,STATE_GET_2, STATE_PUT, STATE_PUT2, STATE_THREAD_EXIT );
 
 	-- PUT YOUR OWN COMPONENTS HERE
 
@@ -123,6 +123,43 @@ architecture implementation of hwt_ethernet_test is
         rx_ll_dst_rdy_n   : in std_logic
 	);
 	end component;
+
+component remove_header is
+	port (
+		i_clk		: in std_logic;
+  		i_rst		: in std_logic;
+  	    	-- comm with PHY
+  	    	i_rx_ll_data        : in std_logic_vector(7 downto 0);
+        	i_rx_ll_sof_n       : in std_logic;
+        	i_rx_ll_eof_n       : in std_logic;
+        	i_rx_ll_src_rdy_n   : in std_logic;
+        	o_rx_ll_dst_rdy_n   : out std_logic;
+  	
+  		-- comm with next blocks (with internal switch)
+  		o_tx_sof : out std_logic;
+  		o_tx_eof : out std_logic;
+  		o_tx_data : out std_logic_vector(7 downto 0);
+  		o_tx_src_rdy : out std_logic;
+  		i_tx_dst_rdy : in std_logic;
+  
+  		o_global_addr : out std_logic_vector(3 downto 0);
+  		o_local_addr : out std_logic_vector(1 downto 0);
+  		o_direction : out std_logic;
+  		o_priority : out std_logic;
+  		o_latency_critical : out std_logic_vector(1 downto 0);	
+  		o_src_idp : out  std_logic_vector(31 downto 0);
+  		o_dst_idp : out  std_logic_vector(31 downto 0);
+  		
+  		-- comm to setup hash and address mapping table
+  		i_set_idp : in std_logic;
+  		i_set_address : in std_logic;
+  		i_hash	: in std_logic_vector(63 downto 0);
+  		i_idp 	: in std_logic_vector(31 downto 0);
+  		i_address : in std_logic_vector(5 downto 0)
+  		 
+		);
+		end component;
+
 
     	-- ADD YOUR CONSTANTS, TYPES AND SIGNALS BELOW
 
@@ -190,6 +227,13 @@ architecture implementation of hwt_ethernet_test is
 	signal priority : std_logic_vector(1 downto 0);
 	signal global_addr : std_logic_vector(3 downto 0);
 	signal local_addr : std_logic_vector(1 downto 0);
+
+	signal set_idp : std_logic;
+  	signal set_address : std_logic;
+  	signal hash : std_logic_vector(63 downto 0);
+  	signal idp_in : std_logic_vector(31 downto 0);
+  	signal address_in : std_logic_vector(5 downto 0);
+
 
 begin
 	
@@ -312,6 +356,41 @@ begin
 		FIFO32_M_Wr
 	);
 	
+	remove_header_inst : remove_header
+	port map (
+		i_clk		 => clk,
+  		i_rst		 => rst,
+  	    	-- comm with PHY
+  	    	i_rx_ll_data    => rx_ll_data,    
+        	i_rx_ll_sof_n    => rx_ll_sof_n,   
+        	i_rx_ll_eof_n    => rx_ll_eof_n,   
+        	i_rx_ll_src_rdy_n => rx_ll_src_rdy_n,  
+        	o_rx_ll_dst_rdy_n  => rx_ll_dst_rdy_n, 
+         	
+  		-- comm with next blocks (with internal switch)
+  		o_tx_sof => rx_ll_sof,
+  		o_tx_eof => rx_ll_eof,
+  		o_tx_data => rx_ll_data,
+  		o_tx_src_rdy => rx_ll_src_rdy,
+  		i_tx_dst_rdy => rx_ll_src_rdy,
+  
+  		o_global_addr => global_addr,
+  		o_local_addr => local_addr,
+  		o_direction => direction,
+  		o_priority => priority,
+  		o_latency_critical 	=> latency_critical,
+  		o_src_idp => src_idp,
+  		o_dst_idp => dst_idp,
+  		
+  		-- comm to setup hash and address mapping table
+  		i_set_idp => set_idp,
+  		i_set_address => set_address,
+  		i_hash	=> hash,
+  		i_idp 	=> idp_in,
+  		i_address => address_in
+	);
+
+
     -- PUT YOUR OWN PROCESSES HERE
 	--conversion packet decoder and ethernet interface.
     	tx_ll_sof_n     <= not tx_ll_sof;
@@ -320,10 +399,10 @@ begin
        	tx_ll_dst_rdy	<= not tx_ll_dst_rdy_n;
 	--downstreamReadClock	<= i_osif.clk;
 		
-	rx_ll_sof       <= not rx_ll_sof_n;
-        rx_ll_eof       <= not rx_ll_eof_n;
-        rx_ll_src_rdy   <= not rx_ll_src_rdy_n;
-       	rx_ll_dst_rdy_n	<= not rx_ll_dst_rdy;
+--	rx_ll_sof       <= not rx_ll_sof_n;
+--        rx_ll_eof       <= not rx_ll_eof_n;
+--        rx_ll_src_rdy   <= not rx_ll_src_rdy_n;
+--       	rx_ll_dst_rdy_n	<= not rx_ll_dst_rdy;
 	--upstreamWriteClock	<= i_osif.clk;
 
 	--count all rx packets
@@ -397,19 +476,26 @@ begin
 			osif_reset(o_osif);
 			memif_reset(o_memif);
 			state <= STATE_GET;
-			dst_idp  <= (others  => '0');
-			src_idp  <= (others  => '0');
-			latency_critical  <= '0';
-			direction  <= '0'; --0 = ingress
-			priority  <= (others  => '0');
-			global_addr  <= "0001"; --default: send all packets to sw
-			local_addr  <= "01";
+			--dst_idp  <= (others  => '0');
+			--src_idp  <= (others  => '0');
+			--latency_critical  <= '0';
+			--direction  <= '0'; --0 = ingress
+			--priority  <= (others  => '0');
+			--global_addr  <= "0001"; --default: send all packets to sw
+			--local_addr  <= "01";
+			set_idp <= '0';
+			set_address <= '0';
+			hash <= (others => '0');
+			idp_in <= (others => '0');
+			address_in <= (others => '0');
 
             -- RESET YOUR OWN SIGNALS HERE
-
 		elsif rising_edge(clk) then
-			case state is
+			set_idp <= '0';
+			set_address <= '0';
 
+			case state is
+				
                 -- EXAMPLE STATE MACHINE - ADD YOUR STATES AS NEEDED
 
 				-- Get some data
@@ -419,18 +505,33 @@ begin
 						if (data = X"FFFFFFFF") then
 							state <= STATE_THREAD_EXIT;
 						else
-							dst_idp(7 downto 0)  <= data(31 downto 24);
-							src_idp(7 downto 0)  <= data(23 downto 16);
-							latency_critical  <= data(9);
-							direction  <= data(8);
-							priority  <= data(7 downto 6);
-							global_addr  <= data(5 downto 2);
-							local_addr  <= data(1 downto 0);
-							state <= STATE_PUT;
+							set_hash <= '1';
+							hash  <= x"ABABABABABABABAB";
+	    						idp_in  <= x"12344321";
+						--	dst_idp(7 downto 0)  <= data(31 downto 24);
+						--	src_idp(7 downto 0)  <= data(23 downto 16);
+						--	latency_critical  <= data(9);
+						--	direction  <= data(8);
+						--	priority  <= data(7 downto 6);
+						--	global_addr  <= data(5 downto 2);
+						--	local_addr  <= data(1 downto 0);
+							state <= STATE_GET_2;
 						end if;
 					end if;
 				
-				
+				when STATE_GET_2 =>
+					osif_mbox_get(i_osif, o_osif, MBOX_RECV, data, done);
+					if done then
+						if (data = X"FFFFFFFF") then
+							state <= STATE_THREAD_EXIT;
+						else
+							set_address <= '1';
+							address_in  <= "000001"; --hard coded to AES
+	    						idp_in  <= x"12344321";
+	    						state  <= STATE_PUT;
+						end if;
+					end if;
+
 				-- Echo the data
 				when STATE_PUT =>
 					osif_mbox_put(i_osif, o_osif, MBOX_SEND, rx_packet_count, ignore, done);

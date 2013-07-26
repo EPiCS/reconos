@@ -92,6 +92,9 @@ architecture Behavioral of remove_header is
 	signal int_valid_idp : std_logic;
 	signal int_valid_idp_next : std_logic;
 	signal address_out : std_logic_vector(5 downto 0);
+	signal int_addr : std_logic_vector(5 downto 0);
+	signal int_addr_next : std_logic_vector(5 downto 0);
+	
 	
 	signal int_hash : std_logic_vector(63 downto 0);
 	signal int_idp : std_logic_vector(31 downto 0);
@@ -100,14 +103,27 @@ architecture Behavioral of remove_header is
 begin
 
 	rem_proc : process(state, i_rx_ll_data, i_rx_ll_src_rdy_n, i_rx_ll_sof_n, counter, hash, 
-		idp_valid, int_valid_idp, address_valid, address_out, i_tx_dst_rdy, i_rx_ll_eof_n
+		idp_valid, int_valid_idp, address_valid, address_out, i_tx_dst_rdy, i_rx_ll_eof_n, int_addr
 	)
 	begin
 		state_next  <= state;
 		o_rx_ll_dst_rdy_n  <= '0';
 		o_tx_src_rdy  <= '0';
 		o_tx_data  <= i_rx_ll_data;
+		o_tx_sof <= '0';
+		o_tx_eof  <= '0';
+		
+		o_global_addr  <= int_addr(5 downto 2);
+		o_local_addr  <= int_addr(1 downto 0);
+		
+		o_latency_critical  <= (others  => '0');
+		o_src_idp  <= (others  => '0');
+		o_dst_idp  <= (others  => '0');
+		o_priority  <= '0';
+		o_direction  <= '1';
+		
 		int_idp  <= idp_out;
+		int_addr_next  <= int_addr;
 		
      	counter_next  <= counter;
 		hash_next  <= hash;
@@ -116,6 +132,8 @@ begin
 		get_idp  <= '0';
 		get_address  <= '0';
 		int_hash  <= hash;
+		
+		
 	    case state is
 	    	when STATE_INIT  => 
 	    		state_next  <= STATE_IDLE;
@@ -134,7 +152,7 @@ begin
 	    		end if;
 	    	when STATE_READ_HASH  => 
 	    		if i_rx_ll_src_rdy_n = '0' then
-	    			hash_next(63 - counter * 8 downto 63 - 1 - (counter + 1)*8)  <= i_rx_ll_data;
+	    			hash_next(64 -1 - counter * 8 downto 64 -  (counter + 1)*8)  <= i_rx_ll_data;
 	    			counter_next  <= counter + 1;
 	    			if counter + 1 = 8 then
 	    				state_next  <= STATE_LOOKUP;
@@ -151,9 +169,15 @@ begin
 	    		get_address  <= '1';
 	    	when STATE_LOOKUP_2  => 
 	    		if int_valid_idp = '1' and address_valid = '1' then
+	    			int_addr_next  <= address_out;
 	    			o_global_addr  <= address_out(5 downto 2);
 	    			o_local_addr  <= address_out(1 downto 0);
+	    		else --we don't know the connection, send it to the sw (mainly for debugging, later on we could drop it (how to deal with connection setup?)
+	    			o_global_addr  <= "0001";
+	    			o_local_addr  <= "01"; 
+	    			int_addr_next  <= "000101";
 	    		end if;
+	    		
 	    		state_next  <= STATE_FORWARD_SOF;
 	    	when STATE_FORWARD_SOF  => 
 	    		o_tx_sof  <= '1';
@@ -163,6 +187,7 @@ begin
 	    		end if;
 			when STATE_FORWARD  => 
 					o_rx_ll_dst_rdy_n  <= not i_tx_dst_rdy;
+					o_tx_src_rdy  <= not i_rx_ll_src_rdy_n;
 					o_tx_eof  <= not i_rx_ll_eof_n;
 					if i_rx_ll_eof_n = '0' then
 						state_next  <= STATE_IDLE;
@@ -215,11 +240,13 @@ begin
 			counter  <= 0;
 			hash  <= (others  => '0');
 			int_valid_idp  <= '0';
+			int_addr  <= (others  => '0');
 	    elsif rising_edge(i_clk) then
 	     	state  <= state_next;
 	     	counter  <= counter_next;
 			hash  <= hash_next;
 			int_valid_idp  <= int_valid_idp_next;
+			int_addr  <= int_addr_next;
 	    end if;
 	end process;
 	
