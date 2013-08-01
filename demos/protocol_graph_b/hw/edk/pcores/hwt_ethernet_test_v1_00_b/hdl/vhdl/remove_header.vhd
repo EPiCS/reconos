@@ -39,8 +39,8 @@ entity remove_header is
   		o_global_addr : out std_logic_vector(3 downto 0);
   		o_local_addr : out std_logic_vector(1 downto 0);
   		o_direction : out std_logic;
-  		o_priority : out std_logic;
-  		o_latency_critical : out std_logic_vector(1 downto 0);	
+  		o_priority : out std_logic_vector(1 downto 0);
+  		o_latency_critical : out std_logic;	
   		o_src_idp : out  std_logic_vector(31 downto 0);
   		o_dst_idp : out  std_logic_vector(31 downto 0);
   		
@@ -116,10 +116,10 @@ begin
 		o_global_addr  <= int_addr(5 downto 2);
 		o_local_addr  <= int_addr(1 downto 0);
 		
-		o_latency_critical  <= (others  => '0');
+		o_latency_critical  <= '0';
 		o_src_idp  <= (others  => '0');
 		o_dst_idp  <= (others  => '0');
-		o_priority  <= '0';
+		o_priority  <= (others => '0');
 		o_direction  <= '1';
 		
 		int_idp  <= idp_out;
@@ -158,7 +158,7 @@ begin
 	    				state_next  <= STATE_LOOKUP;
 	    				counter_next  <= 0;
 	    				int_hash  <= hash(63 downto 8) & i_rx_ll_data;
-	    				o_rx_ll_dst_rdy_n  <= '1';
+	    				--o_rx_ll_dst_rdy_n  <= '1';
 	    				get_idp  <= '1';
 	    			end if;
 	    		end if;
@@ -168,6 +168,7 @@ begin
 	    		state_next  <= STATE_LOOKUP_2;
 	    		get_address  <= '1';
 	    	when STATE_LOOKUP_2  => 
+			o_rx_ll_dst_rdy_n <= '1';
 	    		if int_valid_idp = '1' and address_valid = '1' then
 	    			int_addr_next  <= address_out;
 	    			o_global_addr  <= address_out(5 downto 2);
@@ -181,17 +182,18 @@ begin
 	    		state_next  <= STATE_FORWARD_SOF;
 	    	when STATE_FORWARD_SOF  => 
 	    		o_tx_sof  <= '1';
-	    		o_tx_src_rdy  <= '1';
-	    		if i_tx_dst_rdy = '1' then
+	    		o_tx_src_rdy  <= not i_rx_ll_src_rdy_n;
+			o_rx_ll_dst_rdy_n <= not i_tx_dst_rdy;
+	    		if i_tx_dst_rdy = '1' and i_rx_ll_src_rdy_n = '0' then
 	    			state_next  <= STATE_FORWARD;
 	    		end if;
-			when STATE_FORWARD  => 
-					o_rx_ll_dst_rdy_n  <= not i_tx_dst_rdy;
-					o_tx_src_rdy  <= not i_rx_ll_src_rdy_n;
-					o_tx_eof  <= not i_rx_ll_eof_n;
-					if i_rx_ll_eof_n = '0' then
-						state_next  <= STATE_IDLE;
-					end if;    		 
+		when STATE_FORWARD  => 
+			o_rx_ll_dst_rdy_n  <= not i_tx_dst_rdy;
+			o_tx_src_rdy  <= not i_rx_ll_src_rdy_n;
+			o_tx_eof  <= not i_rx_ll_eof_n;
+			if i_rx_ll_eof_n = '0' then
+				state_next  <= STATE_IDLE;
+			end if;    		 
 	    		
 	    	when others => 
 	    		state_next  <= STATE_INIT;

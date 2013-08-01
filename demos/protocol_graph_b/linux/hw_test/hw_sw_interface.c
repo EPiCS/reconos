@@ -176,6 +176,18 @@ static int __init init_reconos_test_module(void)
 	printk(KERN_INFO "[reconos-interface] HZ= %d\n", HZ);
 	jiffies_before = jiffies;
 
+	
+	while(1){
+		printk(KERN_INFO "waiting for hw packets \n");
+		int ret = mbox_get(&b_mb_get);
+		int i;
+		for (i = 0; i < 100; i+=4)
+			printk(KERN_INFO "%x %x %x %x\n", shared_mem_h2s[i], shared_mem_h2s[i+1],  shared_mem_h2s[i+2],  shared_mem_h2s[i+3]);
+		printk(KERN_INFO "received packet of len %u\n", ret);
+		mbox_put(&b_mb_put, shared_mem_h2s );
+	}
+
+
 #ifdef ADD	//get interrupt time
 	mbox_put(&e_mb_put, shared_mem_s2h);
 	/**************************************
@@ -219,13 +231,14 @@ static int __init init_reconos_test_module(void)
 	
 	}
 
-#endif
+//#endif
 		/****************************************
 		 * Reconfigure ETH to send data to dummy
 		 ****************************************/
 		u32 config_data = 1; //global=0, local=1
 		mbox_put(&a_mb_put, config_data);
 
+#endif
 
 
 #ifdef SW_APP
@@ -449,8 +462,9 @@ static int __init init_reconos_test_module(void)
 	}
 	jiffies_after =jiffies;
 
-#endif
+//#endif
 	printk(KERN_INFO "[reconos-interface] jiffies before = %lu, jiffies after = %lu, delta = %lu", jiffies_before, jiffies_after, jiffies_after - jiffies_before);
+#endif
 
 	printk(KERN_INFO "[reconos-interface] done\n");
 	return 0;

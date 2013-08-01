@@ -145,8 +145,8 @@ component remove_header is
   		o_global_addr : out std_logic_vector(3 downto 0);
   		o_local_addr : out std_logic_vector(1 downto 0);
   		o_direction : out std_logic;
-  		o_priority : out std_logic;
-  		o_latency_critical : out std_logic_vector(1 downto 0);	
+  		o_priority : out std_logic_vector(1 downto 0);
+  		o_latency_critical : out std_logic;	
   		o_src_idp : out  std_logic_vector(31 downto 0);
   		o_dst_idp : out  std_logic_vector(31 downto 0);
   		
@@ -229,11 +229,11 @@ component remove_header is
 	signal local_addr : std_logic_vector(1 downto 0);
 
 	signal set_idp : std_logic;
+	signal set_hash : std_logic;
   	signal set_address : std_logic;
   	signal hash : std_logic_vector(63 downto 0);
   	signal idp_in : std_logic_vector(31 downto 0);
   	signal address_in : std_logic_vector(5 downto 0);
-
 
 begin
 	
@@ -372,7 +372,7 @@ begin
   		o_tx_eof => rx_ll_eof,
   		o_tx_data => rx_ll_data,
   		o_tx_src_rdy => rx_ll_src_rdy,
-  		i_tx_dst_rdy => rx_ll_src_rdy,
+  		i_tx_dst_rdy => rx_ll_dst_rdy,
   
   		o_global_addr => global_addr,
   		o_local_addr => local_addr,
