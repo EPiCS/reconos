@@ -82,7 +82,8 @@ entity hwt_ethernet_test is
 end hwt_ethernet_test;
 
 architecture implementation of hwt_ethernet_test is
-	type STATE_TYPE is ( STATE_GET,STATE_GET_2, STATE_PUT, STATE_PUT2, STATE_THREAD_EXIT );
+	type STATE_TYPE is ( STATE_GET,STATE_SET_ADDRESS, STATE_SET_IDP_1, STATE_SET_IDP_2, STATE_SET_IDP_3, 
+				STATE_PUT, STATE_PUT2, STATE_THREAD_EXIT );
 
 	-- PUT YOUR OWN COMPONENTS HERE
 
@@ -229,7 +230,6 @@ component remove_header is
 	signal local_addr : std_logic_vector(1 downto 0);
 
 	signal set_idp : std_logic;
-	signal set_hash : std_logic;
   	signal set_address : std_logic;
   	signal hash : std_logic_vector(63 downto 0);
   	signal idp_in : std_logic_vector(31 downto 0);
@@ -499,15 +499,18 @@ begin
                 -- EXAMPLE STATE MACHINE - ADD YOUR STATES AS NEEDED
 
 				-- Get some data
-				when STATE_GET =>
+				when STATE_SET_IDP_1 =>
 					osif_mbox_get(i_osif, o_osif, MBOX_RECV, data, done);
 					if done then
 						if (data = X"FFFFFFFF") then
 							state <= STATE_THREAD_EXIT;
 						else
-							set_hash <= '1';
-							hash  <= x"ABABABABABABABAB";
-	    						idp_in  <= x"12344321";
+							hash(63 downto 32) <= data;
+							state <= STATE_SET_IDP_2;
+						end if;
+						--	set_idp <= '1';
+						--	hash  <= x"ABABABABABABABAB";
+	    					--	idp_in  <= x"12344321";
 						--	dst_idp(7 downto 0)  <= data(31 downto 24);
 						--	src_idp(7 downto 0)  <= data(23 downto 16);
 						--	latency_critical  <= data(9);
@@ -515,27 +518,36 @@ begin
 						--	priority  <= data(7 downto 6);
 						--	global_addr  <= data(5 downto 2);
 						--	local_addr  <= data(1 downto 0);
-							state <= STATE_GET_2;
-						end if;
+						--	state <= STATE_GET_2;
+						--end if;
 					end if;
 				
-				when STATE_GET_2 =>
+				when STATE_SET_IDP_2 =>
 					osif_mbox_get(i_osif, o_osif, MBOX_RECV, data, done);
 					if done then
-						if (data = X"FFFFFFFF") then
-							state <= STATE_THREAD_EXIT;
-						else
-							set_address <= '1';
-							address_in  <= "000001"; --hard coded to AES
-	    						idp_in  <= x"12344321";
-	    						state  <= STATE_PUT;
-						end if;
+						hash(31 downto 0) <= data;
+						state <= STATE_SET_IDP_3;
 					end if;
+				when STATE_SET_IDP_3 =>
+					osif_mbox_get(i_osif, o_osif, MBOX_RECV, data, done);
+					if done then
+						idp_in <= data;
+						state <= STATE_SET_ADDRESS;
+						set_idp <= '1';
+					end if;
+				when STATE_SET_ADDRESS =>
+					osif_mbox_get(i_osif, o_osif, MBOX_RECV, data, done);
+					if done then
+						address_in <= data(5 downto 0);
+						state <= STATE_PUT;
+						set_address <= '1';
+					end if;
+
 
 				-- Echo the data
 				when STATE_PUT =>
 					osif_mbox_put(i_osif, o_osif, MBOX_SEND, rx_packet_count, ignore, done);
-					if done then state <= STATE_PUT2; end if;
+					if done then state <= STATE_SET_IDP_1; end if;
 				
 				when STATE_PUT2 =>
 					osif_mbox_put(i_osif, o_osif, MBOX_SEND, tx_packet_count, ignore, done);
@@ -544,6 +556,8 @@ begin
 				-- thread exit
 				when STATE_THREAD_EXIT =>
 					osif_thread_exit(i_osif,o_osif);
+				when others =>
+					state <= STATE_SET_IDP_1;
 			
 			end case;
 		end if;
