@@ -222,7 +222,7 @@ static int __init init_reconos_test_module(void)
 		u32 config_eth_idp = 0x12341234;
 		u32 config_eth_address = 1; //global 0, local 1 -> aes
 
-		mbox_put(&a_mb_put, config_eth_hash_1 ); //TODO: Interface needs to be adapted! Currently, it is hardcoded in the hwt_ethernet pcore
+		mbox_put(&a_mb_put, config_eth_hash_1 ); 
 		mbox_put(&a_mb_put, config_eth_hash_2);
 		mbox_put(&a_mb_put, config_eth_idp);
 		mbox_put(&a_mb_put, config_eth_address);
@@ -235,13 +235,36 @@ static int __init init_reconos_test_module(void)
 		config_eth_idp = 0x56785678;
 		config_eth_address = 5; //global 1, local 1 -> h2s
 
-		mbox_put(&a_mb_put, config_eth_hash_1 ); //TODO: Interface needs to be adapted! Currently, it is hardcoded in the hwt_ethernet pcore
+		mbox_put(&a_mb_put, config_eth_hash_1 );
 		mbox_put(&a_mb_put, config_eth_hash_2);
 		mbox_put(&a_mb_put, config_eth_idp);
 		mbox_put(&a_mb_put, config_eth_address);
 
 		ret = mbox_get(&a_mb_get);
-		printk(KERN_INFO "hwt_ethernet configured\n");
+		printk(KERN_INFO "hwt_ethernet configured - 2\n");
+		
+		ret = mbox_get(&b_mb_get);
+		
+		for (i = 0; i < 100; i+=4)
+			printk(KERN_INFO "%x %x %x %x\n", shared_mem_h2s[i], shared_mem_h2s[i+1],  shared_mem_h2s[i+2],  shared_mem_h2s[i+3]);
+		printk(KERN_INFO "received packet of len %u\n", ret);
+		mbox_put(&b_mb_put, shared_mem_h2s );
+//config eth
+		config_eth_hash_1 = 0xabababab;
+		config_eth_hash_2 = 0xabababab;
+		config_eth_idp = 0x12341234;
+		config_eth_address = 5; //global 1, local 1 -> h2s
+
+		mbox_put(&a_mb_put, config_eth_hash_1 ); 
+		mbox_put(&a_mb_put, config_eth_hash_2);
+		mbox_put(&a_mb_put, config_eth_idp);
+		mbox_put(&a_mb_put, config_eth_address);
+
+		ret = mbox_get(&a_mb_get);
+		printk(KERN_INFO "hwt_ethernet configured - 3\n");
+
+
+
 
 	}
 

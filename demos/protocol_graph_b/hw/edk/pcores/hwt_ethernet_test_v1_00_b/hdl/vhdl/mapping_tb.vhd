@@ -32,7 +32,8 @@ architecture Behavioral of mapping_tb is
   	port (
   		i_clk		: in std_logic;
   		i_rst		: in std_logic;
-  		i_index 	: in std_logic_vector(INDEX_LEN - 1 downto 0);
+  		i_index_get	: in std_logic_vector(INDEX_LEN - 1 downto 0);
+  		i_index_set	: in std_logic_vector(INDEX_LEN - 1 downto 0);
   		i_value		: in std_logic_vector(VALUE_LEN - 1 downto 0);
   		i_set_value	: in std_logic;
   		i_get_value	: in std_logic;
@@ -58,7 +59,7 @@ architecture Behavioral of mapping_tb is
 	signal address_valid : std_logic;
 	signal dst_address : std_logic_vector(5 downto 0);
 	
-	type testing_state_t is (STATE_INIT, STATE_SET_1, STATE_SET_2, STATE_SET_3, STATE_GET, STATE_GET_2, STATE_SET_ADDR, STATE_DUMMY);
+	type testing_state_t is (STATE_INIT, STATE_SET_1, STATE_SET_2, STATE_SET_3, STATE_GET, STATE_GET_2, STATE_SET_ADDR, STATE_RECONFIG, STATE_DUMMY);
 	signal state 	    : testing_state_t;
 	signal state_next   : testing_state_t;
 		
@@ -72,7 +73,8 @@ begin
     port map (
     		i_clk  => clk,
     		i_rst  => rst,
-    		i_index  => hash,
+    		i_index_get  => hash,
+    		i_index_set  => hash,
     		i_value  => idp_in,
     		i_set_value  => set_hash,
     		i_get_value  => get_idp,
@@ -88,7 +90,8 @@ begin
     port map (
     		i_clk  => clk,
     		i_rst  => rst,
-    		i_index  => idp_in,
+    		i_index_get  => idp_in,
+    		i_index_set  => idp_in,
     		i_value  => address_in,
     		i_set_value  => set_address,
     		i_get_value  => get_address,
@@ -119,7 +122,7 @@ begin
 	    		state_next  <= STATE_SET_2;
 	    	when STATE_SET_2  => 
 	    	 	hash  <= x"EEFFFFEE55667788";
-	    		idp_in  <= x"56788765";
+	    	 	idp_in  <= x"56788765";
 	    		set_hash  <= '1';
 	    		state_next  <= STATE_SET_3;
 	    	when STATE_SET_3  => 
@@ -128,7 +131,7 @@ begin
 	    		idp_in  <= x"56788765";
 	    		state_next  <= STATE_GET;
 	    	when STATE_GET  =>
-	    		hash  <= x"EEFFFFEE55667789";
+	    		hash  <= x"EEFFFFEE55667788";
 	    		get_idp  <= '1';
 	    		state_next  <= STATE_GET_2;
 	    	when STATE_GET_2  => 
@@ -143,7 +146,13 @@ begin
 	    		else
 	    			dst_address  <= (others  => '1');
 	    		end if;
-	    		state_next  <= STATE_DUMMY;
+	    		state_next  <= STATE_RECONFIG;
+	    	when STATE_RECONFIG =>
+	    		set_address <= '1';
+	    		idp_in <= x"56788765";
+				address_in <= "010101";
+				state_next <= STATE_GET;	    		
+	    		
 	    	when STATE_DUMMY  => 
 	    		address_in  <= dst_address;
 	    		

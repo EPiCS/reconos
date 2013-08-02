@@ -62,6 +62,7 @@ begin
 	
 	
 	mapping_proc : process(i_index_get, i_index_set, i_value, i_set_value, i_get_value, int_index, mapping_table, state, int_value, int_valid)
+	variable found : std_logic;
 	begin
 		int_value_next  <= int_value;
 		mapping_table_next  <= mapping_table;
@@ -75,9 +76,18 @@ begin
 	    		mapping_table_next  <= (others  => (others  => '0'));
 	    		state_next  <= STATE_IDLE;
         	when STATE_IDLE =>
+        		found := '0';
 		   		if i_set_value = '1' then
-		   			mapping_table_next(int_index) <= i_index_set & i_value;
-		   			int_index_next <= int_index + 1; --TODO: overflow protection.
+		   			for i in 0 to NR_OF_ENTRIES - 1 loop
+		   				if i_index_set = mapping_table(i)(INDEX_LEN + VALUE_LEN -1 downto VALUE_LEN) then
+		   					mapping_table_next(i) <= i_index_set & i_value;
+		   					found := '1';
+		   				end if;
+		   			end loop;
+		   			if found = '0' then
+		   					mapping_table_next(int_index) <= i_index_set & i_value;
+		   					int_index_next <= int_index + 1; --TODO: overflow protection.
+		   				end if;
 		   		end if;
 		   		if i_get_value = '1' then
 		   			for i in 0 to NR_OF_ENTRIES - 1 loop
@@ -87,6 +97,7 @@ begin
 		   				end if;
 		   			end loop;
 		   		end if;
+		
 	--	when others =>
 	    end case;
 	end process;
