@@ -102,7 +102,7 @@ architecture Behavioral of remove_header is
 	
 begin
 
-	rem_proc : process(state, i_rx_ll_data, i_rx_ll_src_rdy_n, i_rx_ll_sof_n, counter, hash, 
+	rem_proc : process(state, i_rx_ll_data, i_rx_ll_src_rdy_n, i_rx_ll_sof_n, counter, hash, i_idp, 
 		idp_valid, int_valid_idp, address_valid, address_out, i_tx_dst_rdy, i_rx_ll_eof_n, int_addr
 	)
 	begin
@@ -118,7 +118,7 @@ begin
 		
 		o_latency_critical  <= '0';
 		o_src_idp  <= (others  => '0');
-		o_dst_idp  <= (others  => '0');
+		o_dst_idp  <= idp_out;
 		o_priority  <= (others => '0');
 		o_direction  <= '1';
 		

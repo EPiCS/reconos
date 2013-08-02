@@ -228,6 +228,19 @@ static int __init init_reconos_test_module(void)
 		mbox_put(&a_mb_put, config_eth_address);
 
 		ret = mbox_get(&a_mb_get);
+		printk(KERN_INFO "hwt_ethernet configured - 1\n");
+
+		config_eth_hash_1 = 0xabababab;
+		config_eth_hash_2 = 0xababab01;
+		config_eth_idp = 0x56785678;
+		config_eth_address = 5; //global 1, local 1 -> h2s
+
+		mbox_put(&a_mb_put, config_eth_hash_1 ); //TODO: Interface needs to be adapted! Currently, it is hardcoded in the hwt_ethernet pcore
+		mbox_put(&a_mb_put, config_eth_hash_2);
+		mbox_put(&a_mb_put, config_eth_idp);
+		mbox_put(&a_mb_put, config_eth_address);
+
+		ret = mbox_get(&a_mb_get);
 		printk(KERN_INFO "hwt_ethernet configured\n");
 
 	}
