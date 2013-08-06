@@ -11,6 +11,9 @@ sort_demo: $(APP_OBJS)
 clean:
 	rm -f *.o sort_demo 
 
+install:
+	cp sort_demo /exports/rootfs_mb/demos/sort_demo_tmr
+
 %.o: %.c
 	$(CC) -c $(CFLAGS) -o $@ $<
 
