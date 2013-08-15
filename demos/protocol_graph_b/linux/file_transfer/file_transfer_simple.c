@@ -57,7 +57,7 @@ int main(int argc, char **argv)
 	printf("our instance: %s\n", name);
 	fprintf(stderr, "our instance: %s\n", name);
 	/* communication should be established */
-	memset(msg_buff, 1, MTU);	
+	memset(msg_buff, 0xfe, MTU);	
       	/* open the file for transmission*/
 	if (server){
 		/* wait for client to be setup */

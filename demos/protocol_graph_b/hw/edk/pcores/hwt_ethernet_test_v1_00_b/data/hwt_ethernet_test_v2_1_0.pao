@@ -22,6 +22,7 @@ lib hwt_ethernet_test_v1_00_b v6_emac_v1_4_locallink vhdl
 lib hwt_ethernet_test_v1_00_b eth_wrapper vhdl
 lib hwt_ethernet_test_v1_00_b mapping vhdl
 lib hwt_ethernet_test_v1_00_b remove_header vhdl
+lib hwt_ethernet_test_v1_00_b add_header vhdl
 lib hwt_ethernet_test_v1_00_b hwt_ethernet_test vhdl
 
 

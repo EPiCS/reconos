@@ -161,6 +161,33 @@ component remove_header is
 		);
 		end component;
 
+component add_header is
+	port (
+  		i_clk		: in std_logic;
+  		i_rst		: in std_logic;
+  	    	-- comm with PHY
+  	    	o_tx_ll_data        : out std_logic_vector(7 downto 0);
+        	o_tx_ll_sof_n       : out std_logic;
+        	o_tx_ll_eof_n       : out std_logic;
+        	o_tx_ll_src_rdy_n   : out std_logic;
+        	i_tx_ll_dst_rdy_n   : in std_logic;
+  	
+  		-- comm with previous blocks (with internal switch)
+  		i_rx_sof : in std_logic;
+  		i_rx_eof : in std_logic;
+  		i_rx_data : in std_logic_vector(7 downto 0);
+  		i_rx_src_rdy : in std_logic;
+  		o_rx_dst_rdy : out std_logic;
+  
+  		i_src_idp : in  std_logic_vector(31 downto 0);
+  		i_dst_idp : in  std_logic_vector(31 downto 0)
+  			 
+	 
+    );
+end component;
+
+
+
 
     	-- ADD YOUR CONSTANTS, TYPES AND SIGNALS BELOW
 
@@ -183,6 +210,8 @@ component remove_header is
 
 	--Ethernet
 	signal tx_ll_data        : std_logic_vector(7 downto 0);
+	signal tx_ll_data_int       : std_logic_vector(7 downto 0);
+
         signal tx_ll_sof_n       : std_logic;
         signal tx_ll_eof_n       : std_logic;
         signal tx_ll_src_rdy_n   : std_logic;
@@ -235,6 +264,10 @@ component remove_header is
   	signal idp_in : std_logic_vector(31 downto 0);
   	signal address_in : std_logic_vector(5 downto 0);
 
+	signal nox_rx_srcIdp : std_logic_vector(31 downto 0);
+	signal nox_rx_dstIdp : std_logic_vector(31 downto 0);
+	
+
 begin
 	
 
@@ -255,13 +288,13 @@ begin
 		-- Decoded values of the packet
 		noc_rx_sof		=> tx_ll_sof,		-- Indicates the start of a new packet
 		noc_rx_eof		=> tx_ll_eof,		-- Indicates the end of the packet
-		noc_rx_data		=> tx_ll_data,		-- The current data byte
+		noc_rx_data		=> tx_ll_data_int,		-- The current data byte
 		noc_rx_src_rdy		=> tx_ll_src_rdy, 	-- '1' if the data are valid, '0' else
 		noc_rx_direction	=> open,		-- '1' for egress, '0' for ingress
 		noc_rx_priority		=> open,		-- The priority of the packet
 		noc_rx_latencyCritical	=> open,		-- '1' if this packet is latency critical
-		noc_rx_srcIdp		=> open,		-- The source IDP
-		noc_rx_dstIdp		=> open,		-- The destination IDP
+		noc_rx_srcIdp		=> nox_rx_srcIdp,		-- The source IDP
+		noc_rx_dstIdp		=> nox_rx_dstIdp,		-- The destination IDP
 		noc_rx_dst_rdy		=> tx_ll_dst_rdy	-- Read enable for the functional block	
 );
 	
@@ -391,12 +424,36 @@ begin
 	);
 
 
+	add_header_inst : add_header
+	port map (
+		i_clk		=> clk, 
+  		i_rst		=> rst, 
+  	    	-- comm with PHY
+  	    	o_tx_ll_data    => tx_ll_data,    
+        	o_tx_ll_sof_n   => tx_ll_sof_n,    
+        	o_tx_ll_eof_n   => tx_ll_eof_n,    
+        	o_tx_ll_src_rdy_n  => tx_ll_src_rdy_n, 
+        	i_tx_ll_dst_rdy_n  => tx_ll_dst_rdy_n, 
+  	
+  		-- comm with previous blocks (with internal switch)
+  		i_rx_sof => tx_ll_sof,
+  		i_rx_eof => tx_ll_eof,
+  		i_rx_data => tx_ll_data_int,
+  		i_rx_src_rdy => tx_ll_src_rdy,
+  		o_rx_dst_rdy => tx_ll_dst_rdy,
+  
+  		i_src_idp => nox_rx_srcIdp,
+  		i_dst_idp => nox_rx_dstIdp
+  			 
+    );
+
+
     -- PUT YOUR OWN PROCESSES HERE
 	--conversion packet decoder and ethernet interface.
-    	tx_ll_sof_n     <= not tx_ll_sof;
-        tx_ll_eof_n     <= not tx_ll_eof;
-        tx_ll_src_rdy_n <= not tx_ll_src_rdy;
-       	tx_ll_dst_rdy	<= not tx_ll_dst_rdy_n;
+   -- 	tx_ll_sof_n     <= not tx_ll_sof;
+   --     tx_ll_eof_n     <= not tx_ll_eof;
+   --     tx_ll_src_rdy_n <= not tx_ll_src_rdy;
+   --    	tx_ll_dst_rdy	<= not tx_ll_dst_rdy_n;
 	--downstreamReadClock	<= i_osif.clk;
 		
 --	rx_ll_sof       <= not rx_ll_sof_n;
