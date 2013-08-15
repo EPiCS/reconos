@@ -5,6 +5,7 @@
  *      Author: meise
  */
 
+#include <stdlib.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <mb_interface.h>
@@ -134,7 +135,7 @@ int pthread_cond_broadcast (pthread_cond_t *__cond){
  */
 void pthread_exit(void *retval){
 	putfsl(OSIF_CMD_THREAD_EXIT, OSIF_FSL);
-	exit(0);
+	exit(EXIT_SUCCESS);
 }
 
 /**
@@ -145,4 +146,51 @@ void * reconos_get_init_data(){
 	putfsl(OSIF_CMD_THREAD_GET_INIT_DATA, OSIF_FSL);
 	getfsl(retval, OSIF_FSL);
 	return retval;
+}
+
+
+/**
+ * Copies data from local ram into system's main memory.
+ * @note: Only multiples of 4 for len parameter allowed, because FSL copies always 32 bits.
+ */
+#define MEMIF_CMD_READ  0x00
+#define MEMIF_CMD_WRITE 0x80
+
+void memif_write(const void* src_addr, void* dst_addr, uint32_t len){
+	uint32_t temp;
+	uint32_t i;
+
+	temp = (MEMIF_CMD_WRITE << 23) || // Top 8 bit are command
+		   (len & 0x00FFFFFc) << 2;	  // lower 24 bit are length in bytes. Since only multiples of 4 bytes are allowed, lower 2 bits get zeroed.
+	putfsl(temp,MEMIF_FSL);
+
+	temp = (uint32_t) dst_addr & 0xFFFFFFFc;  // Address of data in main memory. Lower two bits zeroed to align to word size.
+	putfsl(temp,MEMIF_FSL);
+
+	for( i=0; i< len; len+=4){
+		putfsl( *(uint32_t*)src_addr,MEMIF_FSL);
+		src_addr +=4;
+	}
+
+}
+
+/**
+ * Copies data from system's main memory into local ram.
+ * @note: Only multiples of 4 for len parameter allowed, because FSL copies always 32 bits.
+ */
+void memif_read(const void* src_addr, void* dst_addr, uint32_t len){
+	uint32_t temp;
+	uint32_t i;
+
+	temp = (MEMIF_CMD_READ << 23) ||  // Top 8 bit are command
+		   (len & 0x00FFFFFc) << 2;	  // lower 24 bit are length in bytes. Since only multiples of 4 bytes are allowed, lower 2 bits get zeroed.
+	putfsl(temp,MEMIF_FSL);
+
+	temp = (uint32_t) src_addr & 0xFFFFFFFc;  // Address of data in main memory. Lower two bits zeroed to align to word size.
+	putfsl(temp,MEMIF_FSL);
+
+	for( i=0; i< len; len+=4){
+		getfsl( *(uint32_t*)dst_addr,MEMIF_FSL);
+		dst_addr +=4;
+	}
 }

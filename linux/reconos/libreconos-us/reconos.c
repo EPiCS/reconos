@@ -430,7 +430,7 @@ static void reconos_delegate_process_load_program(struct reconos_hwt *hwt){
 
 	fsl_write(hwt->slot, program_size-PROGRAM_FILE_OFFSET);
 	fsl_write_block(hwt->slot, program_buffer, program_size-PROGRAM_FILE_OFFSET);
-
+	printf("Loaded program %s\n", hwt->program_path);
 cleanup:
 	free(program_buffer);
 

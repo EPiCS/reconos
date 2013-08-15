@@ -161,7 +161,7 @@ int main(int argc, char ** argv)
         mbox_init(&mb_stop ,TO_BLOCKS(buffer_size));
 
 	// init reconos and communication resources
-	reconos_init(14,15);
+	reconos_init_autodetect();
 
 	res[0].type = RECONOS_TYPE_MBOX;
 	res[0].ptr  = &mb_start;	  	
@@ -174,6 +174,7 @@ int main(int argc, char ** argv)
 	{
 	  printf(" %i",i);fflush(stdout);
 	  reconos_hwt_setresources(&(hwt[i]),res,2);
+	  reconos_hwt_setprogram(&(hwt[i]), "sort_demo_workercpu.bin");
 	  reconos_hwt_create(&(hwt[i]),i,NULL);
 	}
 	printf("\n");

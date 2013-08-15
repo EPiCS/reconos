@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <string.h>
 #include <mb_interface.h>
 #include "reconos.h"
 
@@ -28,10 +29,11 @@ pthread_mutex_t mutex_send = 7;
 pthread_cond_t cond_recv = 8;
 pthread_cond_t cond_send = 9;
 
-#define REPETITIONS  14000 //8192
 
-#define BUFFER_SIZE REPETITIONS*sizeof(uint32_t)
-uint32_t buffer[BUFFER_SIZE/sizeof(uint32_t)];
+
+#define BUFFER_SIZE_BYTES 56000
+#define REPETITIONS  BUFFER_SIZE_BYTES/sizeof(uint32_t)
+uint32_t buffer[BUFFER_SIZE_BYTES/sizeof(uint32_t)];
 
 bool test_echo(){
 	uint32_t temp = 0;
@@ -130,6 +132,34 @@ bool test_cond() {
 	return true;
 }
 
+bool test_mem_read() {
+	int i;
+	void * src;
+	bool passed = true;
+
+	memset(buffer, 0x0, BUFFER_SIZE_BYTES);
+	src = (void *) mbox_get(&mb_recv);
+	memif_read(src, buffer, BUFFER_SIZE_BYTES);
+
+	// Check for correct contents: all bytes should be 0x42, which means a word of data should be 0x42424242
+	for (i = 0; i< BUFFER_SIZE_BYTES/sizeof(uint32_t); i++){
+		if (buffer[i] != 0x42424242 ){
+			passed = false;
+			break;
+		}
+	}
+
+	mbox_put(&mb_send,(uint32_t) passed);
+	return passed;
+}
+
+bool test_mem_write() {
+	void * dst;
+	//dst = (void *)mbox_get(&mb_recv);
+	//memif_write(buffer, dst, BUFFER_SIZE_BYTES);
+	return true;
+}
+
 typedef bool (*test_func)();
 
 test_func test_array[] = {
@@ -140,6 +170,8 @@ test_func test_array[] = {
 		test_cond,
 		test_echo,
 		test_echo_block,
+		test_mem_read,
+		test_mem_write,
 		NULL
 };
 

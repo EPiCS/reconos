@@ -68,4 +68,7 @@ extern void pthread_exit(void *retval);
 
 extern void * reconos_get_init_data();
 
+extern void memif_write(const void* src_addr, void* dst_addr, uint32_t len);
+extern void memif_read(const void* src_addr, void* dst_addr, uint32_t len);
+
 #endif /* RECONOS_H_ */
