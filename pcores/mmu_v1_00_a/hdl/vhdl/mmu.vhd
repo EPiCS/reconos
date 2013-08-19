@@ -208,7 +208,10 @@ begin
 	
 	pgde_addr <= "00" &  pgd(29 downto 12) & vaddr(31 downto 22) & "00";
 	pte_addr  <= "00" & pgde(29 downto 12) & vaddr(21 downto 12) & "00";
-	paddr     <= pte(31 downto 12) & vaddr(11 downto 0);
+	--paddr     <= pte(31 downto 12) & vaddr(11 downto 0);
+	--Bypass MMU for kernel space addresses
+	paddr     <= vaddr - X"C0000000" when vaddr >= X"C0000000" else pte(31 downto 12) & vaddr(11 downto 0);
+
 
 	tlb_hits   <= tlb_hits_dup;
 	tlb_misses <= tlb_misses_dup;
