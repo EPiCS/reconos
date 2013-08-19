@@ -1,0 +1,34 @@
+###################################################################
+##
+## Name     : rgb_to_yuv
+## Desc     : RGB_TO_YUV FOR VIDEO SIGNAL
+##
+###################################################################
+
+BEGIN rgb_to_yuv
+
+## Peripheral Options
+OPTION IPTYPE = PERIPHERAL
+OPTION IMP_NETLIST = TRUE
+OPTION HDL = VHDL
+OPTION DESC = RGB_TO_YUV
+OPTION LONG_DESC = RGB_TO_YUV FOR VIDEO SIGNAL
+OPTION ARCH_SUPPORT_MAP = (others=DEVELOPMENT)
+
+
+
+## Ports
+PORT clk = "", DIR = I, SIGIS = CLK
+PORT rst = "", DIR = I, SIGIS = RST
+##PORT switch_uv  = "", DIR = I
+PORT rgb_data_in = "", DIR = I, VEC = [23:0]
+PORT yuv_data_out = "", DIR = O, VEC = [15:0]
+PORT rgb2yuv_in_vblank = "", DIR = I
+PORT rgb2yuv_in_hblank = "", DIR = I
+PORT rgb2yuv_in_de     = "", DIR = I
+PORT rgb2yuv_out_vblank = "", DIR = O
+PORT rgb2yuv_out_hblank = "", DIR = O
+PORT rgb2yuv_out_de     = "", DIR = O
+
+
+END

@@ -1,0 +1,38 @@
+###################################################################
+##
+## Name     : manipulator
+## Desc     : MANIPLUATOR FOR VIDEO SIGNAL
+##
+###################################################################
+
+BEGIN yuv_to_rgb
+
+## Peripheral Options
+OPTION IPTYPE = PERIPHERAL
+OPTION IMP_NETLIST = TRUE
+OPTION HDL = VHDL
+OPTION DESC = YUV_TO_RGB
+OPTION LONG_DESC = YUV_TO_RGB FOR VIDEO SIGNAL
+OPTION ARCH_SUPPORT_MAP = (others=DEVELOPMENT)
+OPTION STYLE = MIX
+
+
+
+## Ports
+PORT clk = "", DIR = I, SIGIS = CLK
+PORT rst = "", DIR = I, SIGIS = RST
+PORT switch_r = "", DIR = I
+PORT switch_g = "", DIR = I
+PORT switch_b = "", DIR = I
+PORT switch_uv  = "", DIR = I
+PORT yuv_data_in = "", DIR = I, VEC = [15:0]
+PORT rgb_data_out = "", DIR = O, VEC = [23:0]
+PORT yuv2rgb_in_vblank = "", DIR = I
+PORT yuv2rgb_in_hblank = "", DIR = I
+PORT yuv2rgb_in_de     = "", DIR = I
+PORT yuv2rgb_out_vblank = "", DIR = O
+PORT yuv2rgb_out_hblank = "", DIR = O
+PORT yuv2rgb_out_de     = "", DIR = O
+
+
+END

@@ -1,0 +1,8 @@
+##############################################################################
+## Filename:          /home/huangy/work/ran_num_generator/pcores/ran_num_generator_v1_00_a/data/ran_num_generator_v2_1_0.pao
+## Description:       Peripheral Analysis Order
+## Date:              Tue Mar 26 12:48:54 2013 (by Create and Import Peripheral Wizard)
+##############################################################################
+
+lib proc_common_v3_00_a  all 
+lib rgb_to_yuv_v1_00_a rgb_to_yuv vhdl
