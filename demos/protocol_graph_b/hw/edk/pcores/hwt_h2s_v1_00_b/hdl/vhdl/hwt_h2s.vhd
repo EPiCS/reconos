@@ -367,6 +367,8 @@ begin
 						if rx_ll_eof = '1' then
 							receiving_state  <= STATE_EOF;
 							rx_ll_dst_rdy_local  <= '0';
+							o_RAMWE_sender <= '1';
+							o_RAMData_sender(8 to 15) <= rx_ll_data;
 						else
 							receiving_state  <= STATE_RCV_3;
 						end if;
@@ -378,6 +380,9 @@ begin
 						if rx_ll_eof = '1' then
 							receiving_state  <= STATE_EOF;
 							rx_ll_dst_rdy_local  <= '0';
+							o_RAMWE_sender <= '1';
+							o_RAMData_sender(16 to 23) <= rx_ll_data;
+
 						else
 							receiving_state  <= STATE_RCV_4;
 						end if;
@@ -404,6 +409,8 @@ begin
 							receiving_state  <= STATE_EOF;
 							o_RAMWE_sender <= '1';
 							rx_ll_dst_rdy_local  <= '0';
+							o_RAMData_sender(0 to 7) <= rx_ll_data;
+
 						else
 							receiving_state  <= STATE_RCV_2;
 						end if;
@@ -530,7 +537,7 @@ begin
 					
 				when STATE_WRITE =>
 					reconos_fsm_ready  <= '0';
-					memif_write(i_ram, o_ram, i_memif, o_memif, X"00000000", base_addr, total_packet_len(23 downto 0) , done);
+					memif_write(i_ram, o_ram, i_memif, o_memif, X"00000000", base_addr, total_packet_len(23 downto 0) + 4, done); --the length is silently truncated!
 					if done then 
 						state <= STATE_PUT;
 					end if;

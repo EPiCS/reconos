@@ -176,6 +176,99 @@ static int __init init_reconos_test_module(void)
 	printk(KERN_INFO "[reconos-interface] HZ= %d\n", HZ);
 	jiffies_before = jiffies;
 
+	printk(KERN_INFO "[reconos-interface] Setting up AES slot \n");
+	
+	u32 config_data_start=1;
+	u32 config_rcv=0;
+	u32 config_data_mode=0;	//"....1100"=12=mode128, mode192=13, mode256=14,15
+	u32 config_data_key0=0x16157e2b; // 50462976;	//X"03020100"
+	u32 config_data_key1=0xa6d2ae28; //117835012;	//X"07060504"
+	u32 config_data_key2=0x8815f7ab; //185207048;	//X"0b0a0908"
+	u32 config_data_key3=0x3c4fcf09; //252579084;	//X"0f0e0d0c"
+
+	u32 config_data_key4=319951120;	//X"13121110"
+	u32 config_data_key5=387323156;	//X"17161514"
+	u32 config_data_key6=454695192;	//X"1b1a1918"
+	u32 config_data_key7=522067228;	//X"1f1e1d1c"
+	u32 exit_sig=4294967295;
+//	config_data_mode=16; //key length 128 bit, send everything to eth
+	config_data_mode=20; //key length 128 bit, send everything to sw
+	mbox_put(&e_mb_put, config_data_start);
+	mbox_put(&e_mb_put, config_data_mode);
+	mbox_put(&e_mb_put, config_data_key0);
+	mbox_put(&e_mb_put, config_data_key1);
+	mbox_put(&e_mb_put, config_data_key2);
+	mbox_put(&e_mb_put, config_data_key3);
+
+	mbox_put(&e_mb_put, config_data_key4);
+	mbox_put(&e_mb_put, config_data_key5);
+	mbox_put(&e_mb_put, config_data_key6);
+	mbox_put(&e_mb_put, config_data_key7);
+	config_rcv=mbox_get(&e_mb_get);
+	printk(KERN_INFO "[reconos-interface] AES Setup done\n");
+
+	while(1){
+		printk(KERN_INFO "waiting for hw packets \n");
+		int ret = mbox_get(&b_mb_get);
+		int i;
+		for (i = 0; i < 100; i+=4)
+			printk(KERN_INFO "%x %x %x %x\n", shared_mem_h2s[i], shared_mem_h2s[i+1],  shared_mem_h2s[i+2],  shared_mem_h2s[i+3]);
+		printk(KERN_INFO "received packet of len %u\n", ret);
+		mbox_put(&b_mb_put, shared_mem_h2s );
+		printk(KERN_INFO "setting up hash table \n");
+		//config eth
+		u32 config_eth_hash_1 = 0xabababab;
+		u32 config_eth_hash_2 = 0xabababab;
+		u32 config_eth_idp = 0x12341234;
+		u32 config_eth_address = 1; //global 0, local 1 -> aes
+
+		mbox_put(&a_mb_put, config_eth_hash_1 ); 
+		mbox_put(&a_mb_put, config_eth_hash_2);
+		mbox_put(&a_mb_put, config_eth_idp);
+		mbox_put(&a_mb_put, config_eth_address);
+
+		ret = mbox_get(&a_mb_get);
+		printk(KERN_INFO "hwt_ethernet configured - 1\n");
+
+		config_eth_hash_1 = 0xabababab;
+		config_eth_hash_2 = 0xababab01;
+		config_eth_idp = 0x56785678;
+		config_eth_address = 5; //global 1, local 1 -> h2s
+
+		mbox_put(&a_mb_put, config_eth_hash_1 );
+		mbox_put(&a_mb_put, config_eth_hash_2);
+		mbox_put(&a_mb_put, config_eth_idp);
+		mbox_put(&a_mb_put, config_eth_address);
+
+		ret = mbox_get(&a_mb_get);
+		printk(KERN_INFO "hwt_ethernet configured - 2\n");
+		
+		ret = mbox_get(&b_mb_get);
+		
+		for (i = 0; i < 100; i+=4)
+			printk(KERN_INFO "%x %x %x %x\n", shared_mem_h2s[i], shared_mem_h2s[i+1],  shared_mem_h2s[i+2],  shared_mem_h2s[i+3]);
+		printk(KERN_INFO "received packet of len %u\n", ret);
+		mbox_put(&b_mb_put, shared_mem_h2s );
+//config eth
+		config_eth_hash_1 = 0xabababab;
+		config_eth_hash_2 = 0xabababab;
+		config_eth_idp = 0x12341234;
+		config_eth_address = 5; //global 1, local 1 -> h2s
+
+		mbox_put(&a_mb_put, config_eth_hash_1 ); 
+		mbox_put(&a_mb_put, config_eth_hash_2);
+		mbox_put(&a_mb_put, config_eth_idp);
+		mbox_put(&a_mb_put, config_eth_address);
+
+		ret = mbox_get(&a_mb_get);
+		printk(KERN_INFO "hwt_ethernet configured - 3\n");
+
+
+
+
+	}
+
+
 #ifdef ADD	//get interrupt time
 	mbox_put(&e_mb_put, shared_mem_s2h);
 	/**************************************
@@ -219,13 +312,14 @@ static int __init init_reconos_test_module(void)
 	
 	}
 
-#endif
+//#endif
 		/****************************************
 		 * Reconfigure ETH to send data to dummy
 		 ****************************************/
 		u32 config_data = 1; //global=0, local=1
 		mbox_put(&a_mb_put, config_data);
 
+#endif
 
 
 #ifdef SW_APP
@@ -449,8 +543,9 @@ static int __init init_reconos_test_module(void)
 	}
 	jiffies_after =jiffies;
 
-#endif
+//#endif
 	printk(KERN_INFO "[reconos-interface] jiffies before = %lu, jiffies after = %lu, delta = %lu", jiffies_before, jiffies_after, jiffies_after - jiffies_before);
+#endif
 
 	printk(KERN_INFO "[reconos-interface] done\n");
 	return 0;
