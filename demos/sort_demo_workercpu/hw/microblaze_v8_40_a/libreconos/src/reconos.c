@@ -153,25 +153,34 @@ void * reconos_get_init_data(){
  * Copies data from local ram into system's main memory.
  * @note: Only multiples of 4 for len parameter allowed, because FSL copies always 32 bits.
  */
-#define MEMIF_CMD_READ  0x00
-#define MEMIF_CMD_WRITE 0x80
 
 void memif_write(const void* src_addr, void* dst_addr, uint32_t len){
 	uint32_t temp;
 	uint32_t i;
 
-	temp = (MEMIF_CMD_WRITE << 23) || // Top 8 bit are command
-		   (len & 0x00FFFFFc) << 2;	  // lower 24 bit are length in bytes. Since only multiples of 4 bytes are allowed, lower 2 bits get zeroed.
+	temp = (MEMIF_CMD_WRITE << 24) | // Top 8 bit are command
+		   (len & 0x00FFFFFc);	  // lower 24 bit are length in bytes. Since only multiples of 4 bytes are allowed, lower 2 bits get zeroed.
 	putfsl(temp,MEMIF_FSL);
 
 	temp = (uint32_t) dst_addr & 0xFFFFFFFc;  // Address of data in main memory. Lower two bits zeroed to align to word size.
 	putfsl(temp,MEMIF_FSL);
 
-	for( i=0; i< len; len+=4){
+	for( i=0; i< len; i+=4){
 		putfsl( *(uint32_t*)src_addr,MEMIF_FSL);
 		src_addr +=4;
 	}
 
+}
+
+/**
+ * Helper functione: reverses bits in a doubleword: uint32_t
+ */
+uint32_t reverse_uint32_t(uint32_t b) {
+	b = (b & 0xFF00FF00) >> 8 | (b & 0x00FF00FF) << 8;
+	b = (b & 0xF0F0F0F0) >> 4 | (b & 0x0F0F0F0F) << 4;
+	b = (b & 0xCCCCCCCC) >> 2 | (b & 0x33333333) << 2;
+	b = (b & 0xAAAAAAAA) >> 1 | (b & 0x55555555) << 1;
+	return b;
 }
 
 /**
@@ -182,14 +191,16 @@ void memif_read(const void* src_addr, void* dst_addr, uint32_t len){
 	uint32_t temp;
 	uint32_t i;
 
-	temp = (MEMIF_CMD_READ << 23) ||  // Top 8 bit are command
-		   (len & 0x00FFFFFc) << 2;	  // lower 24 bit are length in bytes. Since only multiples of 4 bytes are allowed, lower 2 bits get zeroed.
+	temp = (MEMIF_CMD_READ << 24) |  // Top 8 bit are command
+		   (len & 0x00FFFFFc);	  // lower 24 bit are length in bytes. Since only multiples of 4 bytes are allowed, lower 2 bits get zeroed.
+	temp = reverse_uint32_t(temp);
 	putfsl(temp,MEMIF_FSL);
 
 	temp = (uint32_t) src_addr & 0xFFFFFFFc;  // Address of data in main memory. Lower two bits zeroed to align to word size.
+	temp = reverse_uint32_t(temp);
 	putfsl(temp,MEMIF_FSL);
 
-	for( i=0; i< len; len+=4){
+	for( i=0; i< len; i+=4){
 		getfsl( *(uint32_t*)dst_addr,MEMIF_FSL);
 		dst_addr +=4;
 	}

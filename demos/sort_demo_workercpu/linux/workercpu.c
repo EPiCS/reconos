@@ -346,13 +346,25 @@ bool mem_read_setup(){
 	mbox_setup();
 	return true;
 }
+
 bool mem_read_test() {
 	uint32_t result;
+	printf("\n");
+	printf("Preparing buffer...\n");
 	memset(mem_read_buffer, 0x42, MEM_READ_BUFFER_SIZE_BYTES);
-	mbox_put(&mb_send, (uint32_t)&mem_read_buffer);
+	printf("Sending worker address of buffer: %lu ...\n", (uint32_t)mem_read_buffer);
+	mbox_put(&mb_send, (uint32_t)mem_read_buffer);
+	printf("Waiting for worker reply...\n");
+	result=mbox_get(&mb_recv); // address received?
+	printf("Worker received address %lu ...\n", result);
+	result=mbox_get(&mb_recv); // memory read?
+	printf("Worker read memory from address %lu ...\n", result);
+
 	result=mbox_get(&mb_recv);
+	printf("Worker send comparison results: %lu \n", result); // memory read correctly?
 	return result;
 }
+
 bool mem_read_teardown(){
 	mbox_teardown();
 	return true;
@@ -414,14 +426,14 @@ bool test_teardown(test_t tests[]){
 }
 
 test_t workercpu_tests[] = {
-		{"MBOX Test", mbox_setup, mbox_test, mbox_teardown},
-		{"RQUEUE Test", rqueue_setup, rqueue_test, rqueue_teardown},
-		{"SEM Test", sem_setup, sem_test, sem_teardown},
-		{"MUTEX Test", mutex_setup, mutex_test, mutex_teardown},
-		{"COND Test", cond_setup, cond_test, cond_teardown},
-		{"FSL Benchmark", echo_setup, echo_test, echo_teardown},
-		{"FSL Block Ops Benchmark", echo_block_setup, echo_block_test, echo_block_teardown},
-		{"Memory Access Benchmark", membench_setup, membench_test, membench_teardown},
+//		{"MBOX Test", mbox_setup, mbox_test, mbox_teardown},
+//		{"RQUEUE Test", rqueue_setup, rqueue_test, rqueue_teardown},
+//		{"SEM Test", sem_setup, sem_test, sem_teardown},
+//		{"MUTEX Test", mutex_setup, mutex_test, mutex_teardown},
+//		{"COND Test", cond_setup, cond_test, cond_teardown},
+//		{"FSL Benchmark", echo_setup, echo_test, echo_teardown},
+//		{"FSL Block Ops Benchmark", echo_block_setup, echo_block_test, echo_block_teardown},
+//		{"Memory Access Benchmark", membench_setup, membench_test, membench_teardown},
 		{"Worker Memory Read", mem_read_setup, mem_read_test, mem_read_teardown},
 		{NULL}
 };

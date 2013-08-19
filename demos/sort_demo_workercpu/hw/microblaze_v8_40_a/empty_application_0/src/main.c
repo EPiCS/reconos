@@ -139,8 +139,12 @@ bool test_mem_read() {
 
 	memset(buffer, 0x0, BUFFER_SIZE_BYTES);
 	src = (void *) mbox_get(&mb_recv);
-	memif_read(src, buffer, BUFFER_SIZE_BYTES);
+	mbox_put(&mb_send,(uint32_t) src); // acknowledge receiving of address
 
+	memif_read(src, buffer, BUFFER_SIZE_BYTES);
+	//memif_read((void*)0xFFFFFFFF, buffer, BUFFER_SIZE_BYTES); // provokes segfault
+
+	mbox_put(&mb_send,(uint32_t) src); // acknowledge memory read
 	// Check for correct contents: all bytes should be 0x42, which means a word of data should be 0x42424242
 	for (i = 0; i< BUFFER_SIZE_BYTES/sizeof(uint32_t); i++){
 		if (buffer[i] != 0x42424242 ){
@@ -150,11 +154,12 @@ bool test_mem_read() {
 	}
 
 	mbox_put(&mb_send,(uint32_t) passed);
+
 	return passed;
 }
 
 bool test_mem_write() {
-	void * dst;
+	//void * dst;
 	//dst = (void *)mbox_get(&mb_recv);
 	//memif_write(buffer, dst, BUFFER_SIZE_BYTES);
 	return true;
@@ -163,13 +168,13 @@ bool test_mem_write() {
 typedef bool (*test_func)();
 
 test_func test_array[] = {
-		test_mbox,
-		test_rqueue,
-		test_sem,
-		test_mutex,
-		test_cond,
-		test_echo,
-		test_echo_block,
+//		test_mbox,
+//		test_rqueue,
+//		test_sem,
+//		test_mutex,
+//		test_cond,
+//		test_echo,
+//		test_echo_block,
 		test_mem_read,
 		test_mem_write,
 		NULL
