@@ -1,0 +1,3 @@
+lib ana_v1_00_a anaPkg.vhd vhdl
+lib ana_v1_00_a packetDecoder.vhd vhdl
+lib ana_v1_00_a packetEncoder.vhd vhdl
