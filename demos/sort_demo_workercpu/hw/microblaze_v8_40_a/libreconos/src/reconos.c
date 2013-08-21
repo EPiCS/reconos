@@ -192,16 +192,17 @@ void memif_read(const void* src_addr, void* dst_addr, uint32_t len){
 	uint32_t i;
 
 	temp = (MEMIF_CMD_READ << 24) |  // Top 8 bit are command
-		   (len & 0x00FFFFFc);	  // lower 24 bit are length in bytes. Since only multiples of 4 bytes are allowed, lower 2 bits get zeroed.
-	temp = reverse_uint32_t(temp);
+		   (len & 0x00FFFFFC);	  // lower 24 bit are length in bytes. Since only multiples of 4 bytes are allowed, lower 2 bits get zeroed.
+	//temp = reverse_uint32_t(temp);
 	putfsl(temp,MEMIF_FSL);
 
 	temp = (uint32_t) src_addr & 0xFFFFFFFc;  // Address of data in main memory. Lower two bits zeroed to align to word size.
-	temp = reverse_uint32_t(temp);
+	//temp = reverse_uint32_t(temp);
 	putfsl(temp,MEMIF_FSL);
 
 	for( i=0; i< len; i+=4){
-		getfsl( *(uint32_t*)dst_addr,MEMIF_FSL);
+		getfsl( temp,MEMIF_FSL);
+		*(uint32_t*)dst_addr = temp;
 		dst_addr +=4;
 	}
 }

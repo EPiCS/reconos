@@ -15,6 +15,8 @@
 #include <stdbool.h>
 #include <pthread.h>
 #include <assert.h>
+#include <signal.h>
+#include <sys/ucontext.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -26,7 +28,7 @@
 #include <rqueue.h>
 #include <semaphore.h>
 
-#define WORKERCPU_SLOT 0
+#define WORKERCPU_SLOT 1
 
 #define WORKER_BUFFER_SIZE_BYTES 56000 // Keep in sync with worker program!
 #define REPETITIONS WORKER_BUFFER_SIZE_BYTES/sizeof(uint32_t)
@@ -350,18 +352,29 @@ bool mem_read_setup(){
 bool mem_read_test() {
 	uint32_t result;
 	printf("\n");
+	uint32_t tlb_hits;
+	uint32_t tlb_misses;
+	uint32_t page_faults;
+	reconos_mmu_stats(&tlb_hits, &tlb_misses, &page_faults);
+	printf("MMU Stats Before Request: TLB Hits: %u , TLB Misses: %u , Page Faults: %u\n", tlb_hits, tlb_misses, page_faults);
+
 	printf("Preparing buffer...\n");
 	memset(mem_read_buffer, 0x42, MEM_READ_BUFFER_SIZE_BYTES);
-	printf("Sending worker address of buffer: %lu ...\n", (uint32_t)mem_read_buffer);
+
+	printf("Sending worker address of buffer: %p ...\n", mem_read_buffer);
 	mbox_put(&mb_send, (uint32_t)mem_read_buffer);
+
 	printf("Waiting for worker reply...\n");
 	result=mbox_get(&mb_recv); // address received?
-	printf("Worker received address %lu ...\n", result);
-	result=mbox_get(&mb_recv); // memory read?
-	printf("Worker read memory from address %lu ...\n", result);
 
+	printf("Worker received address %p. Waiting for Memory Read to finish...\n", (uint32_t*)result);
+	reconos_mmu_stats(&tlb_hits, &tlb_misses, &page_faults);
+	printf("MMU Stats After Request: TLB Hits: %u , TLB Misses: %u , Page Faults: %u\n", tlb_hits, tlb_misses, page_faults);
+	result=mbox_get(&mb_recv); // memory read?
+
+	printf("Worker read memory from address %p. Waiting for comparison results...\n", (uint32_t*) result);
 	result=mbox_get(&mb_recv);
-	printf("Worker send comparison results: %lu \n", result); // memory read correctly?
+	printf("Worker send comparison results: %u \n", result); // memory read correctly?
 	return result;
 }
 
@@ -450,6 +463,34 @@ struct reconos_resource res[] = {{.type = RECONOS_TYPE_MBOX, .ptr  = &mb_send},
                       			{.type = RECONOS_TYPE_COND, .ptr  = &cond_recv}};
 struct reconos_hwt hwt;
 
+/*
+ * Signal handler for SIGSEGV. Used for debugging on a microblaze processor.
+ * Get as much information to help in debugging as possible!
+ */
+void sigsegv_handler(int sig, siginfo_t *siginfo, void * context) {
+	ucontext_t* uc = (ucontext_t*) context;
+
+	// Yeah, i know using printf in a signal context is not save.
+	// But with a SIGSEGV the programm is messed up anyway, so what?
+	printf(
+			"SIGSEGV: Programm killed at programm address %p, tried to access %p.\n",
+#ifndef HOST_COMPILE
+			(void*)uc->uc_mcontext.regs.pc,
+#else
+			(void*) uc->uc_mcontext.gregs[14],
+#endif
+			(void*) siginfo->si_addr);
+
+#ifdef SHADOWING
+	// Print OS call lists for debugging
+	int i;
+	for (i=0; i < running_threads; i++) {
+		shadow_dump(sh + i);
+	}
+#endif
+	exit(32);
+}
+
 int main(int argc, char ** argv)
 {
 	bool test_success = true;
@@ -458,6 +499,15 @@ int main(int argc, char ** argv)
 	// twiddle with reset signal
 	//reconos_slot_reset(WORKERCPU_SLOT, 1);
 	//reconos_slot_reset(WORKERCPU_SLOT, 0);
+
+
+	//
+	// Install signal handler for segfaults
+	//
+	struct sigaction act = { .sa_sigaction = sigsegv_handler, .sa_flags =
+			SA_SIGINFO };
+	sigaction(SIGSEGV, &act, NULL);
+
 
 	printf("sizeof(res)= %lu\n", sizeof(res)/sizeof(struct reconos_resource));
     reconos_hwt_setresources(&hwt,res,sizeof(res)/sizeof(struct reconos_resource));
