@@ -9,6 +9,7 @@
 #include "reconos.h"
 #include "fsl.h"
 #include "timing.h"
+#include "xutils.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -341,7 +342,8 @@ bool cond_teardown(){
 }
 
 #define MEM_READ_BUFFER_SIZE_BYTES WORKER_BUFFER_SIZE_BYTES
-uint32_t mem_read_buffer[MEM_READ_BUFFER_SIZE_BYTES/sizeof(uint32_t)];
+#define PAGE_SIZE 4096
+uint32_t  mem_read_buffer[MEM_READ_BUFFER_SIZE_BYTES/sizeof(uint32_t)];
 
 bool mem_read_setup(){
 	// We reuse the mailboxes from mbox tests
@@ -350,6 +352,8 @@ bool mem_read_setup(){
 }
 
 bool mem_read_test() {
+	timing_t t_start, t_stop;
+
 	uint32_t result;
 	printf("\n");
 	uint32_t tlb_hits;
@@ -362,6 +366,7 @@ bool mem_read_test() {
 	memset(mem_read_buffer, 0x42, MEM_READ_BUFFER_SIZE_BYTES);
 
 	printf("Sending worker address of buffer: %p ...\n", mem_read_buffer);
+	t_start = gettime();
 	mbox_put(&mb_send, (uint32_t)mem_read_buffer);
 
 	printf("Waiting for worker reply...\n");
@@ -371,6 +376,10 @@ bool mem_read_test() {
 	reconos_mmu_stats(&tlb_hits, &tlb_misses, &page_faults);
 	printf("MMU Stats After Request: TLB Hits: %u , TLB Misses: %u , Page Faults: %u\n", tlb_hits, tlb_misses, page_faults);
 	result=mbox_get(&mb_recv); // memory read?
+
+	t_stop = gettime();
+	printf ("Memory Read : Size of read: %u, Time (ms): %li\n", (uint32_t)MEM_READ_BUFFER_SIZE_BYTES, calc_timediff_ms( t_start, t_stop ));
+	printf ("Read Speed : %f KB/s per second\n", ((double)MEM_READ_BUFFER_SIZE_BYTES*1000) / ((double)calc_timediff_ms( t_start, t_stop ) * 1024));
 
 	printf("Worker read memory from address %p. Waiting for comparison results...\n", (uint32_t*) result);
 	result=mbox_get(&mb_recv);

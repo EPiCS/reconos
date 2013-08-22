@@ -186,23 +186,29 @@ uint32_t reverse_uint32_t(uint32_t b) {
 /**
  * Copies data from system's main memory into local ram.
  * @note: Only multiples of 4 for len parameter allowed, because FSL copies always 32 bits.
+ * @implementation At time of implementation, memory subsystem accepts non aligned addresses, but only chunks up to 256 bytes of length.
  */
+#define MAX_REQUEST_LEN_BYTES 256
 void memif_read(const void* src_addr, void* dst_addr, uint32_t len){
+	uint32_t request_len;
 	uint32_t temp;
 	uint32_t i;
 
-	temp = (MEMIF_CMD_READ << 24) |  // Top 8 bit are command
-		   (len & 0x00FFFFFC);	  // lower 24 bit are length in bytes. Since only multiples of 4 bytes are allowed, lower 2 bits get zeroed.
-	//temp = reverse_uint32_t(temp);
-	putfsl(temp,MEMIF_FSL);
+	while (len > 0){
+		request_len = len <= MAX_REQUEST_LEN_BYTES ? len : MAX_REQUEST_LEN_BYTES;
+		len -= request_len;
 
-	temp = (uint32_t) src_addr & 0xFFFFFFFc;  // Address of data in main memory. Lower two bits zeroed to align to word size.
-	//temp = reverse_uint32_t(temp);
-	putfsl(temp,MEMIF_FSL);
+		temp = (MEMIF_CMD_READ << 24) |  // Top 8 bit are command
+			   (request_len & 0x00FFFFFC);	  // lower 24 bit are length in bytes. Since only multiples of 4 bytes are allowed, lower 2 bits get zeroed.
+		putfsl(temp,MEMIF_FSL);
 
-	for( i=0; i< len; i+=4){
-		getfsl( temp,MEMIF_FSL);
-		*(uint32_t*)dst_addr = temp;
-		dst_addr +=4;
+		temp = (uint32_t) src_addr & 0xFFFFFFFc;  // Address of data in main memory. Lower two bits zeroed to align to word size.
+		putfsl(temp,MEMIF_FSL);
+
+		for( i=0; i< request_len; i+=4){
+			getfsl(temp, MEMIF_FSL);
+			*(uint32_t*)dst_addr = temp;
+			dst_addr +=4;
+		}
 	}
 }

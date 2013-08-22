@@ -141,8 +141,8 @@ bool test_mem_read() {
 	src = (void *) mbox_get(&mb_recv);
 	mbox_put(&mb_send,(uint32_t) src); // acknowledge receiving of address
 
-	//memif_read(src, buffer, BUFFER_SIZE_BYTES);
-	memif_read(src, buffer, 512);
+	memif_read(src, buffer, BUFFER_SIZE_BYTES);
+	//memif_read(src, buffer, 256);
 	//memif_read((void*)0xFFFFFFFF, buffer, BUFFER_SIZE_BYTES); // provokes segfault
 
 	mbox_put(&mb_send,(uint32_t) src); // acknowledge memory read
