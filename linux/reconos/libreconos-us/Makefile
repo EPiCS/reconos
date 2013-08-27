@@ -8,9 +8,9 @@ HOST_CFLAGS = -O0 -g -Wall -m32 -DHOST_COMPILE -pthread
 # -m32
 
 host:
-#AR=$(HOST_AR)
-#CC=$(HOST_CC)
-#CFLAGS=$(HOST_CFLAGS)
+AR=$(HOST_AR)
+CC=$(HOST_CC)
+CFLAGS=$(HOST_CFLAGS)
 
 APP_OBJS = reconos.o fsl.o mbox.o rqueue.o xutils.o glist.o timing.o fifo.o func_call.o max_covering_intervals.o thread_shadowing.o thread_shadowing_schedule.o thread_shadowing_subs.o
 

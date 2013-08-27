@@ -8,6 +8,7 @@
 #ifndef FUNC_CALL_H_
 #define FUNC_CALL_H_
 
+#include <sys/time.h>
 #include "timing.h"
 //
 // Other Constants
