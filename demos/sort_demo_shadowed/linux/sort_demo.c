@@ -1,11 +1,12 @@
+#define  _GNU_SOURCE
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
-#define  _GNU_SOURCE
 #include <pthread.h>
 #include <assert.h>
 #include <signal.h>
-//#include <sys/ucontext.h>
+#include <sys/ucontext.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -27,16 +28,11 @@
 #include "sort8k.h"
 #include "timing.h"
 
+#include "parallel_sort_interface.h"
 #include "sort_mbox.h"
 #include "sort_rq.h"
 #include "sort_shmem.h"
 
-
-//! #define PAGE_SIZE 4096 // In bytes, needed for correct memory alignment
-
-
-#define TO_WORDS(x) ((x)/4)
-#define TO_BLOCKS(buffer_size_bytes, block_size_bytes) ((buffer_size_bytes)/(block_size_bytes))
 
 // Thread Interfaces
 #define TI_SHMEM  0
@@ -47,12 +43,17 @@ struct gengetopt_args_info args_info;
 int running_threads;
 int buffer_size = 0;
 
-
+char * actual_slot_map[] = {
+		"SLOT_SORT_SHMEM", "SLOT_SORT_SHMEM", "SLOT_SORT_SHMEM", "SLOT_SORT_SHMEM",
+		"SLOT_SORT_SHMEM", "SLOT_SORT_SHMEM", "SLOT_SORT_SHMEM", "SLOT_SORT_SHMEM",
+		"SLOT_SORT_SHMEM", "SLOT_SORT_SHMEM", "SLOT_SORT_SHMEM", "SLOT_SORT_SHMEM",
+		"SLOT_SORT_SHMEM", "SLOT_SORT_SHMEM",
+		NULL};
 
 #ifdef SHADOWING
 // Thread shadowing
-
 shadowedthread_t sh[MAX_THREADS];
+unsigned int sh_free_idx=0;
 #else
 // software threads
 pthread_t swt[MAX_THREADS];
@@ -60,6 +61,9 @@ pthread_attr_t swt_attr[MAX_THREADS];
 
 // hardware threads
 struct reconos_hwt hwt[MAX_THREADS];
+
+// workercpu threads
+struct reconos_hwt hwt_worker[MAX_THREADS];
 #endif
 
 // pointers to buffers of unsorted numbers
@@ -110,19 +114,25 @@ void print_mmu_stats() {
  * Signal handler for SIGSEGV. Used for debugging on a microblaze processor.
  * Get as much information to help in debugging as possible!
  */
+/*
+data
+copy
+running_threads
+sh
+ */
 void sigsegv_handler(int sig, siginfo_t *siginfo, void * context) {
-//!	ucontext_t* uc = (ucontext_t*) context;
+	ucontext_t* uc = (ucontext_t*) context;
 
 	// Yeah, i know using printf in a signal context is not save.
 	// But with a SIGSEGV the programm is messed up anyway, so what?
-//!	printf(
-//!			"SIGSEGV: Programm killed at programm address %p, tried to access %p.\n",
+	printf(
+			"SIGSEGV: Programm killed at programm address %p, tried to access %p.\n",
 #ifndef HOST_COMPILE
-//!			(void*)uc->uc_mcontext.regs.pc,
+			(void*)uc->uc_mcontext.regs.pc,
 #else
-//!			(void*) uc->uc_mcontext.gregs[14],
+			(void*) uc->uc_mcontext.gregs[14],
 #endif
-//!			(void*) siginfo->si_addr);
+			(void*) siginfo->si_addr);
 
 	// Print address of unsorted numbers buffer
 	printf("data: %8p \ncopy: %8p\n", data, copy);
@@ -154,14 +164,39 @@ int limit(int var, int lower, int upper) {
 	return var;
 }
 
-void install_sighandlers(){
-	// Install signal handler for segfaults
-	struct sigaction act = { .sa_sigaction = sigsegv_handler, .sa_flags =
-			SA_SIGINFO };
-	sigaction(SIGSEGV, &act, NULL);
-
+// nth starts with 0!
+int slot_map_find(char * const  map[], const char * hwt_type, int nth){
+	int found_at_index=-1;
+	for (int i = 0; map[i] != NULL ; i++){
+		if (strcmp(map[i],hwt_type) == 0){nth--;}
+		if (nth == -1){found_at_index = i; break;}
+	}
+	return found_at_index;
 }
 
+void slot_map_print(char * const  map[]){
+	printf("Slot Map:");
+	for (int i = 0; map[i] != NULL ; i++){
+		printf(" %s", map[i]);
+	}
+	printf("\n");
+}
+
+void install_sighandlers(){
+	// Install signal handler for segfaults
+	struct sigaction act;
+	act.sa_sigaction = sigsegv_handler;
+	sigemptyset (&act.sa_mask);
+	act.sa_flags = SA_SIGINFO;
+	sigaction(SIGSEGV, &act, NULL);
+	sigaction(SIGFPE, &act, NULL);
+}
+
+/*
+args_info
+buffer_size
+running_threads
+ */
 void handle_commandline(int argc, char** argv){
 	//
 	// Parse command line arguments
@@ -173,6 +208,7 @@ void handle_commandline(int argc, char** argv){
 	args_info.swt_arg = limit(args_info.swt_arg, 0, MAX_THREADS);
 	args_info.mt_arg = limit(args_info.mt_arg, 0, MAX_THREADS);
 	buffer_size = args_info.blocks_arg * args_info.blocksize_arg;
+	running_threads = args_info.hwt_arg + args_info.swt_arg + args_info.mt_arg;
 
 #ifdef SHADOWING
 	printf("sort_demo_shadowed build: %s %s\n", __DATE__, __TIME__);
@@ -192,176 +228,269 @@ void handle_commandline(int argc, char** argv){
 			args_info.shadow_schedule_arg, args_info.shadow_transmodal_flag,
 			args_info.mt_arg, args_info.blocksize_arg);
 
-	running_threads = args_info.hwt_arg + args_info.swt_arg + args_info.mt_arg;
 	printf("Main thread is pthread %lu\n", (unsigned long)pthread_self());
 }
 
 
+struct parallel_sort_interface choose_implementation (int interface){
+	struct parallel_sort_interface pint;
+	switch (interface){
+		case TI_SHMEM:
+			pint = sort_shmem_interface;
+			break;
+		case TI_MBOX:
+			pint = sort_mbox_interface;
+			break;
+		case TI_RQUEUE:
+			pint = sort_rq_interface;
+			break;
+	}
+	return pint;
+}
 
-
-
+//#define SHADOWING 1
 #ifdef SHADOWING
-void prepare_threads_shadowing(shadowedthread_t * sh, const char* worker_progname, void *(*actual_sort_thread)(void* data)){
+/*
+args_info.hwt_arg
+args_info.swt_arg
+args_info.shadow_schedule_arg
+sh
+res
+worker_progname
+actual_sort_thread
+*/
+void prepare_threads_shadowing(int thread_count,
+								struct reconos_resource * res,
+								shadowedthread_t * sh,
+								const char* worker_progname,
+								void *(*actual_sort_thread)(void* data))
+{
 	//
 	// Configure Threads
 	//
-	printf("Configuring %i shadowed threads: ", args_info.hwt_arg+args_info.swt_arg);
-	for (int i = 0; i < args_info.hwt_arg+args_info.swt_arg; i++) {
+	printf("Configuring %i shadowed threads: ", thread_count);
+	for (int i = 0; i < thread_count; i++) {
 		shadow_init( sh+i );
-		shadow_set_resources( sh+i, res[i], 2 );
+		shadow_set_resources( sh+i, &res[i], 2 );
 		shadow_set_program( sh+i , worker_progname);
-		/*
-		 for (j=0; j< (args_info.shadow_flag+1); j++)
-		 {
-		 args_info.shadow_transmodal_flag
-		 args_info.shadow_flag
-		 shadow_set_hwslots(sh+i, j, actual_slot_map[(i*(args_info.shadow_flag+1))+j]);
-		 }
-		 */
 		shadow_set_swthread( sh+i, actual_sort_thread );
 		if(args_info.shadow_schedule_arg==0) {shadow_set_options(sh+i, TS_MANUAL_SCHEDULE);}
 	}
 }
 
-void start_threads_shadowing_hw(shadowedthread_t * sh, const int * actual_slot_map){
+void start_threads_shadowing_hw(int hwt_count,
+								struct reconos_resource * res,
+								shadowedthread_t * sh,
+								unsigned int * sh_free_idx,
+								char * const actual_slot_map[],
+								char * hwt_type,
+								int shadow_flag,
+								int shadow_transmodal_flag)
+{
 	//
 	// create hardware shadowed threads
 	//
 	reconos_init_autodetect();
 
-	printf("Creating %i shadowed hw-threads: ", args_info.hwt_arg);
+	printf("Creating %i shadowed hw-threads: ", hwt_count);
 	fflush(stdout);
-	for (int i = 0; i < args_info.hwt_arg; i++)
+	for (int i = *sh_free_idx; i < hwt_count+*sh_free_idx; i++)
 	{
 		printf(" %i",i);fflush(stdout);
-		shadow_set_threadcount(sh+i, (args_info.shadow_flag+1), 0);
-		//if(args_info.shadow_transmodal_flag==1) {shadow_set_options(sh+i, TS_HW_LEADS);}
-		for (int j=0; j< (args_info.shadow_flag+1); j++)
+		shadow_set_threadcount(sh+i, (shadow_flag+1), 0);
+		for (int j=0; j< (shadow_flag+1); j++)
 		{
-			if ( j == 1 && args_info.shadow_transmodal_flag == 1) {
-				shadow_set_hwslots(sh+i, j, workercpu_slots[(i*(args_info.shadow_flag+1))+j]);
-				printf("Set thread %d.%d to slot %d\n", i,j, workercpu_slots[(i*(args_info.shadow_flag+1))+j]);
+			int slot_number;
+			char * hardware;
+			if ( j == 1 && shadow_transmodal_flag == 1) {
+				hardware = "SLOT_WORKERCPU";
 			} else {
-				shadow_set_hwslots(sh+i, j, actual_slot_map[(i*(args_info.shadow_flag+1))+j]);
-				printf("Set thread %d.%d to slot %d\n", i,j, actual_slot_map[(i*(args_info.shadow_flag+1))+j]);
+				hardware = hwt_type;
 			}
+			slot_number = slot_map_find(actual_slot_map, hardware , (i*(shadow_flag+1))+j);
+			if(slot_number == -1){printf("Warning: Requested HWT Type not found: %s\n", hardware);}
+			shadow_set_hwslots(sh+i, j, slot_number);
+			printf("Set thread %d.%d to slot %d\n", i,j, slot_number);
 		}
 		shadow_thread_create(sh+i);
 	}
+	*sh_free_idx += hwt_count;
 	printf("\n");
 }
 
-void start_threads_shadowing_sw(shadowedthread_t * sh, const int * actual_slot_map){
+/*
+args_info.swt_arg
+args_info.hwt_arg
+sh
+args_info.shadow_flag
+args_info.shadow_transmodal_flag
+actual_slot_map
+workercpu_slots
+ */
+void start_threads_shadowing_sw(int swt_count,
+								struct reconos_resource * res,
+								shadowedthread_t * sh,
+								unsigned int * sh_free_idx,
+								char * const actual_slot_map[],
+								char * hwt_type,
+								int shadow_flag,
+								int shadow_transmodal_flag)
+{
 	//
 	// create software shadowed threads
 	//
 
-	printf("Creating %i shadowed sw-threads: ",args_info.swt_arg);
+	printf("Creating %i shadowed sw-threads: ",swt_count);
 	fflush(stdout);
 
-	for (int i = args_info.hwt_arg; i < args_info.hwt_arg+args_info.swt_arg; i++)
+	for (int i = *sh_free_idx; i < *sh_free_idx+swt_count; i++)
 	{
 		printf(" %i",i-args_info.hwt_arg);fflush(stdout);
-		shadow_set_threadcount(sh+i, (args_info.shadow_flag+1), 0);
-		for (int j=0; j< (args_info.shadow_flag+1); j++)
+		shadow_set_threadcount(sh+i, (shadow_flag+1), 0);
+		for (int j=0; j< (shadow_flag+1); j++)
 		{
-			if ( j == 1 && args_info.shadow_transmodal_flag == 1) {
-				shadow_set_hwslots(sh+i, j, actual_slot_map[((i-args_info.hwt_arg)*(args_info.shadow_flag+1))+j]);
-				printf("Set thread %d.%d to slot %d\n", i,j, actual_slot_map[((i-args_info.hwt_arg)*(args_info.shadow_flag+1))+j]);
+			int slot_number;
+			char * hardware;
+			if ( j == 1 && shadow_transmodal_flag == 1) {
+				hardware = hwt_type;
 			} else {
-				shadow_set_hwslots(sh+i, j, workercpu_slots[((i-args_info.hwt_arg)*(args_info.shadow_flag+1))+j]);
-				printf("Set thread %d.%d to slot %d\n", i,j, workercpu_slots[((i-args_info.hwt_arg)*(args_info.shadow_flag+1))+j]);
+				hardware = "SLOT_WORKERCPU";
 			}
+			slot_number = slot_map_find(actual_slot_map, hardware , ((i-*sh_free_idx)*(shadow_flag+1))+j);
+			if(slot_number == -1){printf("Warning: Requested HWT Type not found: %s\n", hardware);}
+			shadow_set_hwslots(sh+i, j, slot_number);
+			printf("Set thread %d.%d to slot %d\n", i,j, slot_number);
 		}
-		/*		shadow_set_threadcount(sh+i, args_info.shadow_transmodal_flag, (args_info.shadow_flag+1)-args_info.shadow_transmodal_flag);
-		 if(args_info.shadow_transmodal_flag==1) {shadow_set_options(sh+i, TS_SW_LEADS);}
-		 */
 		shadow_thread_create(sh+i);
 
 	}
+	*sh_free_idx += swt_count;
 	printf("\n");
 }
 #endif //SHADOWING
 
-void start_threads_hw(const char* worker_progname, const int * actual_slot_map){
+/*
+args_info.hwt_arg
+res
+hwt
+worker_progname
+actual_slot_map
+ */
+void start_threads_hw(int hwt_count,
+						struct reconos_resource * res,
+						int reconos_resource_count,
+						struct reconos_hwt * hwt,
+						char * hwt_type,
+						char * const actual_slot_map[])
+{
 	// init reconos and communication resources
 	reconos_init_autodetect();
 
-	printf("Creating %i hw-threads: ", args_info.hwt_arg);
+	printf("Creating %i hw-threads: ", hwt_count);
 	fflush(stdout);
-	for (int i = 0; i < args_info.hwt_arg; i++)
+	for (int i = 0; i < hwt_count; i++)
 	{
 		printf(" %i",i);fflush(stdout);
-		reconos_hwt_setresources(&(hwt[i]),res[i],2);
-		reconos_hwt_setprogram( &(hwt[i]), worker_progname);
-		reconos_hwt_create(&(hwt[i]), actual_slot_map[i], NULL);
+		reconos_hwt_setresources(&(hwt[i]),res+i*reconos_resource_count, reconos_resource_count);
+		int slot_number = slot_map_find(actual_slot_map, hwt_type, i);
+		if(slot_number == -1){
+			printf("Warning: Requested HWT Type not found: %s\n", hwt_type);
+			slot_map_print(actual_slot_map);
+		}
+		reconos_hwt_create(&(hwt[i]),
+				slot_number,
+				NULL);
 	}
 	printf("\n");
 }
 
-void start_threads_sw(const char* worker_progname, const int * actual_slot_map){
+/*
+args_info.swt_arg
+res
+hwt
+worker_progname
+workercpu_slots
+ */
+void start_threads_sw(int swt_count,
+						struct reconos_resource * res,
+						int reconos_resource_count,
+						struct reconos_hwt * hwt_worker,
+						const char* worker_progname,
+						char * const actual_slot_map[])
+{
 	// init software threads
-	printf("Creating %i sw-threads: ", args_info.swt_arg);
+	printf("Creating %i sw-threads: ", swt_count);
 	fflush(stdout);
-	for (int i = args_info.hwt_arg; i < args_info.swt_arg + args_info.hwt_arg;
-			i++) {
+	for (int i = 0; i < swt_count;i++) {
 		printf(" %i", i);
 		fflush(stdout);
-		reconos_hwt_setresources(&(hwt[i]), res[i], 2);
-		reconos_hwt_setprogram(&(hwt[i]), worker_progname);
-		reconos_hwt_create(&(hwt[i]), workercpu_slots[i - args_info.hwt_arg],
+		reconos_hwt_setresources(&(hwt_worker[i]), res+i*reconos_resource_count, reconos_resource_count);
+		reconos_hwt_setprogram(&(hwt_worker[i]), worker_progname);
+		int slot_number = slot_map_find(actual_slot_map, "SLOT_WORKERCPU", i);
+		if(slot_number == -1){printf("Warning: Requested HWT Type not found: %s\n", "SLOT_WORKERCPU");}
+		reconos_hwt_create(&(hwt_worker[i]),
+				slot_number,
 				NULL);
 	}
 }
 
-void start_threads_host(void *(*actual_sort_thread)(void* data)){
-	printf("Creating %i main-threads: ", args_info.mt_arg);
+void start_threads_host(int mt_count,
+						struct reconos_resource * res,
+						int reconos_resource_count,
+						pthread_t * swt,
+						pthread_attr_t * swt_attr,
+						void *(*actual_sort_thread)(void* data))
+{
+	printf("Creating %i main-threads: ", mt_count);
 	fflush(stdout);
-	for (int i = args_info.hwt_arg+args_info.swt_arg; i < args_info.hwt_arg+args_info.swt_arg+args_info.mt_arg; i++) {
+	for (int i = 0; i < mt_count; i++) {
 	 printf(" %i", i);
 	 fflush(stdout);
 	 pthread_attr_init(&swt_attr[i]);
-	 pthread_create(&swt[i], &swt_attr[i], actual_sort_thread,
-	 (void*) res[i]);
+	 pthread_create(&swt[i], &swt_attr[i], actual_sort_thread,(void*) (res+i*reconos_resource_count));
 	 }
-
 	printf("\n");
 }
 
-void setup_sort_data(){
+void setup_sort_data(unsigned int ** data, unsigned int ** copy, int buffer_size){
 	printf("malloc page aligned ...\n");
-	data = xmalloc_aligned(buffer_size, PAGE_SIZE);
-	copy = xmalloc_aligned(buffer_size, PAGE_SIZE);
+	*data = xmalloc_aligned(buffer_size, PAGE_SIZE);
+	*copy = xmalloc_aligned(buffer_size, PAGE_SIZE);
 	printf("generating %i words of data ...\n", TO_WORDS(buffer_size));
-	generate_data(data, TO_WORDS(buffer_size));
-	memcpy(copy, data, buffer_size);
+	generate_data(*data, TO_WORDS(buffer_size));
+	memcpy(*copy, *data, buffer_size);
 
 	// print generated data
 #if 0
 	printf("\ndumping the first and last 128 words of data:\n");
-	print_data_first_last(data, buffer_size, 128, 128);
+	print_data_first_last(*data, buffer_size, 128, 128);
 
 	printf("\ndumping the first and last 128 words of copy:\n");
-	print_data_first_last(copy, buffer_size, 128, 128);
+	print_data_first_last(*copy, buffer_size, 128, 128);
 #endif
 }
 
-void merge_sort_data(){
+unsigned int * merge_sort_data(unsigned int * data, int buffer_size, int blocksize){
 	printf("Merging sorted data slices...\n");
-	unsigned int * temp = xmalloc_aligned(buffer_size, PAGE_SIZE);
+	unsigned int * merged_buffer;
+	unsigned int * scratchpad_buffer = xmalloc_aligned(buffer_size, PAGE_SIZE);
 	//printf("Data buffer at address %p \n", (void*)data);
 	//printf("Address of temporary merge buffer: %p\n", (void*)temp);
 	//printf("Total size of data in bytes: %i\n",buffer_size);
 	//printf("Size of a sorting block in bytes: %i\n",args_info.blocksize_arg);
-	if (temp == NULL) {
+	if (scratchpad_buffer == NULL) {
 		printf("Buffer allocation failed. Exiting...\n");
 		exit(2);
 	}
-	data = recursive_merge(data, temp, TO_WORDS(buffer_size),
-			TO_WORDS(args_info.blocksize_arg), simple_merge);
+	merged_buffer = recursive_merge(data, scratchpad_buffer, TO_WORDS(buffer_size),
+			TO_WORDS(blocksize), simple_merge);
+
+	if (merged_buffer == data				){free(scratchpad_buffer);}
+	if (merged_buffer == scratchpad_buffer	){free(data);}
+	return merged_buffer;
 }
 
-void check_sort_data(){
+void check_sort_data(unsigned int * data, unsigned int * copy, int buffer_size){
 	printf("Checking sorted data: ... ");
 	fflush(stdout);
 	int error_idx = check_data(data, copy, TO_WORDS(buffer_size));
@@ -377,10 +506,12 @@ void check_sort_data(){
 	} else {
 		printf("success\n");
 	}
-
 }
 
 #if SHADOWING
+/*
+running_threads
+ */
 void join_threads_shadowing(shadowedthread_t * sh){
 	for (int i=0; i<running_threads; i++)
 	{
@@ -388,8 +519,15 @@ void join_threads_shadowing(shadowedthread_t * sh){
 	}
 	printf("\n");
 }
-#endif // Shadowing
+#else
 
+/*
+args_info.hwt_arg
+args_info.swt_arg
+args_info.mt_arg
+hwt[i].delegate
+swt
+ */
 void join_threads(){
 	for (int i = 0; i < args_info.hwt_arg; i++) {
 		pthread_join(hwt[i].delegate, NULL);
@@ -406,84 +544,138 @@ void join_threads(){
 */
 }
 
+#endif
 /**
  * @bief Main function
  */
 int main(int argc, char ** argv) {
-	void *(*actual_sort_thread)(void* data) = NULL;
-	const int * actual_slot_map = NULL;
-	timing_t t_start = { };
-	timing_t t_stop = { };
-	timing_t t_generate = { };
-	timing_t t_sort = { };
-	timing_t t_merge = { };
-	timing_t t_check = { };
+	struct parallel_sort_params_in pin;
+	struct parallel_sort_params_out pout;
+	struct parallel_sort_interface pinterface;
 
-	//
-	// Setup program names for worker cpus
-	//
-	const char* worker_progname = "sort_demo_workercpu.bin";
+	INIT_THE_CLOCK()
+
+//	timing_t t_start = { };
+//	timing_t t_stop = { };
+//	timing_t t_generate = { };
+//	timing_t t_sort = { };
+//	timing_t t_merge = { };
+//	timing_t t_check = { };
+
 
 	install_sighandlers();
 
 	handle_commandline(argc, argv);
 
-	switch (args_info.thread_interface_arg) {
-	case TI_SHMEM:
-		sort_shmem_setup_resources(&actual_sort_thread, &actual_slot_map, res);
-		break;
-	case TI_MBOX:
-		sort_mbox_setup_resources(&actual_sort_thread, &actual_slot_map, res);
-		break;
-	case TI_RQUEUE:
-		sort_rq_setup_resources(&actual_sort_thread, &actual_slot_map, res);
-		break;
-	}
+
+	//
+	// create pages and generate data
+	//
+	STOP_THE_CLOCK(t_generate,
+		setup_sort_data(&data, &copy, buffer_size);
+	)
+
+	pin.actual_slot_map = actual_slot_map;
+	pin.data = data;
+	pin.block_size_bytes = args_info.blocksize_arg;
+	pin.data_size_bytes = buffer_size;
+	pin.thread_count = args_info.hwt_arg + args_info.swt_arg + args_info.mt_arg;
+
+	pinterface = choose_implementation(args_info.thread_interface_arg);
+
+	pinterface.setup_resources(&pin, &pout);
+
 
 #ifdef SHADOWING
-	prepare_threads_shadowing(actual_sort_thread);
-
+	prepare_threads_shadowing(pin.thread_count,
+								pout.res,
+								sh,
+								pout.sort_program_worker,
+								pout.sort_thread_main);
 #ifndef HOST_COMPILE
-	start_threads_shadowing_hw(sh, actual_slot_map);
+	start_threads_shadowing_hw(args_info.hwt_arg,
+								pout.res,
+								sh,
+								&sh_free_idx,
+								actual_slot_map,
+								pout.sort_program_hwt,
+								args_info.shadow_flag,
+								args_info.shadow_transmodal_flag);
 #endif // HOST_COMPILE
-	start_threads_shadowing_sw(sh, actual_slot_map);
+	start_threads_shadowing_sw(args_info.swt_arg,
+								pout.res,
+								sh,
+								&sh_free_idx,
+								actual_slot_map,
+								pout.sort_program_hwt,
+								args_info.shadow_flag,
+								args_info.shadow_transmodal_flag);
 
 #else // not SHADOWING
 
 #ifndef HOST_COMPILE
-	start_threads_hw(worker_progname, actual_slot_map);
-#endif // HOST_COMPILE
-	start_threads_sw(worker_progname, actual_slot_map);
+	start_threads_hw(args_info.hwt_arg,
+						pout.res,
+						pout.reconos_resources_count,
+						hwt,
+						pout.sort_program_hwt,
+						actual_slot_map);
 
-	start_threads_host(actual_sort_thread);
+	start_threads_sw(args_info.swt_arg,
+						pout.res,
+						pout.reconos_resources_count,
+						hwt_worker,
+						pout.sort_program_worker,
+						actual_slot_map);
+#endif // HOST_COMPILE
+	start_threads_host(args_info.mt_arg,
+						pout.res,
+						pout.reconos_resources_count,
+						swt,
+						swt_attr,
+						pout.sort_thread_main);
 #endif // SHADOWING
 
 
-	// create pages and generate data
-	t_start = gettime();
-	setup_sort_data();
-	t_stop = gettime();
-	timerdiff(&t_stop, &t_start, &t_generate);
+	//t_start = gettime();
+	//setup_sort_data(data, copy, buffer_size);
+	//t_stop = gettime();
+	//timerdiff(&t_stop, &t_start, &t_generate);
 
-	// Start sort threads
-	t_start = gettime();
-	printf("Putting %i blocks into job queues: ", TO_BLOCKS(buffer_size, args_info.blocksize_arg));
-	fflush(stdout);
 	//
 	// Transfer data to compute threads
 	//
-	switch (args_info.thread_interface_arg) {
-	case TI_SHMEM:
-		sort_shmem_put_data();
-		break;
-	case TI_MBOX:
-		sort_mbox_put_data();
-		break;
-	case TI_RQUEUE:
-		sort_rq_put_data();
-		break;
-	}
+	STOP_THE_CLOCK(t_sort,
+				printf("Putting %i blocks into job queues...\n", TO_BLOCKS(buffer_size, args_info.blocksize_arg));
+				pinterface.put_data(&pin);
+
+			#ifndef HOST_COMPILE
+				//
+				// Install permanent error in first Message Based HW Sort Thread
+				//
+				if (args_info.error_count_arg) {
+					// Lowest bit in data signals coming from  sorter will suffer a stuck-at-0 error
+					//reconos_faultinject(1, 0x00000001, 0x00000000);
+
+					// Disturb hwt state machine
+					reconos_faultinject(0, 0x00000001, 0x00000000);
+				}
+			#endif
+
+				//
+				// Wait for results
+				//
+				printf("Waiting for %i blocks of data...\n", TO_BLOCKS(buffer_size, args_info.blocksize_arg));
+				pinterface.get_data(&pin);
+	)
+
+/*
+	t_start = gettime();
+	printf("Putting %i blocks into job queues: ", TO_BLOCKS(buffer_size, args_info.blocksize_arg));
+	fflush(stdout);
+	pinterface.put_data(&pin);
 	printf("\n");
+
 #ifndef HOST_COMPILE
 	//
 	// Install permanent error in first Message Based HW Sort Thread
@@ -496,59 +688,48 @@ int main(int argc, char ** argv) {
 		reconos_faultinject(0, 0x00000001, 0x00000000);
 	}
 #endif
+
 	//
 	// Wait for results
 	//
 	printf("Waiting for %i blocks of data: ", TO_BLOCKS(buffer_size, args_info.blocksize_arg));
 	fflush(stdout);
-	switch (args_info.thread_interface_arg) {
-	case TI_SHMEM:
-		sort_shmem_get_data();
-		break;
-	case TI_MBOX:
-		sort_mbox_get_data();
-		break;
-	case TI_RQUEUE:
-		sort_rq_get_data();
-		break;
-	}
-	printf("\n");
+	pinterface.get_data(&pin);
 	t_stop = gettime();
 	timerdiff(&t_stop, &t_start, &t_sort);
-
+*/
+	//
 	// merge data
-	t_start = gettime();
-	merge_sort_data();
-	t_stop = gettime();
-	timerdiff(&t_stop, &t_start, &t_merge);
+	//
+	STOP_THE_CLOCK(t_merge,
+		data = merge_sort_data(data, buffer_size, args_info.blocksize_arg);
+	)
+	//t_start = gettime();
+	//merge_sort_data(data, buffer_size, args_info.blocksize_arg);
+	//t_stop = gettime();
+	//timerdiff(&t_stop, &t_start, &t_merge);
 
+	//
 	// check data
-	//data[0] = 6666; // manual fault
-	t_start = gettime();
-	check_sort_data();
-	t_stop = gettime();
-	timerdiff(&t_stop, &t_start, &t_stop);
+	//
+	STOP_THE_CLOCK(t_check,
+		check_sort_data(data, copy, buffer_size);
+	)
+
+	//t_start = gettime();
+	//check_sort_data(data, copy, buffer_size);
+	//t_stop = gettime();
+	//timerdiff(&t_stop, &t_start, &t_stop);
 
 	// terminate all threads
 	printf("Sending terminate message to %i threads:", running_threads);
 	fflush(stdout);
-	switch (args_info.thread_interface_arg) {
-	case TI_SHMEM:
-		sort_shmem_terminate();
-		break;
-	case TI_MBOX:
-		sort_mbox_terminate();
-		break;
-	case TI_RQUEUE:
-		sort_rq_terminate();
-		break;
-	}
+	pinterface.terminate(&pin);
 	printf("\n");
 	printf("Waiting for termination...\n");
 
 #ifdef SHADOWING
 	join_threads_shadowing(sh);
-
 #else
 	join_threads();
 #endif
@@ -566,6 +747,7 @@ int main(int argc, char ** argv) {
 			TO_WORDS(buffer_size), args_info.hwt_arg, args_info.swt_arg,
 			timer2ms(&t_generate), timer2ms(&t_sort), timer2ms(&t_merge),
 			timer2ms(&t_check), timer2ms(&t_sort) + timer2ms(&t_merge));
+
 #ifdef SHADOWING
 	shadow_dump_timestats_all();
 	shadow_dump_cyclestats_all();
@@ -573,6 +755,7 @@ int main(int argc, char ** argv) {
 	free(data);
 	free(copy);
 
+	pinterface.teardown_resources(&pin, &pout);
 	//
 	// Deactivate Fault Injection
 	//

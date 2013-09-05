@@ -9,16 +9,22 @@
 #define SORT_SHMEM_H_
 
 #include "reconos.h"
+#include "parallel_sort_interface.h"
 #include "sort_demo.h"
-#include "mbox.h"
 #include "bubblesort.h"
 #include <limits.h>
+#include <stddef.h>
 
-void *sort_thread_shmem(void* data);
+#include "mbox.h"
 
-void sort_shmem_setup_resources(void *(**actual_sort_thread)(void* data), const int ** actual_slot_map, struct reconos_resource res[MAX_THREADS][2], int buffer_size,struct gengetopt_args_info args_info);
-void sort_shmem_put_data(int buffer_size);
-void sort_shmem_get_data(int buffer_size);
-void sort_shmem_terminate();
+extern struct parallel_sort_interface sort_shmem_interface;
+
+void *sort_shmem_thread(void* data);
+
+void sort_shmem_setup_resources(const struct parallel_sort_params_in * pin, struct parallel_sort_params_out * pout);
+void sort_shmem_put_data(const struct parallel_sort_params_in * pin);
+void sort_shmem_get_data(const struct parallel_sort_params_in * pin);
+void sort_shmem_terminate(const struct parallel_sort_params_in * pin);
+void sort_shmem_teardown_resources(const struct parallel_sort_params_in * pin, struct parallel_sort_params_out * pout);
 
 #endif /* SORT_SHMEM_H_ */

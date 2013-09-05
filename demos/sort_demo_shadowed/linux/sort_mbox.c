@@ -23,15 +23,23 @@
 	#define SORT_DEBUG4(message, arg1, arg2, arg3, arg4)
 #endif
 
+struct parallel_sort_interface sort_mbox_interface = {
+		.setup_resources = sort_mbox_setup_resources,
+		.put_data = sort_mbox_put_data,
+		.get_data = sort_mbox_get_data,
+		.terminate = sort_mbox_terminate,
+		.teardown_resources = sort_mbox_teardown_resources
+};
+
 // mailboxes
-struct mbox mb_start[MAX_THREADS];
-struct mbox mb_stop[MAX_THREADS];
+struct mbox sort_mbox_start[MAX_THREADS];
+struct mbox sort_mbox_stop[MAX_THREADS];
 
 // This is a messsage based sort thread:
 // - gets length of data and every data word via a message box
 // - if length > 0: copy data into private buffer and start sorting it; afterwards pass data back via message box
 // - if length = UINT_MAX : exit command -> issue thread exit os call
-void *sort_thread_mbox(void* data)
+void *sort_mbox_thread(void* data)
 {
 	static int call_nr = 0;
 	unsigned int i;
@@ -115,61 +123,65 @@ void *sort_thread_mbox(void* data)
     return (void*)0;
 }
 
-void sort_mbox_setup_resources(void *(**actual_sort_thread)(void* data), const int ** actual_slot_map, struct reconos_resource res[MAX_THREADS][2],int buffer_size,struct gengetopt_args_info args_info){
-	// set software implementation of sort thread
-	*actual_sort_thread = sort_thread_mbox;
+void sort_mbox_setup_resources(const struct parallel_sort_params_in * pin, struct parallel_sort_params_out * pout){
+	const int sort_mbox_resource_count = 2;
+	// set implementations of sort thread
+	pout->sort_thread_main = sort_mbox_thread;
+	pout->sort_program_worker = NULL;
+	pout->sort_program_hwt = "SLOT_SORT_MBOX";
 
-	// set slot assignments
-	*actual_slot_map = mbox_slots;
-
+	pout->reconos_resources_count = sort_mbox_resource_count;
+	pout->res = malloc(sort_mbox_resource_count * pin->thread_count* sizeof(struct reconos_resource));
 	// init mailboxes for mbox solution
-	for (int i = 0; i < MAX_THREADS; i++) {
-		mbox_init(&(mb_start[i]), TO_WORDS(buffer_size) + MAX_THREADS);
-		mbox_init(&(mb_stop[i]), TO_WORDS(buffer_size) + MAX_THREADS);
-		res[i][0].type = RECONOS_TYPE_MBOX;
-		res[i][0].ptr = &(mb_start[i]);
-		res[i][1].type = RECONOS_TYPE_MBOX;
-		res[i][1].ptr = &(mb_stop[i]);
+	for (int i = 0; i < pin->thread_count; i++) {
+		mbox_init(&(sort_mbox_start[i]), TO_WORDS(pin->data_size_bytes) + MAX_THREADS);
+		mbox_init(&(sort_mbox_stop[i]), TO_WORDS(pin->data_size_bytes) + MAX_THREADS);
+		pout->res[i*sort_mbox_resource_count + 0] = (struct reconos_resource){
+		       .type = RECONOS_TYPE_MBOX,
+		       .ptr = &(sort_mbox_start[i])
+		};
+		pout->res[i*sort_mbox_resource_count + 1] = (struct reconos_resource){
+			.type = RECONOS_TYPE_MBOX,
+			.ptr = &(sort_mbox_stop[i])
+		};
 	}
 
 }
 
-void sort_mbox_put_data(int buffer_size){
-	//
-	// mbox solution
-	//
-	for (int i = 0; i < TO_BLOCKS(buffer_size, args_info.blocksize_arg); i++) {
-		mbox_put(&mb_start[i % running_threads],
-				(unsigned int) TO_WORDS(args_info.blocksize_arg));
+void sort_mbox_put_data(const struct parallel_sort_params_in * pin){
+	for (int i = 0; i < TO_BLOCKS(pin->data_size_bytes, pin->block_size_bytes); i++) {
+		mbox_put(&sort_mbox_start[i % pin->thread_count],
+				(unsigned int) TO_WORDS(pin->block_size_bytes));
 		//printf(" %i",i);fflush(stdout);
-		for (int j = 0; j < TO_WORDS(args_info.blocksize_arg); j++) {
-			mbox_put(&mb_start[i % running_threads],
-					(unsigned int) data[i * TO_WORDS(args_info.blocksize_arg) + j]);
+		for (int j = 0; j < TO_WORDS(pin->block_size_bytes); j++) {
+			mbox_put(&sort_mbox_start[i % pin->thread_count],
+					(unsigned int) pin->data[i * TO_WORDS(pin->block_size_bytes) + j]);
 		}
 	}
 }
 
-void sort_mbox_get_data(int buffer_size){
-	//
-	// mbox solution
-	//
-	for (int i = 0; i < TO_BLOCKS(buffer_size, args_info.blocksize_arg); i++) {
-		for (int j = 0; j < TO_WORDS(args_info.blocksize_arg); j++) {
-			data[i * TO_WORDS(args_info.blocksize_arg) + j] = mbox_get(
-					&mb_stop[i % running_threads]);
+void sort_mbox_get_data(const struct parallel_sort_params_in * pin){
+	for (int i = 0; i < TO_BLOCKS(pin->data_size_bytes, pin->block_size_bytes); i++) {
+		for (int j = 0; j < TO_WORDS(pin->block_size_bytes); j++) {
+			pin->data[i * TO_WORDS(pin->block_size_bytes) + j] = mbox_get(
+					&sort_mbox_stop[i % pin->thread_count]);
 		}
 		//printf(" %i",i);fflush(stdout);
 	}
 }
 
-void sort_mbox_terminate(){
-	//
-	// mbox_solution
-	//
-	for (int i = 0; i < running_threads; i++) {
+void sort_mbox_terminate(const struct parallel_sort_params_in * pin){
+	for (int i = 0; i < pin->thread_count; i++) {
 		printf(" %i", i);
 		fflush(stdout);
-		mbox_put(&mb_start[i], UINT_MAX);
+		mbox_put(&sort_mbox_start[i], UINT_MAX);
 	}
 }
 
+void sort_mbox_teardown_resources(const struct parallel_sort_params_in * pin, struct parallel_sort_params_out * pout){
+	free(pout->res);
+	for (int i = 0; i < MAX_THREADS; i++) {
+		mbox_destroy(&(sort_mbox_start[i]));
+		mbox_destroy(&(sort_mbox_stop[i]));
+	}
+}

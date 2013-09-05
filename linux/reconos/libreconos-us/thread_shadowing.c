@@ -660,7 +660,10 @@ int shadow_set_initdata(shadowedthread_t *sh, void* init_data) {
 }
 
 extern int pthread_getattr_np(pthread_t thread, pthread_attr_t *attr);
+
+#ifndef HOST_COMPILE
 extern int pthread_attr_getstack(pthread_attr_t *attr, void **stackaddr, size_t *stacksize);
+#endif
 
 int shadow_get_stack(shadowedthread_t *sh, unsigned int thread_idx, void ** stackaddr, size_t *stacksize) {
 	assert(sh);

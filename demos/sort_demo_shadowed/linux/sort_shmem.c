@@ -6,7 +6,7 @@
  */
 #include "sort_shmem.h"
 
-#define DEBUG 1
+//#define DEBUG 1
 
 #ifdef DEBUG
     #define SORT_DEBUG(message) printf("SORT_SHMEM: " message)
@@ -22,15 +22,23 @@
 	#define SORT_DEBUG4(message, arg1, arg2, arg3, arg4)
 #endif
 
+struct parallel_sort_interface sort_shmem_interface = {
+		.setup_resources = sort_shmem_setup_resources,
+		.put_data = sort_shmem_put_data,
+		.get_data = sort_shmem_get_data,
+		.terminate = sort_shmem_terminate,
+		.teardown_resources = sort_shmem_teardown_resources
+};
+
 // mailboxes
-struct mbox mb_start[MAX_THREADS];
-struct mbox mb_stop[MAX_THREADS];
+static struct mbox sort_shmem_mb_start[MAX_THREADS];
+static struct mbox sort_shmem_mb_stop[MAX_THREADS];
 
 // sort thread shall behave the same as hw thread:
 // - get pointer to data buffer
 // - if valid address: sort data and post answer
 // - if exit command: issue thread exit os call
-void *sort_thread_shmem(void* data)
+void *sort_shmem_thread(void* data)
 {
 	static int call_nr = 0;
 	unsigned int length; // number of words to sort
@@ -78,48 +86,57 @@ void *sort_thread_shmem(void* data)
 }
 
 
-void sort_shmem_setup_resources(void *(**actual_sort_thread)(void* data), const int ** actual_slot_map, struct reconos_resource res[MAX_THREADS][2], int buffer_size,struct gengetopt_args_info args_info){
-	// set software implementation of sort thread
-	*actual_sort_thread = sort_thread_shmem;
+void sort_shmem_setup_resources(const struct parallel_sort_params_in * pin, struct parallel_sort_params_out * pout){
+	const int sort_shmem_resource_count = 2;
+	// set implementations of sort thread
+	pout->sort_thread_main = sort_shmem_thread;
+	pout->sort_program_worker = NULL;
+	pout->sort_program_hwt = "SLOT_SORT_SHMEM";
 
-	// set slot assignments
-	*actual_slot_map = shmem_slots;
-
+	pout->reconos_resources_count = sort_shmem_resource_count;
+	pout->res = malloc(sort_shmem_resource_count * pin->thread_count* sizeof(struct reconos_resource));
 	// init mailboxes for shared memory solution
-	for (int i = 0; i < MAX_THREADS; i++) {
-		mbox_init(&mb_start[i], TO_BLOCKS(buffer_size, args_info.blocksize_arg));
-		mbox_init(&mb_stop[i], TO_BLOCKS(buffer_size, args_info.blocksize_arg));
-		res[i][0].type = RECONOS_TYPE_MBOX;
-		res[i][0].ptr = &(mb_start[i]);
-		res[i][1].type = RECONOS_TYPE_MBOX;
-		res[i][1].ptr = &(mb_stop[i]);
+	for (int i = 0; i < pin->thread_count; i++) {
+		mbox_init(&sort_shmem_mb_start[i], TO_BLOCKS(pin->data_size_bytes, pin->block_size_bytes));
+		mbox_init(&sort_shmem_mb_stop[i], TO_BLOCKS(pin->data_size_bytes, pin->block_size_bytes));
+		pout->res[i*sort_shmem_resource_count + 0] = (struct reconos_resource){
+				.type = RECONOS_TYPE_MBOX,
+				.ptr = &(sort_shmem_mb_start[i])
+		};
+		pout->res[i*sort_shmem_resource_count + 1] = (struct reconos_resource){
+				.type = RECONOS_TYPE_MBOX,
+				.ptr = &(sort_shmem_mb_stop[i])
+		};
+
 	}
 }
 
-void sort_shmem_put_data(int buffer_size){
-	//
-	// shared memory solution
-	//
-	for (int i = 0; i < TO_BLOCKS(buffer_size, args_info.blocksize_arg); i++) {
-		mbox_put(&mb_start[i % running_threads], TO_WORDS(args_info.blocksize_arg));
-		mbox_put(&mb_start[i % running_threads], (unsigned int) data + (i * args_info.blocksize_arg));
+void sort_shmem_put_data(const struct parallel_sort_params_in * pin){
+	for (int i = 0; i < TO_BLOCKS(pin->data_size_bytes, pin->block_size_bytes); i++) {
+		mbox_put(&sort_shmem_mb_start[i % pin->thread_count], TO_WORDS(pin->block_size_bytes));
+		mbox_put(&sort_shmem_mb_start[i % pin->thread_count], (unsigned int) pin->data + (i * pin->block_size_bytes));
 		//printf(" %i",i);fflush(stdout);
 	}
 }
 
-void sort_shmem_get_data(int buffer_size){
-	//
-	// shared memory solution
-	//
-	for (int i = 0; i < TO_BLOCKS(buffer_size, args_info.blocksize_arg); i++) {
-		(void) mbox_get(&mb_stop[i % running_threads]); // we discard return value as it does not matter
+void sort_shmem_get_data(const struct parallel_sort_params_in * pin){
+	for (int i = 0; i < TO_BLOCKS(pin->data_size_bytes, pin->block_size_bytes); i++) {
+		(void) mbox_get(&sort_shmem_mb_stop[i % pin->thread_count]); // we discard return value as it does not matter
 	}
 }
 
-void sort_shmem_terminate(){
-	for (int i = 0; i < running_threads; i++) {
+void sort_shmem_terminate(const struct parallel_sort_params_in * pin){
+	for (int i = 0; i < pin->thread_count; i++) {
 		printf(" %i", i);
 		fflush(stdout);
-		mbox_put(&mb_start[i], UINT_MAX);
+		mbox_put(&sort_shmem_mb_start[i], UINT_MAX);
+	}
+}
+
+void sort_shmem_teardown_resources(const struct parallel_sort_params_in * pin, struct parallel_sort_params_out * pout){
+	free(pout->res);
+	for (int i = 0; i < MAX_THREADS; i++) {
+		mbox_destroy(&sort_shmem_mb_start[i]);
+		mbox_destroy(&sort_shmem_mb_stop[i]);
 	}
 }

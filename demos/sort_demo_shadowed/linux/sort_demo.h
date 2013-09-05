@@ -9,19 +9,27 @@
 #define SORT_DEMO_H_
 
 #define MAX_THREADS	32
+#define MAX_RESOURCES 8
 #define MAX_BLOCK_SIZE_WORDS	(8192/sizeof(unsigned int)) // number of words per block
+#define PAGE_SIZE 1024 //4096 // In bytes, needed for correct memory alignment
+
+#define TO_WORDS(x) ((x)/4)
+#define TO_BLOCKS(buffer_size_bytes, block_size_bytes) ((buffer_size_bytes)/(block_size_bytes))
 
 //
 // Setup resources for communication with compute threads
 // Maps thread number to hardware slot number.
 //
-struct reconos_resource res[MAX_THREADS][2];
-const int shmem_slots[] = { 0, 1, 2, 3 };
-const int mbox_slots[] = { 4, 5, 6, 7 };
-//const int rqueue_slots[] = {8,9,10,11}; // mixed configuration
-//const int rqueue_slots[] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13 }; //rqueue only configuration
-const int rqueue_slots[] = { 7, 8, 9, 10, 11, 12, 13 };
-const int workercpu_slots[] = { 0, 1, 2, 3, 4, 5, 6 };
 
+//struct reconos_resource res[MAX_THREADS][2];
+
+#define SLOT_END -1
+#define SLOT_EMPTY 0
+#define SLOT_WORKERCPU 1
+#define SLOT_SORT_SHMEM 2
+#define SLOT_SORT_MBOX  3
+#define SLOT_SORT_RQ 	4
+
+extern char *  actual_slot_map[];
 
 #endif /* SORT_DEMO_H_ */

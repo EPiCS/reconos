@@ -23,9 +23,17 @@
 	#define SORT_DEBUG4(message, arg1, arg2, arg3, arg4)
 #endif
 
+struct parallel_sort_interface sort_rq_interface = {
+		.setup_resources = sort_rq_setup_resources,
+		.put_data = sort_rq_put_data,
+		.get_data = sort_rq_get_data,
+		.terminate = sort_rq_terminate,
+		.teardown_resources = sort_rq_teardown_resources
+};
+
 // reconos queues
-rqueue rq_start[MAX_THREADS];
-rqueue rq_stop[MAX_THREADS];
+rqueue sort_rq_start[MAX_THREADS];
+rqueue sort_rq_stop[MAX_THREADS];
 
 // This is a reconos queue based solution.
 // Sort data is communicated in 8k blocks via reconos queues.
@@ -34,7 +42,7 @@ rqueue rq_stop[MAX_THREADS];
 //   If it is UINT_MAX, thread will exit
 // - Second rq message will contain data to sort.
 // - thread sends back sorted data via rq message
-void *sort_thread_rqueue(void* data)
+void *sort_rq_thread(void* data)
 {
 	static int call_nr = 0;
     unsigned int length;
@@ -126,62 +134,65 @@ void *sort_thread_rqueue(void* data)
     return (void*)0;
 }
 
-void sort_rq_setup_resources(void *(**actual_sort_thread)(void* data), const int ** actual_slot_map, struct reconos_resource res[MAX_THREADS][2], int buffer_size, struct gengetopt_args_info args_info){
+void sort_rq_setup_resources(const struct parallel_sort_params_in * pin, struct parallel_sort_params_out * pout){
+	const int sort_rq_resource_count = 2;
 	// set software implementation of sort thread
-	*actual_sort_thread = sort_thread_rqueue;
+	pout->sort_thread_main = sort_rq_thread;
+	pout->sort_program_worker = NULL;
+	pout->sort_program_hwt = "SLOT_SORT_RQ";
 
-	// set slot assignments
-	*actual_slot_map = rqueue_slots;
-
+	pout->reconos_resources_count = sort_rq_resource_count;
+		pout->res = malloc(sort_rq_resource_count * pin->thread_count* sizeof(struct reconos_resource));
 	// init reconos queues
-	for (int i = 0; i < MAX_THREADS; i++) {
-		rq_init(&(rq_start[i]), TO_BLOCKS(buffer_size, args_info.blocksize_arg) * 2);
-		rq_init(&(rq_stop[i]), TO_BLOCKS(buffer_size, args_info.blocksize_arg) * 2);
-		res[i][0].type = RECONOS_TYPE_RQ;
-		res[i][0].ptr = &(rq_start[i]);
-		res[i][1].type = RECONOS_TYPE_RQ;
-		res[i][1].ptr = &(rq_stop[i]);
+	for (int i = 0; i < pin->thread_count; i++) {
+		rq_init(&(sort_rq_start[i]), TO_BLOCKS(pin->data_size_bytes, pin->block_size_bytes) * 2);
+		rq_init(&(sort_rq_stop[i]), TO_BLOCKS(pin->data_size_bytes, pin->block_size_bytes) * 2);
+		pout->res[i*sort_rq_resource_count + 0] = (struct reconos_resource){
+			.type = RECONOS_TYPE_RQ,
+			.ptr = &(sort_rq_start[i])
+		};
+		pout->res[i*sort_rq_resource_count + 1] = (struct reconos_resource){
+				.type = RECONOS_TYPE_RQ,
+				.ptr = &(sort_rq_stop[i])
+		};
 	}
 }
 
-void sort_rq_put_data(int buffer_size){
-	//
-	// rq solution
-	//
-	unsigned int length = TO_WORDS(args_info.blocksize_arg) * 4;
-	for (int i = 0; i < TO_BLOCKS(buffer_size, args_info.blocksize_arg); i++) {
+void sort_rq_put_data(const struct parallel_sort_params_in * pin){
+	unsigned int length = TO_WORDS(pin->block_size_bytes) * 4;
+	for (int i = 0; i < TO_BLOCKS(pin->data_size_bytes, pin->block_size_bytes); i++) {
 		// First send length of data  to sort
-		rq_send(&rq_start[i % running_threads], &length, sizeof(length));
+		rq_send(&sort_rq_start[i % pin->thread_count], &length, sizeof(length));
 		// then send actual data
-		rq_send(&rq_start[i % running_threads],
-				data + i * TO_WORDS(args_info.blocksize_arg), length);
+		rq_send(&sort_rq_start[i % pin->thread_count],
+				pin->data + i * TO_WORDS(pin->block_size_bytes), length);
 	}
 }
 
-void sort_rq_get_data(int buffer_size){
-	//
-	// rq solution
-	//
-	unsigned int length = TO_WORDS(args_info.blocksize_arg) * 4;
-	for (int i = 0; i < TO_BLOCKS(buffer_size, args_info.blocksize_arg); i++) {
+void sort_rq_get_data(const struct parallel_sort_params_in * pin){
+	unsigned int length = TO_WORDS(pin->block_size_bytes) * 4;
+	for (int i = 0; i < TO_BLOCKS(pin->data_size_bytes,pin->block_size_bytes); i++) {
 		// receive results
-		rq_receive(&rq_stop[i % running_threads],
-				data + i * TO_WORDS(args_info.blocksize_arg), length);
+		rq_receive(&sort_rq_stop[i % pin->thread_count],
+				pin->data + i * TO_WORDS(pin->block_size_bytes), length);
 	}
 }
 
-void sort_rq_terminate(){
-	//
-	// rq solution
-	//
-	{
+void sort_rq_terminate(const struct parallel_sort_params_in * pin){
 	unsigned int exit_value = UINT_MAX;
-	for (int i = 0; i < running_threads; i++) {
+	for (int i = 0; i < pin->thread_count; i++) {
 		printf(" %i", i);
 		fflush(stdout);
-		rq_send(&rq_start[i], &exit_value, sizeof(exit_value));
+		rq_send(&sort_rq_start[i], &exit_value, sizeof(exit_value));
 		//shadow_dump(sh+i);
 
 	}
 }
+
+void sort_rq_teardown_resources(const struct parallel_sort_params_in * pin, struct parallel_sort_params_out * pout){
+	free(pout->res);
+	for (int i = 0; i < MAX_THREADS; i++) {
+		rq_close(&(sort_rq_start[i]));
+		rq_close(&(sort_rq_stop[i]));
+	}
 }

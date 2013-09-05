@@ -9,16 +9,22 @@
 #define SORT_RQ_H_
 
 #include "reconos.h"
-#include "rqueue.h"
+#include "parallel_sort_interface.h"
 #include "sort_demo.h"
 #include "bubblesort.h"
 #include <limits.h>
+#include <stddef.h>
 
-void *sort_thread_rqueue(void* data);
+#include "rqueue.h"
 
-void sort_rq_setup_resources(void *(**actual_sort_thread)(void* data), const int ** actual_slot_map, struct reconos_resource res[MAX_THREADS][2], int buffer_size, struct gengetopt_args_info args_info);
-void sort_rq_put_data(int buffer_size);
-void sort_rq_get_data(int buffer_size);
-void sort_rq_terminate();
+extern struct parallel_sort_interface sort_rq_interface;
+
+void *sort_rq_thread(void* data);
+
+void sort_rq_setup_resources(const struct parallel_sort_params_in * pin, struct parallel_sort_params_out * pout);
+void sort_rq_put_data(const struct parallel_sort_params_in * pin);
+void sort_rq_get_data(const struct parallel_sort_params_in * pin);
+void sort_rq_terminate(const struct parallel_sort_params_in * pin);
+void sort_rq_teardown_resources(const struct parallel_sort_params_in * pin, struct parallel_sort_params_out * pout);
 
 #endif /* SORT_RQ_H_ */

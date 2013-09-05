@@ -29,6 +29,17 @@ typedef unsigned long timing_t;
 typedef unsigned long ms_t;
 #endif
 
+#define INIT_THE_CLOCK() \
+	timing_t t_start = { };\
+	timing_t t_stop = { };\
+
+#define STOP_THE_CLOCK( time, action ) \
+	timing_t time;\
+	t_start = gettime(); \
+	do{action}while(0);\
+	t_stop = gettime(); \
+	timerdiff(&t_stop, &t_start, &time);\
+
 timing_t gettime();
 void timerdiff(timing_t * a, timing_t * b, timing_t * diff);
 int timer2string(char* s, int s_len, timing_t * t);
