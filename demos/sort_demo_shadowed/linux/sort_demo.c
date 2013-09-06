@@ -43,11 +43,19 @@ struct gengetopt_args_info args_info;
 int running_threads;
 int buffer_size = 0;
 
+/*
 char * actual_slot_map[] = {
 		"SLOT_SORT_SHMEM", "SLOT_SORT_SHMEM", "SLOT_SORT_SHMEM", "SLOT_SORT_SHMEM",
 		"SLOT_SORT_SHMEM", "SLOT_SORT_SHMEM", "SLOT_SORT_SHMEM", "SLOT_SORT_SHMEM",
 		"SLOT_SORT_SHMEM", "SLOT_SORT_SHMEM", "SLOT_SORT_SHMEM", "SLOT_SORT_SHMEM",
 		"SLOT_SORT_SHMEM", "SLOT_SORT_SHMEM",
+		NULL};
+*/
+char * actual_slot_map[] = {
+		"SLOT_WORKERCPU", "SLOT_WORKERCPU", "SLOT_WORKERCPU", "SLOT_WORKERCPU",
+		"SLOT_WORKERCPU", "SLOT_WORKERCPU", "SLOT_WORKERCPU",
+		"SLOT_SORT_RQ", "SLOT_SORT_RQ", "SLOT_SORT_RQ", "SLOT_SORT_RQ",
+		"SLOT_SORT_RQ", "SLOT_SORT_RQ", "SLOT_SORT_RQ",
 		NULL};
 
 #ifdef SHADOWING

@@ -45,7 +45,7 @@ rqueue sort_rq_stop[MAX_THREADS];
 void *sort_rq_thread(void* data)
 {
 	static int call_nr = 0;
-    unsigned int length;
+    unsigned int length_words;
     unsigned int error=0;
     unsigned int  buffer[MAX_BLOCK_SIZE_WORDS*sizeof(unsigned int)];
     struct reconos_resource *res  = (struct reconos_resource*) data;
@@ -68,36 +68,36 @@ void *sort_rq_thread(void* data)
 
     while ( 1 ) {
     	SORT_DEBUG3("SW Thread %lu, call %d: getting length from rqueue %p\n", self, call_nr, rq_start);
-        error = rq_receive(rq_start,&length, sizeof(length));
+        error = rq_receive(rq_start,&length_words, sizeof(length_words));
         SORT_DEBUG1("RQ_RECEIVE 1 returned %i\n", error);
-        SORT_DEBUG1("RQ_RECEIVE 1 length is %i\n", length);
-        if ( error != sizeof(length) )
+        SORT_DEBUG1("RQ_RECEIVE 1 length_words is %i\n", length_words);
+        if ( error != sizeof(length_words) )
         {
-        	printf("ERROR: rq_receive 1 returned to few data. Expected: %lu bytes, returned %i bytes", sizeof(length), error);
+        	printf("ERROR: rq_receive 1 returned to few data. Expected: %lu bytes, returned %i bytes", sizeof(length_words), error);
         	exit(24);
         }
 		//printf("SW Thread %lu: Got address %p from mailbox %p.\n", self, (void*)ret, mb_start);
-		if (length == UINT_MAX)
+		if (length_words == UINT_MAX)
 		{
 		  SORT_DEBUG3("SW Thread %lu, call %d: Got exit command from rqueue %p.\n", self, call_nr, rq_start);
-		  rq_send(rq_stop, &length, sizeof(length));
+		  rq_send(rq_stop, &length_words, sizeof(length_words));
 		  //free(buffer);
 		  pthread_exit((void*)0);
 		}
 		else
 		{
-		  SORT_DEBUG3("SW Thread %lu, call %d: starting bubblesort with length %i\n", self, call_nr, (unsigned int)length);
+		  SORT_DEBUG3("SW Thread %lu, call %d: starting bubblesort with length_words %i\n", self, call_nr, (unsigned int)length_words);
 		  // read into local buffer
 		  SORT_DEBUG("Reading Data Words:...\n");
 		  // Error injection:
-		  // if (leading_thread){length--;} // Tests parameter checking
+		  // if (leading_thread){length_words--;} // Tests parameter checking
 		  //
-		  error = rq_receive(rq_start, buffer, length);
+		  error = rq_receive(rq_start, buffer, length_words*sizeof(unsigned int));
 		  SORT_DEBUG1("RQ_RECEIVE 2 returned %i\n", error);
-		  SORT_DEBUG1("RQ_RECEIVE 2 length is %i\n", length);
-		  if ( error != length )
+		  SORT_DEBUG1("RQ_RECEIVE 2 length_words is %i\n", length_words);
+		  if ( error != length_words*sizeof(unsigned int) )
 		  {
-			printf("ERROR: rq_receive 2 returned to few data. Expected: %i bytes, returned %i bytes", length, error);
+			printf("ERROR: rq_receive 2 returned to few data. Expected: %i bytes, returned %i bytes", length_words, error);
 			exit(24);
 		  }
 
@@ -108,7 +108,7 @@ void *sort_rq_thread(void* data)
 		  ms_t bubblesort_time;
 		  start = gettime();
 #endif
-		  bubblesort(  buffer, length); // N is number of (unsigned int*) the buffer consists of
+		  bubblesort(  buffer, length_words); // N is number of (unsigned int*) the buffer consists of
 #ifdef BENCHMARK
 		  stop = gettime();
 		  bubblesort_time = calc_timediff_ms(start, stop);
@@ -120,7 +120,7 @@ void *sort_rq_thread(void* data)
 
 		  // write sorted buffer into output queue
 		  SORT_DEBUG("Writing Data Words...\n");
-		  rq_send(rq_stop, buffer, length);
+		  rq_send(rq_stop, buffer, length_words*sizeof(unsigned int));
 		  SORT_DEBUG3("First three data words written: %i %i %i\n", buffer[0],buffer[1],buffer[2]);
 
 		}
@@ -159,22 +159,24 @@ void sort_rq_setup_resources(const struct parallel_sort_params_in * pin, struct 
 }
 
 void sort_rq_put_data(const struct parallel_sort_params_in * pin){
-	unsigned int length = TO_WORDS(pin->block_size_bytes) * 4;
+	// rq_* calls expect length parameters in bytes
+	// the sort thread expects length parameters in words!
+	unsigned int length_words = TO_WORDS(pin->block_size_bytes);
 	for (int i = 0; i < TO_BLOCKS(pin->data_size_bytes, pin->block_size_bytes); i++) {
 		// First send length of data  to sort
-		rq_send(&sort_rq_start[i % pin->thread_count], &length, sizeof(length));
+		rq_send(&sort_rq_start[i % pin->thread_count], &length_words, sizeof(length_words));
 		// then send actual data
 		rq_send(&sort_rq_start[i % pin->thread_count],
-				pin->data + i * TO_WORDS(pin->block_size_bytes), length);
+				pin->data + i * TO_WORDS(pin->block_size_bytes), length_words*sizeof(unsigned int));
 	}
 }
 
 void sort_rq_get_data(const struct parallel_sort_params_in * pin){
-	unsigned int length = TO_WORDS(pin->block_size_bytes) * 4;
+	unsigned int length_words = TO_WORDS(pin->block_size_bytes);
 	for (int i = 0; i < TO_BLOCKS(pin->data_size_bytes,pin->block_size_bytes); i++) {
 		// receive results
 		rq_receive(&sort_rq_stop[i % pin->thread_count],
-				pin->data + i * TO_WORDS(pin->block_size_bytes), length);
+				pin->data + i * TO_WORDS(pin->block_size_bytes), length_words*sizeof(unsigned int));
 	}
 }
 
