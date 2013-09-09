@@ -10,8 +10,8 @@ APP_OBJS = bubblesort.o data.o merge.o sort8k.o sort_shmem.o sort_rq.o sort_mbox
 
 
 host:
-CC=$(HOST_CC)
-CFLAGS=$(HOST_CFLAGS)
+#CC=$(HOST_CC)
+#CFLAGS=$(HOST_CFLAGS)
 
 LIBPATH = -L ../../../linux/reconos/libreconos-us
 INCLUDEPATH = -I ../../../linux/reconos/libreconos-us
