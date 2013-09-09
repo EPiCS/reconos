@@ -1420,7 +1420,9 @@ package body reconos_pkg is
 				end if;
 
 			when 5 =>
-				o_memif.s_rd    <= '1';
+				if (i_ram.count > 1) then
+					o_memif.s_rd    <= '1';
+				end if;
 				o_ram.data      <= i_memif.s_data;
 				o_ram.remainder <= i_ram.remainder - 1;
 				o_ram.count     <= i_ram.count - 1;
