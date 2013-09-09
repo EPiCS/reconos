@@ -138,7 +138,7 @@ void sort_rq_setup_resources(const struct parallel_sort_params_in * pin, struct 
 	const int sort_rq_resource_count = 2;
 	// set software implementation of sort thread
 	pout->sort_thread_main = sort_rq_thread;
-	pout->sort_program_worker = NULL;
+	pout->sort_program_worker = "sort_demo_rq_workercpu.bin";
 	pout->sort_program_hwt = "SLOT_SORT_RQ";
 
 	pout->reconos_resources_count = sort_rq_resource_count;
