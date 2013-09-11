@@ -15,6 +15,9 @@
 #define OSIF_FSL 0
 #define MEMIF_FSL 1
 
+#define MEMIF_CMD_READ  0x00
+#define MEMIF_CMD_WRITE 0x80
+
 #define OSIF_CMD_SEM_POST 0x000000B0
 #define OSIF_CMD_SEM_WAIT 0x000000B1
 
@@ -69,5 +72,8 @@ extern void pthread_exit(void *retval);
 extern void pthread_yield();
 
 extern void * reconos_get_init_data();
+
+extern void memif_write(const void* src_addr, void* dst_addr, uint32_t len);
+extern void memif_read(const void* src_addr, void* dst_addr, uint32_t len);
 
 #endif /* RECONOS_H_ */

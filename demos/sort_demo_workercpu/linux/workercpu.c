@@ -9,12 +9,15 @@
 #include "reconos.h"
 #include "fsl.h"
 #include "timing.h"
+#include "xutils.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <pthread.h>
 #include <assert.h>
+#include <signal.h>
+#include <sys/ucontext.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -26,9 +29,10 @@
 #include <rqueue.h>
 #include <semaphore.h>
 
-#define WORKERCPU_SLOT 0
+#define WORKERCPU_SLOT 1
 
-#define REPETITIONS 14000
+#define WORKER_BUFFER_SIZE_BYTES 56000 // Keep in sync with worker program!
+#define REPETITIONS WORKER_BUFFER_SIZE_BYTES/sizeof(uint32_t)
 
 void reconos_slot_reset(int num, int reset);
 
@@ -49,7 +53,7 @@ bool echo_test(){
 		//output = fsl_read(WORKERCPU_SLOT);
 	}
 	t_stop = gettime();
-	printf ("Write Speed : Bytes: %i, Time (ms): %li\n", REPETITIONS*4, calc_timediff_ms( t_start, t_stop ));
+	printf ("Write Speed : Bytes: %lu, Time (ms): %li\n", REPETITIONS*4, calc_timediff_ms( t_start, t_stop ));
 	printf ("Write Speed : %f KB/s\n", ((double)REPETITIONS*4*1000) / ((double)calc_timediff_ms( t_start, t_stop ) * 1024));
 
 	t_start = gettime();
@@ -57,7 +61,7 @@ bool echo_test(){
 		output = fsl_read(WORKERCPU_SLOT);
 	}
 	t_stop = gettime();
-	printf ("Read Speed : Bytes: %i, Time (ms): %li\n", REPETITIONS*4, calc_timediff_ms( t_start, t_stop ));
+	printf ("Read Speed : Bytes: %lu, Time (ms): %li\n", REPETITIONS*4, calc_timediff_ms( t_start, t_stop ));
 	printf ("Read Speed : %f KB/s\n", ((double)REPETITIONS*4*1000) / ((double)calc_timediff_ms( t_start, t_stop ) * 1024));
 
 	t_start = gettime();
@@ -66,7 +70,7 @@ bool echo_test(){
 		output = fsl_read(WORKERCPU_SLOT);
 	}
 	t_stop = gettime();
-	printf ("Echo Speed : Bytes: %i, Time (ms): %li\n", REPETITIONS*4, calc_timediff_ms( t_start, t_stop ));
+	printf ("Echo Speed : Bytes: %lu, Time (ms): %li\n", REPETITIONS*4, calc_timediff_ms( t_start, t_stop ));
 	printf ("Echo Speed : %f KB/s\n", ((double)REPETITIONS*4*1000) / ((double)calc_timediff_ms( t_start, t_stop ) * 1024));
 	printf("\n");
 	return true;
@@ -91,7 +95,7 @@ bool echo_block_test(){
 	fsl_write_block(WORKERCPU_SLOT, input, REPETITIONS*sizeof(uint32_t));
 
 	t_stop = gettime();
-	printf ("Write Speed : Bytes: %i, Time (ms): %li\n", REPETITIONS*4, calc_timediff_ms( t_start, t_stop ));
+	printf ("Write Speed : Bytes: %lu, Time (ms): %li\n", REPETITIONS*4, calc_timediff_ms( t_start, t_stop ));
 	printf ("Write Speed : %f KB/s\n", ((double)REPETITIONS*4*1000) / ((double)calc_timediff_ms( t_start, t_stop ) * 1024));
 
 	t_start = gettime();
@@ -99,7 +103,7 @@ bool echo_block_test(){
 	fsl_read_block(WORKERCPU_SLOT, output, REPETITIONS*sizeof(uint32_t));
 
 	t_stop = gettime();
-	printf ("Read Speed : Bytes: %i, Time (ms): %li\n", REPETITIONS*4, calc_timediff_ms( t_start, t_stop ));
+	printf ("Read Speed : Bytes: %lu, Time (ms): %li\n", REPETITIONS*4, calc_timediff_ms( t_start, t_stop ));
 	printf ("Read Speed : %f KB/s\n", ((double)REPETITIONS*4*1000) / ((double)calc_timediff_ms( t_start, t_stop ) * 1024));
 
 	t_start = gettime();
@@ -108,7 +112,7 @@ bool echo_block_test(){
 	fsl_read_block(WORKERCPU_SLOT, output, REPETITIONS*sizeof(uint32_t));
 
 	t_stop = gettime();
-	printf ("Echo Speed : Bytes: %i, Time (ms): %li\n", REPETITIONS*4, calc_timediff_ms( t_start, t_stop ));
+	printf ("Echo Speed : Bytes: %lu, Time (ms): %li\n", REPETITIONS*4, calc_timediff_ms( t_start, t_stop ));
 	printf ("Echo Speed : %f KB/s\n", ((double)REPETITIONS*4*1000) / ((double)calc_timediff_ms( t_start, t_stop ) * 1024));
 	printf("\n");
 
@@ -185,7 +189,7 @@ bool mbox_test(){
 		mbox_put( &mb_send, input );
 	}
 	t_stop = gettime();
-	printf ("Host put, Slave get : Repetitions: %i, Time (ms): %li\n", REPETITIONS, calc_timediff_ms( t_start, t_stop ));
+	printf ("Host put, Slave get : Repetitions: %lu, Time (ms): %li\n", REPETITIONS, calc_timediff_ms( t_start, t_stop ));
 	printf ("put/gets speed : %f per second\n", ((double)REPETITIONS*1000) / ((double)calc_timediff_ms( t_start, t_stop )));
 
 
@@ -194,7 +198,7 @@ bool mbox_test(){
 		output = mbox_get( &mb_recv );
 	}
 	t_stop = gettime();
-	printf ("Host get, Slave out : Repetitions: %i, Time (ms): %li\n", REPETITIONS, calc_timediff_ms( t_start, t_stop ));
+	printf ("Host get, Slave out : Repetitions: %lu, Time (ms): %li\n", REPETITIONS, calc_timediff_ms( t_start, t_stop ));
 	printf ("get/puts speed : %f per second\n", ((double)REPETITIONS*1000) / ((double)calc_timediff_ms( t_start, t_stop )));
 	printf("\n");
 
@@ -230,7 +234,7 @@ bool rqueue_test(){
 		rq_send( &rqueue_send, send_buffer, RQUEUE_BUFFER_SIZE );
 	}
 	t_stop = gettime();
-	printf ("Host send, Slave receive : Repetitions: %i, Time (ms): %li\n", REPETITIONS, calc_timediff_ms( t_start, t_stop ));
+	printf ("Host send, Slave receive : Repetitions: %lu, Time (ms): %li\n", REPETITIONS, calc_timediff_ms( t_start, t_stop ));
 	printf ("send/receives speed : %f per second\n", ((double)REPETITIONS*1000) / ((double)calc_timediff_ms( t_start, t_stop )));
 
 	t_start = gettime();
@@ -238,7 +242,7 @@ bool rqueue_test(){
 		rq_receive( &rqueue_recv, recv_buffer, RQUEUE_BUFFER_SIZE );
 	}
 	t_stop = gettime();
-	printf ("Host receive, Slave send : Repetitions: %i, Time (ms): %li\n", REPETITIONS, calc_timediff_ms( t_start, t_stop ));
+	printf ("Host receive, Slave send : Repetitions: %lu, Time (ms): %li\n", REPETITIONS, calc_timediff_ms( t_start, t_stop ));
 	printf ("receive/sends speed : %f per second\n", ((double)REPETITIONS*1000) / ((double)calc_timediff_ms( t_start, t_stop )));
 	printf("\n");
 	return memcmp(send_buffer, recv_buffer, RQUEUE_BUFFER_SIZE) == 0;
@@ -266,7 +270,7 @@ bool sem_test() {
 		sem_post( &sem_send );
 /*	}
 	t_stop = gettime();
-	printf ("Host post, Slave wait : Repetitions: %i, Time (ms): %li\n", REPETITIONS, calc_timediff_ms( t_start, t_stop ));
+	printf ("Host post, Slave wait : Repetitions: %lu, Time (ms): %li\n", REPETITIONS, calc_timediff_ms( t_start, t_stop ));
 	printf ("post/wait speed : %f per second\n", ((double)REPETITIONS*1000) / ((double)calc_timediff_ms( t_start, t_stop )));
 
 	t_start = gettime();
@@ -274,7 +278,7 @@ bool sem_test() {
 */		sem_wait( &sem_recv );
 	}
 	t_stop = gettime();
-	printf ("Host wait, Slave post : Repetitions: %i, Time (ms): %li\n", REPETITIONS, calc_timediff_ms( t_start, t_stop ));
+	printf ("Host wait, Slave post : Repetitions: %lu, Time (ms): %li\n", REPETITIONS, calc_timediff_ms( t_start, t_stop ));
 	printf ("wait/posts speed : %f per second\n", ((double)REPETITIONS*1000) / ((double)calc_timediff_ms( t_start, t_stop )));
 	printf("\n");
 
@@ -305,7 +309,7 @@ bool mutex_test() {
 		pthread_mutex_unlock( &mutex_send );
 /*	}
 	t_stop = gettime();
-	printf ("Host unlock, Slave lock : Repetitions: %i, Time (ms): %li\n", REPETITIONS, calc_timediff_ms( t_start, t_stop ));
+	printf ("Host unlock, Slave lock : Repetitions: %lu, Time (ms): %li\n", REPETITIONS, calc_timediff_ms( t_start, t_stop ));
 	printf ("unlock/lock speed : %f per second\n", ((double)REPETITIONS*1000) / ((double)calc_timediff_ms( t_start, t_stop )));
 
 	t_start = gettime();
@@ -313,7 +317,7 @@ bool mutex_test() {
 */		pthread_mutex_lock( &mutex_recv );
 	}
 	t_stop = gettime();
-	printf ("Host lock, Slave unlock : Repetitions: %i, Time (ms): %li\n", REPETITIONS, calc_timediff_ms( t_start, t_stop ));
+	printf ("Host lock, Slave unlock : Repetitions: %lu, Time (ms): %li\n", REPETITIONS, calc_timediff_ms( t_start, t_stop ));
 	printf ("lock/unlock speed : %f per second\n", ((double)REPETITIONS*1000) / ((double)calc_timediff_ms( t_start, t_stop )));
 	printf("\n");
 	return true;
@@ -337,12 +341,65 @@ bool cond_teardown(){
 	return true;
 }
 
+#define MEM_READ_BUFFER_SIZE_BYTES WORKER_BUFFER_SIZE_BYTES
+#define PAGE_SIZE 4096
+uint32_t  mem_read_buffer[MEM_READ_BUFFER_SIZE_BYTES/sizeof(uint32_t)];
+
+bool mem_read_setup(){
+	// We reuse the mailboxes from mbox tests
+	mbox_setup();
+	return true;
+}
+
+bool mem_read_test() {
+	timing_t t_start, t_stop;
+
+	uint32_t result;
+	printf("\n");
+	uint32_t tlb_hits;
+	uint32_t tlb_misses;
+	uint32_t page_faults;
+	reconos_mmu_stats(&tlb_hits, &tlb_misses, &page_faults);
+	printf("MMU Stats Before Request: TLB Hits: %u , TLB Misses: %u , Page Faults: %u\n", tlb_hits, tlb_misses, page_faults);
+
+	printf("Preparing buffer...\n");
+	memset(mem_read_buffer, 0x42, MEM_READ_BUFFER_SIZE_BYTES);
+
+	printf("Sending worker address of buffer: %p ...\n", mem_read_buffer);
+	t_start = gettime();
+	mbox_put(&mb_send, (uint32_t)mem_read_buffer);
+
+	printf("Waiting for worker reply...\n");
+	result=mbox_get(&mb_recv); // address received?
+
+	printf("Worker received address %p. Waiting for Memory Read to finish...\n", (uint32_t*)result);
+	reconos_mmu_stats(&tlb_hits, &tlb_misses, &page_faults);
+	printf("MMU Stats After Request: TLB Hits: %u , TLB Misses: %u , Page Faults: %u\n", tlb_hits, tlb_misses, page_faults);
+	result=mbox_get(&mb_recv); // memory read?
+
+	t_stop = gettime();
+	printf ("Memory Read : Size of read: %u, Time (ms): %li\n", (uint32_t)MEM_READ_BUFFER_SIZE_BYTES, calc_timediff_ms( t_start, t_stop ));
+	printf ("Read Speed : %f KB/s per second\n", ((double)MEM_READ_BUFFER_SIZE_BYTES*1000) / ((double)calc_timediff_ms( t_start, t_stop ) * 1024));
+
+	printf("Worker read memory from address %p. Waiting for comparison results...\n", (uint32_t*) result);
+	result=mbox_get(&mb_recv);
+	printf("Worker send comparison results: %u \n", result); // memory read correctly?
+	return result;
+}
+
+bool mem_read_teardown(){
+	mbox_teardown();
+	return true;
+}
+
 typedef struct test {
 	char * test_name;
 	bool (* test_setup)();
 	bool (* test_run)();
 	bool (* test_teardown)();
 } test_t;
+
+
 
 bool test_setup(test_t  tests[]){
 	bool setup_succeded;
@@ -391,14 +448,15 @@ bool test_teardown(test_t tests[]){
 }
 
 test_t workercpu_tests[] = {
-		{"MBOX Test", mbox_setup, mbox_test, mbox_teardown},
-		{"RQUEUE Test", rqueue_setup, rqueue_test, rqueue_teardown},
-		{"SEM Test", sem_setup, sem_test, sem_teardown},
-		{"MUTEX Test", mutex_setup, mutex_test, mutex_teardown},
-		{"COND Test", cond_setup, cond_test, cond_teardown},
-		{"FSL Benchmark", echo_setup, echo_test, echo_teardown},
-		{"FSL Block Ops Benchmark", echo_block_setup, echo_block_test, echo_block_teardown},
-		{"Memory Access Benchmark", membench_setup, membench_test, membench_teardown},
+//		{"MBOX Test", mbox_setup, mbox_test, mbox_teardown},
+//		{"RQUEUE Test", rqueue_setup, rqueue_test, rqueue_teardown},
+//		{"SEM Test", sem_setup, sem_test, sem_teardown},
+//		{"MUTEX Test", mutex_setup, mutex_test, mutex_teardown},
+//		{"COND Test", cond_setup, cond_test, cond_teardown},
+//		{"FSL Benchmark", echo_setup, echo_test, echo_teardown},
+//		{"FSL Block Ops Benchmark", echo_block_setup, echo_block_test, echo_block_teardown},
+//		{"Memory Access Benchmark", membench_setup, membench_test, membench_teardown},
+		{"Worker Memory Read", mem_read_setup, mem_read_test, mem_read_teardown},
 		{NULL}
 };
 
@@ -414,6 +472,34 @@ struct reconos_resource res[] = {{.type = RECONOS_TYPE_MBOX, .ptr  = &mb_send},
                       			{.type = RECONOS_TYPE_COND, .ptr  = &cond_recv}};
 struct reconos_hwt hwt;
 
+/*
+ * Signal handler for SIGSEGV. Used for debugging on a microblaze processor.
+ * Get as much information to help in debugging as possible!
+ */
+void sigsegv_handler(int sig, siginfo_t *siginfo, void * context) {
+	ucontext_t* uc = (ucontext_t*) context;
+
+	// Yeah, i know using printf in a signal context is not save.
+	// But with a SIGSEGV the programm is messed up anyway, so what?
+	printf(
+			"SIGSEGV: Programm killed at programm address %p, tried to access %p.\n",
+#ifndef HOST_COMPILE
+			(void*)uc->uc_mcontext.regs.pc,
+#else
+			(void*) uc->uc_mcontext.gregs[14],
+#endif
+			(void*) siginfo->si_addr);
+
+#ifdef SHADOWING
+	// Print OS call lists for debugging
+	int i;
+	for (i=0; i < running_threads; i++) {
+		shadow_dump(sh + i);
+	}
+#endif
+	exit(32);
+}
+
 int main(int argc, char ** argv)
 {
 	bool test_success = true;
@@ -422,6 +508,15 @@ int main(int argc, char ** argv)
 	// twiddle with reset signal
 	//reconos_slot_reset(WORKERCPU_SLOT, 1);
 	//reconos_slot_reset(WORKERCPU_SLOT, 0);
+
+
+	//
+	// Install signal handler for segfaults
+	//
+	struct sigaction act = { .sa_sigaction = sigsegv_handler, .sa_flags =
+			SA_SIGINFO };
+	sigaction(SIGSEGV, &act, NULL);
+
 
 	printf("sizeof(res)= %lu\n", sizeof(res)/sizeof(struct reconos_resource));
     reconos_hwt_setresources(&hwt,res,sizeof(res)/sizeof(struct reconos_resource));

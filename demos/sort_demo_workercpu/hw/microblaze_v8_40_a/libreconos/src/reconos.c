@@ -5,6 +5,7 @@
  *      Author: meise
  */
 
+#include <stdlib.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <mb_interface.h>
@@ -134,7 +135,7 @@ int pthread_cond_broadcast (pthread_cond_t *__cond){
  */
 void pthread_exit(void *retval){
 	putfsl(OSIF_CMD_THREAD_EXIT, OSIF_FSL);
-	exit(0);
+	exit(EXIT_SUCCESS);
 }
 
 void pthread_yield(){
@@ -151,4 +152,77 @@ void * reconos_get_init_data(){
 	putfsl(OSIF_CMD_THREAD_GET_INIT_DATA, OSIF_FSL);
 	getfsl(retval, OSIF_FSL);
 	return retval;
+}
+
+
+/**
+ * Copies data from local ram into system's main memory.
+ * @note: Only multiples of 4 for len parameter allowed, because FSL copies always 32 bits.
+ * @implementation At time of implementation, memory subsystem accepts non aligned addresses, but only chunks up to 256 bytes of length.
+ */
+#define MAX_REQUEST_LEN_BYTES 256
+void memif_write(const void* src_addr, void* dst_addr, uint32_t len){
+	uint32_t request_len;
+	uint32_t temp;
+	uint32_t i;
+
+	while (len > 0){
+		request_len = len <= MAX_REQUEST_LEN_BYTES ? len : MAX_REQUEST_LEN_BYTES;
+		len -= request_len;
+
+		temp = (MEMIF_CMD_WRITE << 24) | // Top 8 bit are command
+			   (request_len & 0x00FFFFFc);	  // lower 24 bit are length in bytes. Since only multiples of 4 bytes are allowed, lower 2 bits get zeroed.
+		putfsl(temp,MEMIF_FSL);
+
+		temp = (uint32_t) dst_addr & 0xFFFFFFFcl;  // Address of data in main memory. Lower two bits zeroed to align to word size.
+		putfsl(temp,MEMIF_FSL);
+		dst_addr += request_len;
+
+		for( i=0; i< request_len; i+=4){
+			temp = *((uint32_t*)src_addr);
+			putfsl( temp,MEMIF_FSL);
+			src_addr +=4;
+		}
+	}
+}
+
+/**
+ * Helper functione: reverses bits in a doubleword: uint32_t
+ */
+uint32_t reverse_uint32_t(uint32_t b) {
+	b = (b & 0xFF00FF00) >> 8 | (b & 0x00FF00FF) << 8;
+	b = (b & 0xF0F0F0F0) >> 4 | (b & 0x0F0F0F0F) << 4;
+	b = (b & 0xCCCCCCCC) >> 2 | (b & 0x33333333) << 2;
+	b = (b & 0xAAAAAAAA) >> 1 | (b & 0x55555555) << 1;
+	return b;
+}
+
+/**
+ * Copies data from system's main memory into local ram.
+ * @note: Only multiples of 4 for len parameter allowed, because FSL copies always 32 bits.
+ * @implementation At time of implementation, memory subsystem accepts non aligned addresses, but only chunks up to 256 bytes of length.
+ */
+void memif_read(const void* src_addr, void* dst_addr, uint32_t len){
+	uint32_t request_len;
+	uint32_t temp;
+	uint32_t i;
+
+	while (len > 0){
+		request_len = len <= MAX_REQUEST_LEN_BYTES ? len : MAX_REQUEST_LEN_BYTES;
+		len -= request_len;
+
+		temp = (MEMIF_CMD_READ << 24) |  // Top 8 bit are command
+			   (request_len & 0x00FFFFFC);	  // lower 24 bit are length in bytes. Since only multiples of 4 bytes are allowed, lower 2 bits get zeroed.
+		putfsl(temp,MEMIF_FSL);
+
+		temp = (uint32_t) src_addr & 0xFFFFFFFcl;  // Address of data in main memory. Lower two bits zeroed to align to word size.
+		putfsl(temp,MEMIF_FSL);
+		src_addr += request_len;
+
+		for( i=0; i< request_len; i+=4){
+			getfsl(temp, MEMIF_FSL);
+			*((uint32_t*)dst_addr) = temp;
+			dst_addr +=4;
+		}
+	}
 }

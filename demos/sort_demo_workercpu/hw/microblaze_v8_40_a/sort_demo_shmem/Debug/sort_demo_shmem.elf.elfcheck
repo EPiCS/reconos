@@ -1,0 +1,8 @@
+elfcheck
+Xilinx EDK 14.2 Build EDK_P.28xd
+Copyright (c) 1995-2012 Xilinx, Inc.  All rights reserved.
+
+Command Line: elfcheck sort_demo_shmem.elf 
+
+ERROR:EDK:1228 - Expecting processor instance name! Please specify the processor
+   name for which the ELF file is compiled using -pe option.

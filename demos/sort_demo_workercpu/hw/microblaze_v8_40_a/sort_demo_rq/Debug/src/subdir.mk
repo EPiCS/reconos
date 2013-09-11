@@ -6,7 +6,7 @@
 C_SRCS += \
 ../src/bubblesort.c \
 ../src/platform.c \
-../src/sort_demo.c 
+../src/sort_demo_rq.c 
 
 LD_SRCS += \
 ../src/lscript.ld 
@@ -14,12 +14,12 @@ LD_SRCS += \
 OBJS += \
 ./src/bubblesort.o \
 ./src/platform.o \
-./src/sort_demo.o 
+./src/sort_demo_rq.o 
 
 C_DEPS += \
 ./src/bubblesort.d \
 ./src/platform.d \
-./src/sort_demo.d 
+./src/sort_demo_rq.d 
 
 
 # Each subdirectory must supply rules for building sources it contributes

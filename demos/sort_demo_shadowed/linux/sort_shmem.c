@@ -90,7 +90,7 @@ void sort_shmem_setup_resources(const struct parallel_sort_params_in * pin, stru
 	const int sort_shmem_resource_count = 2;
 	// set implementations of sort thread
 	pout->sort_thread_main = sort_shmem_thread;
-	pout->sort_program_worker = NULL;
+	pout->sort_program_worker = "sort_demo_shmem_workercpu.bin";
 	pout->sort_program_hwt = "SLOT_SORT_SHMEM";
 
 	pout->reconos_resources_count = sort_shmem_resource_count;

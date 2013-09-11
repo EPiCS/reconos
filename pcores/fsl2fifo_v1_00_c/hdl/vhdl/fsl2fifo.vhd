@@ -10,6 +10,9 @@ library reconos_v3_00_b;
 use reconos_v3_00_b.reconos_pkg.all;
 
 entity fsl2fifo is
+  generic (
+    DEBUG     : integer := 0   --! 1 enables debug connections   
+    );
 	port (
 		-- OSIF FSL
 		
@@ -30,7 +33,10 @@ entity fsl2fifo is
 		
 		FIFO32_M_Data : out std_logic_vector(31 downto 0);
 		FIFO32_M_Rem : in std_logic_vector(15 downto 0);
-		FIFO32_M_Wr : out std_logic
+		FIFO32_M_Wr : out std_logic;
+    
+    -- Debug
+    debug_port : out std_logic_vector(97 downto 0)
 	);
 
 end entity;
@@ -48,7 +54,13 @@ begin
   FIFO32_M_Data <= FSL_M_Data;
   FSL_M_Full <= '1' when FIFO32_M_Rem = X"0000" else
                 '0';
-  -- FSL_M_Control is igrnored
+  -- FSL_M_Control is ignored
 
-
+  debug_port(31 downto 0)  <= FSL_M_Data; -- alias of FIFO32_M_Data
+  debug_port(47 downto 32) <= FIFO32_M_Rem;
+  debug_port(48)           <= FSL_M_Write; -- alias of FIFO32_M_Wr
+  debug_port(80 downto 49) <= FIFO32_S_Data;
+  debug_port(96 downto 81) <= FIFO32_S_Fill;
+  debug_port(97)           <= FSL_S_Read; -- alias of FIFO32_S_Rd
+  
 end architecture;
