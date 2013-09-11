@@ -39,6 +39,7 @@ modules.builtin
 *.lzo
 *.patch
 *.gcno
+*.elf.size
 
 #
 # Ignore Hardware designs
