@@ -572,7 +572,7 @@ END
 # PORT tx_ll_dst_rdy = tx_ll_dst_rdy
 BEGIN hwt_smart_cam
  PARAMETER INSTANCE = hwt_smart_cam_0
- PARAMETER HW_VER = 1.00.a
+ PARAMETER HW_VER = 1.00.b
  BUS_INTERFACE OS_SFSL = fsl_v20_3b
  BUS_INTERFACE OS_MFSL = fsl_v20_3a
  BUS_INTERFACE SFIFO32 = fifo32_3b_sfifo32

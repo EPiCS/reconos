@@ -111,7 +111,16 @@ architecture IMP of smart_cam is
 	signal line_sel : std_logic;
 	signal debug_r : std_logic_vector(7 downto 0);
 	signal debug_g : std_logic_vector(7 downto 0);
-	signal debug_b : std_logic_vector(7 downto 0);	
+	signal debug_b : std_logic_vector(7 downto 0);
+
+	signal line_tx_ll_sof_n      : std_logic;     
+	signal line_tx_ll_eof_n      : std_logic;    
+	signal line_tx_ll_data       : std_logic_vector(7 downto 0);
+	signal line_tx_ll_src_rdy_n  : std_logic; 
+	
+	signal camera_id : std_logic_vector(7 downto 0); 
+	signal debug_step_line : std_logic_vector(4 downto 0);
+	signal debug_pxl_cnt : std_logic_vector(31 downto 0);
 
 begin
 
@@ -213,6 +222,12 @@ begin
 		end if;
 	end process;
 	
+	
+	tx_ll_sof_n <= line_tx_ll_sof_n;
+	tx_ll_eof_n <= line_tx_ll_eof_n;
+	tx_ll_src_rdy_n <= line_tx_ll_src_rdy_n;
+	tx_ll_data      <= line_tx_ll_data;
+	
 	-- process that sends current line to tx_ll 
 	send_line : process(clk,rst,send_line_en,send_frame_en) is
 		variable step       : natural range 0 to 19;
@@ -228,178 +243,369 @@ begin
 			line_a          <= (others=>'0');
 			line_b          <= (others=>'0');
 			o_RAMData_com   <= (others=>'0');
-			tx_ll_sof_n     <= '1';
-			tx_ll_eof_n     <= '1';
-			tx_ll_data      <= (others=>'1');
-			tx_ll_src_rdy_n <= '1';
-			rx_ll_dst_rdy_n <= '0';
+			line_tx_ll_sof_n     <= '1';
+			line_tx_ll_eof_n     <= '1';
+			line_tx_ll_data      <= (others=>'1');
+			line_tx_ll_src_rdy_n <= '1';
 			send_line_done  <= '0';
 			line_cnt_next   <= (others=>'0');
 			pixel_cnt := 0;
+			debug_step_line <= (others=>'0');
+			debug_pxl_cnt <= (others=>'0');
 			step := 0;
 		elsif (rising_edge(clk)) then
-			tx_ll_data  <= (others => '1');
-			tx_ll_sof_n <= '1';
-			tx_ll_eof_n <= '1';
-			tx_ll_src_rdy_n <= '0';
+			line_tx_ll_data  <= (others => '1');
+			line_tx_ll_sof_n <= '1';
+			line_tx_ll_eof_n <= '1';
+			line_tx_ll_src_rdy_n <= '0';
 			case step is
 				when 0 => -- start of ETH header
-					tx_ll_data    <= X"FF";
-					tx_ll_sof_n <= '0';
+					line_tx_ll_data    <= X"FF";
+					line_tx_ll_sof_n <= '0';
 					if tx_ll_dst_rdy_n = '0' then
 						header_cnt := 2;
+						debug_step_line <= debug_step_line + 1;
 						step := step + 1;
-					end if;
-					
+					end if;	
 				when 1 => 
 					if tx_ll_dst_rdy_n = '0' then
-						tx_ll_data    <= X"FF";
+						line_tx_ll_data    <= X"FF";
 						if (10 <= header_cnt) then
+							debug_step_line <= debug_step_line + 1;
 							step := step + 1;
 						else
 							header_cnt := header_cnt + 1;
 						end if;
-					end if;
-					
+					end if;		
 				when 2 => 
 					if tx_ll_dst_rdy_n = '0' then
-						tx_ll_data <= "0000" & switch_camera_4 & switch_camera_3 & switch_camera_2 & switch_camera_1;
+						line_tx_ll_data <= camera_id;
+						debug_step_line <= debug_step_line + 1;
 						step := step + 1;
 					end if;
-					
 				when 3 => 
 					if tx_ll_dst_rdy_n = '0' then
 						parameter_size <= size_x;
-						tx_ll_data <= X"AC";
+						line_tx_ll_data <= X"AC";
+						debug_step_line <= debug_step_line + 1;
 						step := step + 1;
 					end if;
-					
 				when 4 =>  -- end of ETH header
 					if tx_ll_dst_rdy_n = '0' then
 						parameter_size <= parameter_size + size_x;
-						tx_ll_data <= X"DC";
+						line_tx_ll_data <= X"DC";
+						debug_step_line <= debug_step_line + 1;
 						step := step + 1;
 					end if;
-
 				when 5 => -- start of smart cam header
 					if tx_ll_dst_rdy_n = '0' then
 						parameter_size <= parameter_size + size_x;
-						tx_ll_data <= X"F0"; -- destination: GUI at workstation
+						line_tx_ll_data <= X"F0"; -- destination: GUI at workstation
+						debug_step_line <= debug_step_line + 1;
 						step := step + 1;
 					end if;
-
 				when 6 => 
 					if tx_ll_dst_rdy_n = '0' then
-						tx_ll_data <= "0000" & switch_camera_4 & switch_camera_3 & switch_camera_2 & switch_camera_1;
+						line_tx_ll_data <= camera_id;
+						debug_step_line <= debug_step_line + 1;
 						step := step + 1;
 					end if;
-
 				when 7 => 
 					if tx_ll_dst_rdy_n = '0' then
 						parameter_size <= parameter_size + 6; -- parameter size = 3*size_x + 6 -- used to be 5
-						tx_ll_data <= X"01"; -- command: send compressed video frame
+						line_tx_ll_data <= X"01"; -- command: send compressed video frame
+						debug_step_line <= debug_step_line + 1;
 						step := step + 1;
 					end if;
-
 				when 8 => 
 					if tx_ll_dst_rdy_n = '0' then
-						tx_ll_data <= parameter_size(15 downto 8); -- parameter size: 6 + size_x*3 (1/2)
+						line_tx_ll_data <= parameter_size(15 downto 8); -- parameter size: 6 + size_x*3 (1/2)
+						debug_step_line <= debug_step_line + 1;
 						step := step + 1;
 					end if;
-					
 				when 9 => 
 					if tx_ll_dst_rdy_n = '0' then
 						line_cnt_next <= line_cnt + 1;
-						tx_ll_data <= parameter_size(7 downto 0); -- parameter size: 6 + size_x*3 (2/2)
+						line_tx_ll_data <= parameter_size(7 downto 0); -- parameter size: 6 + size_x*3 (2/2)
+						debug_step_line <= debug_step_line + 1;
 						step := step + 1;
 					end if;
-
 				when 10 => 
 					if tx_ll_dst_rdy_n = '0' then
-						tx_ll_data <= line_cnt_next(15 downto 8); -- line number (1/2)
+						line_tx_ll_data <= line_cnt_next(15 downto 8); -- line number (1/2)
+						debug_step_line <= debug_step_line + 1;
 						step := step + 1;
 					end if;
-					
 				when 11 => 
 					if tx_ll_dst_rdy_n = '0' then
-						tx_ll_data <= line_cnt_next(7 downto 0); -- line number (2/2)
+						line_tx_ll_data <= line_cnt_next(7 downto 0); -- line number (2/2)
+						debug_step_line <= debug_step_line + 1;
 						step := step + 1;
 					end if;
-
 				when 12 =>
 					if tx_ll_dst_rdy_n = '0' then
-						tx_ll_data <= frame_cnt(31 downto 24); -- frame no.
+						line_tx_ll_data <= frame_cnt(31 downto 24); -- frame no.
+						debug_step_line <= debug_step_line + 1;
 						step := step + 1;
 					end if;
-
 				when 13 =>
 					if tx_ll_dst_rdy_n = '0' then
-						tx_ll_data <= frame_cnt(23 downto 16);
+						line_tx_ll_data <= frame_cnt(23 downto 16);
+						debug_step_line <= debug_step_line + 1;
 						step := step + 1;
 					end if;
-
 				when 14 => 
 					if tx_ll_dst_rdy_n = '0' then
-						tx_ll_data <= frame_cnt(15 downto 8);
+						line_tx_ll_data <= frame_cnt(15 downto 8);
+						debug_step_line <= debug_step_line + 1;
 						step := step + 1;
 					end if;
-
 				when 15 => -- end of smart cam header
 					if tx_ll_dst_rdy_n = '0' then
-						tx_ll_data <= frame_cnt(7 downto 0);
+						line_tx_ll_data <= frame_cnt(7 downto 0);
 						line_sel <= '0';
 						line_a(23 downto 0) <= i_RAMData_com(23 downto 0);
+						debug_step_line <= debug_step_line + 1;
 						step := step + 1;
 					end if;
-
 				when 16 => -- start of sending pixel data: first byte
 					if tx_ll_dst_rdy_n = '0' then
 						pixel_cnt := pixel_cnt + 1;
+						debug_pxl_cnt <= debug_pxl_cnt + 1;
 						o_RAMAddr_com <= o_RAMAddr_com + 1; -- get next pixel
 						if (line_sel='0') then
-							tx_ll_data <= line_a(23 downto 16);
+							line_tx_ll_data <= line_a(23 downto 16);
 						else
-							tx_ll_data <= line_b(23 downto 16);
+							line_tx_ll_data <= line_b(23 downto 16);
 						end if;
-						--tx_ll_data <= i_RAMData_com(23 downto 16);
+						--line_tx_ll_data <= i_RAMData_com(23 downto 16);
+						debug_step_line <= debug_step_line + 1;
 						step := step + 1;
 					end if;
-
 				when 17 => -- second byte
 					if tx_ll_dst_rdy_n = '0' then
 						if (line_sel='0') then
-							tx_ll_data <= line_a(15 downto 8);
+							line_tx_ll_data <= line_a(15 downto 8);
 						else
-							tx_ll_data <= line_b(15 downto 8);
+							line_tx_ll_data <= line_b(15 downto 8);
 						end if;
-						--tx_ll_data <= i_RAMData_com(15 downto 8);
+						--line_tx_ll_data <= i_RAMData_com(15 downto 8);
+						debug_step_line <= debug_step_line + 1;
 						step := step + 1;
 					end if;
-
 				when 18 => -- third byte
 					if tx_ll_dst_rdy_n = '0' then
 						if (line_sel='0') then
 							line_b(23 downto 0) <= i_RAMData_com(23 downto 0); 
-							tx_ll_data <= line_a(7 downto 0);
+							line_tx_ll_data <= line_a(7 downto 0);
 						else
 							line_a(23 downto 0) <= i_RAMData_com(23 downto 0); 
-							tx_ll_data <= line_b(7 downto 0);
+							line_tx_ll_data <= line_b(7 downto 0);
 						end if;
 						line_sel <= not line_sel;
-						--tx_ll_data <= i_RAMData_com(7 downto 0);
+						--line_tx_ll_data <= i_RAMData_com(7 downto 0);
 						if (size_x <= pixel_cnt) then
-							tx_ll_eof_n <= '0';
+							line_tx_ll_eof_n <= '0';
+							debug_step_line <= debug_step_line + 1;
 							step := step + 1;
 						else
+							debug_step_line <= debug_step_line - 2;
 							step := step - 2;
 						end if;
 					end if;						
-				
 				when 19 => -- finished sending frame
 					send_line_done <= '1';
 			end case;
 		end if;
 	end process;
+	
+--	-- process that sends current line to tx_ll 
+--	send_line : process(clk,rst,send_line_en,send_frame_en) is
+--		variable step       : natural range 0 to 19;
+--		variable pixel_cnt  : natural range 0 to FRAME_HEIGHT;
+--		variable header_cnt : natural range 0 to 11;  
+--	begin
+--		if (rst = '1' or send_line_en = '0') then
+--			o_RAMWE_com     <= '0';
+--			if (rst ='1' or send_frame_en = '0') then
+--				o_RAMAddr_com   <= (others=>'0');
+--			end if;
+--			line_sel        <= '0';
+--			line_a          <= (others=>'0');
+--			line_b          <= (others=>'0');
+--			o_RAMData_com   <= (others=>'0');
+--			tx_ll_sof_n     <= '1';
+--			tx_ll_eof_n     <= '1';
+--			tx_ll_data      <= (others=>'1');
+--			tx_ll_src_rdy_n <= '1';
+--			rx_ll_dst_rdy_n <= '0';
+--			send_line_done  <= '0';
+--			line_cnt_next   <= (others=>'0');
+--			pixel_cnt := 0;
+--			step := 0;
+--		elsif (rising_edge(clk)) then
+--			tx_ll_data  <= (others => '1');
+--			tx_ll_sof_n <= '1';
+--			tx_ll_eof_n <= '1';
+--			tx_ll_src_rdy_n <= '0';
+--			case step is
+--				when 0 => -- start of ETH header
+--					tx_ll_data    <= X"FF";
+--					tx_ll_sof_n <= '0';
+--					if tx_ll_dst_rdy_n = '0' then
+--						header_cnt := 2;
+--						step := step + 1;
+--					end if;
+--					
+--				when 1 => 
+--					if tx_ll_dst_rdy_n = '0' then
+--						tx_ll_data    <= X"FF";
+--						if (10 <= header_cnt) then
+--							step := step + 1;
+--						else
+--							header_cnt := header_cnt + 1;
+--						end if;
+--					end if;
+--					
+--				when 2 => 
+--					if tx_ll_dst_rdy_n = '0' then
+--						tx_ll_data <= "0000" & switch_camera_4 & switch_camera_3 & switch_camera_2 & switch_camera_1;
+--						step := step + 1;
+--					end if;
+--					
+--				when 3 => 
+--					if tx_ll_dst_rdy_n = '0' then
+--						parameter_size <= size_x;
+--						tx_ll_data <= X"AC";
+--						step := step + 1;
+--					end if;
+--					
+--				when 4 =>  -- end of ETH header
+--					if tx_ll_dst_rdy_n = '0' then
+--						parameter_size <= parameter_size + size_x;
+--						tx_ll_data <= X"DC";
+--						step := step + 1;
+--					end if;
+--
+--				when 5 => -- start of smart cam header
+--					if tx_ll_dst_rdy_n = '0' then
+--						parameter_size <= parameter_size + size_x;
+--						tx_ll_data <= X"F0"; -- destination: GUI at workstation
+--						step := step + 1;
+--					end if;
+--
+--				when 6 => 
+--					if tx_ll_dst_rdy_n = '0' then
+--						tx_ll_data <= "0000" & switch_camera_4 & switch_camera_3 & switch_camera_2 & switch_camera_1;
+--						step := step + 1;
+--					end if;
+--
+--				when 7 => 
+--					if tx_ll_dst_rdy_n = '0' then
+--						parameter_size <= parameter_size + 6; -- parameter size = 3*size_x + 6 -- used to be 5
+--						tx_ll_data <= X"01"; -- command: send compressed video frame
+--						step := step + 1;
+--					end if;
+--
+--				when 8 => 
+--					if tx_ll_dst_rdy_n = '0' then
+--						tx_ll_data <= parameter_size(15 downto 8); -- parameter size: 6 + size_x*3 (1/2)
+--						step := step + 1;
+--					end if;
+--					
+--				when 9 => 
+--					if tx_ll_dst_rdy_n = '0' then
+--						line_cnt_next <= line_cnt + 1;
+--						tx_ll_data <= parameter_size(7 downto 0); -- parameter size: 6 + size_x*3 (2/2)
+--						step := step + 1;
+--					end if;
+--
+--				when 10 => 
+--					if tx_ll_dst_rdy_n = '0' then
+--						tx_ll_data <= line_cnt_next(15 downto 8); -- line number (1/2)
+--						step := step + 1;
+--					end if;
+--					
+--				when 11 => 
+--					if tx_ll_dst_rdy_n = '0' then
+--						tx_ll_data <= line_cnt_next(7 downto 0); -- line number (2/2)
+--						step := step + 1;
+--					end if;
+--
+--				when 12 =>
+--					if tx_ll_dst_rdy_n = '0' then
+--						tx_ll_data <= frame_cnt(31 downto 24); -- frame no.
+--						step := step + 1;
+--					end if;
+--
+--				when 13 =>
+--					if tx_ll_dst_rdy_n = '0' then
+--						tx_ll_data <= frame_cnt(23 downto 16);
+--						step := step + 1;
+--					end if;
+--
+--				when 14 => 
+--					if tx_ll_dst_rdy_n = '0' then
+--						tx_ll_data <= frame_cnt(15 downto 8);
+--						step := step + 1;
+--					end if;
+--
+--				when 15 => -- end of smart cam header
+--					if tx_ll_dst_rdy_n = '0' then
+--						tx_ll_data <= frame_cnt(7 downto 0);
+--						line_sel <= '0';
+--						line_a(23 downto 0) <= i_RAMData_com(23 downto 0);
+--						step := step + 1;
+--					end if;
+--
+--				when 16 => -- start of sending pixel data: first byte
+--					if tx_ll_dst_rdy_n = '0' then
+--						pixel_cnt := pixel_cnt + 1;
+--						o_RAMAddr_com <= o_RAMAddr_com + 1; -- get next pixel
+--						if (line_sel='0') then
+--							tx_ll_data <= line_a(23 downto 16);
+--						else
+--							tx_ll_data <= line_b(23 downto 16);
+--						end if;
+--						--tx_ll_data <= i_RAMData_com(23 downto 16);
+--						step := step + 1;
+--					end if;
+--
+--				when 17 => -- second byte
+--					if tx_ll_dst_rdy_n = '0' then
+--						if (line_sel='0') then
+--							tx_ll_data <= line_a(15 downto 8);
+--						else
+--							tx_ll_data <= line_b(15 downto 8);
+--						end if;
+--						--tx_ll_data <= i_RAMData_com(15 downto 8);
+--						step := step + 1;
+--					end if;
+--
+--				when 18 => -- third byte
+--					if tx_ll_dst_rdy_n = '0' then
+--						if (line_sel='0') then
+--							line_b(23 downto 0) <= i_RAMData_com(23 downto 0); 
+--							tx_ll_data <= line_a(7 downto 0);
+--						else
+--							line_a(23 downto 0) <= i_RAMData_com(23 downto 0); 
+--							tx_ll_data <= line_b(7 downto 0);
+--						end if;
+--						line_sel <= not line_sel;
+--						--tx_ll_data <= i_RAMData_com(7 downto 0);
+--						if (size_x <= pixel_cnt) then
+--							tx_ll_eof_n <= '0';
+--							step := step + 1;
+--						else
+--							step := step - 2;
+--						end if;
+--					end if;						
+--				
+--				when 19 => -- finished sending frame
+--					send_line_done <= '1';
+--			end case;
+--		end if;
+--	end process;
 	
 	-- process that strores next frame to local memory
 	get_next_frame : process(video_in_clk,rst,get_frame_en) is

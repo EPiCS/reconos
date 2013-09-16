@@ -89,7 +89,7 @@ int main()
             		return 1;
         	}
 		//printf("%d != %d", data_size,packet_size);
-		if (data_size == packet_size)
+		if (data_size == packet_size || data_size == packet_size-1 )
 		{
 			counter++;
 			counter2++;

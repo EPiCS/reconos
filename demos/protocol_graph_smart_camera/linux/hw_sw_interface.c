@@ -106,7 +106,7 @@ void print_packet(struct noc_pkt * pkt){
 
 static int __init init_reconos_test_module(void)
 {
-	int ret,i;
+	int ret,ret2,ret3,ret4,i;
 	printk(KERN_INFO "[reconos-interface] Init.\n");
 
 	mbox_init(&e_mb_put, 2);
@@ -160,14 +160,26 @@ static int __init init_reconos_test_module(void)
 	reconos_hwt_setresources(&c_hwt,c_res,2);
 	reconos_hwt_create(&c_hwt,C_HWT_SLOT_NR,NULL);
 
+	// forward incoming packets (from physical ETH interface to HWT smart cam) 
+	mbox_put(&a_mb_put,1);
+	ret = mbox_get(&a_mb_get);
+	ret = mbox_get(&a_mb_get);
+
 	while(1){
+		// send generated packets to HWT Ethernet Test
 		mbox_put(&e_mb_put,4);
-		printk("sent packets:");
-		for (i=0;i<5;i++){
-			ret = mbox_get(&e_mb_get);
-			printk(" \tcounter(%d)=%08d",i,ret);
+		ret = mbox_get(&e_mb_get);
+		//printk("received:  %08d", ret);
+		//printk("sent packets: ");
+		for (i=0;i<4;i++){
+			ret2 = mbox_get(&e_mb_get);
+			//printk("%08d",ret);
 		}
-		printk("\n");
+		mbox_put(&a_mb_put,1);
+		ret3 = mbox_get(&a_mb_get);
+		ret4 = mbox_get(&a_mb_get);
+		printk("packets: [Smart CAM] received=%08d   sent=%08d,   [ETH] received=%08d   sent=%08d\n",ret,ret2,ret3,ret4);
+		//printk("\n");
 		msleep(1000);
 	}
 
