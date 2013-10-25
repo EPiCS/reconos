@@ -81,5 +81,6 @@ extern void reconos_hwt_setresources(struct reconos_hwt *hwt,
 				     size_t num_resources);
 extern void reconos_hwt_setinitdata(struct reconos_hwt *hwt, void *init_data);
 extern int reconos_hwt_create(struct reconos_hwt *hwt, int slot, void *arg);
+extern void reconos_slot_reset(int num, int reset);
 
 #endif /* RECONOS_H */

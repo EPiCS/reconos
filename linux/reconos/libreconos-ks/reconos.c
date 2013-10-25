@@ -19,7 +19,12 @@ extern unsigned long getpgd_fetch_pgd(int userland);
 
 static struct reconos_process reconos_proc;
 
-static void reconos_slot_reset(int num, int reset)
+//static uint32_t handle;
+//static uint32_t handle_2;
+//static uint32_t arg0;
+
+//static void reconos_slot_reset(int num, int reset)
+void reconos_slot_reset(int num, int reset)
 {
 	int i;
 	uint32_t cmd, mask = 0;
@@ -38,6 +43,7 @@ static void reconos_slot_reset(int num, int reset)
 	cmd = mask | 0x01000000;
 	fsl_write_word(reconos_proc.proc_control_fsl_b, cmd);
 }
+EXPORT_SYMBOL_GPL(reconos_slot_reset);
 
 static inline uint32_t reconos_getpgd(void)
 {
@@ -224,22 +230,40 @@ static inline void reconos_assert_type_and_res(struct reconos_hwt *hwt,
 
 static void reconos_delegate_process_mbox_get(struct reconos_hwt *hwt)
 {
+	// old #######################################
 	uint32_t handle = fsl_read_word(hwt->slot);
-
+	printk("[reconos] slot %d, mbox (%d) get ... start\n",hwt->slot, handle);
 	reconos_assert_type_and_res(hwt, handle, RECONOS_TYPE_MBOX);
 	fsl_write_word(hwt->slot, mbox_get(hwt->resources[handle].ptr));
+	printk("[reconos] slot %d, mbox (%d) get ... done\n",hwt->slot, handle);
+	// new #######################################
+	//handle = fsl_read_word(hwt->slot);
+	//reconos_assert_type_and_res(hwt, handle, RECONOS_TYPE_MBOX);
+	//fsl_write_word(hwt->slot, mbox_get(hwt->resources[handle].ptr));
 }
 
 static void reconos_delegate_process_mbox_put(struct reconos_hwt *hwt)
 {
+	// old #######################################
 	uint32_t handle = fsl_read_word(hwt->slot);
 	uint32_t arg0 = fsl_read_word(hwt->slot);
 
+	printk("[reconos] slot %d, mbox (%d) put %x ... start\n",hwt->slot, handle, arg0);
 	reconos_assert_type_and_res(hwt, handle, RECONOS_TYPE_MBOX);
 
 	mbox_put(hwt->resources[handle].ptr, arg0);
 
 	fsl_write_word(hwt->slot, 0);
+	printk("[reconos] slot %d, mbox (%d) put %x ... done\n",hwt->slot, handle, arg0);
+	// new #######################################
+	//handle_2 = fsl_read_word(hwt->slot);
+	//arg0 = fsl_read_word(hwt->slot);
+	//reconos_assert_type_and_res(hwt, handle_2, RECONOS_TYPE_MBOX);
+
+	//mbox_put(hwt->resources[handle_2].ptr, arg0);
+
+	//fsl_write_word(hwt->slot, 0);
+
 
 }
 
@@ -308,15 +332,37 @@ static void reconos_delegate_process_get_init_data(struct reconos_hwt *hwt)
 static int reconos_delegate_thread_entry(void *arg)
 {
 	struct reconos_hwt *hwt = arg;
+	//int pr_thread = 0;
 
 	reconos_slot_reset(hwt->slot, 1);
 	reconos_slot_reset(hwt->slot, 0);
+
 
 	while (likely(!kthread_should_stop())) {
 		uint32_t cmd = fsl_read_word(hwt->slot);
 
 		switch (cmd) {
 		case RECONOS_CMD_MBOX_GET:
+			/*if(hwt->slot==3){ // partial slot
+				//if(reconos_schedule(hwt)){
+				//hwt->state = RECONOS_STATE_RECONFIGURING;
+				printk("HWT %d is going to be reconfigured\r\n",hwt->slot);
+				fsl_read_word(hwt->slot); // read handle
+				reconos_slot_reset(hwt->slot,1);
+				if (pr_thread == 0) {
+					printk("configuring thread PR A into slot %d\r\n",hwt->slot);
+					// TODO configure bitstream PR A  ("cat /partial_bitstreams/partial_a.bit > /dev/icap0")
+					pr_thread = 1;
+				} else {
+					printk("configuring thread PR B into slot %d\r\n",hwt->slot);
+					// TODO configure bitstream PR B  ("cat /partial_bitstreams/partial_b.bit > /dev/icap0")
+					pr_thread = 0;
+				}
+				//hwt->state = RECONOS_STATE_RUNNING;
+				reconos_slot_reset(hwt->slot,0);
+				continue;
+				//}
+			}*/
 			reconos_delegate_process_mbox_get(hwt);
 			break;	
 		case RECONOS_CMD_MBOX_PUT:
@@ -349,7 +395,8 @@ static int reconos_delegate_thread_entry(void *arg)
 		case RECONOS_CMD_RQ_SEND:
 		default:
 			/* Unsupported, dummy read */
-			BUG();
+			//BUG(); ignore bugs
+			break;
 		}
 	}
 

@@ -1,0 +1,14 @@
+##############################################################################
+## Filename:          hwt_pr_v2_1_0.pao
+## Description:       Dummy partial reconfigurable functional block
+## Date:              Tue Sep 13 12:47:26 2011 (by Create and Import Peripheral Wizard)
+##############################################################################
+
+lib proc_common_v3_00_a  proc_common_pkg vhdl
+lib reconos_v3_00_b reconos_pkg vhdl
+lib ana_v1_00_a anaPkg vhdl
+lib ana_v1_00_a ../../../ana_v1_00_a/hdl/vhdl/packetDecoder.vhd vhdl
+lib ana_v1_00_a ../../../ana_v1_00_a/hdl/vhdl/packetEncoder.vhd vhdl
+lib hwt_pr_v1_00_a hwt_pr vhdl
+
+
