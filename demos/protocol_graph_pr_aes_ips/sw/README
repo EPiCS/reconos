@@ -1,0 +1,17 @@
+/pr_hw_sw_interface/.
+---------------------
+  kernel module to test the partial reconfigurable system
+  in a while loop: 
+      (1) wait for a single message (eth->partial_block->h2s->kernel-module)
+      (2) wait for 20 seconds to give the user the chance to reconfigure the partial hardware slot (see config.sh)
+  The kernel module has to be copied to the compact flash card.
+
+/send_pkts/.
+------------
+   simple program that sends a single packet from a workstation to the FPGA board over the eth1-interface.
+   > cd send_pkts; sudo ./send_pkts 
+
+config.sh
+---------
+   commands for the Linux shell (on minicom) to set up the potocol stack and reconfigure the the partial HW slot
+ 

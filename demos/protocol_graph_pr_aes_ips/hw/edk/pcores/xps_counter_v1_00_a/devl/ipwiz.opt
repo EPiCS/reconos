@@ -1,0 +1,8 @@
+-batch 
+-create xps_counter 
+-ver 1.00.a 
+-dir "/home/andreas/reconos/demos/sort_demo/hw/edk_xilkernel" 
+-lang vhdl 
+-bus plbv46 s 
+-reg 1 
+-xps 
