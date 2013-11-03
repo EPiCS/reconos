@@ -34,7 +34,10 @@ void send_packet( void){
 	// do not change the Ethernet header
 	memset(&sendbuf[tx_len], 0, BUF_SIZE-tx_len);
 	// set parameter
-	for (i=0;i<250;i++){
+	for (i = 0; i < 8; i++){
+		sendbuf[tx_len++] = 0xcd;
+	}
+	for (i=16;i<250;i++){
 		sendbuf[tx_len++] = (char) 1; //(rand() % 256 + 1);
 	}
 	// send packet
@@ -102,7 +105,7 @@ int main()
 	memset(socket_address.sll_addr,0x01,6);
 	// Ethernet header
 	memcpy(eh->ether_shost,&if_mac.ifr_hwaddr.sa_data,6);
-	memset(eh->ether_dhost,0x01,6);
+	memset(eh->ether_dhost,0xff,6);
 	// Ethertype field
 	eh->ether_type = htons(0xACDC); //htons(ETH_P_IP);
 

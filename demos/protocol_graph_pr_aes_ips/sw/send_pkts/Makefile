@@ -1,7 +1,7 @@
 CC	= gcc
 DEBUG   = DEBUG_NONE
 CFLAGS	= -O3 -DDEBUG=$(DEBUG) 
-LIBS	= -lstdc++
+#LIBS	= -lstdc++
 
 EXECUTABLES = send_pkts
 

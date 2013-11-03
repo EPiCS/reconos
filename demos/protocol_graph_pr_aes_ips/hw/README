@@ -23,18 +23,18 @@ over a network-on-chip.
     some kernel modules (such as libreconos.ko and pr_hw_sw_interface.ko)
 (3) the 'S2H' FB receives packets from the software and inserts them to the network-on-chip
 (4) the 'PR' slot is the only partial reconfigurable slot/module in our design. 
-    In this demo we can either configure the 'PR_a' or the 'PR_b' FB to this slot. 
-    The 'PR_a' FB overwrites the payload of each incoming packet with '0A', the 'PR_b' FB 
-    overwrites the payload of each incoming packet with '0B'.
+    In this demo we can either configure the 'PR_aes' or the 'PR_ips' FB to this slot. 
+    The PR_aes block decrypts all packets with the aes algorithm and the PR_ips block
+    checks all packets for non-shortest forms UTF8 encoding.
 
 -----------------------------------------------------------------------------------------------
 
 For our demo we require the following four bitstreams:
 
-[1] system_a.bit:  full bitstream, where 'PR_a' is configured into the 'PR' slot (configuration A)
-[2] system_b.bit:  full bitstream, where 'PR_b' is configured into the 'PR' slot (configuration B)
-[3] partial_a.bit: partial bitstream for the 'PR_a' FB
-[4] partial_b.bit: partial bitstream for the 'PR_b' FB
+[1] system_aes.bit:  full bitstream, where 'PR_aes' is configured into the 'PR' slot (configuration A)
+[2] system_ips.bit:  full bitstream, where 'PR_ips' is configured into the 'PR' slot (configuration B)
+[3] partial_aes.bit: partial bitstream for the 'PR_aes' FB
+[4] partial_ips.bit: partial bitstream for the 'PR_ips' FB
 
 -----------------------------------------------------------------------------------------------
 
@@ -42,9 +42,10 @@ To generate these bitstreams you have to follow these steps:
 
 STEP 1: Generate static and partial netlists for configuration A
 ================================================================
-- Install the Xilinx 14.4 tools to your system (if this is not already the case)
-- Open 'hw/edk/system.xmp' using the Xilinx Platform Studio (XPS) and click on 'Hardware>Generate Hardware'
-- Important: You can stop this process, when XPS starts the mapping process. (We only need the netlists!)
+- Install the Xilinx 14.5 tools to your system (if this is not already the case)
+- Check that all symbolic links in hw/edk/pcores are set correctly
+- Copy the pcore hw/edk/pcores/hwt_aesde_v1_00_b/hwt_pr_v1_00_a to hw/edk/pcores/
+- Open 'hw/edk/system.xmp' using the Xilinx Platform Studio (XPS) and click on 'Hardware>Generate Netlist'
 
 STEP 2: Copy static and partial netlists to the 'hw/prdesign'
 =============================================================
@@ -53,32 +54,42 @@ STEP 2: Copy static and partial netlists to the 'hw/prdesign'
 
 STEP 3: Generate partial netlists for configuration B
 =====================================================
+- delete the folder hw/edk/pcores/hwt_pr_v1_00_a
+- copy the folder hw/edk/pcores/hwt_ips_v1_00_a to hw/edk/pcores/
 - Open 'hw/edk/system.xmp' using the Xilinx Platform Studio (XPS) and click on 'Hardware>Clean Hardware'
-- Open the file 'hw/edk/pcores/hwt_pr_v1_00_a/hdl/vhdl/hwt_pr.vhd' wit a text editor and change the following line
-  old: 'constant PR_MODULE  : std_logic_vector(7 downto 0) := X"0A";' (line 56)
-  new: 'constant PR_MODULE  : std_logic_vector(7 downto 0) := X"0B";'
-- In XPS: click 'Hardware>Generate Hardware'
-- Important: You can stop this process, when XPS starts the mapping process. (We only need the partial netlist/s!)
+- Generate the netlists: Hardware > Generate Netlists. You can stop as soon as the system_hwt_pr_0_wrapper.ngc file is available.
+- go to the directory hw/edk/synthesis and add the following line to thefile system_hwt_pr_0_wrapper_xst.scr
+	-bufg 0
+- on the command line type the followig:
+xst -ifn system_hwt_pr_0_wrapper_xst.scr > xst_out.txt
+grep through xst_out.txt for BUFG to verify no BUFGs are instanciated.
+
 
 STEP 4: Copy partial netlist/s to the 'hw/prdesign'
 ===================================================
-- Copy the partial netlist 'system_hwt_pr_0_wrapper.ngc' from the folder 'hw/edk/implementation' to 'hw/prdesign/syn/pr_b'
+- Copy the partial netlist 'system_hwt_pr_0_wrapper.ngc' from the folder 'hw/edk/implementation' to 'hw/prdesign/syn/pr_b'.
 
 STEP 5: Generate bitstreams for configuration A
 ================================================
 - goto the folder 'hw/prdesign/imp/config_pr_a' and call './generate_config.sh'
 - this step will create the full bistream 'system.bit' and the partial bitstream for configuration A 
-- copy the full bitstream 'hw/prdesign/imp/config_pr_a/system.bit' to 'hw/prdesign/bitfiles/system_a.bit'
+- copy the full bitstream 'hw/prdesign/imp/config_pr_a/system.bit' to 'hw/prdesign/bitfiles/system_aes.bit'
 - copy the partial bitstream 'hw/prdesign/imp/config_pr_a/system_hwt_pr_0_hwt_pr_a_partial.bin' 
-  to 'hw/prdesign/bitfiles/partial_a.bit' (important: the file *.bin contains the partial bitstream without a header)
+  to 'hw/prdesign/bitfiles/partial_aes.bit' (important: the file *.bin contains the partial bitstream without a header)
 
 STEP 6: Generate bitstreams for configuration B
 ================================================
 - goto the folder 'hw/prdesign/imp/config_pr_b' and call './generate_config.sh'
 - this step will create the full bistream 'system.bit' and the partial bitstream for configuration B 
-- copy the full bitstream 'hw/prdesign/imp/config_pr_b/system.bit' to 'hw/prdesign/bitfiles/system_b.bit'
+- copy the full bitstream 'hw/prdesign/imp/config_pr_b/system.bit' to 'hw/prdesign/bitfiles/system_ips.bit'
 - copy the partial bitstream 'hw/prdesign/imp/config_pr_b/system_hwt_pr_0_hwt_pr_b_partial.bin' 
-  to 'hw/prdesign/bitfiles/partial_b.bit' (important: the file *.bin contains the partial bitstream without a header)
+  to 'hw/prdesign/bitfiles/partial_ips.bit' (important: the file *.bin contains the partial bitstream without a header)
+
+STEP 7: Build the kernel
+========================
+- copy the device tree from hw/device_tree/noc_with_cache_mmu.dts to /path/to/kernel/arch/microblaze/boot/dts/
+- compile the kernel: 
+make CROSS_COMPILE=microblaze-unknown-linux-gnu- ARCH=microblaze clean -j4 simpleImage.noc_with_cache_mmu
 
 STEP 7: Build the software
 ==========================
@@ -88,22 +99,26 @@ STEP 7: Build the software
 
 STEP 8: Configure the FPGA and download the kernel image
 ========================================================
-- download the system_a.bit or "system_b.bit" using Xilinx Impact or the 'dow' script
-- download the Linux kernel image ('simpleImage.noc') using the 'xmd' tool or the 'dow' script
+- download the system_ips.bit using Xilinx Impact or the 'dow' script (not the system_aes.bit!)
+- download the Linux kernel image ('simpleImage.noc_with_cache_mmu.dts') using the 'xmd' tool or the 'dow' script
 
 STEP 9: Test the system
 =======================
 - open minicom in a terminal (e.g. 'minicom -D /dev/ttyUSB0')
+- if does not already exist: mknod /dev/icap0 c 259 0
 - configure the protocol graph demo according to the file 'sw/config.sh' (line 2-3)
 - the kernel module first wait for a message from the network interface
   -> call the 'sw/send_pkts/send_pkts' application on your workstation 
      to send a single packet over the eth1 interface to the FPGA
-- then you have 20 seconds to reconfigure the partial slot ('[partial slot] reconfig. START')
+- then you have 30 seconds to reconfigure the partial slot ('[partial slot] reconfig. START')
   -> first hit the 'enter'-key such that you go back to the terminal
-  -> in the terminal you can now download a partial bitstream
-     =>> for pr_a: 'cat partial_bitstreams/partial_a.bit > /dev/icap0')
-     =>> for pr_b: 'cat partial_bitstreams/partial_b.bit > /dev/icap0')
-- after 20 seconds, you should not reconfigure anymore, this is indicated by the output '[partial slot] reconfig. STOP'
+  -> in the terminal you can now download the aes partial bitstream
+     =>> for pr_aes: 'cat partial_bitstreams/partial_aes.bit > /dev/icap0')
+- after 30 seconds, you should not reconfigure anymore, this is indicated by the output '[partial slot] reconfig. STOP'
   -> the kernel module will again wait for another message (that could be send using sw/send_pkts/send_pkts)
 - and so on and so on...
+  -> the kernel module expects that the hardware is changed from ips to aes etc. each time it waits, and 
+	configures the partial slot accordingly. Since aes and ips do not have the same configuration interface
+	the system wont work if the kernel module assumes the wrong partial module is configured.
+
 

@@ -2,10 +2,13 @@
 
 # Fix for newer SO-DIMM / external memory.
 # See http://www.xilinx.com/support/answers/44814.htm
-Net fpga_0_DDR2_SDRAM_DIMM0_DDR2_RowAddr_pin_13 LOC=J15 |IOSTANDARD = SSTL15;
+NET "fpga_0_DDR2_SDRAM_DIMM0_DDR2_RowAddr_pin_13" LOC = J15;
+NET "fpga_0_DDR2_SDRAM_DIMM0_DDR2_RowAddr_pin_13" IOSTANDARD = SSTL15;
 
-Net fpga_0_RS232_Uart_1_RX_pin LOC = J24  |  IOSTANDARD=LVCMOS25;
-Net fpga_0_RS232_Uart_1_TX_pin LOC = J25  |  IOSTANDARD=LVCMOS25;
+NET "fpga_0_RS232_Uart_1_RX_pin" LOC = J24;
+NET "fpga_0_RS232_Uart_1_RX_pin" IOSTANDARD = LVCMOS25;
+NET "fpga_0_RS232_Uart_1_TX_pin" LOC = J25;
+NET "fpga_0_RS232_Uart_1_TX_pin" IOSTANDARD = LVCMOS25;
 #Net fpga_0_LEDs_8Bit_GPIO_IO_pin<0> LOC = AC22  |  IOSTANDARD=LVCMOS25;
 #Net fpga_0_LEDs_8Bit_GPIO_IO_pin<1> LOC = AC24  |  IOSTANDARD=LVCMOS25;
 #Net fpga_0_LEDs_8Bit_GPIO_IO_pin<2> LOC = AE22  |  IOSTANDARD=LVCMOS25;
@@ -101,103 +104,202 @@ Net fpga_0_RS232_Uart_1_TX_pin LOC = J25  |  IOSTANDARD=LVCMOS25;
 #Net fpga_0_Ethernet_MAC_PHY_MDC_pin LOC=AP14  |  IOSTANDARD = LVCMOS25;
 #Net fpga_0_Ethernet_MAC_PHY_MDIO_pin LOC=AN14  |  IOSTANDARD = LVCMOS25;
 #Net fpga_0_Ethernet_MAC_MDINT_pin LOC=AH14  |  IOSTANDARD = LVCMOS25  |  TIG;
-Net fpga_0_DDR3_SDRAM_DDR3_Clk_pin LOC=G18  |  IOSTANDARD = DIFF_SSTL15;
-Net fpga_0_DDR3_SDRAM_DDR3_Clk_n_pin LOC=H18  |  IOSTANDARD = DIFF_SSTL15;
-Net fpga_0_DDR3_SDRAM_DDR3_CE_pin LOC=M18  |  IOSTANDARD = SSTL15;
-Net fpga_0_DDR3_SDRAM_DDR3_CS_n_pin LOC=K18  |  IOSTANDARD = SSTL15;
-Net fpga_0_DDR3_SDRAM_DDR3_ODT_pin LOC=F18  |  IOSTANDARD = SSTL15;
-Net fpga_0_DDR3_SDRAM_DDR3_RAS_n_pin LOC=L19  |  IOSTANDARD = SSTL15;
-Net fpga_0_DDR3_SDRAM_DDR3_CAS_n_pin LOC=C17  |  IOSTANDARD = SSTL15;
-Net fpga_0_DDR3_SDRAM_DDR3_WE_n_pin LOC=B17  |  IOSTANDARD = SSTL15;
-Net fpga_0_DDR3_SDRAM_DDR3_BankAddr_pin<0> LOC=K19  |  IOSTANDARD = SSTL15;
-Net fpga_0_DDR3_SDRAM_DDR3_BankAddr_pin<1> LOC=J19  |  IOSTANDARD = SSTL15;
-Net fpga_0_DDR3_SDRAM_DDR3_BankAddr_pin<2> LOC=L15  |  IOSTANDARD = SSTL15;
-Net fpga_0_DDR3_SDRAM_DDR3_Addr_pin<0> LOC=L14  |  IOSTANDARD = SSTL15;
-Net fpga_0_DDR3_SDRAM_DDR3_Addr_pin<1> LOC=A16  |  IOSTANDARD = SSTL15;
-Net fpga_0_DDR3_SDRAM_DDR3_Addr_pin<2> LOC=B16  |  IOSTANDARD = SSTL15;
-Net fpga_0_DDR3_SDRAM_DDR3_Addr_pin<3> LOC=E16  |  IOSTANDARD = SSTL15;
-Net fpga_0_DDR3_SDRAM_DDR3_Addr_pin<4> LOC=D16  |  IOSTANDARD = SSTL15;
-Net fpga_0_DDR3_SDRAM_DDR3_Addr_pin<5> LOC=J17  |  IOSTANDARD = SSTL15;
-Net fpga_0_DDR3_SDRAM_DDR3_Addr_pin<6> LOC=A15  |  IOSTANDARD = SSTL15;
-Net fpga_0_DDR3_SDRAM_DDR3_Addr_pin<7> LOC=B15  |  IOSTANDARD = SSTL15;
-Net fpga_0_DDR3_SDRAM_DDR3_Addr_pin<8> LOC=G15  |  IOSTANDARD = SSTL15;
-Net fpga_0_DDR3_SDRAM_DDR3_Addr_pin<9> LOC=F15  |  IOSTANDARD = SSTL15;
-Net fpga_0_DDR3_SDRAM_DDR3_Addr_pin<10> LOC=M16  |  IOSTANDARD = SSTL15;
-Net fpga_0_DDR3_SDRAM_DDR3_Addr_pin<11> LOC=M15  |  IOSTANDARD = SSTL15;
-Net fpga_0_DDR3_SDRAM_DDR3_Addr_pin<12> LOC=H15  |  IOSTANDARD = SSTL15;
-Net fpga_0_DDR3_SDRAM_DDR3_DQ_pin<0> LOC=J11  |  IOSTANDARD = SSTL15_T_DCI;
-Net fpga_0_DDR3_SDRAM_DDR3_DQ_pin<1> LOC=E13  |  IOSTANDARD = SSTL15_T_DCI;
-Net fpga_0_DDR3_SDRAM_DDR3_DQ_pin<2> LOC=F13  |  IOSTANDARD = SSTL15_T_DCI;
-Net fpga_0_DDR3_SDRAM_DDR3_DQ_pin<3> LOC=K11  |  IOSTANDARD = SSTL15_T_DCI;
-Net fpga_0_DDR3_SDRAM_DDR3_DQ_pin<4> LOC=L11  |  IOSTANDARD = SSTL15_T_DCI;
-Net fpga_0_DDR3_SDRAM_DDR3_DQ_pin<5> LOC=K13  |  IOSTANDARD = SSTL15_T_DCI;
-Net fpga_0_DDR3_SDRAM_DDR3_DQ_pin<6> LOC=K12  |  IOSTANDARD = SSTL15_T_DCI;
-Net fpga_0_DDR3_SDRAM_DDR3_DQ_pin<7> LOC=D11  |  IOSTANDARD = SSTL15_T_DCI;
-Net fpga_0_DDR3_SDRAM_DDR3_DQ_pin<8> LOC=M13  |  IOSTANDARD = SSTL15_T_DCI;
-Net fpga_0_DDR3_SDRAM_DDR3_DQ_pin<9> LOC=J14  |  IOSTANDARD = SSTL15_T_DCI;
-Net fpga_0_DDR3_SDRAM_DDR3_DQ_pin<10> LOC=B13  |  IOSTANDARD = SSTL15_T_DCI;
-Net fpga_0_DDR3_SDRAM_DDR3_DQ_pin<11> LOC=B12  |  IOSTANDARD = SSTL15_T_DCI;
-Net fpga_0_DDR3_SDRAM_DDR3_DQ_pin<12> LOC=G10  |  IOSTANDARD = SSTL15_T_DCI;
-Net fpga_0_DDR3_SDRAM_DDR3_DQ_pin<13> LOC=M11  |  IOSTANDARD = SSTL15_T_DCI;
-Net fpga_0_DDR3_SDRAM_DDR3_DQ_pin<14> LOC=C12  |  IOSTANDARD = SSTL15_T_DCI;
-Net fpga_0_DDR3_SDRAM_DDR3_DQ_pin<15> LOC=A11  |  IOSTANDARD = SSTL15_T_DCI;
-Net fpga_0_DDR3_SDRAM_DDR3_DQ_pin<16> LOC=G11  |  IOSTANDARD = SSTL15_T_DCI;
-Net fpga_0_DDR3_SDRAM_DDR3_DQ_pin<17> LOC=F11  |  IOSTANDARD = SSTL15_T_DCI;
-Net fpga_0_DDR3_SDRAM_DDR3_DQ_pin<18> LOC=D14  |  IOSTANDARD = SSTL15_T_DCI;
-Net fpga_0_DDR3_SDRAM_DDR3_DQ_pin<19> LOC=C14  |  IOSTANDARD = SSTL15_T_DCI;
-Net fpga_0_DDR3_SDRAM_DDR3_DQ_pin<20> LOC=G12  |  IOSTANDARD = SSTL15_T_DCI;
-Net fpga_0_DDR3_SDRAM_DDR3_DQ_pin<21> LOC=G13  |  IOSTANDARD = SSTL15_T_DCI;
-Net fpga_0_DDR3_SDRAM_DDR3_DQ_pin<22> LOC=F14  |  IOSTANDARD = SSTL15_T_DCI;
-Net fpga_0_DDR3_SDRAM_DDR3_DQ_pin<23> LOC=H14  |  IOSTANDARD = SSTL15_T_DCI;
-Net fpga_0_DDR3_SDRAM_DDR3_DQ_pin<24> LOC=D26  |  IOSTANDARD = SSTL15_T_DCI;
-Net fpga_0_DDR3_SDRAM_DDR3_DQ_pin<25> LOC=F26  |  IOSTANDARD = SSTL15_T_DCI;
-Net fpga_0_DDR3_SDRAM_DDR3_DQ_pin<26> LOC=B26  |  IOSTANDARD = SSTL15_T_DCI;
-Net fpga_0_DDR3_SDRAM_DDR3_DQ_pin<27> LOC=E26  |  IOSTANDARD = SSTL15_T_DCI;
-Net fpga_0_DDR3_SDRAM_DDR3_DQ_pin<28> LOC=C24  |  IOSTANDARD = SSTL15_T_DCI;
-Net fpga_0_DDR3_SDRAM_DDR3_DQ_pin<29> LOC=D25  |  IOSTANDARD = SSTL15_T_DCI;
-Net fpga_0_DDR3_SDRAM_DDR3_DQ_pin<30> LOC=D27  |  IOSTANDARD = SSTL15_T_DCI;
-Net fpga_0_DDR3_SDRAM_DDR3_DQ_pin<31> LOC=C25  |  IOSTANDARD = SSTL15_T_DCI;
-Net fpga_0_DDR3_SDRAM_DDR3_DM_pin<0> LOC=E11  |  IOSTANDARD = SSTL15;
-Net fpga_0_DDR3_SDRAM_DDR3_DM_pin<1> LOC=B11  |  IOSTANDARD = SSTL15;
-Net fpga_0_DDR3_SDRAM_DDR3_DM_pin<2> LOC=E14  |  IOSTANDARD = SSTL15;
-Net fpga_0_DDR3_SDRAM_DDR3_DM_pin<3> LOC=A26  |  IOSTANDARD = SSTL15;
-Net fpga_0_DDR3_SDRAM_DDR3_Reset_n_pin LOC=E18  |  IOSTANDARD = SSTL15;
-Net fpga_0_DDR3_SDRAM_DDR3_DQS_pin<0> LOC=D12  |  IOSTANDARD = DIFF_SSTL15_T_DCI;
-Net fpga_0_DDR3_SDRAM_DDR3_DQS_pin<1> LOC=H12  |  IOSTANDARD = DIFF_SSTL15_T_DCI;
-Net fpga_0_DDR3_SDRAM_DDR3_DQS_pin<2> LOC=A13  |  IOSTANDARD = DIFF_SSTL15_T_DCI;
-Net fpga_0_DDR3_SDRAM_DDR3_DQS_pin<3> LOC=B25  |  IOSTANDARD = DIFF_SSTL15_T_DCI;
-Net fpga_0_DDR3_SDRAM_DDR3_DQS_n_pin<0> LOC=E12  |  IOSTANDARD = DIFF_SSTL15_T_DCI;
-Net fpga_0_DDR3_SDRAM_DDR3_DQS_n_pin<1> LOC=J12  |  IOSTANDARD = DIFF_SSTL15_T_DCI;
-Net fpga_0_DDR3_SDRAM_DDR3_DQS_n_pin<2> LOC=A14  |  IOSTANDARD = DIFF_SSTL15_T_DCI;
-Net fpga_0_DDR3_SDRAM_DDR3_DQS_n_pin<3> LOC=A25  |  IOSTANDARD = DIFF_SSTL15_T_DCI;
-Net xps_sysace_0_SysACE_MPA_pin<0> LOC=AC15  |  IOSTANDARD = LVCMOS25;
-Net xps_sysace_0_SysACE_MPA_pin<1> LOC=AP15  |  IOSTANDARD = LVCMOS25;
-Net xps_sysace_0_SysACE_MPA_pin<2> LOC=AG17  |  IOSTANDARD = LVCMOS25;
-Net xps_sysace_0_SysACE_MPA_pin<3> LOC=AH17  |  IOSTANDARD = LVCMOS25;
-Net xps_sysace_0_SysACE_MPA_pin<4> LOC=AG15  |  IOSTANDARD = LVCMOS25;
-Net xps_sysace_0_SysACE_MPA_pin<5> LOC=AF15  |  IOSTANDARD = LVCMOS25;
-Net xps_sysace_0_SysACE_MPA_pin<6> LOC=AK14  |  IOSTANDARD = LVCMOS25;
-Net xps_sysace_0_SysACE_CLK_pin LOC=AE16  |  IOSTANDARD = LVCMOS25  |  PERIOD = 30000 ps;
-Net xps_sysace_0_SysACE_MPIRQ_pin LOC=L9  |  IOSTANDARD = LVCMOS25  |  TIG;
-Net xps_sysace_0_SysACE_CEN_pin LOC=AJ14  |  IOSTANDARD = LVCMOS25;
-Net xps_sysace_0_SysACE_OEN_pin LOC=AL15  |  IOSTANDARD = LVCMOS25;
-Net xps_sysace_0_SysACE_WEN_pin LOC=AL14  |  IOSTANDARD = LVCMOS25;
-Net xps_sysace_0_SysACE_MPD<0> LOC=AM15  |  IOSTANDARD = LVCMOS25;
-Net xps_sysace_0_SysACE_MPD<1> LOC=AJ17  |  IOSTANDARD = LVCMOS25;
-Net xps_sysace_0_SysACE_MPD<2> LOC=AJ16  |  IOSTANDARD = LVCMOS25;
-Net xps_sysace_0_SysACE_MPD<3> LOC=AP16  |  IOSTANDARD = LVCMOS25;
-Net xps_sysace_0_SysACE_MPD<4> LOC=AG16  |  IOSTANDARD = LVCMOS25;
-Net xps_sysace_0_SysACE_MPD<5> LOC=AH15  |  IOSTANDARD = LVCMOS25;
-Net xps_sysace_0_SysACE_MPD<6> LOC=AF16  |  IOSTANDARD = LVCMOS25;
-Net xps_sysace_0_SysACE_MPD<7> LOC=AN15  |  IOSTANDARD = LVCMOS25;
-Net fpga_0_clk_1_sys_clk_p_pin TNM_NET = sys_clk_pin;
-TIMESPEC TS_sys_clk_pin = PERIOD sys_clk_pin 200000 kHz;
-Net fpga_0_clk_1_sys_clk_p_pin LOC = J9  |  IOSTANDARD=LVDS_25  |  DIFF_TERM = TRUE;
-Net fpga_0_clk_1_sys_clk_n_pin LOC = H9  |  IOSTANDARD=LVDS_25  |  DIFF_TERM = TRUE;
+NET "fpga_0_DDR3_SDRAM_DDR3_Clk_pin" LOC = G18;
+NET "fpga_0_DDR3_SDRAM_DDR3_Clk_pin" IOSTANDARD = DIFF_SSTL15;
+NET "fpga_0_DDR3_SDRAM_DDR3_Clk_n_pin" LOC = H18;
+NET "fpga_0_DDR3_SDRAM_DDR3_Clk_n_pin" IOSTANDARD = DIFF_SSTL15;
+NET "fpga_0_DDR3_SDRAM_DDR3_CE_pin" LOC = M18;
+NET "fpga_0_DDR3_SDRAM_DDR3_CE_pin" IOSTANDARD = SSTL15;
+NET "fpga_0_DDR3_SDRAM_DDR3_CS_n_pin" LOC = K18;
+NET "fpga_0_DDR3_SDRAM_DDR3_CS_n_pin" IOSTANDARD = SSTL15;
+NET "fpga_0_DDR3_SDRAM_DDR3_ODT_pin" LOC = F18;
+NET "fpga_0_DDR3_SDRAM_DDR3_ODT_pin" IOSTANDARD = SSTL15;
+NET "fpga_0_DDR3_SDRAM_DDR3_RAS_n_pin" LOC = L19;
+NET "fpga_0_DDR3_SDRAM_DDR3_RAS_n_pin" IOSTANDARD = SSTL15;
+NET "fpga_0_DDR3_SDRAM_DDR3_CAS_n_pin" LOC = C17;
+NET "fpga_0_DDR3_SDRAM_DDR3_CAS_n_pin" IOSTANDARD = SSTL15;
+NET "fpga_0_DDR3_SDRAM_DDR3_WE_n_pin" LOC = B17;
+NET "fpga_0_DDR3_SDRAM_DDR3_WE_n_pin" IOSTANDARD = SSTL15;
+NET "fpga_0_DDR3_SDRAM_DDR3_BankAddr_pin[0]" LOC = K19;
+NET "fpga_0_DDR3_SDRAM_DDR3_BankAddr_pin[0]" IOSTANDARD = SSTL15;
+NET "fpga_0_DDR3_SDRAM_DDR3_BankAddr_pin[1]" LOC = J19;
+NET "fpga_0_DDR3_SDRAM_DDR3_BankAddr_pin[1]" IOSTANDARD = SSTL15;
+NET "fpga_0_DDR3_SDRAM_DDR3_BankAddr_pin[2]" LOC = L15;
+NET "fpga_0_DDR3_SDRAM_DDR3_BankAddr_pin[2]" IOSTANDARD = SSTL15;
+NET "fpga_0_DDR3_SDRAM_DDR3_Addr_pin[0]" LOC = L14;
+NET "fpga_0_DDR3_SDRAM_DDR3_Addr_pin[0]" IOSTANDARD = SSTL15;
+NET "fpga_0_DDR3_SDRAM_DDR3_Addr_pin[1]" LOC = A16;
+NET "fpga_0_DDR3_SDRAM_DDR3_Addr_pin[1]" IOSTANDARD = SSTL15;
+NET "fpga_0_DDR3_SDRAM_DDR3_Addr_pin[2]" LOC = B16;
+NET "fpga_0_DDR3_SDRAM_DDR3_Addr_pin[2]" IOSTANDARD = SSTL15;
+NET "fpga_0_DDR3_SDRAM_DDR3_Addr_pin[3]" LOC = E16;
+NET "fpga_0_DDR3_SDRAM_DDR3_Addr_pin[3]" IOSTANDARD = SSTL15;
+NET "fpga_0_DDR3_SDRAM_DDR3_Addr_pin[4]" LOC = D16;
+NET "fpga_0_DDR3_SDRAM_DDR3_Addr_pin[4]" IOSTANDARD = SSTL15;
+NET "fpga_0_DDR3_SDRAM_DDR3_Addr_pin[5]" LOC = J17;
+NET "fpga_0_DDR3_SDRAM_DDR3_Addr_pin[5]" IOSTANDARD = SSTL15;
+NET "fpga_0_DDR3_SDRAM_DDR3_Addr_pin[6]" LOC = A15;
+NET "fpga_0_DDR3_SDRAM_DDR3_Addr_pin[6]" IOSTANDARD = SSTL15;
+NET "fpga_0_DDR3_SDRAM_DDR3_Addr_pin[7]" LOC = B15;
+NET "fpga_0_DDR3_SDRAM_DDR3_Addr_pin[7]" IOSTANDARD = SSTL15;
+NET "fpga_0_DDR3_SDRAM_DDR3_Addr_pin[8]" LOC = G15;
+NET "fpga_0_DDR3_SDRAM_DDR3_Addr_pin[8]" IOSTANDARD = SSTL15;
+NET "fpga_0_DDR3_SDRAM_DDR3_Addr_pin[9]" LOC = F15;
+NET "fpga_0_DDR3_SDRAM_DDR3_Addr_pin[9]" IOSTANDARD = SSTL15;
+NET "fpga_0_DDR3_SDRAM_DDR3_Addr_pin[10]" LOC = M16;
+NET "fpga_0_DDR3_SDRAM_DDR3_Addr_pin[10]" IOSTANDARD = SSTL15;
+NET "fpga_0_DDR3_SDRAM_DDR3_Addr_pin[11]" LOC = M15;
+NET "fpga_0_DDR3_SDRAM_DDR3_Addr_pin[11]" IOSTANDARD = SSTL15;
+NET "fpga_0_DDR3_SDRAM_DDR3_Addr_pin[12]" LOC = H15;
+NET "fpga_0_DDR3_SDRAM_DDR3_Addr_pin[12]" IOSTANDARD = SSTL15;
+NET "fpga_0_DDR3_SDRAM_DDR3_DQ_pin[0]" LOC = J11;
+NET "fpga_0_DDR3_SDRAM_DDR3_DQ_pin[0]" IOSTANDARD = SSTL15_T_DCI;
+NET "fpga_0_DDR3_SDRAM_DDR3_DQ_pin[1]" LOC = E13;
+NET "fpga_0_DDR3_SDRAM_DDR3_DQ_pin[1]" IOSTANDARD = SSTL15_T_DCI;
+NET "fpga_0_DDR3_SDRAM_DDR3_DQ_pin[2]" LOC = F13;
+NET "fpga_0_DDR3_SDRAM_DDR3_DQ_pin[2]" IOSTANDARD = SSTL15_T_DCI;
+NET "fpga_0_DDR3_SDRAM_DDR3_DQ_pin[3]" LOC = K11;
+NET "fpga_0_DDR3_SDRAM_DDR3_DQ_pin[3]" IOSTANDARD = SSTL15_T_DCI;
+NET "fpga_0_DDR3_SDRAM_DDR3_DQ_pin[4]" LOC = L11;
+NET "fpga_0_DDR3_SDRAM_DDR3_DQ_pin[4]" IOSTANDARD = SSTL15_T_DCI;
+NET "fpga_0_DDR3_SDRAM_DDR3_DQ_pin[5]" LOC = K13;
+NET "fpga_0_DDR3_SDRAM_DDR3_DQ_pin[5]" IOSTANDARD = SSTL15_T_DCI;
+NET "fpga_0_DDR3_SDRAM_DDR3_DQ_pin[6]" LOC = K12;
+NET "fpga_0_DDR3_SDRAM_DDR3_DQ_pin[6]" IOSTANDARD = SSTL15_T_DCI;
+NET "fpga_0_DDR3_SDRAM_DDR3_DQ_pin[7]" LOC = D11;
+NET "fpga_0_DDR3_SDRAM_DDR3_DQ_pin[7]" IOSTANDARD = SSTL15_T_DCI;
+NET "fpga_0_DDR3_SDRAM_DDR3_DQ_pin[8]" LOC = M13;
+NET "fpga_0_DDR3_SDRAM_DDR3_DQ_pin[8]" IOSTANDARD = SSTL15_T_DCI;
+NET "fpga_0_DDR3_SDRAM_DDR3_DQ_pin[9]" LOC = J14;
+NET "fpga_0_DDR3_SDRAM_DDR3_DQ_pin[9]" IOSTANDARD = SSTL15_T_DCI;
+NET "fpga_0_DDR3_SDRAM_DDR3_DQ_pin[10]" LOC = B13;
+NET "fpga_0_DDR3_SDRAM_DDR3_DQ_pin[10]" IOSTANDARD = SSTL15_T_DCI;
+NET "fpga_0_DDR3_SDRAM_DDR3_DQ_pin[11]" LOC = B12;
+NET "fpga_0_DDR3_SDRAM_DDR3_DQ_pin[11]" IOSTANDARD = SSTL15_T_DCI;
+NET "fpga_0_DDR3_SDRAM_DDR3_DQ_pin[12]" LOC = G10;
+NET "fpga_0_DDR3_SDRAM_DDR3_DQ_pin[12]" IOSTANDARD = SSTL15_T_DCI;
+NET "fpga_0_DDR3_SDRAM_DDR3_DQ_pin[13]" LOC = M11;
+NET "fpga_0_DDR3_SDRAM_DDR3_DQ_pin[13]" IOSTANDARD = SSTL15_T_DCI;
+NET "fpga_0_DDR3_SDRAM_DDR3_DQ_pin[14]" LOC = C12;
+NET "fpga_0_DDR3_SDRAM_DDR3_DQ_pin[14]" IOSTANDARD = SSTL15_T_DCI;
+NET "fpga_0_DDR3_SDRAM_DDR3_DQ_pin[15]" LOC = A11;
+NET "fpga_0_DDR3_SDRAM_DDR3_DQ_pin[15]" IOSTANDARD = SSTL15_T_DCI;
+NET "fpga_0_DDR3_SDRAM_DDR3_DQ_pin[16]" LOC = G11;
+NET "fpga_0_DDR3_SDRAM_DDR3_DQ_pin[16]" IOSTANDARD = SSTL15_T_DCI;
+NET "fpga_0_DDR3_SDRAM_DDR3_DQ_pin[17]" LOC = F11;
+NET "fpga_0_DDR3_SDRAM_DDR3_DQ_pin[17]" IOSTANDARD = SSTL15_T_DCI;
+NET "fpga_0_DDR3_SDRAM_DDR3_DQ_pin[18]" LOC = D14;
+NET "fpga_0_DDR3_SDRAM_DDR3_DQ_pin[18]" IOSTANDARD = SSTL15_T_DCI;
+NET "fpga_0_DDR3_SDRAM_DDR3_DQ_pin[19]" LOC = C14;
+NET "fpga_0_DDR3_SDRAM_DDR3_DQ_pin[19]" IOSTANDARD = SSTL15_T_DCI;
+NET "fpga_0_DDR3_SDRAM_DDR3_DQ_pin[20]" LOC = G12;
+NET "fpga_0_DDR3_SDRAM_DDR3_DQ_pin[20]" IOSTANDARD = SSTL15_T_DCI;
+NET "fpga_0_DDR3_SDRAM_DDR3_DQ_pin[21]" LOC = G13;
+NET "fpga_0_DDR3_SDRAM_DDR3_DQ_pin[21]" IOSTANDARD = SSTL15_T_DCI;
+NET "fpga_0_DDR3_SDRAM_DDR3_DQ_pin[22]" LOC = F14;
+NET "fpga_0_DDR3_SDRAM_DDR3_DQ_pin[22]" IOSTANDARD = SSTL15_T_DCI;
+NET "fpga_0_DDR3_SDRAM_DDR3_DQ_pin[23]" LOC = H14;
+NET "fpga_0_DDR3_SDRAM_DDR3_DQ_pin[23]" IOSTANDARD = SSTL15_T_DCI;
+NET "fpga_0_DDR3_SDRAM_DDR3_DQ_pin[24]" LOC = D26;
+NET "fpga_0_DDR3_SDRAM_DDR3_DQ_pin[24]" IOSTANDARD = SSTL15_T_DCI;
+NET "fpga_0_DDR3_SDRAM_DDR3_DQ_pin[25]" LOC = F26;
+NET "fpga_0_DDR3_SDRAM_DDR3_DQ_pin[25]" IOSTANDARD = SSTL15_T_DCI;
+NET "fpga_0_DDR3_SDRAM_DDR3_DQ_pin[26]" LOC = B26;
+NET "fpga_0_DDR3_SDRAM_DDR3_DQ_pin[26]" IOSTANDARD = SSTL15_T_DCI;
+NET "fpga_0_DDR3_SDRAM_DDR3_DQ_pin[27]" LOC = E26;
+NET "fpga_0_DDR3_SDRAM_DDR3_DQ_pin[27]" IOSTANDARD = SSTL15_T_DCI;
+NET "fpga_0_DDR3_SDRAM_DDR3_DQ_pin[28]" LOC = C24;
+NET "fpga_0_DDR3_SDRAM_DDR3_DQ_pin[28]" IOSTANDARD = SSTL15_T_DCI;
+NET "fpga_0_DDR3_SDRAM_DDR3_DQ_pin[29]" LOC = D25;
+NET "fpga_0_DDR3_SDRAM_DDR3_DQ_pin[29]" IOSTANDARD = SSTL15_T_DCI;
+NET "fpga_0_DDR3_SDRAM_DDR3_DQ_pin[30]" LOC = D27;
+NET "fpga_0_DDR3_SDRAM_DDR3_DQ_pin[30]" IOSTANDARD = SSTL15_T_DCI;
+NET "fpga_0_DDR3_SDRAM_DDR3_DQ_pin[31]" LOC = C25;
+NET "fpga_0_DDR3_SDRAM_DDR3_DQ_pin[31]" IOSTANDARD = SSTL15_T_DCI;
+NET "fpga_0_DDR3_SDRAM_DDR3_DM_pin[0]" LOC = E11;
+NET "fpga_0_DDR3_SDRAM_DDR3_DM_pin[0]" IOSTANDARD = SSTL15;
+NET "fpga_0_DDR3_SDRAM_DDR3_DM_pin[1]" LOC = B11;
+NET "fpga_0_DDR3_SDRAM_DDR3_DM_pin[1]" IOSTANDARD = SSTL15;
+NET "fpga_0_DDR3_SDRAM_DDR3_DM_pin[2]" LOC = E14;
+NET "fpga_0_DDR3_SDRAM_DDR3_DM_pin[2]" IOSTANDARD = SSTL15;
+NET "fpga_0_DDR3_SDRAM_DDR3_DM_pin[3]" LOC = A26;
+NET "fpga_0_DDR3_SDRAM_DDR3_DM_pin[3]" IOSTANDARD = SSTL15;
+NET "fpga_0_DDR3_SDRAM_DDR3_Reset_n_pin" LOC = E18;
+NET "fpga_0_DDR3_SDRAM_DDR3_Reset_n_pin" IOSTANDARD = SSTL15;
+NET "fpga_0_DDR3_SDRAM_DDR3_DQS_pin[0]" LOC = D12;
+NET "fpga_0_DDR3_SDRAM_DDR3_DQS_pin[0]" IOSTANDARD = DIFF_SSTL15_T_DCI;
+NET "fpga_0_DDR3_SDRAM_DDR3_DQS_pin[1]" LOC = H12;
+NET "fpga_0_DDR3_SDRAM_DDR3_DQS_pin[1]" IOSTANDARD = DIFF_SSTL15_T_DCI;
+NET "fpga_0_DDR3_SDRAM_DDR3_DQS_pin[2]" LOC = A13;
+NET "fpga_0_DDR3_SDRAM_DDR3_DQS_pin[2]" IOSTANDARD = DIFF_SSTL15_T_DCI;
+NET "fpga_0_DDR3_SDRAM_DDR3_DQS_pin[3]" LOC = B25;
+NET "fpga_0_DDR3_SDRAM_DDR3_DQS_pin[3]" IOSTANDARD = DIFF_SSTL15_T_DCI;
+NET "fpga_0_DDR3_SDRAM_DDR3_DQS_n_pin[0]" LOC = E12;
+NET "fpga_0_DDR3_SDRAM_DDR3_DQS_n_pin[0]" IOSTANDARD = DIFF_SSTL15_T_DCI;
+NET "fpga_0_DDR3_SDRAM_DDR3_DQS_n_pin[1]" LOC = J12;
+NET "fpga_0_DDR3_SDRAM_DDR3_DQS_n_pin[1]" IOSTANDARD = DIFF_SSTL15_T_DCI;
+NET "fpga_0_DDR3_SDRAM_DDR3_DQS_n_pin[2]" LOC = A14;
+NET "fpga_0_DDR3_SDRAM_DDR3_DQS_n_pin[2]" IOSTANDARD = DIFF_SSTL15_T_DCI;
+NET "fpga_0_DDR3_SDRAM_DDR3_DQS_n_pin[3]" LOC = A25;
+NET "fpga_0_DDR3_SDRAM_DDR3_DQS_n_pin[3]" IOSTANDARD = DIFF_SSTL15_T_DCI;
+NET "xps_sysace_0_SysACE_MPA_pin[0]" LOC = AC15;
+NET "xps_sysace_0_SysACE_MPA_pin[0]" IOSTANDARD = LVCMOS25;
+NET "xps_sysace_0_SysACE_MPA_pin[1]" LOC = AP15;
+NET "xps_sysace_0_SysACE_MPA_pin[1]" IOSTANDARD = LVCMOS25;
+NET "xps_sysace_0_SysACE_MPA_pin[2]" LOC = AG17;
+NET "xps_sysace_0_SysACE_MPA_pin[2]" IOSTANDARD = LVCMOS25;
+NET "xps_sysace_0_SysACE_MPA_pin[3]" LOC = AH17;
+NET "xps_sysace_0_SysACE_MPA_pin[3]" IOSTANDARD = LVCMOS25;
+NET "xps_sysace_0_SysACE_MPA_pin[4]" LOC = AG15;
+NET "xps_sysace_0_SysACE_MPA_pin[4]" IOSTANDARD = LVCMOS25;
+NET "xps_sysace_0_SysACE_MPA_pin[5]" LOC = AF15;
+NET "xps_sysace_0_SysACE_MPA_pin[5]" IOSTANDARD = LVCMOS25;
+NET "xps_sysace_0_SysACE_MPA_pin[6]" LOC = AK14;
+NET "xps_sysace_0_SysACE_MPA_pin[6]" IOSTANDARD = LVCMOS25;
+NET "xps_sysace_0_SysACE_CLK_pin" PERIOD = 30000 ps;
+NET "xps_sysace_0_SysACE_CLK_pin" LOC = AE16;
+NET "xps_sysace_0_SysACE_CLK_pin" IOSTANDARD = LVCMOS25;
+NET "xps_sysace_0_SysACE_MPIRQ_pin" TIG;
+NET "xps_sysace_0_SysACE_MPIRQ_pin" LOC = L9;
+NET "xps_sysace_0_SysACE_MPIRQ_pin" IOSTANDARD = LVCMOS25;
+NET "xps_sysace_0_SysACE_CEN_pin" LOC = AJ14;
+NET "xps_sysace_0_SysACE_CEN_pin" IOSTANDARD = LVCMOS25;
+NET "xps_sysace_0_SysACE_OEN_pin" LOC = AL15;
+NET "xps_sysace_0_SysACE_OEN_pin" IOSTANDARD = LVCMOS25;
+NET "xps_sysace_0_SysACE_WEN_pin" LOC = AL14;
+NET "xps_sysace_0_SysACE_WEN_pin" IOSTANDARD = LVCMOS25;
+NET "xps_sysace_0_SysACE_MPD[0]" LOC = AM15;
+NET "xps_sysace_0_SysACE_MPD[0]" IOSTANDARD = LVCMOS25;
+NET "xps_sysace_0_SysACE_MPD[1]" LOC = AJ17;
+NET "xps_sysace_0_SysACE_MPD[1]" IOSTANDARD = LVCMOS25;
+NET "xps_sysace_0_SysACE_MPD[2]" LOC = AJ16;
+NET "xps_sysace_0_SysACE_MPD[2]" IOSTANDARD = LVCMOS25;
+NET "xps_sysace_0_SysACE_MPD[3]" LOC = AP16;
+NET "xps_sysace_0_SysACE_MPD[3]" IOSTANDARD = LVCMOS25;
+NET "xps_sysace_0_SysACE_MPD[4]" LOC = AG16;
+NET "xps_sysace_0_SysACE_MPD[4]" IOSTANDARD = LVCMOS25;
+NET "xps_sysace_0_SysACE_MPD[5]" LOC = AH15;
+NET "xps_sysace_0_SysACE_MPD[5]" IOSTANDARD = LVCMOS25;
+NET "xps_sysace_0_SysACE_MPD[6]" LOC = AF16;
+NET "xps_sysace_0_SysACE_MPD[6]" IOSTANDARD = LVCMOS25;
+NET "xps_sysace_0_SysACE_MPD[7]" LOC = AN15;
+NET "xps_sysace_0_SysACE_MPD[7]" IOSTANDARD = LVCMOS25;
+NET "fpga_0_clk_1_sys_clk_p_pin" TNM_NET = "sys_clk_pin";
+TIMESPEC TS_sys_clk_pin = PERIOD "sys_clk_pin" 200000 KHz;
+NET "fpga_0_clk_1_sys_clk_p_pin" LOC = J9;
+NET "fpga_0_clk_1_sys_clk_p_pin" IOSTANDARD = LVDS_25;
+NET "fpga_0_clk_1_sys_clk_p_pin" DIFF_TERM = "TRUE";
+NET "fpga_0_clk_1_sys_clk_n_pin" LOC = H9;
+NET "fpga_0_clk_1_sys_clk_n_pin" IOSTANDARD = LVDS_25;
+NET "fpga_0_clk_1_sys_clk_n_pin" DIFF_TERM = "TRUE";
 #Maybe the next signal should be renamed to RESET
-Net fpga_0_rst_1_sys_rst_pin TIG; 
-Net fpga_0_rst_1_sys_rst_pin LOC = H10  |  IOSTANDARD=SSTL15  |  PULLUP  |  TIG;
-Net fpga_0_FLASH_CE_inverter_Res_pin LOC=AJ12  |  IOSTANDARD=LVCMOS25;
+NET "fpga_0_rst_1_sys_rst_pin" TIG;
+NET "fpga_0_rst_1_sys_rst_pin" TIG;
+NET "fpga_0_rst_1_sys_rst_pin" LOC = H10;
+NET "fpga_0_rst_1_sys_rst_pin" IOSTANDARD = SSTL15;
+NET "fpga_0_rst_1_sys_rst_pin" PULLUP;
+NET "fpga_0_FLASH_CE_inverter_Res_pin" LOC = AJ12;
+NET "fpga_0_FLASH_CE_inverter_Res_pin" IOSTANDARD = LVCMOS25;
 
 ###### PCIe_Bridge
 # SYS clock 250 MHz (input) signal.  The sys_clk_p and sys_clk_n
@@ -251,8 +353,9 @@ Net fpga_0_FLASH_CE_inverter_Res_pin LOC=AJ12  |  IOSTANDARD=LVCMOS25;
 # Constrain BUFR clocks used to synchronize data from IOB to fabric logic
 # Note that ISE cannot infer this from other PERIOD constraints because
 # of the use of OSERDES blocks in the BUFR clock generation path
-NET "*/mpmc_core_0/gen_v6_ddr3_phy.mpmc_phy_if_0/clk_rsync[?]" TNM_NET = TNM_clk_rsync;
-TIMESPEC "TS_clk_rsync" = PERIOD "TNM_clk_rsync" 5000 ps;       # This is over-constraint for 200MHz, user can relax it to match mpmc_clk0
+NET "*/mpmc_core_0/gen_v6_ddr3_phy.mpmc_phy_if_0/clk_rsync[?]" TNM_NET = "TNM_clk_rsync";
+# This is over-constraint for 200MHz, user can relax it to match mpmc_clk0
+TIMESPEC TS_clk_rsync = PERIOD "TNM_clk_rsync" 5000 ps;
  
 # Paths between DQ/DQS ISERDES.Q outputs and CLB flops clocked by falling 
 # edge of BUFR will by design only be used if DYNCLKDIVSEL is asserted for 
@@ -263,15 +366,17 @@ TIMESPEC "TS_clk_rsync" = PERIOD "TNM_clk_rsync" 5000 ps;       # This is over-c
 # in the resync clock domain such that other rising->falling edge paths 
 # exist, then constraint below should be modified to utilize pattern 
 # matching to specific affect only the DQ/DQS ISERDES.Q outputs
-TIMEGRP "TG_clk_rsync_rise" = RISING  "TNM_clk_rsync";
-TIMEGRP "TG_clk_rsync_fall" = FALLING "TNM_clk_rsync";
-TIMESPEC "TS_clk_rsync_rise_to_fall" =    FROM "TG_clk_rsync_rise" TO "TG_clk_rsync_fall" 5000 ps;    # This is over-constraint for 200MHz, user can relax it to match mpmc_clk0
+TIMEGRP TG_clk_rsync_rise = RISING  "TNM_clk_rsync";
+TIMEGRP TG_clk_rsync_fall = FALLING  "TNM_clk_rsync";
+# This is over-constraint for 200MHz, user can relax it to match mpmc_clk0
+TIMESPEC TS_clk_rsync_rise_to_fall = FROM "TG_clk_rsync_rise" TO "TG_clk_rsync_fall" 5000 ps;
  
 # Signal to select between controller and physical layer signals. Four divided by two clock
 # cycles (4 memory clock cycles) are provided by design for the signal to settle down.
 # Used only by the phy modules.
 INST "*/mpmc_core_0/gen_v6_ddr3_phy.mpmc_phy_if_0/u_phy_init/u_ff_phy_init_data_sel" TNM = "TNM_PHY_INIT_SEL";
-TIMESPEC "TS_MC_PHY_INIT_SEL" = FROM "TNM_PHY_INIT_SEL" TO FFS = 10000 ps;                         # This is over-constraint, user can relax it to match 4 memory clock cycles
+# This is over-constraint, user can relax it to match 4 memory clock cycles
+TIMESPEC TS_MC_PHY_INIT_SEL = FROM "TNM_PHY_INIT_SEL" TO  FFS 10000 ps;
 
 ###############################################################################
 #DCI_CASCADING
@@ -305,42 +410,28 @@ CONFIG PROHIBIT = C13,F25,K14,L13;
 #####################################################################
 
 # CLK_RSYNC[0]: Site M12
-INST "*/u_phy_rdclk_gen/gen_loop_col0.u_oserdes_rsync"  
-  LOC = "OLOGIC_X2Y139";
-INST "*/u_phy_rdclk_gen/gen_loop_col0.u_odelay_rsync"
-  LOC = "IODELAY_X2Y139";
-INST "*/u_phy_rdclk_gen/gen_loop_col0.u_bufr_rsync"
-  LOC = "BUFR_X2Y6";
+INST "DDR3_SDRAM/DDR3_SDRAM/mpmc_core_0/gen_v6_ddr3_phy.mpmc_phy_if_0/u_phy_read/u_phy_rdclk_gen/gen_loop_col0.u_oserdes_rsync" LOC = OLOGIC_X2Y139;
+INST "DDR3_SDRAM/DDR3_SDRAM/mpmc_core_0/gen_v6_ddr3_phy.mpmc_phy_if_0/u_phy_read/u_phy_rdclk_gen/gen_loop_col0.u_odelay_rsync" LOC = IODELAY_X2Y139;
+INST "DDR3_SDRAM/DDR3_SDRAM/mpmc_core_0/gen_v6_ddr3_phy.mpmc_phy_if_0/u_phy_read/u_phy_rdclk_gen/gen_loop_col0.u_bufr_rsync" LOC = BUFR_X2Y6;
 
 # CLK_RSYNC[1]: Site C29
-INST "*/u_phy_rdclk_gen/gen_loop_col1.u_oserdes_rsync"  
-  LOC = "OLOGIC_X1Y139";
-INST "*/u_phy_rdclk_gen/gen_loop_col1.u_odelay_rsync"
-  LOC = "IODELAY_X1Y139";
-INST "*/u_phy_rdclk_gen/gen_loop_col1.u_bufr_rsync"
-  LOC = "BUFR_X1Y6";
+INST "DDR3_SDRAM/DDR3_SDRAM/mpmc_core_0/gen_v6_ddr3_phy.mpmc_phy_if_0/u_phy_read/u_phy_rdclk_gen/gen_loop_col1.u_oserdes_rsync" LOC = OLOGIC_X1Y139;
+INST "DDR3_SDRAM/DDR3_SDRAM/mpmc_core_0/gen_v6_ddr3_phy.mpmc_phy_if_0/u_phy_read/u_phy_rdclk_gen/gen_loop_col1.u_odelay_rsync" LOC = IODELAY_X1Y139;
+INST "DDR3_SDRAM/DDR3_SDRAM/mpmc_core_0/gen_v6_ddr3_phy.mpmc_phy_if_0/u_phy_read/u_phy_rdclk_gen/gen_loop_col1.u_bufr_rsync" LOC = BUFR_X1Y6;
 
 # Place CPT OSERDES and IODELAY:
 # DQS[0]: Site C13
-INST "*/u_phy_rdclk_gen/gen_ck_cpt[0].u_oserdes_cpt"
-  LOC = "OLOGIC_X2Y137";
-INST "*/u_phy_rdclk_gen/gen_ck_cpt[0].u_odelay_cpt"
-  LOC = "IODELAY_X2Y137";
+INST "DDR3_SDRAM/DDR3_SDRAM/mpmc_core_0/gen_v6_ddr3_phy.mpmc_phy_if_0/u_phy_read/u_phy_rdclk_gen/gen_ck_cpt[0].u_oserdes_cpt" LOC = OLOGIC_X2Y137;
+INST "DDR3_SDRAM/DDR3_SDRAM/mpmc_core_0/gen_v6_ddr3_phy.mpmc_phy_if_0/u_phy_read/u_phy_rdclk_gen/gen_ck_cpt[0].u_odelay_cpt" LOC = IODELAY_X2Y137;
 # DQS[1]: Site L13
-INST "*/u_phy_rdclk_gen/gen_ck_cpt[1].u_oserdes_cpt"
-  LOC = "OLOGIC_X2Y141";
-INST "*/u_phy_rdclk_gen/gen_ck_cpt[1].u_odelay_cpt"
-  LOC = "IODELAY_X2Y141";
+INST "DDR3_SDRAM/DDR3_SDRAM/mpmc_core_0/gen_v6_ddr3_phy.mpmc_phy_if_0/u_phy_read/u_phy_rdclk_gen/gen_ck_cpt[1].u_oserdes_cpt" LOC = OLOGIC_X2Y141;
+INST "DDR3_SDRAM/DDR3_SDRAM/mpmc_core_0/gen_v6_ddr3_phy.mpmc_phy_if_0/u_phy_read/u_phy_rdclk_gen/gen_ck_cpt[1].u_odelay_cpt" LOC = IODELAY_X2Y141;
 # DQS[2]: Site K14
-INST "*/u_phy_rdclk_gen/gen_ck_cpt[2].u_oserdes_cpt"
-  LOC = "OLOGIC_X2Y143";
-INST "*/u_phy_rdclk_gen/gen_ck_cpt[2].u_odelay_cpt"
-  LOC = "IODELAY_X2Y143";
+INST "DDR3_SDRAM/DDR3_SDRAM/mpmc_core_0/gen_v6_ddr3_phy.mpmc_phy_if_0/u_phy_read/u_phy_rdclk_gen/gen_ck_cpt[2].u_oserdes_cpt" LOC = OLOGIC_X2Y143;
+INST "DDR3_SDRAM/DDR3_SDRAM/mpmc_core_0/gen_v6_ddr3_phy.mpmc_phy_if_0/u_phy_read/u_phy_rdclk_gen/gen_ck_cpt[2].u_odelay_cpt" LOC = IODELAY_X2Y143;
 # DQS[3]: Site F25  
-INST "*/u_phy_rdclk_gen/gen_ck_cpt[3].u_oserdes_cpt"
-  LOC = "OLOGIC_X1Y137";
-INST "*/u_phy_rdclk_gen/gen_ck_cpt[3].u_odelay_cpt"
-  LOC = "IODELAY_X1Y137";
+INST "DDR3_SDRAM/DDR3_SDRAM/mpmc_core_0/gen_v6_ddr3_phy.mpmc_phy_if_0/u_phy_read/u_phy_rdclk_gen/gen_ck_cpt[3].u_oserdes_cpt" LOC = OLOGIC_X1Y137;
+INST "DDR3_SDRAM/DDR3_SDRAM/mpmc_core_0/gen_v6_ddr3_phy.mpmc_phy_if_0/u_phy_read/u_phy_rdclk_gen/gen_ck_cpt[3].u_odelay_cpt" LOC = IODELAY_X1Y137;
 
 
 
@@ -369,17 +460,18 @@ TIMESPEC "TS_v6_emac_v1_4_gt_clk" = PERIOD "*/v6_emac_v1_4_gt_clk" 8 ns HIGH 50 
 # -----------------------------------------------------------------------------
 
 # These values should be modified according to your specific design.
-INST "MGTCLK_N" LOC = "H5";
-INST "MGTCLK_P" LOC = "H6"; 
-INST "TXP"      LOC = "A3";
-INST "TXN"      LOC = "A4";
-INST "RXP"      LOC = "B5";
-INST "RXN"      LOC = "B6";
-INST "*gtx0_v6_gtxwizard_i?gtxe1_i" LOC = "GTXE1_X0Y19"; # "GTXE1_X0Y8"; #--?GTXE1_X0Y19
+NET "MGTCLK_N" LOC = H5;
+NET "MGTCLK_P" LOC = H6;
+NET "TXP" LOC = A3;
+NET "TXN" LOC = A4;
+NET "RXP" LOC = B5;
+NET "RXN" LOC = B6;
+# "GTXE1_X0Y8"; #--?GTXE1_X0Y19
+INST "hwt_ethernet_test_0/hwt_ethernet_test_0/eth_inst/v6_emac_v1_4_locallink_inst/v6_emac_v1_4_block_inst/v6_gtxwizard_top_inst/v6_gtxwizard_inst/gtx0_v6_gtxwizard_i/gtxe1_i" LOC = GTXE1_X0Y19;
 
 #Reset
 #NET "RESET" 	LOC = "H10" | SLEW=SLOW |IOSTANDARD=LVCMOS25;
-NET "PHY_RESET" LOC = "AH13";
+NET "PHY_RESET" LOC = AH13;
 
 # LOCALLINK FIFO CONSTRAINTS
 # The following constraints are necessary for proper operation of the LocalLink
@@ -390,63 +482,94 @@ NET "PHY_RESET" LOC = "AH13";
 # -----------------------------------------------------------------------------
 
 # Group the clock crossing signals into timing groups
-INST "*client_side_FIFO?tx_fifo_i?rd_tran_frame_tog"    TNM = "tx_fifo_rd_to_wr";
-INST "*client_side_FIFO?tx_fifo_i?rd_retran_frame_tog"  TNM = "tx_fifo_rd_to_wr";
+INST "*client_side_FIFO?tx_fifo_i?rd_tran_frame_tog" TNM = "tx_fifo_rd_to_wr";
+INST "*client_side_FIFO?tx_fifo_i?rd_retran_frame_tog" TNM = "tx_fifo_rd_to_wr";
 #INST "*client_side_FIFO?tx_fifo_i?rd_col_window_pipe_1" TNM = "tx_fifo_rd_to_wr";
-INST "*client_side_FIFO?tx_fifo_i?rd_addr_txfer*"       TNM = "tx_fifo_rd_to_wr";
-INST "*client_side_FIFO?tx_fifo_i?rd_txfer_tog"         TNM = "tx_fifo_rd_to_wr";
-INST "*client_side_FIFO?tx_fifo_i?wr_frame_in_fifo"     TNM = "tx_fifo_wr_to_rd";
+INST "*client_side_FIFO?tx_fifo_i?rd_addr_txfer*" TNM = "tx_fifo_rd_to_wr";
+INST "*client_side_FIFO?tx_fifo_i?rd_txfer_tog" TNM = "tx_fifo_rd_to_wr";
+INST "*client_side_FIFO?tx_fifo_i?wr_frame_in_fifo" TNM = "tx_fifo_wr_to_rd";
 
-TIMESPEC "TS_tx_fifo_rd_to_wr" = FROM "tx_fifo_rd_to_wr" TO "v6_emac_v1_4_gt_clk" 8 ns DATAPATHONLY;
-TIMESPEC "TS_tx_fifo_wr_to_rd" = FROM "tx_fifo_wr_to_rd" TO "v6_emac_v1_4_gt_clk" 8 ns DATAPATHONLY;
+TIMESPEC TS_tx_fifo_rd_to_wr = FROM "tx_fifo_rd_to_wr" TO "v6_emac_v1_4_gt_clk" 8 ns DATAPATHONLY;
+TIMESPEC TS_tx_fifo_wr_to_rd = FROM "tx_fifo_wr_to_rd" TO "v6_emac_v1_4_gt_clk" 8 ns DATAPATHONLY;
 
 # Reduce clock period to allow for metastability settling time
-INST "*client_side_FIFO?tx_fifo_i?wr_tran_frame_tog"    TNM = "tx_metastable";
-INST "*client_side_FIFO?tx_fifo_i?wr_rd_addr*"          TNM = "tx_metastable";
-INST "*client_side_FIFO?tx_fifo_i?wr_txfer_tog"         TNM = "tx_metastable";
-INST "*client_side_FIFO?tx_fifo_i?frame_in_fifo"        TNM = "tx_metastable";
+INST "*client_side_FIFO?tx_fifo_i?wr_tran_frame_tog" TNM = "tx_metastable";
+INST "*client_side_FIFO?tx_fifo_i?wr_rd_addr*" TNM = "tx_metastable";
+INST "*client_side_FIFO?tx_fifo_i?wr_txfer_tog" TNM = "tx_metastable";
+INST "*client_side_FIFO?tx_fifo_i?frame_in_fifo" TNM = "tx_metastable";
 INST "*client_side_FIFO?tx_fifo_i?wr_retran_frame_tog*" TNM = "tx_metastable";
 #INST "*client_side_FIFO?tx_fifo_i?wr_col_window_pipe_0" TNM = "tx_metastable";
-TIMESPEC "TS_tx_meta_protect" = FROM "tx_metastable" 5 ns DATAPATHONLY;
+TIMESPEC TS_tx_meta_protect = FROM "tx_metastable" 5 ns DATAPATHONLY;
 
 # Transmit-side client FIFO address bus timing
 INST "*client_side_FIFO?tx_fifo_i?rd_addr_txfer*" TNM = "tx_addr_rd";
-INST "*client_side_FIFO?tx_fifo_i?wr_rd_addr*"    TNM = "tx_addr_wr";
-TIMESPEC "TS_tx_fifo_addr" = FROM "tx_addr_rd" TO "tx_addr_wr" 10 ns;
+INST "*client_side_FIFO?tx_fifo_i?wr_rd_addr*" TNM = "tx_addr_wr";
+TIMESPEC TS_tx_fifo_addr = FROM "tx_addr_rd" TO "tx_addr_wr" 10 ns;
 
 # LocalLink client FIFO receive-side constraints
 # -----------------------------------------------------------------------------
 
 # Group the clock crossing signals into timing groups
 INST "*client_side_FIFO?rx_fifo_i?wr_store_frame_tog" TNM = "rx_fifo_wr_to_rd";
-INST "*client_side_FIFO?rx_fifo_i?rd_addr_gray*"      TNM = "rx_fifo_rd_to_wr";
+INST "*client_side_FIFO?rx_fifo_i?rd_addr_gray*" TNM = "rx_fifo_rd_to_wr";
 
-TIMESPEC "TS_rx_fifo_wr_to_rd" = FROM "rx_fifo_wr_to_rd" TO "v6_emac_v1_4_gt_clk" 8 ns DATAPATHONLY;
-TIMESPEC "TS_rx_fifo_rd_to_wr" = FROM "rx_fifo_rd_to_wr" TO "v6_emac_v1_4_gt_clk" 8 ns DATAPATHONLY;
+TIMESPEC TS_rx_fifo_wr_to_rd = FROM "rx_fifo_wr_to_rd" TO "v6_emac_v1_4_gt_clk" 8 ns DATAPATHONLY;
+TIMESPEC TS_rx_fifo_rd_to_wr = FROM "rx_fifo_rd_to_wr" TO "v6_emac_v1_4_gt_clk" 8 ns DATAPATHONLY;
 
 # Reduce clock period to allow for metastability settling time
 INST "*client_side_FIFO?rx_fifo_i?wr_rd_addr_gray_sync*" TNM = "rx_metastable";
-INST "*client_side_FIFO?rx_fifo_i?rd_store_frame_tog"    TNM = "rx_metastable";
-TIMESPEC "TS_rx_meta_protect" = FROM "rx_metastable" 5 ns;
+INST "*client_side_FIFO?rx_fifo_i?rd_store_frame_tog" TNM = "rx_metastable";
+TIMESPEC TS_rx_meta_protect = FROM "rx_metastable" 5 ns;
 
 
 ##############################################################################
 # hwicap
 ##############################################################################
-NET "xps_hwicap_0/xps_hwicap_0/HWICAP_CTRL_I/icap_statemachine_I1/Icap_datain<*>" MAXDELAY = 2ns;
-NET "xps_hwicap_0/xps_hwicap_0/HWICAP_CTRL_I/icap_statemachine_I1/Icap_ce" MAXDELAY = 2ns;
-NET "xps_hwicap_0/xps_hwicap_0/HWICAP_CTRL_I/icap_statemachine_I1/Icap_we" MAXDELAY = 2ns;
+NET "xps_hwicap_0/xps_hwicap_0/HWICAP_CTRL_I/icap_statemachine_I1/Icap_datain[0]" MAXDELAY = 2 ns;
+NET "xps_hwicap_0/xps_hwicap_0/HWICAP_CTRL_I/icap_statemachine_I1/Icap_datain[1]" MAXDELAY = 2 ns;
+NET "xps_hwicap_0/xps_hwicap_0/HWICAP_CTRL_I/icap_statemachine_I1/Icap_datain[2]" MAXDELAY = 2 ns;
+NET "xps_hwicap_0/xps_hwicap_0/HWICAP_CTRL_I/icap_statemachine_I1/Icap_datain[3]" MAXDELAY = 2 ns;
+NET "xps_hwicap_0/xps_hwicap_0/HWICAP_CTRL_I/icap_statemachine_I1/Icap_datain[4]" MAXDELAY = 2 ns;
+NET "xps_hwicap_0/xps_hwicap_0/HWICAP_CTRL_I/icap_statemachine_I1/Icap_datain[5]" MAXDELAY = 2 ns;
+NET "xps_hwicap_0/xps_hwicap_0/HWICAP_CTRL_I/icap_statemachine_I1/Icap_datain[6]" MAXDELAY = 2 ns;
+NET "xps_hwicap_0/xps_hwicap_0/HWICAP_CTRL_I/icap_statemachine_I1/Icap_datain[7]" MAXDELAY = 2 ns;
+NET "xps_hwicap_0/xps_hwicap_0/HWICAP_CTRL_I/icap_statemachine_I1/Icap_datain[8]" MAXDELAY = 2 ns;
+NET "xps_hwicap_0/xps_hwicap_0/HWICAP_CTRL_I/icap_statemachine_I1/Icap_datain[9]" MAXDELAY = 2 ns;
+NET "xps_hwicap_0/xps_hwicap_0/HWICAP_CTRL_I/icap_statemachine_I1/Icap_datain[10]" MAXDELAY = 2 ns;
+NET "xps_hwicap_0/xps_hwicap_0/HWICAP_CTRL_I/icap_statemachine_I1/Icap_datain[11]" MAXDELAY = 2 ns;
+NET "xps_hwicap_0/xps_hwicap_0/HWICAP_CTRL_I/icap_statemachine_I1/Icap_datain[12]" MAXDELAY = 2 ns;
+NET "xps_hwicap_0/xps_hwicap_0/HWICAP_CTRL_I/icap_statemachine_I1/Icap_datain[13]" MAXDELAY = 2 ns;
+NET "xps_hwicap_0/xps_hwicap_0/HWICAP_CTRL_I/icap_statemachine_I1/Icap_datain[14]" MAXDELAY = 2 ns;
+NET "xps_hwicap_0/xps_hwicap_0/HWICAP_CTRL_I/icap_statemachine_I1/Icap_datain[15]" MAXDELAY = 2 ns;
+NET "xps_hwicap_0/xps_hwicap_0/HWICAP_CTRL_I/icap_statemachine_I1/Icap_datain[16]" MAXDELAY = 2 ns;
+NET "xps_hwicap_0/xps_hwicap_0/HWICAP_CTRL_I/icap_statemachine_I1/Icap_datain[17]" MAXDELAY = 2 ns;
+NET "xps_hwicap_0/xps_hwicap_0/HWICAP_CTRL_I/icap_statemachine_I1/Icap_datain[18]" MAXDELAY = 2 ns;
+NET "xps_hwicap_0/xps_hwicap_0/HWICAP_CTRL_I/icap_statemachine_I1/Icap_datain[19]" MAXDELAY = 2 ns;
+NET "xps_hwicap_0/xps_hwicap_0/HWICAP_CTRL_I/icap_statemachine_I1/Icap_datain[20]" MAXDELAY = 2 ns;
+NET "xps_hwicap_0/xps_hwicap_0/HWICAP_CTRL_I/icap_statemachine_I1/Icap_datain[21]" MAXDELAY = 2 ns;
+NET "xps_hwicap_0/xps_hwicap_0/HWICAP_CTRL_I/icap_statemachine_I1/Icap_datain[22]" MAXDELAY = 2 ns;
+NET "xps_hwicap_0/xps_hwicap_0/HWICAP_CTRL_I/icap_statemachine_I1/Icap_datain[23]" MAXDELAY = 2 ns;
+NET "xps_hwicap_0/xps_hwicap_0/HWICAP_CTRL_I/icap_statemachine_I1/Icap_datain[24]" MAXDELAY = 2 ns;
+NET "xps_hwicap_0/xps_hwicap_0/HWICAP_CTRL_I/icap_statemachine_I1/Icap_datain[25]" MAXDELAY = 2 ns;
+NET "xps_hwicap_0/xps_hwicap_0/HWICAP_CTRL_I/icap_statemachine_I1/Icap_datain[26]" MAXDELAY = 2 ns;
+NET "xps_hwicap_0/xps_hwicap_0/HWICAP_CTRL_I/icap_statemachine_I1/Icap_datain[27]" MAXDELAY = 2 ns;
+NET "xps_hwicap_0/xps_hwicap_0/HWICAP_CTRL_I/icap_statemachine_I1/Icap_datain[28]" MAXDELAY = 2 ns;
+NET "xps_hwicap_0/xps_hwicap_0/HWICAP_CTRL_I/icap_statemachine_I1/Icap_datain[29]" MAXDELAY = 2 ns;
+NET "xps_hwicap_0/xps_hwicap_0/HWICAP_CTRL_I/icap_statemachine_I1/Icap_datain[30]" MAXDELAY = 2 ns;
+NET "xps_hwicap_0/xps_hwicap_0/HWICAP_CTRL_I/icap_statemachine_I1/Icap_datain[31]" MAXDELAY = 2 ns;
+NET "xps_hwicap_0/xps_hwicap_0/HWICAP_CTRL_I/icap_statemachine_I1/Icap_ce" MAXDELAY = 2 ns;
+NET "xps_hwicap_0/xps_hwicap_0/HWICAP_CTRL_I/icap_statemachine_I1/Icap_we" MAXDELAY = 2 ns;
 
-NET "clk_100_0000MHzMMCM0" TNM = "PLBCLK_GRP";
-NET "clk_80_ICAP" TNM = "ICAPCLK_GRP";
-TIMESPEC TS_TIG0 = FROM "PLBCLK_GRP" TO "ICAPCLK_GRP" TIG;
-TIMESPEC TS_TIG1 = FROM "ICAPCLK_GRP" TO "PLBCLK_GRP" TIG;
+#NET "clk_100_0000MHzMMCM0" TNM = "PLBCLK_GRP";
+#NET "clk_80_ICAP" TNM = "ICAPCLK_GRP";
+#TIMESPEC TS_TIG0 = FROM "PLBCLK_GRP" TO "ICAPCLK_GRP" TIG ;
+#TIMESPEC TS_TIG1 = FROM "ICAPCLK_GRP" TO "PLBCLK_GRP" TIG ;
 
 
 INST "hwt_pr_0" AREA_GROUP = "pblock_hwt_pr_0";
-AREA_GROUP "pblock_hwt_pr_0" RANGE=SLICE_X0Y200:SLICE_X47Y239;
-AREA_GROUP "pblock_hwt_pr_0" RANGE=DSP48_X0Y80:DSP48_X2Y95;
-AREA_GROUP "pblock_hwt_pr_0" RANGE=RAMB18_X0Y80:RAMB18_X2Y95;
-AREA_GROUP "pblock_hwt_pr_0" RANGE=RAMB36_X0Y40:RAMB36_X2Y47;
-
+AREA_GROUP "pblock_hwt_pr_0" RANGE=SLICE_X12Y120:SLICE_X57Y199;
+AREA_GROUP "pblock_hwt_pr_0" RANGE=DSP48_X0Y48:DSP48_X3Y79;
+AREA_GROUP "pblock_hwt_pr_0" RANGE=RAMB18_X1Y48:RAMB18_X3Y79;
+AREA_GROUP "pblock_hwt_pr_0" RANGE=RAMB36_X1Y24:RAMB36_X3Y39;
+AREA_GROUP "pblock_hwt_pr_0" RESET_AFTER_RECONFIG=TRUE;
 
