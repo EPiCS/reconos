@@ -115,7 +115,7 @@ architecture implementation of hwt_pr is
 			stat_recv_packets     	:	out	std_logic_vector(RECONOS_OSIF_MBOX_WIDTH-1 downto 0);
 			stat_forw_packets     	:	out	std_logic_vector(RECONOS_OSIF_MBOX_WIDTH-1 downto 0);
 			stat_drop_packets     	:	out	std_logic_vector(RECONOS_OSIF_MBOX_WIDTH-1 downto 0);
-			config_header_length  	:	out	std_logic_vector(RECONOS_OSIF_MBOX_WIDTH-1 downto 0)
+			config_header_length  	:	in	std_logic_vector(RECONOS_OSIF_MBOX_WIDTH-1 downto 0)
 		);
 	end component;
 	-- END OF YOUR OWN COMPONENTS

@@ -56,13 +56,13 @@ STEP 3: Generate partial netlists for configuration B
 =====================================================
 - delete the folder hw/edk/pcores/hwt_pr_v1_00_a
 - copy the folder hw/edk/pcores/hwt_ips_v1_00_a to hw/edk/pcores/
-- Open 'hw/edk/system.xmp' using the Xilinx Platform Studio (XPS) and click on 'Hardware>Clean Hardware'
-- Generate the netlists: Hardware > Generate Netlists. You can stop as soon as the system_hwt_pr_0_wrapper.ngc file is available.
+- Open 'hw/edk/system.xmp' using the Xilinx Platform Studio (XPS) and click on 'Hardware>Clean Hardware' [not necessary]
+- Generate the netlists: Hardware > Generate Netlists. You can stop as soon as the system_hwt_pr_0_wrapper.ngc file is available.  [not necessary]
 - go to the directory hw/edk/synthesis and add the following line to thefile system_hwt_pr_0_wrapper_xst.scr
 	-bufg 0
 - on the command line type the followig:
 xst -ifn system_hwt_pr_0_wrapper_xst.scr > xst_out.txt
-grep through xst_out.txt for BUFG to verify no BUFGs are instanciated.
+grep through xst_out.txt for BUFG to verify no BUFGs are instantiated.
 
 
 STEP 4: Copy partial netlist/s to the 'hw/prdesign'
@@ -91,29 +91,30 @@ STEP 7: Build the kernel
 - compile the kernel: 
 make CROSS_COMPILE=microblaze-unknown-linux-gnu- ARCH=microblaze clean -j4 simpleImage.noc_with_cache_mmu
 
-STEP 7: Build the software
+STEP 8: Build the software
 ==========================
 - go to the /sw folder (cd ../sw) and generate the kernel-module and the send_pkts application (using make)
 - copy the kernel module 'pr_hw_sw_interface.ko' to the compact flash card, 
   which should already contain the current libreconos.ko, fsl.ko, etc. 
 
-STEP 8: Configure the FPGA and download the kernel image
+STEP 9: Configure the FPGA and download the kernel image
 ========================================================
 - download the system_ips.bit using Xilinx Impact or the 'dow' script (not the system_aes.bit!)
-- download the Linux kernel image ('simpleImage.noc_with_cache_mmu.dts') using the 'xmd' tool or the 'dow' script
+- download the Linux kernel image ('simpleImage.noc_with_cache_mmu') using the 'xmd' tool or the 'dow' script
 
-STEP 9: Test the system
-=======================
+STEP 10: Test the system
+========================
 - open minicom in a terminal (e.g. 'minicom -D /dev/ttyUSB0')
 - if does not already exist: mknod /dev/icap0 c 259 0
-- configure the protocol graph demo according to the file 'sw/config.sh' (line 2-3)
+- configure the protocol graph demo according to the file 'sw/config.sh' (line 2-4)
 - the kernel module first wait for a message from the network interface
   -> call the 'sw/send_pkts/send_pkts' application on your workstation 
      to send a single packet over the eth1 interface to the FPGA
 - then you have 30 seconds to reconfigure the partial slot ('[partial slot] reconfig. START')
   -> first hit the 'enter'-key such that you go back to the terminal
   -> in the terminal you can now download the aes partial bitstream
-     =>> for pr_aes: 'cat partial_bitstreams/partial_aes.bit > /dev/icap0')
+     =>> for pr_aes: 'cat partial_bitstreams/partial_aes.bit > /dev/icap0' or 'AES'
+     =>> for pr_ips: 'cat partial_bitstreams/partial_ips.bit > /dev/icap0' or 'IPS'
 - after 30 seconds, you should not reconfigure anymore, this is indicated by the output '[partial slot] reconfig. STOP'
   -> the kernel module will again wait for another message (that could be send using sw/send_pkts/send_pkts)
 - and so on and so on...

@@ -208,6 +208,10 @@ static int hw_sw_interface_thread_entry(void *arg)
 		// c) partial slot reset='1' 
 		reconos_slot_reset(DPR_HWT_SLOT_NR,1);
 		printk(KERN_INFO "[partial slot] reconfig. START\n");
+		if (config == 0)
+			printk(KERN_INFO "[partial slot] in the next 25 seconds, please configure AES\n");
+		else
+			printk(KERN_INFO "[partial slot] in the next 25 seconds, please configure IPS\n");
 
 		// d) reconfigure slot
 		// wait for about 20 seconds		

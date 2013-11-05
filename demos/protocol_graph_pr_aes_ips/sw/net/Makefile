@@ -2,7 +2,7 @@
 ARCH		=	microblaze
 CROSS_COMPILE	=	microblaze-unknown-linux-gnu-
 KDIR		?=	~/linux-2.6-xlnx
-EXTRA_CFLAGS	+=	-I$(PWD)/../reconos/libreconos-ks/
+EXTRA_CFLAGS	+=	-I$(PWD)/../../../../linux/reconos/libreconos-ks/
 EXTRA_CFLAGS	+=	-DWITH_RECONOS
 
 export ARCH CROSS_COMPILE

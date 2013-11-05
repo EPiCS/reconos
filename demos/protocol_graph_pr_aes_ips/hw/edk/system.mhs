@@ -46,6 +46,23 @@
  PORT PHY_RESET = PHY_RESET, DIR = O
 
 
+BEGIN hwt_pr
+ PARAMETER INSTANCE = hwt_pr_0
+ PARAMETER HW_VER = v1.00.a
+ BUS_INTERFACE OS_SFSL = fsl_v20_3b
+ BUS_INTERFACE OS_MFSL = fsl_v20_3a
+ BUS_INTERFACE SFIFO32 = fifo32_3b_sfifo32
+ BUS_INTERFACE MFIFO32 = fifo32_3a_mfifo32
+ PORT Rst = proc_control_0_reset3
+ PORT Clk = clk_100_0000MHzMMCM0
+ PORT switch_data_rdy = s2b_src_rdy_2
+ PORT switch_data = s2b_data_2
+ PORT thread_read_rdy = s2b_dst_rdy_2
+ PORT thread_data_rdy = b2s_src_rdy_2
+ PORT thread_data = b2s_data_2
+ PORT switch_read_rdy = b2s_dst_rdy_2
+END
+
 BEGIN plb_v46
  PARAMETER INSTANCE = mb_plb
  PARAMETER HW_VER = 1.05.a
@@ -291,23 +308,6 @@ BEGIN hwt_ethernet_test
  PORT thread_data_rdy = c2s_src_rdy
  PORT thread_data = c2s_data
  PORT switch_read_rdy = c2s_dst_rdy
-END
-
-BEGIN hwt_pr
- PARAMETER INSTANCE = hwt_pr_0
- PARAMETER HW_VER = v1.00.a
- BUS_INTERFACE OS_SFSL = fsl_v20_3b
- BUS_INTERFACE OS_MFSL = fsl_v20_3a
- BUS_INTERFACE SFIFO32 = fifo32_3b_sfifo32
- BUS_INTERFACE MFIFO32 = fifo32_3a_mfifo32
- PORT Rst = proc_control_0_reset3
- PORT Clk = clk_100_0000MHzMMCM0
- PORT switch_data_rdy = s2b_src_rdy_2
- PORT switch_data = s2b_data_2
- PORT thread_read_rdy = s2b_dst_rdy_2
- PORT thread_data_rdy = b2s_src_rdy_2
- PORT thread_data = b2s_data_2
- PORT switch_read_rdy = b2s_dst_rdy_2
 END
 
 BEGIN noc_rst_block
