@@ -232,10 +232,10 @@ static void reconos_delegate_process_mbox_get(struct reconos_hwt *hwt)
 {
 	// old #######################################
 	uint32_t handle = fsl_read_word(hwt->slot);
-	printk("[reconos] slot %d, mbox (%d) get ... start\n",hwt->slot, handle);
+	//printk("[reconos] slot %d, mbox (%d) get ... start\n",hwt->slot, handle);
 	reconos_assert_type_and_res(hwt, handle, RECONOS_TYPE_MBOX);
 	fsl_write_word(hwt->slot, mbox_get(hwt->resources[handle].ptr));
-	printk("[reconos] slot %d, mbox (%d) get ... done\n",hwt->slot, handle);
+	//printk("[reconos] slot %d, mbox (%d) get ... done\n",hwt->slot, handle);
 	// new #######################################
 	//handle = fsl_read_word(hwt->slot);
 	//reconos_assert_type_and_res(hwt, handle, RECONOS_TYPE_MBOX);
@@ -248,13 +248,13 @@ static void reconos_delegate_process_mbox_put(struct reconos_hwt *hwt)
 	uint32_t handle = fsl_read_word(hwt->slot);
 	uint32_t arg0 = fsl_read_word(hwt->slot);
 
-	printk("[reconos] slot %d, mbox (%d) put %x ... start\n",hwt->slot, handle, arg0);
+	//printk("[reconos] slot %d, mbox (%d) put %x ... start\n",hwt->slot, handle, arg0);
 	reconos_assert_type_and_res(hwt, handle, RECONOS_TYPE_MBOX);
 
 	mbox_put(hwt->resources[handle].ptr, arg0);
 
 	fsl_write_word(hwt->slot, 0);
-	printk("[reconos] slot %d, mbox (%d) put %x ... done\n",hwt->slot, handle, arg0);
+	//printk("[reconos] slot %d, mbox (%d) put %x ... done\n",hwt->slot, handle, arg0);
 	// new #######################################
 	//handle_2 = fsl_read_word(hwt->slot);
 	//arg0 = fsl_read_word(hwt->slot);

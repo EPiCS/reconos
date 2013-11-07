@@ -347,7 +347,7 @@ static int __init init_pr_hw_sw_interface_module(void)
 	memset(shared_mem_h2s, 0, 3000);
 
 	config = 0;
-	config_ips();
+	config_aes();
 	
 	/*while(1){
 		result = mbox_get(&h2s_mb_get);

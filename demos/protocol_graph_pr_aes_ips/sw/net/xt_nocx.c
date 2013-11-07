@@ -71,9 +71,10 @@ static struct task_struct *thread_hw2sw, *thread_sw2hw, *thread_scheduler;
 static struct sk_buff_head queue_to_hw;
 static u8 *shared_mem_h2s, *shared_mem_s2h;
 static int order = 0;
-static u64 hw2sw_packets;
+static u64 hw2sw_packets[10];
 
 int current_mapping = 0; //sw
+int reconfig_done = 0;
 
 DECLARE_WAIT_QUEUE_HEAD(wait_queue);
 
@@ -199,7 +200,7 @@ void reconfig_hw_block(char *name){
 	mbox_put(&noc[AES_SLOT].mb_put, config_data_key6);
 	mbox_put(&noc[AES_SLOT].mb_put, config_data_key7);
 	config_rcv=mbox_get(&noc[AES_SLOT].mb_get);
-	printk(KERN_INFO "[XT_NOCX] setup for aes done\n");
+	printk(KERN_INFO "[XT_NOCX] setup for aes done ret = %d\n", config_rcv);
 
 
 	}
@@ -207,10 +208,10 @@ void reconfig_hw_block(char *name){
 	printk(KERN_INFO "[XT_NOCX] setup for ips");
 	u32 address = 5; 	//send to sw
 	u32 header_len = ('h' << 24) | 1;	//the data vs. control byte
-	mbox_put(&noc[IPS_SLOT].mb_put, address);
 	mbox_put(&noc[IPS_SLOT].mb_put, header_len);
-	printk(KERN_INFO "[XT_NOCX] setup for ips done\n");
-
+	mbox_put(&noc[IPS_SLOT].mb_put, address);
+	int ret = mbox_get(&noc[IPS_SLOT].mb_get);
+	printk(KERN_INFO "[XT_NOCX] setup for ips done: ret = %d\n", ret);
 	}
 
 }
@@ -240,7 +241,7 @@ void unset_hw_flag(struct fblock *fb, unsigned int flag)
 	}
 	if(memcmp(fb->name, "aes", 3) == 0){
 		if (flag == 2){
-			printk(KERN_INFO "[xt_nocx] changing eth config for aes: flag hw");
+			printk(KERN_INFO "[xt_nocx] changing eth config for aes: unflag hw");
 			u32 config_eth_hash_1 = 0xcdcdcdcd;
 			u32 config_eth_hash_2 = 0xcdcdcdcd;
 			u32 config_eth_idp = 0x5; //TODO
@@ -461,7 +462,9 @@ static int hwif_hw_to_sw_worker_thread(void *arg)
 {
 	struct noc_pkt npkt;
 	size_t off = sizeof(npkt) - sizeof(npkt.payload);
-	hw2sw_packets = 0;
+	int i = 0;
+	for(i = 0; i < 10; i++)
+		hw2sw_packets[i] = 0;
 	//printk(KERN_INFO "[xt_nocx] off = %d\n", off);
 	while (likely(!kthread_should_stop())) {
 		/* sleeps here */
@@ -474,21 +477,14 @@ static int hwif_hw_to_sw_worker_thread(void *arg)
 
 		pkt_start = shared_mem_h2s;
 		shared_mem_to_noc_pkt(&npkt, pkt_start);
-	//	npkt = (struct noc_pkt *) pkt_start;
-
-//		npkt->payload = pkt_start + off;
-//		for(i = 0; i < 32; i = i+2)
-//			printk(KERN_INFO "[xt_nocx] %x %x", npkt.payload[i], npkt.payload[i+1]);
-		//for(i = 0; i < 32; i = i+2)
-		//	printk(KERN_INFO "[xt_nocx] %x %x", shared_mem_h2s[i], shared_mem_h2s[i+1]);
-
 		//for now, as long as the hw uses a different pkt format...
-	//	DEBUG(printk(KERN_INFO "[xt_nocx]: got npkt from hw: first payload: %x\n", npkt.payload[0]));
-	//	DEBUG(dump_npkt(&npkt));
+		//DEBUG(printk(KERN_INFO "[xt_nocx]: got npkt from hw: first payload: %x\n", npkt.payload[0]));
+		//DEBUG(dump_npkt(&npkt));
 		//TODO: loop here through all packets
 		packet_hw_to_sw(&npkt);
-		//update statistics, later, this needs to be done on a per connection basis.
-		hw2sw_packets++;
+		//update statistics, later, this needs to be done on a per connection basis. Do it more efficiantly!
+		
+		hw2sw_packets[npkt.dst_idp]++;
 		//notify hw that we read the data
 		mbox_put(&noc[HW_TO_SW_SLOT].mb_put, shared_mem_h2s);
 	}
@@ -533,17 +529,192 @@ static int scheduler (void *arg)
 	int delta_cpu = 0;
 	u64 prev_packets = 0;
 	u64 cur_packets = 0;
+	u64 prev_aes_packets = 0;
+	u64 cur_aes_packets = 0;
+	u64 prev_ips_packets = 0;
+	u64 cur_ips_packets = 0;
+
 	int delta_packets = 0;
+	int delta_aes_packets = 0;
+	int delta_ips_packets = 0;
+
 	int counter = 0;
 	msleep(40000); // sleep 20 second;
 	printk(KERN_INFO "[xt_nocx] scheduler start");
 
 	prev_cpu = get_cpu_idle_time_us(0, NULL); //we only have one CPU
-	prev_packets = hw2sw_packets;
+	//prev_packets = hw2sw_packets;
+	prev_aes_packets = hw2sw_packets[5];
+	prev_ips_packets = hw2sw_packets[2];
+
 	msleep(1000); // sleep 10 second;
 	
 
 	while(likely(!kthread_should_stop())){
+		struct lananlmsg msg_ips;
+		struct lananlmsg msg_aes;
+		memcpy(msg_ips.buff, "ips", 4);
+		memcpy(msg_aes.buff, "aes", 4);
+
+		cur_cpu = kstat_cpu(0).cpustat.idle;
+		delta_cpu = cur_cpu - prev_cpu;
+		prev_cpu = cur_cpu;
+		cur_aes_packets = hw2sw_packets[5];
+		cur_ips_packets = hw2sw_packets[2];
+		delta_aes_packets = cur_aes_packets - prev_aes_packets;
+		delta_ips_packets = cur_ips_packets - prev_ips_packets;
+		prev_aes_packets = cur_aes_packets;
+		prev_ips_packets = cur_ips_packets;
+
+
+		
+		//case 1, both sw
+		if(delta_aes_packets + delta_ips_packets < 10){
+			if(current_mapping != 1){
+			
+				current_mapping = 1;
+				//unset flags, we don't need to do a reconfiguration,
+				//but we need to tell the ethernet block to forward the data
+				//directly to the software. 
+			
+				fblock_userctl_set_flags(&msg_ips, FBLOCK_FLAGS_TRANS_IB);
+				fblock_userctl_set_flags(&msg_aes, FBLOCK_FLAGS_TRANS_IB);
+
+				if (fblock_userctl_unset_flags(&msg_ips, FBLOCK_FLAGS_TO_HW) < 0){
+					printk(KERN_INFO "[xt_nocx] unset hw flag ips failed");
+				}
+				if (fblock_userctl_unset_flags(&msg_aes, FBLOCK_FLAGS_TO_HW) < 0){
+					printk(KERN_INFO "[xt_nocx] unset hw flag aes failed");
+				}
+				reconfig_done = 0;
+				wake_up_interruptible(&wait_queue);
+				wait_event_interruptible(wait_queue, reconfig_done == 1); 
+				//msleep(2000);
+
+				fblock_userctl_unset_flags(&msg_ips, FBLOCK_FLAGS_TRANS_IB);
+				fblock_userctl_unset_flags(&msg_aes, FBLOCK_FLAGS_TRANS_IB);
+				printk(KERN_INFO "[xt_noxc] mapping 1 done");
+
+			}
+		}
+
+
+		//case 2, aes hw, ips sw
+		else if(delta_aes_packets > delta_ips_packets){
+			if(current_mapping != 2){
+				current_mapping = 2;
+				//unset ips
+			
+				//loop all packets (only relevant for those that are already in sw
+				fblock_userctl_set_flags(&msg_ips, FBLOCK_FLAGS_TRANS_IB);
+				fblock_userctl_set_flags(&msg_aes, FBLOCK_FLAGS_TRANS_IB);
+		
+				//tell the ethernet block to not forward any packets to the IPS block anymore
+				if (fblock_userctl_unset_flags(&msg_ips, FBLOCK_FLAGS_TO_HW) < 0){
+					printk(KERN_INFO "[xt_nocx] unset hw flag ips failed");
+				}
+
+				//terminate the delegate thread and the hw thread
+				mbox_put(&noc[AES_SLOT].mb_put, 0xffffffff);
+
+				//set reset signal so that nothing bad happens
+				reconos_slot_reset(AES_SLOT,1);
+	
+
+				//note, here we just assume the timing is ok...
+				//tell the software to do the pr for the new configuration
+				reconfig_done = 0;
+				wake_up_interruptible(&wait_queue);
+				//we need to wait until the userspace did the reconfig.
+				wait_event_interruptible(wait_queue, reconfig_done == 1); 
+				//msleep(2000);
+				//we hope the hardware is configured, so we need to
+				//a) initialize the new block
+				printk(KERN_INFO "[xt_nocx] configuring aes");
+
+				//create new delegate
+				reconos_hwt_setresources(&noc[AES_SLOT].hwt, noc[AES_SLOT].res, ARRAY_SIZE(noc[AES_SLOT].res));
+				reconos_hwt_create(&noc[AES_SLOT].hwt, AES_SLOT, NULL);
+ 
+				//reconos_hwt_setresources(TODO, TODO,2);
+				//reconos_hwt_create(TODO, AES_SLOT, NULL);
+
+				//config_aes();
+				reconfig_hw_block("aes");
+				//b) tell the ethernet block the new mapping
+				//c) tell our software networking part the new mapping.
+				if (fblock_userctl_set_flags(&msg_aes, FBLOCK_FLAGS_TO_HW) < 0){
+					printk(KERN_INFO "[xt_nocx] unset hw flag ips failed");
+				}
+
+				//now everything is done and we can process the packets again.
+				fblock_userctl_unset_flags(&msg_ips, FBLOCK_FLAGS_TRANS_IB);
+				fblock_userctl_unset_flags(&msg_aes, FBLOCK_FLAGS_TRANS_IB);
+
+
+			}
+		}
+
+
+		//case 3, aes sw, ips hw
+		else {
+			if(current_mapping != 3){
+				current_mapping = 3;
+			
+				//loop all packets (only relevant for those that are already in sw
+				fblock_userctl_set_flags(&msg_ips, FBLOCK_FLAGS_TRANS_IB);
+				fblock_userctl_set_flags(&msg_aes, FBLOCK_FLAGS_TRANS_IB);
+		
+				//tell the ethernet block to not forward any packets to the IPS block anymore
+				if (fblock_userctl_unset_flags(&msg_aes, FBLOCK_FLAGS_TO_HW) < 0){
+					printk(KERN_INFO "[xt_nocx] unset hw flag ips failed");
+				}
+
+				//terminate the delegate thread and the hw thread
+				mbox_put(&noc[AES_SLOT].mb_put, 0xffffffff);
+
+				//set reset signal so that nothing bad happens
+				reconos_slot_reset(AES_SLOT,1);
+	
+
+
+				//note, here we just assume the timing is ok...
+				//tell the software to do the pr for the new configuration
+				reconfig_done = 0;
+				wake_up_interruptible(&wait_queue);
+				//we need to wait until the userspace did the reconfig.
+				wait_event_interruptible(wait_queue, reconfig_done == 1); 
+				//msleep(2000);
+				//we hope the hardware is configured, so we need to
+				//a) initialize the new block
+				printk(KERN_INFO "[xt_nocx] configuring ips");
+				
+				//create new delegate
+				reconos_hwt_setresources(&noc[AES_SLOT].hwt, noc[AES_SLOT].res, ARRAY_SIZE(noc[AES_SLOT].res));
+				reconos_hwt_create(&noc[AES_SLOT].hwt, AES_SLOT, NULL);
+ 
+
+
+			//	config_ips();
+				reconfig_hw_block("ips");
+				
+				
+				//b) tell the ethernet block the new mapping
+				//c) tell our software networking part the new mapping.
+				if (fblock_userctl_set_flags(&msg_ips, FBLOCK_FLAGS_TO_HW) < 0){
+					printk(KERN_INFO "[xt_nocx] unset hw flag ips failed");
+				}
+
+				//now everything is done and we can process the packets again.
+				fblock_userctl_unset_flags(&msg_ips, FBLOCK_FLAGS_TRANS_IB);
+				fblock_userctl_unset_flags(&msg_aes, FBLOCK_FLAGS_TRANS_IB);
+
+			}
+		}
+
+
+#ifdef one_proc
+
 		cur_cpu = kstat_cpu(0).cpustat.idle;
 		delta_cpu = cur_cpu - prev_cpu;
 		prev_cpu = cur_cpu;
@@ -598,14 +769,21 @@ static int scheduler (void *arg)
 				}
 			}
 		}
-		
+#endif 		
 		msleep(1000); // sleep a second;
 	}
 	return 0;
 }
 
+static int schedular_procfs_write(struct file *file, const char __user *buffer, unsigned long count, void *data){
+	printk(KERN_INFO "[lana] got ack from userspace\n");
+	reconfig_done = 1;
+	wake_up_interruptible(&wait_queue);
+	return 1;
 
-static int schedular_procfs(char *page, char **start, off_t offset, 
+}
+
+static int schedular_procfs_read(char *page, char **start, off_t offset, 
 			int count, int *eof, void *data)
 {
 	int last_mapping;
@@ -614,16 +792,26 @@ static int schedular_procfs(char *page, char **start, off_t offset,
 
 	last_mapping = current_mapping;
 
-	wait_event_interruptible(wait_queue, last_mapping != current_mapping);
+	wait_event_interruptible(wait_queue, last_mapping != current_mapping); //&&current_mapping != 1
+//	current_mapping = 2;
+	if(current_mapping == 1){
+		printk(KERN_INFO "[lana] both processes in SW, the userspace does not care");
+		sprintf(page, "none");
+	}
+	if(current_mapping == 2){
+		printk(KERN_INFO "[lana] mapping aes hw, ips sw");
+		sprintf(page, "partial_aes.bit");
+	}
+	if(current_mapping == 3){
+		printk(KERN_INFO "[lana] mapping aes sw, ips hw");
+		sprintf(page, "partial_ips.bit");
+	}
+	*eof = 1;
+	return 16;
 
-	//todo: locking!?
-//	while(1){
-//		if (last_mapping != current_mapping){
-//			printk(KERN_INFO "[lana] change mapping");
-//			last_mapping = current_mapping;
-//			break;
-//		}
-//	}
+
+
+#ifdef one_proc
 	if (current_mapping == 0){
 		printk(KERN_INFO "[lana] reconfigure to config_a");
 		sprintf(page, "config_a"); 
@@ -633,7 +821,9 @@ static int schedular_procfs(char *page, char **start, off_t offset,
 		sprintf(page, "config_b");
 	}
 	*eof = 1;
+
 	return 9;
+#endif
 
 }
 
@@ -683,7 +873,7 @@ static int reconos_noc_init(void)
 
 
 	/* setup AES slot. Note, this should be done by a controller */
-#ifdef AES_CONFIGURED
+//#ifdef AES_CONFIGURED
 	u32 config_data_start=1;
 	u32 config_rcv=0;
 	u32 config_data_mode=0;	//"....1100"=12=mode128, mode192=13, mode256=14,15
@@ -713,14 +903,14 @@ static int reconos_noc_init(void)
 	mbox_put(&noc[AES_SLOT].mb_put, config_data_key7);
 	config_rcv=mbox_get(&noc[AES_SLOT].mb_get);
 	printk(KERN_INFO "[lana] noc setup hw aes\n");
-#endif
+//#endif
 
-//#ifdef IPS_CONFIGURED
+#ifdef IPS_CONFIGURED
 	u32 address = 5; 	//send to sw
 	u32 header_len = ('h' << 24) | 1;	//the data vs. control byte
 	mbox_put(&noc[IPS_SLOT].mb_put, address);
 	mbox_put(&noc[IPS_SLOT].mb_put, header_len);
-//#endif
+#endif
 	return 0;
 }
 
@@ -756,21 +946,24 @@ int init_hwif(void)
 		goto out_t2;
 	}
 
-//	thread_scheduler = kthread_run(scheduler, NULL, "lana_scheduler");
-//	if (IS_ERR(thread_scheduler)){
-//		printk(KERN_ERR "caoont creat lana_scheduler thread\n");
-//		goto out_t3;
-//	}
+	thread_scheduler = kthread_run(scheduler, NULL, "lana_scheduler");
+	if (IS_ERR(thread_scheduler)){
+		printk(KERN_ERR "caoont creat lana_scheduler thread\n");
+		goto out_t3;
+	}
 
-	scheduler_proc = 
-	create_proc_read_entry("scheduler", 0400, lana_proc_dir, schedular_procfs, NULL);
+//	scheduler_proc = 
+//	create_proc_read_entry("scheduler", 0400, lana_proc_dir, schedular_procfs, NULL);
+	scheduler_proc = create_proc_entry("scheduler", 0644, lana_proc_dir);
 	if (!scheduler_proc)
 		goto out_t4;
+	scheduler_proc->read_proc = schedular_procfs_read;
+	scheduler_proc->write_proc = schedular_procfs_write;
 
 	return 0;
 
 out_t4:
-//	kthread_stop(thread_scheduler);
+	kthread_stop(thread_scheduler);
 out_t3:
 	kthread_stop(thread_sw2hw);
 out_t2:
@@ -785,7 +978,7 @@ void cleanup_hwif(void)
 	printk(KERN_INFO "[lana] cleanup_hwif!\n");
 	kthread_stop(thread_hw2sw);
 	kthread_stop(thread_sw2hw);
-//	kthread_stop(thread_scheduler);
+	kthread_stop(thread_scheduler);
 	remove_proc_entry("scheduler", lana_proc_dir);
 	reconos_noc_cleanup();
 }

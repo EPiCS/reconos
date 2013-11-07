@@ -55,7 +55,7 @@ static int fb_aes_netrx(const struct fblock * const fb,
 	} while (read_seqretry(&fb_priv->lock, seq));
 
 	read_lock(&fb_priv->klock);
-	printk(KERN_INFO "[fb_aes] packet len orig = %d\n", skb->len);
+	printk(KERN_INFO "[fb_aes] packet len orig = %d, forwarding to idp %d\n", skb->len, fb_priv->port[*dir]);
 	
 	if(*dir == TYPE_EGRESS){
 		printk(KERN_INFO "[fb_aes] EGRESS packet \n");
@@ -128,6 +128,7 @@ static int fb_aes_netrx(const struct fblock * const fb,
 
 
 		skb_trim(skb, pktlen);
+		printk(KERN_INFO "[fb_aes] packet decrypted\n");
 	}
 	else{
 		printk(KERN_INFO "[fb_aes] drop packet. Unknown direction\n");

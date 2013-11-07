@@ -100,8 +100,8 @@ int main(int argc, char **argv)
 				continue;
 			}
 			nr_packets++;
-		//	printf("packet count %d\n", nr_packets);
-		//	fprintf(stderr, "packet count %d\n", nr_packets);
+			printf("packet count %d\n", nr_packets);
+			fprintf(stderr, "packet count %d\n", nr_packets);
 			
 		//	fwrite(msg_buff, 1, ret, fp);
 			//printf("file_transfer_simple: received msg with len %d \n", ret);
