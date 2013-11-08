@@ -96,12 +96,14 @@ int main(int argc, char **argv)
 			if (ret < 0) {
 				if (errno != 11)
 					printf("Error: ret:%d, errno:%d\n", ret, errno);
-				sleep(5);
+				sleep(0); //TODO: find out how to actually do a blocking sleep!
 				continue;
 			}
 			nr_packets++;
-			printf("packet count %d\n", nr_packets);
-			fprintf(stderr, "packet count %d\n", nr_packets);
+			if (nr_packets %10 == 0){
+				printf("packet count %d\n", nr_packets);
+				fprintf(stderr, "packet count %d\n", nr_packets);
+			}
 			
 		//	fwrite(msg_buff, 1, ret, fp);
 			//printf("file_transfer_simple: received msg with len %d \n", ret);

@@ -14,6 +14,7 @@
 #include <linux/netdevice.h>
 #include <linux/kernel_stat.h>
 #include <linux/tick.h>
+#include <asm/cacheflush.h>
 
 #include "xt_engine.h"
 #include "xt_fblock.h"
@@ -79,6 +80,13 @@ int reconfig_done = 0;
 DECLARE_WAIT_QUEUE_HEAD(wait_queue);
 
 
+static inline __pure struct page *pgv_to_page(void *addr)
+{
+	if (is_vmalloc_addr(addr))
+		return vmalloc_to_page(addr);
+	return virt_to_page(addr);
+}
+
 void dump_npkt(struct noc_pkt *npkt)
 {
 	//int i;
@@ -125,22 +133,23 @@ static inline void kfree_npkt(struct noc_pkt *npkt)
 
 void set_hw_flag(struct fblock *fb, unsigned int flag)
 {
+	int ret = 0;
 	//TODO: Do this depending on the fblock - for now we only support eth.
 	//printk(KERN_INFO "[xt_nocx] setting\n");
 	//we have only one hw slot, so the hw address is always the same...
 	if(memcmp(fb->name, "ips", 3) == 0){
 		if (flag == 2){
-			printk(KERN_INFO "[xt_nocx] changing eth config for ips: flag hw");
 			u32 config_eth_hash_1 = 0xabababab;
 			u32 config_eth_hash_2 = 0xabababab;
 			u32 config_eth_idp = 0x2;
 			u32 config_eth_address = 1; //global 0, local 1 -> ips
+			printk(KERN_INFO "[xt_nocx] changing eth config for ips: flag hw");
 
 			mbox_put(&noc[ETH_SLOT].mb_put, config_eth_hash_1 ); 
 			mbox_put(&noc[ETH_SLOT].mb_put, config_eth_hash_2);
 			mbox_put(&noc[ETH_SLOT].mb_put, config_eth_idp);
 			mbox_put(&noc[ETH_SLOT].mb_put, config_eth_address);
-			int ret = mbox_get(&noc[ETH_SLOT].mb_get);
+			ret = mbox_get(&noc[ETH_SLOT].mb_get);
 			//printk(KERN_INFO "hwt_ethernet configured - 2\n");
 		}
 		else{
@@ -149,17 +158,17 @@ void set_hw_flag(struct fblock *fb, unsigned int flag)
 	}
 	if(memcmp(fb->name, "aes", 3) == 0){
 		if (flag == 2){
-			printk(KERN_INFO "[xt_nocx] changing eth config for aes: flag hw");
 			u32 config_eth_hash_1 = 0xcdcdcdcd;
 			u32 config_eth_hash_2 = 0xcdcdcdcd;
 			u32 config_eth_idp = 0x5; //TODO
 			u32 config_eth_address = 1; //global 0, local 1 -> aes
+			printk(KERN_INFO "[xt_nocx] changing eth config for aes: flag hw");
 
 			mbox_put(&noc[ETH_SLOT].mb_put, config_eth_hash_1 ); 
 			mbox_put(&noc[ETH_SLOT].mb_put, config_eth_hash_2);
 			mbox_put(&noc[ETH_SLOT].mb_put, config_eth_idp);
 			mbox_put(&noc[ETH_SLOT].mb_put, config_eth_address);
-			int ret = mbox_get(&noc[ETH_SLOT].mb_get);
+			ret = mbox_get(&noc[ETH_SLOT].mb_get);
 			//printk(KERN_INFO "hwt_ethernet configured - 2\n");
 		}
 		else{
@@ -170,48 +179,49 @@ void set_hw_flag(struct fblock *fb, unsigned int flag)
 
 void reconfig_hw_block(char *name){
 	if(memcmp(name, "aes", 3) == 0){
+		/* setup AES slot.  */
+		u32 config_data_start=1;
+		u32 config_rcv=0;
+		u32 config_data_mode=0;	//"....1100"=12=mode128, mode192=13, mode256=14,15
+		u32 config_data_key0=0x16157e2b; // 50462976;	//X"03020100"
+		u32 config_data_key1=0xa6d2ae28; //117835012;	//X"07060504"
+		u32 config_data_key2=0x8815f7ab; //185207048;	//X"0b0a0908"
+		u32 config_data_key3=0x3c4fcf09; //252579084;	//X"0f0e0d0c"
+
+		u32 config_data_key4=319951120;	//X"13121110"
+		u32 config_data_key5=387323156;	//X"17161514"
+		u32 config_data_key6=454695192;	//X"1b1a1918"
+		u32 config_data_key7=522067228;	//X"1f1e1d1c"
+		u32 exit_sig=4294967295;
+		config_data_mode=16; //key length 128 bit, send everything to eth
+		config_data_mode=20; //key length 128 bit, send everything to sw
+
 		printk(KERN_INFO "[XT_NOCX] setup for aes");
-	/* setup AES slot.  */
-	u32 config_data_start=1;
-	u32 config_rcv=0;
-	u32 config_data_mode=0;	//"....1100"=12=mode128, mode192=13, mode256=14,15
-	u32 config_data_key0=0x16157e2b; // 50462976;	//X"03020100"
-	u32 config_data_key1=0xa6d2ae28; //117835012;	//X"07060504"
-	u32 config_data_key2=0x8815f7ab; //185207048;	//X"0b0a0908"
-	u32 config_data_key3=0x3c4fcf09; //252579084;	//X"0f0e0d0c"
 
-	u32 config_data_key4=319951120;	//X"13121110"
-	u32 config_data_key5=387323156;	//X"17161514"
-	u32 config_data_key6=454695192;	//X"1b1a1918"
-	u32 config_data_key7=522067228;	//X"1f1e1d1c"
-	u32 exit_sig=4294967295;
-	config_data_mode=16; //key length 128 bit, send everything to eth
-	config_data_mode=20; //key length 128 bit, send everything to sw
+		mbox_put(&noc[AES_SLOT].mb_put, config_data_start);
+		mbox_put(&noc[AES_SLOT].mb_put, config_data_mode);
+		mbox_put(&noc[AES_SLOT].mb_put, config_data_key0);
+		mbox_put(&noc[AES_SLOT].mb_put, config_data_key1);
+		mbox_put(&noc[AES_SLOT].mb_put, config_data_key2);
+		mbox_put(&noc[AES_SLOT].mb_put, config_data_key3);
 
-	mbox_put(&noc[AES_SLOT].mb_put, config_data_start);
-	mbox_put(&noc[AES_SLOT].mb_put, config_data_mode);
-	mbox_put(&noc[AES_SLOT].mb_put, config_data_key0);
-	mbox_put(&noc[AES_SLOT].mb_put, config_data_key1);
-	mbox_put(&noc[AES_SLOT].mb_put, config_data_key2);
-	mbox_put(&noc[AES_SLOT].mb_put, config_data_key3);
-
-	mbox_put(&noc[AES_SLOT].mb_put, config_data_key4);
-	mbox_put(&noc[AES_SLOT].mb_put, config_data_key5);
-	mbox_put(&noc[AES_SLOT].mb_put, config_data_key6);
-	mbox_put(&noc[AES_SLOT].mb_put, config_data_key7);
-	config_rcv=mbox_get(&noc[AES_SLOT].mb_get);
-	printk(KERN_INFO "[XT_NOCX] setup for aes done ret = %d\n", config_rcv);
-
-
+		mbox_put(&noc[AES_SLOT].mb_put, config_data_key4);
+		mbox_put(&noc[AES_SLOT].mb_put, config_data_key5);
+		mbox_put(&noc[AES_SLOT].mb_put, config_data_key6);
+		mbox_put(&noc[AES_SLOT].mb_put, config_data_key7);
+		config_rcv=mbox_get(&noc[AES_SLOT].mb_get);
+		printk(KERN_INFO "[XT_NOCX] setup for aes done ret = %d\n", config_rcv);
 	}
 	if(memcmp(name, "ips", 3) == 0){
-	printk(KERN_INFO "[XT_NOCX] setup for ips");
-	u32 address = 5; 	//send to sw
-	u32 header_len = ('h' << 24) | 1;	//the data vs. control byte
-	mbox_put(&noc[IPS_SLOT].mb_put, header_len);
-	mbox_put(&noc[IPS_SLOT].mb_put, address);
-	int ret = mbox_get(&noc[IPS_SLOT].mb_get);
-	printk(KERN_INFO "[XT_NOCX] setup for ips done: ret = %d\n", ret);
+		int ret = 0;
+		u32 address = 5; 	//send to sw
+		u32 header_len = ('h' << 24) | 1;	//the data vs. control byte
+		printk(KERN_INFO "[XT_NOCX] setup for ips");
+		mbox_put(&noc[IPS_SLOT].mb_put, header_len);
+		mbox_put(&noc[IPS_SLOT].mb_put, address);
+		ret = mbox_get(&noc[IPS_SLOT].mb_get);
+		printk(KERN_INFO "[XT_NOCX] setup for ips done: ret = %d\n", ret);
+
 	}
 
 }
@@ -373,6 +383,7 @@ static int noc_sendpkt(struct noc_pkt *npkt)
 	memcpy(shared_mem_s2h + total_len, npkt, off);
 	memcpy(shared_mem_s2h + total_len + off, npkt->payload, pkt_len);
 	total_len += npkt->payload_len + 12;
+	flush_dcache_page(pgv_to_page(shared_mem_s2h));		
 
 /*	for(i = 0; i < tmp_len; i++){
 		unsigned char val = shared_mem_s2h[i];
@@ -435,7 +446,13 @@ static void packet_hw_to_sw(struct noc_pkt *npkt)
 	if (skb) {
 //		DEBUG(printk(KERN_INFO "[xt_nocx] packet_hw_to_sw 3\n"));
 		dir = read_path_from_skb(skb);
-		engine_backlog_tail(skb, dir);
+	//	engine_backlog_tail(skb, dir);
+	//	printk(KERN_INFO "[-]\n");
+//		rcu_read_lock();
+		process_packet(skb, dir);
+//		rcu_read_unlock();
+	//	printk(KERN_INFO "[.]\n");
+
 //		DEBUG(printk(KERN_INFO "[xt_nocx] packet_hw_to_sw 4\n"));
 	}
 //		DEBUG(printk(KERN_INFO "[xt_nocx] packet_hw_to_sw 5\n"));
@@ -472,8 +489,11 @@ static int hwif_hw_to_sw_worker_thread(void *arg)
 		int ret = 0;
 		int i = 0;
 		//DEBUG(printk(KERN_INFO "[xt_nocx] waiting for hw packet \n"));
+
 		ret = mbox_get(&noc[HW_TO_SW_SLOT].mb_get);
 		//DEBUG(printk(KERN_INFO "[xt_nocx] received packet with len %d \n", ret));
+		//reconos_cache_flush();
+		flush_dcache_page(pgv_to_page(shared_mem_h2s));		
 
 		pkt_start = shared_mem_h2s;
 		shared_mem_to_noc_pkt(&npkt, pkt_start);
@@ -566,7 +586,8 @@ static int scheduler (void *arg)
 		prev_aes_packets = cur_aes_packets;
 		prev_ips_packets = cur_ips_packets;
 
-
+	//	printk(KERN_INFO "[----------- 5] %lld\n", cur_aes_packets);
+	//	printk(KERN_INFO "[----------- 2] %lld\n", cur_ips_packets);
 		
 		//case 1, both sw
 		if(delta_aes_packets + delta_ips_packets < 10){

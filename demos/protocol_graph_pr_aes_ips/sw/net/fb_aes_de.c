@@ -44,7 +44,7 @@ static int fb_aes_netrx(const struct fblock * const fb,
 
 	//we don't have jumbo packets.	
 	u16 pktlen = 0; //(u16)skb->len;
-	printk(KERN_INFO "[fb_aes] packet len orig = %d\n", skb->len);
+	//printk(KERN_INFO "[fb_aes] packet len orig = %d\n", skb->len);
 
 	fb_priv = rcu_dereference_raw(fb->private_data);
 	do {
@@ -55,10 +55,10 @@ static int fb_aes_netrx(const struct fblock * const fb,
 	} while (read_seqretry(&fb_priv->lock, seq));
 
 	read_lock(&fb_priv->klock);
-	printk(KERN_INFO "[fb_aes] packet len orig = %d, forwarding to idp %d\n", skb->len, fb_priv->port[*dir]);
+	//printk(KERN_INFO "[fb_aes] packet len orig = %d, forwarding to idp %d\n", skb->len, fb_priv->port[*dir]);
 	
 	if(*dir == TYPE_EGRESS){
-		printk(KERN_INFO "[fb_aes] EGRESS packet \n");
+		//printk(KERN_INFO "[fb_aes] EGRESS packet \n");
 
 		pktlen = (u16)skb->len;
 		//we need to pad to 16 bytes
@@ -70,7 +70,7 @@ static int fb_aes_netrx(const struct fblock * const fb,
 		memset(skb->data + pktlen, 0, padding); 
 		//write len to buffer
 //		skb->data[skb->len - 1] = (unsigned char) padding; //last byte is amount of padding;
-		printk(KERN_INFO "[fb_aes] packet len tot = %d\n", skb->len);
+		//printk(KERN_INFO "[fb_aes] packet len tot = %d\n", skb->len);
 
 		plaintext[0] = 0x6b;
 		plaintext[1] = 0xc1;
@@ -105,16 +105,16 @@ static int fb_aes_netrx(const struct fblock * const fb,
 		}
 		skb_put(skb,2);
 		//reserve space for the padding
-		printk(KERN_INFO "[fb_aes] packet len with len = %d\n", skb->len);
+		//printk(KERN_INFO "[fb_aes] packet len with len = %d\n", skb->len);
 		memcpy(&skb->data[skb->len - 2], &pktlen, 2);
 
 
 	}
 	else if(*dir == TYPE_INGRESS){
-		printk(KERN_INFO "[fb_aes] INGRESS packet \n");
+		//printk(KERN_INFO "[fb_aes] INGRESS packet \n");
 
 		memcpy(&pktlen, &skb->data[skb->len - 2], 2);
-		printk(KERN_INFO "[fb_aes] INGRESS received packet len %d \n", pktlen);
+		//printk(KERN_INFO "[fb_aes] INGRESS received packet len %d \n", pktlen);
 		
 		
 		for (i = 0; i < skb->len - 2; i += 16){
@@ -128,7 +128,7 @@ static int fb_aes_netrx(const struct fblock * const fb,
 
 
 		skb_trim(skb, pktlen);
-		printk(KERN_INFO "[fb_aes] packet decrypted\n");
+		//printk(KERN_INFO "[fb_aes] packet decrypted\n");
 	}
 	else{
 		printk(KERN_INFO "[fb_aes] drop packet. Unknown direction\n");
