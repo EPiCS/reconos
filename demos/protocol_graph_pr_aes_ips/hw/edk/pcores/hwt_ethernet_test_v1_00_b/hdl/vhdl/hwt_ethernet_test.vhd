@@ -152,6 +152,7 @@ component remove_header is
   		o_dst_idp : out  std_logic_vector(31 downto 0);
   		
   		-- comm to setup hash and address mapping table
+		i_config_in_progress : in std_logic;
   		i_set_idp : in std_logic;
   		i_set_address : in std_logic;
   		i_hash	: in std_logic_vector(63 downto 0);
@@ -267,6 +268,8 @@ end component;
 
 	signal nox_rx_srcIdp : std_logic_vector(31 downto 0);
 	signal nox_rx_dstIdp : std_logic_vector(31 downto 0);
+
+	signal config_in_progress : std_logic;
 	
 
 begin
@@ -417,6 +420,7 @@ begin
   		o_dst_idp => dst_idp,
   		
   		-- comm to setup hash and address mapping table
+		i_config_in_progress => config_in_progress,
   		i_set_idp => set_idp,
   		i_set_address => set_address,
   		i_hash	=> hash,
@@ -546,11 +550,13 @@ begin
 			hash <= (others => '0');
 			idp_in <= (others => '0');
 			address_in <= (others => '0');
+			config_in_progress <= '0';
 
             -- RESET YOUR OWN SIGNALS HERE
 		elsif rising_edge(clk) then
 			set_idp <= '0';
 			set_address <= '0';
+			config_in_progress <= '0';
 
 			case state is
 				
@@ -565,6 +571,8 @@ begin
 						else
 							hash(63 downto 32) <= data;
 							state <= STATE_SET_IDP_2;
+							config_in_progress <= '1';
+
 						end if;
 						--	set_idp <= '1';
 						--	hash  <= x"ABABABABABABABAB";
@@ -582,11 +590,13 @@ begin
 				
 				when STATE_SET_IDP_2 =>
 					osif_mbox_get(i_osif, o_osif, MBOX_RECV, data, done);
+					config_in_progress <= '1';
 					if done then
 						hash(31 downto 0) <= data;
 						state <= STATE_SET_IDP_3;
 					end if;
 				when STATE_SET_IDP_3 =>
+					config_in_progress <= '1';
 					osif_mbox_get(i_osif, o_osif, MBOX_RECV, data, done);
 					if done then
 						idp_in <= data;
@@ -594,6 +604,7 @@ begin
 						set_idp <= '1';
 					end if;
 				when STATE_SET_ADDRESS =>
+					config_in_progress <= '1';
 					osif_mbox_get(i_osif, o_osif, MBOX_RECV, data, done);
 					if done then
 						address_in <= data(5 downto 0);
@@ -604,6 +615,7 @@ begin
 
 				-- Echo the data
 				when STATE_PUT =>
+					config_in_progress <= '0';
 					osif_mbox_put(i_osif, o_osif, MBOX_SEND, rx_packet_count, ignore, done);
 					if done then state <= STATE_SET_IDP_1; end if;
 				
