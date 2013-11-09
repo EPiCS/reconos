@@ -567,7 +567,7 @@ NET "xps_hwicap_0/xps_hwicap_0/HWICAP_CTRL_I/icap_statemachine_I1/Icap_we" MAXDE
 
 
 INST "hwt_pr_0" AREA_GROUP = "pblock_hwt_pr_0";
-AREA_GROUP "pblock_hwt_pr_0" RANGE=SLICE_X12Y120:SLICE_X57Y199;
+AREA_GROUP "pblock_hwt_pr_0" RANGE=SLICE_X0Y120:SLICE_X61Y199;
 AREA_GROUP "pblock_hwt_pr_0" RANGE=DSP48_X0Y48:DSP48_X3Y79;
 AREA_GROUP "pblock_hwt_pr_0" RANGE=RAMB18_X1Y48:RAMB18_X3Y79;
 AREA_GROUP "pblock_hwt_pr_0" RANGE=RAMB36_X1Y24:RAMB36_X3Y39;
