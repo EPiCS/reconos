@@ -265,13 +265,42 @@ end component;
   	signal idp_in : std_logic_vector(31 downto 0);
   	signal address_in : std_logic_vector(5 downto 0);
 
+  	signal hash_new : std_logic_vector(63 downto 0);
+  	signal idp_in_new : std_logic_vector(31 downto 0);
+  	signal address_in_new : std_logic_vector(5 downto 0);
+
 	signal nox_rx_srcIdp : std_logic_vector(31 downto 0);
 	signal nox_rx_dstIdp : std_logic_vector(31 downto 0);
+
+	signal changing_config : std_logic := '0';
 	
 
 begin
 	
-
+	update_config: process(rst,clk,hash_new,hash,idp_in,idp_in_new,address_in,address_in_new,changing_config,rx_ll_sof_n,rx_ll_src_rdy_n) is
+	begin
+		if (rst = '1') then
+			hash       <= (others => '0');
+			idp_in     <= (others => '0');
+			address_in <= (others => '0');
+			set_address <= '0';
+			set_idp     <= '0';
+		elsif rising_edge(clk) then
+			if (changing_config = '0' and rx_ll_src_rdy_n = '0' and rx_ll_sof_n = '0' ) then
+				hash       <= hash_new;
+				idp_in     <= idp_in_new;
+				address_in <= address_in_new;
+				set_address <= '1';
+				set_idp     <= '1';
+			else
+				hash       <= hash;
+				idp_in     <= idp_in;
+				address_in <= address_in;
+				set_address <= '0';
+				set_idp     <= '0';
+			end if;
+		end if;
+	end process;
    
 
     -- PUT YOUR OWN INSTANCES HERE
@@ -533,7 +562,7 @@ begin
 		if rst = '1' then
 			osif_reset(o_osif);
 			memif_reset(o_memif);
-			state <= STATE_GET;
+			state <= STATE_SET_IDP_1;
 			--dst_idp  <= (others  => '0');
 			--src_idp  <= (others  => '0');
 			--latency_critical  <= '0';
@@ -541,16 +570,17 @@ begin
 			--priority  <= (others  => '0');
 			--global_addr  <= "0001"; --default: send all packets to sw
 			--local_addr  <= "01";
-			set_idp <= '0';
-			set_address <= '0';
-			hash <= (others => '0');
-			idp_in <= (others => '0');
-			address_in <= (others => '0');
+			--set_idp <= '0';
+			--set_address <= '0';
+			hash_new <= (others => '0');
+			idp_in_new <= (others => '0');
+			address_in_new <= (others => '0');
+			changing_config <= '0';
 
             -- RESET YOUR OWN SIGNALS HERE
 		elsif rising_edge(clk) then
-			set_idp <= '0';
-			set_address <= '0';
+			--set_idp <= '0';
+			--set_address <= '0';
 
 			case state is
 				
@@ -558,12 +588,14 @@ begin
 
 				-- Get some data
 				when STATE_SET_IDP_1 =>
+					changing_config <= '0';
 					osif_mbox_get(i_osif, o_osif, MBOX_RECV, data, done);
 					if done then
 						if (data = X"FFFFFFFF") then
 							state <= STATE_THREAD_EXIT;
 						else
-							hash(63 downto 32) <= data;
+							changing_config <= '1';
+							hash_new(63 downto 32) <= data;
 							state <= STATE_SET_IDP_2;
 						end if;
 						--	set_idp <= '1';
@@ -581,35 +613,39 @@ begin
 					end if;
 				
 				when STATE_SET_IDP_2 =>
+					changing_config <= '1';
 					osif_mbox_get(i_osif, o_osif, MBOX_RECV, data, done);
 					if done then
-						hash(31 downto 0) <= data;
+						hash_new(31 downto 0) <= data;
 						state <= STATE_SET_IDP_3;
 					end if;
 				when STATE_SET_IDP_3 =>
+					changing_config <= '1';
 					osif_mbox_get(i_osif, o_osif, MBOX_RECV, data, done);
 					if done then
-						idp_in <= data;
+						idp_in_new <= data;
 						state <= STATE_SET_ADDRESS;
-						set_idp <= '1';
+						--set_idp <= '1';
 					end if;
 				when STATE_SET_ADDRESS =>
+					changing_config <= '1';
 					osif_mbox_get(i_osif, o_osif, MBOX_RECV, data, done);
 					if done then
-						address_in <= data(5 downto 0);
+						address_in_new <= data(5 downto 0);
 						state <= STATE_PUT;
-						set_address <= '1';
+						--set_address <= '1';
 					end if;
 
 
 				-- Echo the data
 				when STATE_PUT =>
+					changing_config <= '0';
 					osif_mbox_put(i_osif, o_osif, MBOX_SEND, rx_packet_count, ignore, done);
 					if done then state <= STATE_SET_IDP_1; end if;
 				
 				when STATE_PUT2 =>
 					osif_mbox_put(i_osif, o_osif, MBOX_SEND, tx_packet_count, ignore, done);
-					if done then state <= STATE_GET; end if;
+					if done then state <= STATE_SET_IDP_1; end if;
 
 				-- thread exit
 				when STATE_THREAD_EXIT =>
@@ -625,3 +661,4 @@ begin
 
 
 end architecture;
+
