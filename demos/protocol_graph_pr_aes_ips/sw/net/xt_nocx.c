@@ -44,6 +44,7 @@ enum noc_hw_slots {
 #define DEBUG(fnt)		(fnt)
 //#define DEBUG(fnt)
 extern struct proc_dir_entry *lana_proc_dir;
+static struct proc_dir_entry *stats_proc;
 static struct proc_dir_entry *scheduler_proc;
 
 struct noc_slot {
@@ -76,6 +77,16 @@ static u64 hw2sw_packets[10];
 
 int current_mapping = 0; //sw
 int reconfig_done = 0;
+
+struct stats {
+	u64 timestamp;
+	u32 cpu_utilization;
+	u32 delta_packets_aes;
+	u32 delta_packets_ips;
+	u32 mapping;
+};
+
+struct stats stats_array[200];
 
 DECLARE_WAIT_QUEUE_HEAD(wait_queue);
 
@@ -143,14 +154,14 @@ void set_hw_flag(struct fblock *fb, unsigned int flag)
 			u32 config_eth_hash_2 = 0xabababab;
 			u32 config_eth_idp = 0x2;
 			u32 config_eth_address = 1; //global 0, local 1 -> ips
-			printk(KERN_INFO "[xt_nocx] changing eth config for ips: flag hw");
+			//printk(KERN_INFO "[xt_nocx] changing eth config for ips: flag hw");
 
 			mbox_put(&noc[ETH_SLOT].mb_put, config_eth_hash_1 ); 
 			mbox_put(&noc[ETH_SLOT].mb_put, config_eth_hash_2);
 			mbox_put(&noc[ETH_SLOT].mb_put, config_eth_idp);
 			mbox_put(&noc[ETH_SLOT].mb_put, config_eth_address);
 			ret = mbox_get(&noc[ETH_SLOT].mb_get);
-			//printk(KERN_INFO "hwt_ethernet configured - 2\n");
+			//printk(KERN_INFO "[xt_nocx] changing eth config for ips: flag hw done: %d\n", ret);
 		}
 		else{
 			//printk(KERN_INFO "[xt_nocx] unknown flag %d\n", flag);
@@ -162,7 +173,7 @@ void set_hw_flag(struct fblock *fb, unsigned int flag)
 			u32 config_eth_hash_2 = 0xcdcdcdcd;
 			u32 config_eth_idp = 0x5; //TODO
 			u32 config_eth_address = 1; //global 0, local 1 -> aes
-			printk(KERN_INFO "[xt_nocx] changing eth config for aes: flag hw");
+			//printk(KERN_INFO "[xt_nocx] changing eth config for aes: flag hw");
 
 			mbox_put(&noc[ETH_SLOT].mb_put, config_eth_hash_1 ); 
 			mbox_put(&noc[ETH_SLOT].mb_put, config_eth_hash_2);
@@ -170,6 +181,8 @@ void set_hw_flag(struct fblock *fb, unsigned int flag)
 			mbox_put(&noc[ETH_SLOT].mb_put, config_eth_address);
 			ret = mbox_get(&noc[ETH_SLOT].mb_get);
 			//printk(KERN_INFO "hwt_ethernet configured - 2\n");
+			//printk(KERN_INFO "[xt_nocx] changing eth config for aes: flag hw done: %d", ret);
+
 		}
 		else{
 			//printk(KERN_INFO "[xt_nocx] unknown flag %d\n", flag);
@@ -180,6 +193,16 @@ void set_hw_flag(struct fblock *fb, unsigned int flag)
 void reconfig_hw_block(char *name){
 	if(memcmp(name, "aes", 3) == 0){
 		/* setup AES slot.  */
+		int ret = 0;
+		//printk(KERN_INFO "[XT_NOCX] setup for aes_dummy");
+#ifdef TESTING
+		u32 address = 5; 	//send to sw
+		mbox_put(&noc[AES_SLOT].mb_put, address);
+		ret=mbox_get(&noc[AES_SLOT].mb_get);
+	//	printk(KERN_INFO "[XT_NOCX] setup for aes_dummy done: ret = %d\n", ret);
+#endif
+
+//#ifdef AES_WORKING
 		u32 config_data_start=1;
 		u32 config_rcv=0;
 		u32 config_data_mode=0;	//"....1100"=12=mode128, mode192=13, mode256=14,15
@@ -211,8 +234,19 @@ void reconfig_hw_block(char *name){
 		mbox_put(&noc[AES_SLOT].mb_put, config_data_key7);
 		config_rcv=mbox_get(&noc[AES_SLOT].mb_get);
 		printk(KERN_INFO "[XT_NOCX] setup for aes done ret = %d\n", config_rcv);
+//#endif
 	}
 	if(memcmp(name, "ips", 3) == 0){
+#ifdef TESTING
+		int ret = 0;
+	//	printk(KERN_INFO "[XT_NOCX] setup for ips_dummy");
+		u32 address = 5; 	//send to sw
+		mbox_put(&noc[IPS_SLOT].mb_put, address);
+		ret = mbox_get(&noc[IPS_SLOT].mb_get);
+	//	printk(KERN_INFO "[XT_NOCX] setup for ips_dummy done: ret = %d\n", ret);
+
+#endif
+//#ifdef AES_WORKING
 		int ret = 0;
 		u32 address = 5; 	//send to sw
 		u32 header_len = ('h' << 24) | 1;	//the data vs. control byte
@@ -221,6 +255,8 @@ void reconfig_hw_block(char *name){
 		mbox_put(&noc[IPS_SLOT].mb_put, address);
 		ret = mbox_get(&noc[IPS_SLOT].mb_get);
 		printk(KERN_INFO "[XT_NOCX] setup for ips done: ret = %d\n", ret);
+//#endif
+
 
 	}
 
@@ -230,9 +266,10 @@ void unset_hw_flag(struct fblock *fb, unsigned int flag)
 {
 	//TODO: Do this depending on the fblock - for now we only support eth.
 	//printk(KERN_INFO "[xt_nocx] unsetting\n");
+	int ret;
 	if(memcmp(fb->name, "ips", 3) == 0){
 		if (flag == 2){
-		printk(KERN_INFO "[xt_nocx] changing eth config for ips: unflag hw");
+	//	printk(KERN_INFO "[xt_nocx] changing eth config for ips: unflag hw");
 			u32 config_eth_hash_1 = 0xabababab;
 			u32 config_eth_hash_2 = 0xabababab;
 			u32 config_eth_idp = 0x2;
@@ -242,7 +279,9 @@ void unset_hw_flag(struct fblock *fb, unsigned int flag)
 			mbox_put(&noc[ETH_SLOT].mb_put, config_eth_hash_2);
 			mbox_put(&noc[ETH_SLOT].mb_put, config_eth_idp);
 			mbox_put(&noc[ETH_SLOT].mb_put, config_eth_address);
-			int ret = mbox_get(&noc[ETH_SLOT].mb_get);
+			ret = mbox_get(&noc[ETH_SLOT].mb_get);
+	//		printk(KERN_INFO "[xt_nocx] changing eth config for ips: unflag hw done %d", ret);
+
 			//printk(KERN_INFO "hwt_ethernet configured - 2\n");
 		}
 		else{
@@ -251,7 +290,7 @@ void unset_hw_flag(struct fblock *fb, unsigned int flag)
 	}
 	if(memcmp(fb->name, "aes", 3) == 0){
 		if (flag == 2){
-			printk(KERN_INFO "[xt_nocx] changing eth config for aes: unflag hw");
+	//		printk(KERN_INFO "[xt_nocx] changing eth config for aes: unflag hw");
 			u32 config_eth_hash_1 = 0xcdcdcdcd;
 			u32 config_eth_hash_2 = 0xcdcdcdcd;
 			u32 config_eth_idp = 0x5; //TODO
@@ -261,7 +300,9 @@ void unset_hw_flag(struct fblock *fb, unsigned int flag)
 			mbox_put(&noc[ETH_SLOT].mb_put, config_eth_hash_2);
 			mbox_put(&noc[ETH_SLOT].mb_put, config_eth_idp);
 			mbox_put(&noc[ETH_SLOT].mb_put, config_eth_address);
-			int ret = mbox_get(&noc[ETH_SLOT].mb_get);
+			ret = mbox_get(&noc[ETH_SLOT].mb_get);
+	//		printk(KERN_INFO "[xt_nocx] changing eth config for aes: unflag hw %d", ret);
+
 			//printk(KERN_INFO "hwt_ethernet configured - 2\n");
 		}
 		else{
@@ -446,7 +487,7 @@ static void packet_hw_to_sw(struct noc_pkt *npkt)
 	if (skb) {
 //		DEBUG(printk(KERN_INFO "[xt_nocx] packet_hw_to_sw 3\n"));
 		dir = read_path_from_skb(skb);
-	//	engine_backlog_tail(skb, dir);
+//		engine_backlog_tail(skb, dir);
 	//	printk(KERN_INFO "[-]\n");
 //		rcu_read_lock();
 		process_packet(skb, dir);
@@ -475,8 +516,62 @@ static void shared_mem_to_noc_pkt(struct noc_pkt * npkt, char *shared_mem){
 	npkt->payload = shared_mem + 12;
 }
 
+
+void config_eth(int addr){
+//	printk(KERN_INFO "[XT_NOCX] setup for eth");
+
+	u32 config_eth_hash_1 = 0xcdcdcdcd;
+	u32 config_eth_hash_2 = 0xcdcdcdcd;
+	u32 config_eth_idp = 0x2; //TODO
+	u32 config_eth_address = addr; //global 0, local 1 -> aes
+	mbox_put(&noc[ETH_SLOT].mb_put, config_eth_hash_1 ); 
+	mbox_put(&noc[ETH_SLOT].mb_put, config_eth_hash_2);
+	mbox_put(&noc[ETH_SLOT].mb_put, config_eth_idp);
+	mbox_put(&noc[ETH_SLOT].mb_put, config_eth_address);
+	int ret = mbox_get(&noc[ETH_SLOT].mb_get);
+//	printk(KERN_INFO "[XT_NOCX] setup for eth done, ret = %d", ret);
+
+
+}
+void config_eth_ips(int addr){
+//	printk(KERN_INFO "[XT_NOCX] setup for eth");
+
+	u32 config_eth_hash_1 = 0xabababab;
+	u32 config_eth_hash_2 = 0xabababab;
+	u32 config_eth_idp = 0x2; //TODO
+	u32 config_eth_address = addr; //global 0, local 1 -> aes
+	mbox_put(&noc[ETH_SLOT].mb_put, config_eth_hash_1 ); 
+	mbox_put(&noc[ETH_SLOT].mb_put, config_eth_hash_2);
+	mbox_put(&noc[ETH_SLOT].mb_put, config_eth_idp);
+	mbox_put(&noc[ETH_SLOT].mb_put, config_eth_address);
+	int ret = mbox_get(&noc[ETH_SLOT].mb_get);
+
+//	printk(KERN_INFO "[XT_NOCX] setup for eth done, ret = %d", ret);
+
+
+}
+
+void config_pr(){
+//	printk(KERN_INFO "[XT_NOCX] setup for ips");
+	u32 address = 5; 	//send to sw
+	//u32 header_len = ('h' << 24) | 1;	//the data vs. control byte
+	//mbox_put(&dpr_mb_put, header_len);
+	mbox_put(&noc[AES_SLOT].mb_put, address);
+
+	int ret = mbox_get(&noc[AES_SLOT].mb_get);
+//	printk(KERN_INFO "[XT_NOCX] setup for ips done: ret = %d\n", ret);
+
+
+}
+
+
 static int hwif_hw_to_sw_worker_thread(void *arg)
 {
+	struct lananlmsg msg_ips;
+	struct lananlmsg msg_aes;
+	memcpy(msg_ips.buff, "ips", 4);
+	memcpy(msg_aes.buff, "aes", 4);
+
 	struct noc_pkt npkt;
 	size_t off = sizeof(npkt) - sizeof(npkt.payload);
 	int i = 0;
@@ -487,26 +582,83 @@ static int hwif_hw_to_sw_worker_thread(void *arg)
 		/* sleeps here */
 		u8 * pkt_start;
 		int ret = 0;
-		int i = 0;
+		u64 stat_index = 0;
 		//DEBUG(printk(KERN_INFO "[xt_nocx] waiting for hw packet \n"));
-
 		ret = mbox_get(&noc[HW_TO_SW_SLOT].mb_get);
 		//DEBUG(printk(KERN_INFO "[xt_nocx] received packet with len %d \n", ret));
 		//reconos_cache_flush();
-		flush_dcache_page(pgv_to_page(shared_mem_h2s));		
+//		flush_dcache_page(pgv_to_page(shared_mem_h2s));		
 
 		pkt_start = shared_mem_h2s;
 		shared_mem_to_noc_pkt(&npkt, pkt_start);
 		//for now, as long as the hw uses a different pkt format...
 		//DEBUG(printk(KERN_INFO "[xt_nocx]: got npkt from hw: first payload: %x\n", npkt.payload[0]));
 		//DEBUG(dump_npkt(&npkt));
-		//TODO: loop here through all packets
+		//TODO: add following line again.
 		packet_hw_to_sw(&npkt);
-		//update statistics, later, this needs to be done on a per connection basis. Do it more efficiantly!
-		
-		hw2sw_packets[npkt.dst_idp]++;
+		//update statistics
+	//	printk(KERN_INFO "dst idp: %d\n", npkt.dst_idp);
+		stat_index = (u64)(npkt.dst_idp);
+		hw2sw_packets[stat_index]++;
+		i++;
 		//notify hw that we read the data
 		mbox_put(&noc[HW_TO_SW_SLOT].mb_put, shared_mem_h2s);
+
+#ifdef DEBUG_RECONFIG
+		if (i%1000 == 0){
+			printk(KERN_INFO "beginning reconfig%d\n", i);
+
+	//		printk(KERN_INFO "beginning reconfig %llu %llu %llu %llu %llu %llu \n",  
+	//			hw2sw_packets[0], hw2sw_packets[1], hw2sw_packets[2], 
+	//			hw2sw_packets[3], hw2sw_packets[4], hw2sw_packets[5]);
+//#ifdef SCHED_ACTIVE
+			if (fblock_userctl_unset_flags(&msg_ips, FBLOCK_FLAGS_TO_HW) < 0){
+					printk(KERN_INFO "[xt_nocx] unset hw flag ips failed");
+			}
+			if (fblock_userctl_unset_flags(&msg_aes, FBLOCK_FLAGS_TO_HW) < 0){
+					printk(KERN_INFO "[xt_nocx] unset hw flag aes failed");
+			}
+
+			config_eth(5);
+			config_eth_ips(5);
+
+			if (current_mapping == 2)
+				current_mapping = 3;
+			else
+				current_mapping = 2;
+			//mbox_put(&dpr_mb_put,0xffffffff);
+			mbox_put(&noc[AES_SLOT].mb_put, 0xffffffff);
+
+			reconfig_done = 0;
+			reconos_slot_reset(AES_SLOT,1);
+
+			wake_up_interruptible(&wait_queue);
+			wait_event_interruptible(wait_queue, reconfig_done == 1); 
+
+		//	reconos_hwt_setresources(&dpr_hwt,dpr_res,2);
+		//	reconos_hwt_create(&dpr_hwt,DPR_HWT_SLOT_NR,NULL);
+			reconos_hwt_setresources(&noc[AES_SLOT].hwt, noc[AES_SLOT].res, ARRAY_SIZE(noc[AES_SLOT].res));
+			reconos_hwt_create(&noc[AES_SLOT].hwt, AES_SLOT, NULL);
+ 
+
+		//	config_pr();
+			reconfig_hw_block("ips");
+
+			config_eth(1);
+			config_eth_ips(1);
+			if (fblock_userctl_set_flags(&msg_aes, FBLOCK_FLAGS_TO_HW) < 0){
+					printk(KERN_INFO "[xt_nocx] unset hw flag ips failed");
+			}
+			if (fblock_userctl_set_flags(&msg_ips, FBLOCK_FLAGS_TO_HW) < 0){
+					printk(KERN_INFO "[xt_nocx] unset hw flag ips failed");
+			}
+
+
+		//	printk(KERN_INFO "ending reconfig\n");
+
+//#endif
+		}
+#endif
 	}
 
 	return 0;
@@ -553,10 +705,11 @@ static int scheduler (void *arg)
 	u64 cur_aes_packets = 0;
 	u64 prev_ips_packets = 0;
 	u64 cur_ips_packets = 0;
-
+	u64 jiffies_start = 0;
 	int delta_packets = 0;
 	int delta_aes_packets = 0;
 	int delta_ips_packets = 0;
+	int i = 0;
 
 	int counter = 0;
 	msleep(40000); // sleep 20 second;
@@ -569,12 +722,14 @@ static int scheduler (void *arg)
 
 	msleep(1000); // sleep 10 second;
 	
-
+	jiffies_start = jiffies;
 	while(likely(!kthread_should_stop())){
 		struct lananlmsg msg_ips;
 		struct lananlmsg msg_aes;
 		memcpy(msg_ips.buff, "ips", 4);
 		memcpy(msg_aes.buff, "aes", 4);
+
+		//we do it everytime.
 
 		cur_cpu = kstat_cpu(0).cpustat.idle;
 		delta_cpu = cur_cpu - prev_cpu;
@@ -588,9 +743,17 @@ static int scheduler (void *arg)
 
 	//	printk(KERN_INFO "[----------- 5] %lld\n", cur_aes_packets);
 	//	printk(KERN_INFO "[----------- 2] %lld\n", cur_ips_packets);
-		
+			if (i < 200){
+			stats_array[i].timestamp = jiffies - jiffies_start;
+			stats_array[i].cpu_utilization = delta_cpu;
+			stats_array[i].delta_packets_aes = delta_aes_packets;
+			stats_array[i].delta_packets_ips = delta_ips_packets;
+			stats_array[i].mapping = current_mapping;
+			i++;
+		}
+
 		//case 1, both sw
-		if(delta_aes_packets + delta_ips_packets < 10){
+		if(delta_aes_packets + delta_ips_packets < 100){
 			if(current_mapping != 1){
 			
 				current_mapping = 1;
@@ -796,6 +959,23 @@ static int scheduler (void *arg)
 	return 0;
 }
 
+static int stats_procfs(char *page, char **start, off_t offset, 
+			int count, int *eof, void *data) {
+	int i = 0;
+	int header_len = sprintf(page, "timestamp cpu_utilization delta_packets_aes delta_packets_ips mapping\n");
+	int index = header_len;
+	for(i = 0; i < 200; i++){
+		int len = sprintf(page + index, "%lld %u %u %u %u\n", 
+				stats_array[i].timestamp, stats_array[i].cpu_utilization, stats_array[i].delta_packets_aes,
+				stats_array[i].delta_packets_ips, stats_array[i].mapping);
+		index += len;
+	}
+	*eof = 1;
+	return index + 1;
+	
+}
+
+
 static int schedular_procfs_write(struct file *file, const char __user *buffer, unsigned long count, void *data){
 	printk(KERN_INFO "[lana] got ack from userspace\n");
 	reconfig_done = 1;
@@ -821,15 +1001,19 @@ static int schedular_procfs_read(char *page, char **start, off_t offset,
 	}
 	if(current_mapping == 2){
 		printk(KERN_INFO "[lana] mapping aes hw, ips sw");
+		//sprintf(page, "partial_aes.bit");
 		sprintf(page, "partial_aes.bit");
+		
 	}
 	if(current_mapping == 3){
 		printk(KERN_INFO "[lana] mapping aes sw, ips hw");
+		//sprintf(page, "partial_ips.bit");
 		sprintf(page, "partial_ips.bit");
+
 	}
 	*eof = 1;
 	return 16;
-
+	//return 14;
 
 
 #ifdef one_proc
@@ -894,7 +1078,7 @@ static int reconos_noc_init(void)
 
 
 	/* setup AES slot. Note, this should be done by a controller */
-//#ifdef AES_CONFIGURED
+#ifdef AES_CONFIGURED
 	u32 config_data_start=1;
 	u32 config_rcv=0;
 	u32 config_data_mode=0;	//"....1100"=12=mode128, mode192=13, mode256=14,15
@@ -924,7 +1108,7 @@ static int reconos_noc_init(void)
 	mbox_put(&noc[AES_SLOT].mb_put, config_data_key7);
 	config_rcv=mbox_get(&noc[AES_SLOT].mb_get);
 	printk(KERN_INFO "[lana] noc setup hw aes\n");
-//#endif
+#endif
 
 #ifdef IPS_CONFIGURED
 	u32 address = 5; 	//send to sw
@@ -932,6 +1116,7 @@ static int reconos_noc_init(void)
 	mbox_put(&noc[IPS_SLOT].mb_put, address);
 	mbox_put(&noc[IPS_SLOT].mb_put, header_len);
 #endif
+	reconfig_hw_block("aes");	
 	return 0;
 }
 
@@ -975,6 +1160,10 @@ int init_hwif(void)
 
 //	scheduler_proc = 
 //	create_proc_read_entry("scheduler", 0400, lana_proc_dir, schedular_procfs, NULL);
+	stats_proc = create_proc_read_entry("stats", 0400, lana_proc_dir, stats_procfs, NULL);
+	if (!stats_proc)
+		goto out_t4;
+	
 	scheduler_proc = create_proc_entry("scheduler", 0644, lana_proc_dir);
 	if (!scheduler_proc)
 		goto out_t4;
@@ -1001,6 +1190,8 @@ void cleanup_hwif(void)
 	kthread_stop(thread_sw2hw);
 	kthread_stop(thread_scheduler);
 	remove_proc_entry("scheduler", lana_proc_dir);
+	remove_proc_entry("stats", lana_proc_dir);
+
 	reconos_noc_cleanup();
 }
 #endif /* WITH_RECONOS */

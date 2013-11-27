@@ -11,6 +11,7 @@
 #include <linux/netlink.h>
 #include <linux/types.h>
 #include <linux/if.h>
+#include <poll.h>
 
 #include "xt_vlink.h"
 #include "xt_fblock.h"
@@ -90,17 +91,30 @@ int main(int argc, char **argv)
 		//printf("open file\n");
 		//fprintf(stderr, "open file\n");
 		//fp = fopen("copy_rfc6921.txt", "w");
+	//	struct pollfd fds;
+	//	fds.fd = sock;
+	//	fds.events = POLLIN;
 		while (1){//(tot_len < 15100){
+		//	printf("waiting for poll\n");
+		//	fprintf(stderr, "waiting for poll\n");
+
+			//ret = poll(&fds, 1, -1);
+		//	printf("poll returned\n");
+		//	fprintf(stderr, "poll returned\n");
+
 			ret = recvfrom(sock, msg_buff, MTU, 0, NULL, NULL);
 			//perror("recvfrom");			
 			if (ret < 0) {
 				if (errno != 11)
 					printf("Error: ret:%d, errno:%d\n", ret, errno);
-				sleep(0); //TODO: find out how to actually do a blocking sleep!
+				sleep(5); //TODO: find out how to actually do a blocking sleep!
 				continue;
 			}
+		//	printf("len %d\n", ret);
+		//	fprintf(stderr, "len %d\n", ret);
+
 			nr_packets++;
-			if (nr_packets %10 == 0){
+			if (nr_packets %1000 == 0){
 				printf("packet count %d\n", nr_packets);
 				fprintf(stderr, "packet count %d\n", nr_packets);
 			}

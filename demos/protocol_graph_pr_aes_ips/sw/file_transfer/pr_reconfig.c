@@ -9,7 +9,8 @@ int main(){
 	char *buf = malloc(120);
 	size_t len = 0;
 	size_t size = 120;
-	char part_1[15] = "cat bitfiles/";
+//	char part_1[15] = "cat bitfiles/";
+	char part_1[5] = "cat ";
 	char part_2[14] = " > /dev/icap0";
 	//unlock the kernel
 	fwrite(buf, 1, 1, f); 
@@ -30,9 +31,13 @@ int main(){
 			continue;
 		}
 		char * command = malloc(30 + len);
-		memcpy(command, part_1, 13);
-		memcpy(command + 13, buf, len -1);
-		memcpy(command + 13 + len - 1, part_2, 14);
+		memcpy(command, part_1, strlen(part_1));
+		memcpy(command + strlen(part_1), buf, len -1);
+		memcpy(command + strlen(part_1) + len - 1, part_2, 14);
+
+	//	memcpy(command, part_1, 13);
+	//	memcpy(command + 13, buf, len -1);
+	//	memcpy(command + 13 + len - 1, part_2, 14);
 		printf("command: %s\n", command);
 		if(system(command) == -1){
 			perror("system");

@@ -45,8 +45,7 @@ entity remove_header is
   		o_dst_idp : out  std_logic_vector(31 downto 0);
   		
   		-- comm to setup hash and address mapping table
-		i_config_in_progress : in std_logic;
-		i_set_idp : in std_logic;
+  		i_set_idp : in std_logic;
   		i_set_address : in std_logic;
   		i_hash	: in std_logic_vector(63 downto 0);
   		i_idp 	: in std_logic_vector(31 downto 0);
@@ -76,7 +75,7 @@ architecture Behavioral of remove_header is
     	);
 	end component;
 	
-	type testing_state_t is (STATE_INIT, STATE_IDLE, STATE_IGNORE, STATE_READ_HASH, STATE_LOOKUP_0, STATE_LOOKUP, STATE_LOOKUP_2, STATE_FORWARD, STATE_FORWARD_SOF);
+	type testing_state_t is (STATE_INIT, STATE_IDLE, STATE_IGNORE, STATE_READ_HASH, STATE_LOOKUP, STATE_LOOKUP_2, STATE_FORWARD, STATE_FORWARD_SOF);
 	signal state 	    : testing_state_t;
 	signal state_next   : testing_state_t;
 
@@ -104,11 +103,11 @@ architecture Behavioral of remove_header is
 begin
 
 	rem_proc : process(state, i_rx_ll_data, i_rx_ll_src_rdy_n, i_rx_ll_sof_n, counter, hash, i_idp, 
-		idp_valid, int_valid_idp, address_valid, address_out, i_tx_dst_rdy, i_rx_ll_eof_n, int_addr,
-		i_config_in_progress
+		idp_valid, int_valid_idp, address_valid, address_out, i_tx_dst_rdy, i_rx_ll_eof_n, int_addr
 	)
 	begin
 		state_next  <= state;
+		o_rx_ll_dst_rdy_n  <= '0';
 		o_tx_src_rdy  <= '0';
 		o_tx_data  <= i_rx_ll_data;
 		o_tx_sof <= '0';
@@ -126,16 +125,14 @@ begin
 		int_idp  <= idp_out;
 		int_addr_next  <= int_addr;
 		
-     		counter_next  <= counter;
+     	counter_next  <= counter;
 		hash_next  <= hash;
 		int_valid_idp_next  <= int_valid_idp;
 		
 		get_idp  <= '0';
 		get_address  <= '0';
 		int_hash  <= hash;
-
-		--if we are configuring, we are not ready...
-		o_rx_ll_dst_rdy_n <= '0'; --i_config_in_progress;
+		
 		
 	    case state is
 	    	when STATE_INIT  => 
@@ -158,34 +155,20 @@ begin
 	    			hash_next(64 -1 - counter * 8 downto 64 -  (counter + 1)*8)  <= i_rx_ll_data;
 	    			counter_next  <= counter + 1;
 	    			if counter + 1 = 8 then
-	    				state_next  <= STATE_LOOKUP_0;
+	    				state_next  <= STATE_LOOKUP;
 	    				counter_next  <= 0;
 	    				int_hash  <= hash(63 downto 8) & i_rx_ll_data;
 	    				--o_rx_ll_dst_rdy_n  <= '1';
-				end if;
+	    				get_idp  <= '1';
+	    			end if;
 	    		end if;
-		when STATE_LOOKUP_0 =>
-			if i_config_in_progress = '0' then
-	    			get_idp  <= '1';
-				state_next <= STATE_LOOKUP;
-			end if;
-
 	    	when STATE_LOOKUP  => 
-			o_rx_ll_dst_rdy_n  <= '1';
-			if i_config_in_progress = '1' then
-				state_next <= STATE_LOOKUP;
-			else
-				int_valid_idp_next  <= idp_valid;
-	    			state_next  <= STATE_LOOKUP_2;
-	    			get_address  <= '1';
-			end if;
-
-    		    	when STATE_LOOKUP_2  => 
+	    		o_rx_ll_dst_rdy_n  <= '1';
+	    		int_valid_idp_next  <= idp_valid;
+	    		state_next  <= STATE_LOOKUP_2;
+	    		get_address  <= '1';
+	    	when STATE_LOOKUP_2  => 
 			o_rx_ll_dst_rdy_n <= '1';
-			if i_config_in_progress = '1' then
-				state_next <= STATE_LOOKUP;
-			else
-
 	    		if int_valid_idp = '1' and address_valid = '1' then
 	    			int_addr_next  <= address_out;
 	    			o_global_addr  <= address_out(5 downto 2);
@@ -197,7 +180,6 @@ begin
 	    		end if;
 	    		
 	    		state_next  <= STATE_FORWARD_SOF;
-			end if;
 	    	when STATE_FORWARD_SOF  => 
 	    		o_tx_sof  <= '1';
 	    		o_tx_src_rdy  <= not i_rx_ll_src_rdy_n;
