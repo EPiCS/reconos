@@ -114,10 +114,10 @@ int main(int argc, char **argv)
 		//	fprintf(stderr, "len %d\n", ret);
 
 			nr_packets++;
-			if (nr_packets %1000 == 0){
-				printf("packet count %d\n", nr_packets);
-				fprintf(stderr, "packet count %d\n", nr_packets);
-			}
+//			if (nr_packets %1000 == 0){
+//				printf("packet count %d\n", nr_packets);
+//				fprintf(stderr, "packet count %d\n", nr_packets);
+//			}
 			
 		//	fwrite(msg_buff, 1, ret, fp);
 			//printf("file_transfer_simple: received msg with len %d \n", ret);

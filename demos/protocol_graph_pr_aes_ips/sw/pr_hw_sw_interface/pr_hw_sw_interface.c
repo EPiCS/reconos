@@ -157,13 +157,13 @@ void config_aes(){
 }
 
 void config_ips(){
-//	printk(KERN_INFO "[XT_NOCX] setup for ips");
+	printk(KERN_INFO "[XT_NOCX] setup for ips");
 	u32 address = 5; 	//send to sw
-	//u32 header_len = ('h' << 24) | 1;	//the data vs. control byte
-	//mbox_put(&dpr_mb_put, header_len);
+	u32 header_len = ('h' << 24) | 1;	//the data vs. control byte
+	mbox_put(&dpr_mb_put, header_len);
 	mbox_put(&dpr_mb_put, address);
 	int ret = mbox_get(&dpr_mb_get);
-//	printk(KERN_INFO "[XT_NOCX] setup for ips done: ret = %d\n", ret);
+	printk(KERN_INFO "[XT_NOCX] setup for ips done: ret = %d\n", ret);
 
 
 }
@@ -209,7 +209,7 @@ static int hw_sw_interface_thread_entry(void *arg)
 	int i = 0;
 	while(likely(!kthread_should_stop())){
 //		if (packet_count%10 == 0) {
-//			printk(KERN_INFO "[pr_hw_sw_interface] wait for message %d\n", packet_count );
+		//	printk(KERN_INFO "[pr_hw_sw_interface] wait for message %d\n", packet_count );
 //		}
 	//	msleep(500);
 		result = mbox_get(&h2s_mb_get);
@@ -319,36 +319,57 @@ static int hw_sw_interface_thread_entry(void *arg)
 	//	}
 		if (packet_count %1000 == 0){
 		printk(KERN_INFO "destination idp: %d, len = %d\n", dst_idp, result);
-//		if (dst_idp == 0){
 		for (i = 0; i < 20; i+=4){
 			printk(KERN_ERR "%#x %#x %#x %#x", shared_mem_h2s[i], shared_mem_h2s[i+1], shared_mem_h2s[i+2], shared_mem_h2s[i+3]);
 
 		}
-	//	}
-
-
+	//	if (packet_count %10 == 0){
 
 			printk(KERN_INFO "beginning reconfig%d\n", packet_count);
 			config_eth(5);
 			config_eth_ips(5);
 
-			if (current_mapping == 2)
+			if (current_mapping == 2){
 				current_mapping = 3;
-			else
-				current_mapping = 2;
-			mbox_put(&dpr_mb_put,0xffffffff);
-			reconfig_done = 0;
-			reconos_slot_reset(DPR_HWT_SLOT_NR,1);
+				mbox_put(&dpr_mb_put,0xffffffff);
+				reconfig_done = 0;
+				reconos_slot_reset(DPR_HWT_SLOT_NR,1);
+				wake_up_interruptible(&wait_queue);
+				wait_event_interruptible(wait_queue, reconfig_done == 1); 
+				reconos_hwt_setresources(&dpr_hwt,dpr_res,2);
+				reconos_hwt_create(&dpr_hwt,DPR_HWT_SLOT_NR,NULL);
+				config_aes();
+				config_eth(1);
 
-			wake_up_interruptible(&wait_queue);
-			wait_event_interruptible(wait_queue, reconfig_done == 1); 
+
+
+			}
+			else {
+				current_mapping = 2;
+				mbox_put(&dpr_mb_put,0xffffffff);
+				reconfig_done = 0;
+				reconos_slot_reset(DPR_HWT_SLOT_NR,1);
+				reconos_hwt_setresources(&dpr_hwt,dpr_res,2);
+				reconos_hwt_create(&dpr_hwt,DPR_HWT_SLOT_NR,NULL);
+				config_ips();
+				config_eth_ips(1);
+
+
+
+			}
+		//	mbox_put(&dpr_mb_put,0xffffffff);
+		//	reconfig_done = 0;
+		//	reconos_slot_reset(DPR_HWT_SLOT_NR,1);
+
+		//	wake_up_interruptible(&wait_queue);
+		//	wait_event_interruptible(wait_queue, reconfig_done == 1); 
 		//	msleep(1000);
 
-			reconos_hwt_setresources(&dpr_hwt,dpr_res,2);
-			reconos_hwt_create(&dpr_hwt,DPR_HWT_SLOT_NR,NULL);
-			config_ips();
-			config_eth(1);
-			config_eth_ips(1);
+		//	reconos_hwt_setresources(&dpr_hwt,dpr_res,2);
+		//	reconos_hwt_create(&dpr_hwt,DPR_HWT_SLOT_NR,NULL);
+		//	config_ips();
+		//	config_eth(1);
+		//	config_eth_ips(1);
 			printk(KERN_INFO "ending reconfig\n");
 
 		}
@@ -444,13 +465,13 @@ static int schedular_procfs_read(char *page, char **start, off_t offset,
 	if(current_mapping == 2){
 		printk(KERN_INFO "[lana] mapping aes hw, ips sw");
 		//sprintf(page, "partial_aes.bit");
-		sprintf(page, "partial_a.bit");
+		sprintf(page, "partial_aes.bit");
 		
 	}
 	if(current_mapping == 3){
 		printk(KERN_INFO "[lana] mapping aes sw, ips hw");
 		//sprintf(page, "partial_ips.bit");
-		sprintf(page, "partial_b.bit");
+		sprintf(page, "partial_ips.bit");
 
 	}
 	*eof = 1;
@@ -529,8 +550,8 @@ static int __init init_pr_hw_sw_interface_module(void)
 	
 
 	// forward incoming packets (from physical ETH interface to partial reconfigurable functional block hwt_pr_0) 
-	config_eth(1);
-	config_eth_ips(1);
+	config_eth(5);
+	config_eth_ips(5);
 	//mbox_put(&eth_mb_put,1); // 1: -> partial block, 5: -> h2s
 	//ret = mbox_get(&eth_mb_get);
 	//ret = mbox_get(&eth_mb_get);

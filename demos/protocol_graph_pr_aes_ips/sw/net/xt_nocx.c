@@ -194,15 +194,15 @@ void reconfig_hw_block(char *name){
 	if(memcmp(name, "aes", 3) == 0){
 		/* setup AES slot.  */
 		int ret = 0;
-		//printk(KERN_INFO "[XT_NOCX] setup for aes_dummy");
+		printk(KERN_INFO "[XT_NOCX] setup for aes_dummy");
 #ifdef TESTING
 		u32 address = 5; 	//send to sw
 		mbox_put(&noc[AES_SLOT].mb_put, address);
 		ret=mbox_get(&noc[AES_SLOT].mb_get);
-	//	printk(KERN_INFO "[XT_NOCX] setup for aes_dummy done: ret = %d\n", ret);
+		printk(KERN_INFO "[XT_NOCX] setup for aes_dummy done: ret = %d\n", ret);
 #endif
 
-//#ifdef AES_WORKING
+#ifdef AES_WORKING
 		u32 config_data_start=1;
 		u32 config_rcv=0;
 		u32 config_data_mode=0;	//"....1100"=12=mode128, mode192=13, mode256=14,15
@@ -234,19 +234,19 @@ void reconfig_hw_block(char *name){
 		mbox_put(&noc[AES_SLOT].mb_put, config_data_key7);
 		config_rcv=mbox_get(&noc[AES_SLOT].mb_get);
 		printk(KERN_INFO "[XT_NOCX] setup for aes done ret = %d\n", config_rcv);
-//#endif
+#endif
 	}
 	if(memcmp(name, "ips", 3) == 0){
-#ifdef TESTING
+//#ifdef TESTING
 		int ret = 0;
-	//	printk(KERN_INFO "[XT_NOCX] setup for ips_dummy");
+		printk(KERN_INFO "[XT_NOCX] setup for ips_dummy");
 		u32 address = 5; 	//send to sw
 		mbox_put(&noc[IPS_SLOT].mb_put, address);
 		ret = mbox_get(&noc[IPS_SLOT].mb_get);
-	//	printk(KERN_INFO "[XT_NOCX] setup for ips_dummy done: ret = %d\n", ret);
+		printk(KERN_INFO "[XT_NOCX] setup for ips_dummy done: ret = %d\n", ret);
 
-#endif
-//#ifdef AES_WORKING
+//#endif
+#ifdef AES_WORKING
 		int ret = 0;
 		u32 address = 5; 	//send to sw
 		u32 header_len = ('h' << 24) | 1;	//the data vs. control byte
@@ -255,7 +255,7 @@ void reconfig_hw_block(char *name){
 		mbox_put(&noc[IPS_SLOT].mb_put, address);
 		ret = mbox_get(&noc[IPS_SLOT].mb_get);
 		printk(KERN_INFO "[XT_NOCX] setup for ips done: ret = %d\n", ret);
-//#endif
+#endif
 
 
 	}
@@ -587,7 +587,7 @@ static int hwif_hw_to_sw_worker_thread(void *arg)
 		ret = mbox_get(&noc[HW_TO_SW_SLOT].mb_get);
 		//DEBUG(printk(KERN_INFO "[xt_nocx] received packet with len %d \n", ret));
 		//reconos_cache_flush();
-//		flush_dcache_page(pgv_to_page(shared_mem_h2s));		
+		flush_dcache_page(pgv_to_page(shared_mem_h2s));		
 
 		pkt_start = shared_mem_h2s;
 		shared_mem_to_noc_pkt(&npkt, pkt_start);
@@ -604,6 +604,11 @@ static int hwif_hw_to_sw_worker_thread(void *arg)
 		//notify hw that we read the data
 		mbox_put(&noc[HW_TO_SW_SLOT].mb_put, shared_mem_h2s);
 
+	//	if (i%1000 == 0){
+	//		printk(KERN_INFO "statistics: %llu %llu %llu %llu %llu %llu \n",  
+	//			hw2sw_packets[0], hw2sw_packets[1], hw2sw_packets[2], 
+	//			hw2sw_packets[3], hw2sw_packets[4], hw2sw_packets[5]);
+	//	}
 #ifdef DEBUG_RECONFIG
 		if (i%1000 == 0){
 			printk(KERN_INFO "beginning reconfig%d\n", i);
@@ -642,10 +647,19 @@ static int hwif_hw_to_sw_worker_thread(void *arg)
  
 
 		//	config_pr();
-			reconfig_hw_block("ips");
+			if (current_mapping == 2){
+				reconfig_hw_block("aes");
+				config_eth(1);
 
-			config_eth(1);
-			config_eth_ips(1);
+			}
+			else{
+				reconfig_hw_block("ips");
+				config_eth_ips(1);
+
+			}
+			
+		//	config_eth(1);
+		//	config_eth_ips(1);
 			if (fblock_userctl_set_flags(&msg_aes, FBLOCK_FLAGS_TO_HW) < 0){
 					printk(KERN_INFO "[xt_nocx] unset hw flag ips failed");
 			}
@@ -755,7 +769,9 @@ static int scheduler (void *arg)
 		//case 1, both sw
 		if(delta_aes_packets + delta_ips_packets < 100){
 			if(current_mapping != 1){
-			
+			//	printk(KERN_INFO "[m1--------- 5] %d\n", delta_aes_packets);
+			//	printk(KERN_INFO "[m1--------- 2] %d\n", delta_ips_packets);
+
 				current_mapping = 1;
 				//unset flags, we don't need to do a reconfiguration,
 				//but we need to tell the ethernet block to forward the data
@@ -788,7 +804,9 @@ static int scheduler (void *arg)
 			if(current_mapping != 2){
 				current_mapping = 2;
 				//unset ips
-			
+			//	printk(KERN_INFO "[m2--------- 5] %d\n", delta_aes_packets);
+			//	printk(KERN_INFO "[m2--------- 2] %d\n", delta_ips_packets);
+
 				//loop all packets (only relevant for those that are already in sw
 				fblock_userctl_set_flags(&msg_ips, FBLOCK_FLAGS_TRANS_IB);
 				fblock_userctl_set_flags(&msg_aes, FBLOCK_FLAGS_TRANS_IB);
@@ -804,7 +822,6 @@ static int scheduler (void *arg)
 				//set reset signal so that nothing bad happens
 				reconos_slot_reset(AES_SLOT,1);
 	
-
 				//note, here we just assume the timing is ok...
 				//tell the software to do the pr for the new configuration
 				reconfig_done = 0;
@@ -834,8 +851,6 @@ static int scheduler (void *arg)
 				//now everything is done and we can process the packets again.
 				fblock_userctl_unset_flags(&msg_ips, FBLOCK_FLAGS_TRANS_IB);
 				fblock_userctl_unset_flags(&msg_aes, FBLOCK_FLAGS_TRANS_IB);
-
-
 			}
 		}
 
@@ -844,7 +859,9 @@ static int scheduler (void *arg)
 		else {
 			if(current_mapping != 3){
 				current_mapping = 3;
-			
+			//	printk(KERN_INFO "[m3--------- 5] %d\n", delta_aes_packets);
+			//	printk(KERN_INFO "[m3--------- 2] %d\n", delta_ips_packets);
+
 				//loop all packets (only relevant for those that are already in sw
 				fblock_userctl_set_flags(&msg_ips, FBLOCK_FLAGS_TRANS_IB);
 				fblock_userctl_set_flags(&msg_aes, FBLOCK_FLAGS_TRANS_IB);
@@ -859,8 +876,6 @@ static int scheduler (void *arg)
 
 				//set reset signal so that nothing bad happens
 				reconos_slot_reset(AES_SLOT,1);
-	
-
 
 				//note, here we just assume the timing is ok...
 				//tell the software to do the pr for the new configuration
@@ -877,11 +892,8 @@ static int scheduler (void *arg)
 				reconos_hwt_setresources(&noc[AES_SLOT].hwt, noc[AES_SLOT].res, ARRAY_SIZE(noc[AES_SLOT].res));
 				reconos_hwt_create(&noc[AES_SLOT].hwt, AES_SLOT, NULL);
  
-
-
 			//	config_ips();
 				reconfig_hw_block("ips");
-				
 				
 				//b) tell the ethernet block the new mapping
 				//c) tell our software networking part the new mapping.
@@ -954,7 +966,7 @@ static int scheduler (void *arg)
 			}
 		}
 #endif 		
-		msleep(1000); // sleep a second;
+		msleep(2000); // sleep a second;
 	}
 	return 0;
 }
@@ -965,7 +977,7 @@ static int stats_procfs(char *page, char **start, off_t offset,
 	int header_len = sprintf(page, "timestamp cpu_utilization delta_packets_aes delta_packets_ips mapping\n");
 	int index = header_len;
 	for(i = 0; i < 200; i++){
-		int len = sprintf(page + index, "%lld %u %u %u %u\n", 
+		int len = sprintf(page + index, "%llu %u %u %u %u\n", 
 				stats_array[i].timestamp, stats_array[i].cpu_utilization, stats_array[i].delta_packets_aes,
 				stats_array[i].delta_packets_ips, stats_array[i].mapping);
 		index += len;
