@@ -89,12 +89,12 @@ static int fb_pflana_netrx(const struct fblock * const fb,
 		packet_sw_to_configd(skb);
 		goto out;
 	} else if (ctlhdr->type != PFLANA_CTL_TYPE_DATA) {
-	//	printk(KERN_INFO "[fb_pf_lana] netrx no data -> drop\n");
+		printk(KERN_INFO "[fb_pf_lana] netrx no data -> drop\n");
 		kfree(skb);
 		return PPE_DROPPED;
 	}
 
-	//printk(KERN_INFO "[fb_pf_lana] netrx data\n");
+	//printk(KERN_INFO "[fb_pf_lana] netrx data with len %d\n", skb_len);
 
 	sk = &fb_priv->sock_self->sk;
 	if (skb_shared(skb)) {

@@ -79,7 +79,7 @@ int current_mapping = 0; //sw
 int reconfig_done = 0;
 
 struct stats {
-	u64 timestamp;
+	u32 timestamp;
 	u32 cpu_utilization;
 	u32 delta_packets_aes;
 	u32 delta_packets_ips;
@@ -740,6 +740,7 @@ static int scheduler (void *arg)
 	while(likely(!kthread_should_stop())){
 		struct lananlmsg msg_ips;
 		struct lananlmsg msg_aes;
+		
 		memcpy(msg_ips.buff, "ips", 4);
 		memcpy(msg_aes.buff, "aes", 4);
 
@@ -766,6 +767,7 @@ static int scheduler (void *arg)
 			i++;
 		}
 
+#ifdef SCHEDULER_ENABLED
 		//case 1, both sw
 		if(delta_aes_packets + delta_ips_packets < 100){
 			if(current_mapping != 1){
@@ -907,6 +909,7 @@ static int scheduler (void *arg)
 
 			}
 		}
+#endif //SCHEDULER_ENABLED
 
 
 #ifdef one_proc
@@ -966,7 +969,7 @@ static int scheduler (void *arg)
 			}
 		}
 #endif 		
-		msleep(2000); // sleep a second;
+		msleep(1000); // sleep a second;
 	}
 	return 0;
 }
@@ -977,7 +980,7 @@ static int stats_procfs(char *page, char **start, off_t offset,
 	int header_len = sprintf(page, "timestamp cpu_utilization delta_packets_aes delta_packets_ips mapping\n");
 	int index = header_len;
 	for(i = 0; i < 200; i++){
-		int len = sprintf(page + index, "%llu %u %u %u %u\n", 
+		int len = sprintf(page + index, "%u %u %u %u %u\n", 
 				stats_array[i].timestamp, stats_array[i].cpu_utilization, stats_array[i].delta_packets_aes,
 				stats_array[i].delta_packets_ips, stats_array[i].mapping);
 		index += len;

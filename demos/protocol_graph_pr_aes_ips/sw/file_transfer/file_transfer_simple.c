@@ -12,6 +12,7 @@
 #include <linux/types.h>
 #include <linux/if.h>
 #include <poll.h>
+#include <signal.h>
 
 #include "xt_vlink.h"
 #include "xt_fblock.h"
@@ -23,6 +24,14 @@
 #define MTU	1499
 //#define MTU     512
 
+unsigned long long nr_packets;
+
+
+void catch_int(int sig){
+	printf("Total received packets: %llu\n", nr_packets);
+	fprintf(stderr, "Total received packets: %llu\n", nr_packets);
+	exit(EXIT_SUCCESS);	
+}
 
 int main(int argc, char **argv)
 {
@@ -32,10 +41,13 @@ int main(int argc, char **argv)
 	int sock, ret, server, tot_len = 0, len;
 	char buff[512];
 	int cur_len = 64;
-	int nr_packets = 0;
+	nr_packets = 0;
 
 	if (argc == 1)
 		panic("Usage: %s <client/server>\n", argv[0]);
+
+	/* signal handler */
+	signal(SIGINT, catch_int);
 
 	/* open socket for communication */
 	sock = socket(27, SOCK_RAW, 0);
