@@ -75,7 +75,7 @@ static u8 *shared_mem_h2s, *shared_mem_s2h;
 static int order = 0;
 static u64 hw2sw_packets[10];
 
-int current_mapping = 0; //sw
+int current_mapping = 1; //sw
 int reconfig_done = 0;
 
 struct stats {
@@ -173,7 +173,7 @@ void set_hw_flag(struct fblock *fb, unsigned int flag)
 			u32 config_eth_hash_2 = 0xcdcdcdcd;
 			u32 config_eth_idp = 0x5; //TODO
 			u32 config_eth_address = 1; //global 0, local 1 -> aes
-			//printk(KERN_INFO "[xt_nocx] changing eth config for aes: flag hw");
+//			printk(KERN_INFO "[xt_nocx] changing eth config for aes: flag hw");
 
 			mbox_put(&noc[ETH_SLOT].mb_put, config_eth_hash_1 ); 
 			mbox_put(&noc[ETH_SLOT].mb_put, config_eth_hash_2);
@@ -181,7 +181,7 @@ void set_hw_flag(struct fblock *fb, unsigned int flag)
 			mbox_put(&noc[ETH_SLOT].mb_put, config_eth_address);
 			ret = mbox_get(&noc[ETH_SLOT].mb_get);
 			//printk(KERN_INFO "hwt_ethernet configured - 2\n");
-			//printk(KERN_INFO "[xt_nocx] changing eth config for aes: flag hw done: %d", ret);
+//			printk(KERN_INFO "[xt_nocx] changing eth config for aes: flag hw done: %d", ret);
 
 		}
 		else{
@@ -194,12 +194,12 @@ void reconfig_hw_block(char *name){
 	if(memcmp(name, "aes", 3) == 0){
 		/* setup AES slot.  */
 		int ret = 0;
-		printk(KERN_INFO "[XT_NOCX] setup for aes_dummy");
+	//	printk(KERN_INFO "[XT_NOCX] setup for aes_dummy");
 #ifdef TESTING
 		u32 address = 5; 	//send to sw
 		mbox_put(&noc[AES_SLOT].mb_put, address);
 		ret=mbox_get(&noc[AES_SLOT].mb_get);
-		printk(KERN_INFO "[XT_NOCX] setup for aes_dummy done: ret = %d\n", ret);
+//		printk(KERN_INFO "[XT_NOCX] setup for aes_dummy done: ret = %d\n", ret);
 #endif
 
 #ifdef AES_WORKING
@@ -239,11 +239,11 @@ void reconfig_hw_block(char *name){
 	if(memcmp(name, "ips", 3) == 0){
 //#ifdef TESTING
 		int ret = 0;
-		printk(KERN_INFO "[XT_NOCX] setup for ips_dummy");
+	//	printk(KERN_INFO "[XT_NOCX] setup for ips_dummy");
 		u32 address = 5; 	//send to sw
 		mbox_put(&noc[IPS_SLOT].mb_put, address);
 		ret = mbox_get(&noc[IPS_SLOT].mb_get);
-		printk(KERN_INFO "[XT_NOCX] setup for ips_dummy done: ret = %d\n", ret);
+	//	printk(KERN_INFO "[XT_NOCX] setup for ips_dummy done: ret = %d\n", ret);
 
 //#endif
 #ifdef AES_WORKING
@@ -380,7 +380,7 @@ static struct sk_buff *noc_pkt_to_skb(struct noc_pkt *npkt)
 		fb = __search_fblock(npkt->dst_idp);
 		if (fb){
 			if (fblock_offload_isset(fb)) {
-				//printk(KERN_INFO "[xt_nocx] was in hw -> forwarding to 3\n");
+			//	printk(KERN_INFO "[xt_nocx] was in hw -> dst_idp = %d\n", npkt->dst_idp);
 				if(npkt->dst_idp == 2){
 					write_next_idp_to_skb(skb, npkt->src_idp, 3); //TODO: can I somehow figure out what the next IDP would be?
 				}
@@ -391,7 +391,7 @@ static struct sk_buff *noc_pkt_to_skb(struct noc_pkt *npkt)
 
 			}
 			else {
-				//printk(KERN_INFO "[xt_nocx] was not in hw -> forwarding to %d\n", npkt->dst_idp);
+			//	printk(KERN_INFO "[xt_nocx] was not in hw -> forwarding to %d\n", npkt->dst_idp);
 
 				write_next_idp_to_skb(skb, npkt->src_idp, npkt->dst_idp);
 			}
@@ -767,9 +767,9 @@ static int scheduler (void *arg)
 			i++;
 		}
 
-#ifdef SCHEDULER_ENABLED
+//#ifdef SCHEDULER_ENABLED
 		//case 1, both sw
-		if(delta_aes_packets + delta_ips_packets < 100){
+		if(delta_aes_packets + delta_ips_packets < 0){ // never
 			if(current_mapping != 1){
 			//	printk(KERN_INFO "[m1--------- 5] %d\n", delta_aes_packets);
 			//	printk(KERN_INFO "[m1--------- 2] %d\n", delta_ips_packets);
@@ -833,7 +833,7 @@ static int scheduler (void *arg)
 				//msleep(2000);
 				//we hope the hardware is configured, so we need to
 				//a) initialize the new block
-				printk(KERN_INFO "[xt_nocx] configuring aes");
+				//printk(KERN_INFO "[xt_nocx] configuring aes");
 
 				//create new delegate
 				reconos_hwt_setresources(&noc[AES_SLOT].hwt, noc[AES_SLOT].res, ARRAY_SIZE(noc[AES_SLOT].res));
@@ -858,7 +858,7 @@ static int scheduler (void *arg)
 
 
 		//case 3, aes sw, ips hw
-		else {
+		else  if(delta_ips_packets > delta_aes_packets){
 			if(current_mapping != 3){
 				current_mapping = 3;
 			//	printk(KERN_INFO "[m3--------- 5] %d\n", delta_aes_packets);
@@ -888,7 +888,7 @@ static int scheduler (void *arg)
 				//msleep(2000);
 				//we hope the hardware is configured, so we need to
 				//a) initialize the new block
-				printk(KERN_INFO "[xt_nocx] configuring ips");
+				//printk(KERN_INFO "[xt_nocx] configuring ips");
 				
 				//create new delegate
 				reconos_hwt_setresources(&noc[AES_SLOT].hwt, noc[AES_SLOT].res, ARRAY_SIZE(noc[AES_SLOT].res));
@@ -909,7 +909,7 @@ static int scheduler (void *arg)
 
 			}
 		}
-#endif //SCHEDULER_ENABLED
+//#endif //SCHEDULER_ENABLED
 
 
 #ifdef one_proc
@@ -992,7 +992,7 @@ static int stats_procfs(char *page, char **start, off_t offset,
 
 
 static int schedular_procfs_write(struct file *file, const char __user *buffer, unsigned long count, void *data){
-	printk(KERN_INFO "[lana] got ack from userspace\n");
+	//printk(KERN_INFO "[lana] got ack from userspace\n");
 	reconfig_done = 1;
 	wake_up_interruptible(&wait_queue);
 	return 1;
@@ -1011,17 +1011,17 @@ static int schedular_procfs_read(char *page, char **start, off_t offset,
 	wait_event_interruptible(wait_queue, last_mapping != current_mapping); //&&current_mapping != 1
 //	current_mapping = 2;
 	if(current_mapping == 1){
-		printk(KERN_INFO "[lana] both processes in SW, the userspace does not care");
+	//	printk(KERN_INFO "[lana] both processes in SW, the userspace does not care");
 		sprintf(page, "none");
 	}
 	if(current_mapping == 2){
-		printk(KERN_INFO "[lana] mapping aes hw, ips sw");
+	//	printk(KERN_INFO "[lana] mapping aes hw, ips sw");
 		//sprintf(page, "partial_aes.bit");
 		sprintf(page, "partial_aes.bit");
 		
 	}
 	if(current_mapping == 3){
-		printk(KERN_INFO "[lana] mapping aes sw, ips hw");
+	//	printk(KERN_INFO "[lana] mapping aes sw, ips hw");
 		//sprintf(page, "partial_ips.bit");
 		sprintf(page, "partial_ips.bit");
 

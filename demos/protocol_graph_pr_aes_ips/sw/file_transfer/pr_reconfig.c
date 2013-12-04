@@ -38,12 +38,12 @@ int main(){
 	//	memcpy(command, part_1, 13);
 	//	memcpy(command + 13, buf, len -1);
 	//	memcpy(command + 13 + len - 1, part_2, 14);
-		printf("command: %s\n", command);
+	//	printf("command: %s\n", command);
 		if(system(command) == -1){
 			perror("system");
 			return -1;
 		}
-		printf("done\n");
+	//	printf("done\n");
 		//rewind(f);		
 
 		fwrite(command, 1, 1, f); //doesnt matter what we write, we just let the kernel know that the reconfig is done.

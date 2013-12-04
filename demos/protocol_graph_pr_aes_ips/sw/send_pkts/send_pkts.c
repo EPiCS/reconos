@@ -40,21 +40,25 @@ void send_packet(char *type, int packet_len){
 	for (i = 0; i < 8; i++){
 		sendbuf[tx_len++] = strtol(type, NULL, 16);
 	}
-//	if(strncmp(type, "cd", 2) == 0){
-//		for(j = 0; j < 5; j++){
-//			for(i = 0; i < 16; i++){
-//				sendbuf[tx_len++] = aes_payload[i];
-//			}
-//		}
-//		for (i = 102; i < packet_len; i++){
-//		sendbuf[tx_len++] = (char) 1; //(rand() % 256 + 1);
-//		}
-//	}
-//	else{
+//#ifdef aes
+	if(strncmp(type, "cd", 2) == 0){
+		for(j = 0; j < 5; j++){
+			for(i = 0; i < 16; i++){
+				sendbuf[tx_len++] = aes_payload[i];
+			}
+		}
+		for (i = 102; i < packet_len; i++){
+		sendbuf[tx_len++] = (char) 1; //(rand() % 256 + 1);
+		}
+	}
+	else{
+//#endif
 		for (i = 22; i < packet_len; i++){
 			sendbuf[tx_len++] = (char) 1; //(rand() % 256 + 1);
 		}
-//	}
+//#ifdef aes
+	}
+//#endif
 	// send packet
 	//if (send(sock_send, sendbuf, tx_len, 0) )
 	if (sendto(sock_send, sendbuf, tx_len, 0,(struct sockaddr*)&socket_address, sizeof(struct sockaddr_ll)) < 0)
@@ -90,7 +94,7 @@ int main(int argc, char **argv)
 		printf("Usage: %s type (ab|cd) scheme(1 = packet rate) scheme_specific(packet rate, number of packets, packet len)\n", argv[0]);
 		return -1;
 	}
-
+	//scheme 1, fixed packet length, fixed pps
 	if (atoi(argv[2]) == 1){
 		if (argc != 6){
 			printf("Usage for scheme 1: %s type 1 packet rate, number of packets, packet len\n", argv[0]);
@@ -102,6 +106,7 @@ int main(int argc, char **argv)
 		packet_len = atoi(argv[5]);
 		fprintf(stderr, "scheme %d: packet rate: %d, nr_of_packets: %d packet_len: %d\n", scheme, packet_rate, nr_of_packets, packet_len);
 	}
+
 	else if(atoi(argv[2]) == 2){
 		if(argc != 4){
 			printf("Usage for scheme 2: %s type 2 packet rate\n", argv[0]);
@@ -112,6 +117,17 @@ int main(int argc, char **argv)
 		fprintf(stderr, "scheme %d packet rate %d\n", scheme, packet_rate);
 	
 	}
+	else if(atoi(argv[2]) == 3){
+		scheme = 3;
+		fprintf(stderr, "scheme %d (increasing pps)\n", scheme);
+	
+	}
+	else if(atoi(argv[2]) == 4){
+		scheme = 4;
+		fprintf(stderr, "scheme %d (decreasing pps)\n", scheme);
+	
+	}
+
 	else{
 		fprintf(stderr, "scheme %d not found\n", atoi(argv[2]));
 		return -1;
@@ -165,6 +181,7 @@ int main(int argc, char **argv)
 		}
 	}
 
+	//variable packet size
 	if (scheme == 2){
 		if (packet_rate > 1){
 			req.tv_sec = 0;
@@ -182,6 +199,56 @@ int main(int argc, char **argv)
 			}
 		}
 	}
+
+	//increasing packet rate
+	if (scheme == 3){
+		int j = 0;
+		int total = 0;
+		packet_len = 1500;
+		for (j = 150; j > 0; j--){
+				packet_rate = j * 6.6;
+				nr_of_packets = packet_rate;
+			
+		
+	//		printf("j = %d, packet_rate = %d, nr_of_packets = %d\n", j, packet_rate, nr_of_packets);
+			req.tv_sec = 0;
+			req.tv_nsec = (double)1/(double)packet_rate*1000000000;
+	
+			for (i = 0; i < nr_of_packets; i++){
+				send_packet(argv[1], packet_len);
+				nanosleep(&req, &rem);
+				total++;
+			}
+		}
+		printf("total packets scheme 3: %d\n", total);
+	}
+
+	//decreasing packet rate
+	if (scheme == 4){
+		int j = 0;
+		int total = 0;
+		packet_len = 1500;
+		for (j = 1; j <= 150; j++){
+				packet_rate = j * 6.6;
+				nr_of_packets = packet_rate;
+			
+		
+		//	printf("j = %d, packet_rate = %d, nr_of_packets = %d\n", j, packet_rate, nr_of_packets);
+			req.tv_sec = 0;
+			req.tv_nsec = (double)1/(double)packet_rate*1000000000;
+	
+			for (i = 0; i < nr_of_packets; i++){
+				send_packet(argv[1], packet_len);
+				nanosleep(&req, &rem);
+				total++;
+			}
+		}
+		printf("total packets scheme 4: %d\n", total);
+
+	}
+
+
+
 
 
 	close(sock_send);
