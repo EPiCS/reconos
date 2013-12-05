@@ -337,7 +337,7 @@ begin
 
 	--count all rx packets
 	-- TODO not needed since my IPS counts packets by itself
-	test_counting : process(rx_ll_sof, rx_ll_src_rdy, rx_ll_dst_rdy, rx_packet_count, testing_state) is
+	test_counting : process(rx_ll_sof,tx_ll_dst_rdy, rx_ll_src_rdy, rx_ll_dst_rdy, rx_packet_count, testing_state,rx_packet_count1,rx_packet_count2,rx_packet_count3) is
 		variable tmp : unsigned(31 downto 0);
 	begin
 		rx_packet_count_next <= rx_packet_count;

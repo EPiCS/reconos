@@ -12,8 +12,8 @@ lib ana_v1_00_a ../../../ana_v1_00_a/hdl/vhdl/packetEncoder.vhd vhdl
 
 lib hwt_pr_v1_00_a fifo32 vhdl
 
-lib hwt_pr_v1_00_a content_analysis_blocks/ca_utf8_nonshortest_form vhdl
-lib hwt_pr_v1_00_a packet_inspection vhdl
+## lib hwt_pr_v1_00_a content_analysis_blocks/ca_utf8_nonshortest_form vhdl
+## lib hwt_pr_v1_00_a packet_inspection vhdl
 lib hwt_pr_v1_00_a ips vhdl
 lib hwt_pr_v1_00_a hwt_pr vhdl
 

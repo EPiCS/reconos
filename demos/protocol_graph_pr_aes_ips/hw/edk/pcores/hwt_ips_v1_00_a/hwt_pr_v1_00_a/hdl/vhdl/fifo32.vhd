@@ -54,7 +54,7 @@ begin
 
 	FIFO32_S_Fill <= pad & fill; 
 	FIFO32_M_Rem  <= pad & remainder; 
-	FIFO32_S_Data <= mem(CONV_INTEGER(rdptr));
+	FIFO32_S_Data <= mem(CONV_INTEGER(rdptr)) when Rst = '0' else (others=>'0');
 	
 	fill          	<= wrptr - rdptr	when wrptr >= rdptr               	else (C_FIFO32_DEPTH + wrptr) - rdptr;
 	remainder     	<=              	                                  	(C_FIFO32_DEPTH - 1) - fill;
@@ -80,6 +80,9 @@ begin
 	begin
 		if Rst = '1' then
 			wrptr <= (others => '0');
+			--for i in 0 to C_FIFO32_DEPTH-1 loop
+			--	mem(i) <= (others=>'0');
+			--end loop;
 		elsif rising_edge(FIFO32_M_Clk) then
 			if safe_write = '1' then
 				mem(CONV_INTEGER(wrptr)) <= FIFO32_M_Data;
