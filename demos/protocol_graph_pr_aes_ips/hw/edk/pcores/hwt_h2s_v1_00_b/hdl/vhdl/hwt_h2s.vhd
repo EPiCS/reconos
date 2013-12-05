@@ -57,7 +57,8 @@ entity hwt_h2s is
 end hwt_h2s;
 
 architecture implementation of hwt_h2s is
-	type STATE_TYPE is ( STATE_INIT, STATE_GET_LEN, STATE_READ, STATE_WAIT, STATE_WRITE, STATE_PULL, STATE_PUT, STATE_PUT2,STATE_PUT3, STATE_PUT4, STATE_THREAD_EXIT
+	type STATE_TYPE is ( STATE_INIT, STATE_GET_LEN, STATE_READ, STATE_WAIT, STATE_WRITE, 
+	STATE_PULL, STATE_PUT, STATE_PUT2,STATE_PUT3, STATE_PUT4, STATE_THREAD_EXIT
 	);
 
 	-- PUT YOUR OWN COMPONENTS HERE
@@ -111,7 +112,8 @@ architecture implementation of hwt_h2s is
 	--signal sending_state		: sending_state_t;
 	--signal sending_state_next	: sending_state_t;
 
-	type RECEIVING_STATE_TYPE_T is (STATE_IDLE, STATE_DST_IDP, STATE_DST_WRITE, STATE_RCV_1, STATE_RCV_2, STATE_RCV_3, STATE_RCV_4, STATE_EOF, STATE_WRITE_LEN, STATE_WRITE_LEN1
+	type RECEIVING_STATE_TYPE_T is (STATE_IDLE, STATE_DST_IDP, STATE_DST_WRITE, STATE_RCV_1, STATE_RCV_2, 
+		STATE_RCV_3, STATE_RCV_4, STATE_EOF, STATE_WRITE_LEN, STATE_WRITE_LEN1, STATE_DONE
 	);
 
 	signal receiving_state : RECEIVING_STATE_TYPE_T;
@@ -162,12 +164,18 @@ architecture implementation of hwt_h2s is
 	signal reconos_fsm_ready : std_logic;
 	
 	signal meta_data : std_logic_vector(31 downto 16);
+	signal receiving_to_ram_en : std_logic;
+	signal receiving_to_ram_done : std_logic;
+
 	signal direction : std_logic;
 	signal priority : std_logic_vector(1 downto 0);
 	signal latency_critical : std_logic;
 	signal srcIDP : std_logic_vector(31 downto 0);
 	signal dstIDP : std_logic_vector(31 downto 0);
 	
+	signal reconos_step : std_logic_vector( 2 downto 0);
+	signal write_step : std_logic_vector( 3 downto 0);
+
 begin
 	
 
@@ -303,25 +311,33 @@ begin
 	destination(5 downto 2) <= "0001"; --(others => '0');
 	destination(1 downto 0) <= "00";
 	
-	receiving_to_ram : process(clk, rst)
+	receiving_to_ram : process(clk, rst,receiving_to_ram_en)
 	begin
-		if rst = '1' then
+		if rst = '1' or receiving_to_ram_en = '0' then
 			o_RAMAddr_sender <= (others => '0');
 			o_RAMData_sender  <= (others  => '0');
 			o_RAMWE_sender <= '0';
 			rx_ll_dst_rdy_local  <= '0';
 			packet_received  <= '0';
-			payload_count  <= 0;
-			meta_data  <= (others  => '0');	
+			if (rst='1') then
+				payload_count  <= 0;
+			end if;
+			meta_data  <= (others  => '0');
+			receiving_to_ram_done <= '0';
+			write_step <= "0000";
+			receiving_state  <= STATE_IDLE;
 		elsif rising_edge(clk) then
 			rx_ll_dst_rdy_local  <= '1';
 			o_RAMWE_sender <= '0';
 			o_RAMData_sender <= payload;
 			packet_received  <= '0';
+			receiving_to_ram_done <= '0';
 			case receiving_state is
 				when STATE_IDLE  => 
+					write_step <= "0001";
+					rx_ll_dst_rdy_local  <= '0'; 
 					o_RAMAddr_sender <= (others => '0');
-					if reconos_fsm_ready = '1' then
+				--	if reconos_fsm_ready = '1' then
 						if rx_ll_src_rdy = '1' and rx_ll_sof = '1' then
 							--safe meta data for later, since we need to know the payload len
 							--meta_data(31 downto 24) <= rx_ll_data;
@@ -336,22 +352,24 @@ begin
 							--read data
 							payload_count  <= 1;
 							payload(31 downto 24)  <= rx_ll_data;
-							
 							--next state
 							receiving_state  <= STATE_DST_IDP;
-							rx_ll_dst_rdy_local  <= '0';
+							rx_ll_dst_rdy_local  <= '1'; 
 						end if;
-					else
-						rx_ll_dst_rdy_local  <= '0';
-					end if;
+				--	else
+				--		rx_ll_dst_rdy_local  <= '0';
+				--	end if;
 					
 				when STATE_DST_IDP  =>
+	   				write_step <= "0010";
+
 					o_RAMData_sender  <= dstIDP;
 					o_RAMAddr_sender  <= "00000000010";		
 					o_RAMWE_sender  <= '1';
 					receiving_state  <= STATE_DST_WRITE;
 				
 				when STATE_DST_WRITE  => 
+					write_step <= "0011";
 					if rx_ll_src_rdy = '1' then		
 						payload_count  <= payload_count + 1;
 						o_RAMAddr_sender <= o_RAMAddr_sender + 1;
@@ -361,6 +379,7 @@ begin
 				
 				
 				when STATE_RCV_2  => 
+					write_step <= "0100";
 					if rx_ll_src_rdy = '1' then
 						payload(23 downto 16)  <= rx_ll_data;
 						payload_count  <= payload_count + 1;
@@ -374,6 +393,7 @@ begin
 						end if;
 					end if;
 				when STATE_RCV_3  => 
+					write_step <= "0101";
 					if rx_ll_src_rdy = '1' then
 						payload(15 downto 8)  <= rx_ll_data;
 						payload_count  <= payload_count + 1;
@@ -388,6 +408,7 @@ begin
 						end if;
 					end if;
 				when STATE_RCV_4  => 
+					write_step <= "0110";
 					if rx_ll_src_rdy = '1' then
 						payload(7 downto 0)  <= rx_ll_data;
 						o_RAMData_sender(24 to 31) <= rx_ll_data;
@@ -401,6 +422,7 @@ begin
 						end if;
 					end if;
 				when STATE_RCV_1  => 
+					write_step <= "0111";
 					if rx_ll_src_rdy = '1' then
 						payload(31 downto 24)  <= rx_ll_data;	
 						payload_count <= payload_count + 1;
@@ -417,14 +439,22 @@ begin
 					end if;
 					
 				when STATE_EOF  => 
-					rx_ll_dst_rdy_local  <= '0';
+					write_step <= "1000";
+					rx_ll_dst_rdy_local  <= '0'; 
 					o_RAMAddr_sender <= (others  => '0');
 					o_RAMData_sender <= meta_data & std_logic_vector(to_unsigned(payload_count, 16));
 					o_RAMWE_sender <= '1';
-					receiving_state  <= STATE_IDLE;
 					payload_count  <= payload_count + 12;
 					packet_received  <= '1';
+					receiving_state  <= STATE_DONE;
+					
+				when STATE_DONE => 
+					write_step <= "1111";
+					packet_received  <= '1';
+					rx_ll_dst_rdy_local  <= '0';
+					receiving_to_ram_done <= '1';
 				when others  =>
+					receiving_state <= STATE_DONE;
 			end case;
 		end if;
 	end process;
@@ -509,33 +539,49 @@ begin
 			len <= (others => '0');
 			data_ready <= '0';
 			base_addr_answer <= (others => '0');
+			reconos_fsm_ready <= '0';
+			reconos_step <= "000";
+			receiving_to_ram_en <= '0';
 
 		elsif rising_edge(clk) then
 			total_packet_len  <= std_logic_vector(to_unsigned(payload_count, 32));
 			data_ready <= '0';
 			reconos_fsm_ready  <= '0';
+			receiving_to_ram_en <= '0';
 			case state is
 
                 -- EXAMPLE STATE MACHINE - ADD YOUR STATES AS NEEDED
 
 				-- Get some data
 				when STATE_INIT =>
+					reconos_step <= "001";
 					base_addr_answer <= (others => '0');
 					osif_mbox_get(i_osif, o_osif, MBOX_RECV, base_addr, done);
 					if done then
 						state <= STATE_WAIT;
+						reconos_fsm_ready  <= '1';
+						receiving_to_ram_en <= '1';
 						base_addr <= base_addr(31 downto 2) & "00";
 					end if;
 				
 				when STATE_WAIT =>
 					data_ready <= '1';
-					reconos_fsm_ready  <= '1';		
-					if packet_received = '1' then
-						state <= STATE_WRITE; --STATE_WRITE;
-						reconos_fsm_ready  <= '0';		
+					reconos_step <= "010";
+					reconos_fsm_ready  <= '1';	
+					receiving_to_ram_en <= '1';
+					--if packet_received = '1' then
+					--	state <= STATE_WRITE; --STATE_WRITE;
+					--	reconos_fsm_ready  <= '0';		
+					--end if;
+					if receiving_to_ram_done = '1' then
+						state <= STATE_WRITE;
+						reconos_fsm_ready   <= '0';
+						receiving_to_ram_en <= '0';
 					end if;
+
 					
 				when STATE_WRITE =>
+					reconos_step <= "011";
 					reconos_fsm_ready  <= '0';
 					memif_write(i_ram, o_ram, i_memif, o_memif, X"00000000", base_addr, total_packet_len(23 downto 0) + 4, done); --the length is silently truncated!
 					if done then 
@@ -549,10 +595,12 @@ begin
 					
 				-- Echo the data
 				when STATE_PUT =>
+					reconos_step <= "100";
 					osif_mbox_put(i_osif, o_osif, MBOX_SEND, total_packet_len, ignore, done);
 					if done then state <= STATE_GET_LEN; end if;
 				
 				when STATE_GET_LEN  => 
+					reconos_step <= "101";
 					osif_mbox_get(i_osif, o_osif, MBOX_RECV, base_addr, done); --ignored, will be the length that was read
 					if done then state  <= STATE_WAIT; end if;
 				
@@ -570,6 +618,7 @@ begin
 
 				-- thread exit
 				when STATE_THREAD_EXIT =>
+					reconos_step <= "111";
 					osif_thread_exit(i_osif,o_osif);
 				when others =>
 					state <= STATE_INIT;

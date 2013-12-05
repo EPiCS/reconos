@@ -32,6 +32,7 @@
 #define MEM_PRESSURE_THRES	(130*1024)
 
 #define SIOCLANAGETFBLOCK	(SIOCPROTOPRIVATE + 0)
+DECLARE_WAIT_QUEUE_HEAD(wait_queue_pf_lana);
 
 struct lana_protocol {
 	int protocol;
@@ -88,12 +89,12 @@ static int fb_pflana_netrx(const struct fblock * const fb,
 		packet_sw_to_configd(skb);
 		goto out;
 	} else if (ctlhdr->type != PFLANA_CTL_TYPE_DATA) {
-	//	printk(KERN_INFO "[fb_pf_lana] netrx no data -> drop\n");
+		printk(KERN_INFO "[fb_pf_lana] netrx no data -> drop\n");
 		kfree(skb);
 		return PPE_DROPPED;
 	}
 
-	//printk(KERN_INFO "[fb_pf_lana] netrx data\n");
+	//printk(KERN_INFO "[fb_pf_lana] netrx data with len %d\n", skb_len);
 
 	sk = &fb_priv->sock_self->sk;
 	if (skb_shared(skb)) {
@@ -127,6 +128,10 @@ static int fb_pflana_netrx(const struct fblock * const fb,
 						  FBLOCK_MEM_PRESSURE, &zero);
 		}
 	}
+//	printk(KERN_INFO "[pflana] added packet to socket queue\n");
+	wake_up_interruptible(&wait_queue_pf_lana);
+
+
 out:
 	return PPE_HALT;
 }
@@ -276,14 +281,20 @@ static unsigned int lana_raw_poll(struct file *file, struct socket *sock,
 	struct lana_sock *lana = to_lana_sk(sk);
 	struct fblock *fb = lana->fb;
 	struct fb_pflana_priv *fb_priv;
+	printk(KERN_INFO "[pflana] poll 1\n");
+
 
 	rcu_read_lock();
 	fb_priv = rcu_dereference(fb->private_data);
 	rcu_read_unlock();
+	printk(KERN_INFO "[pflana] poll 2\n");
 
 	poll_wait(file, sk_sleep(sk), wait);
+	printk(KERN_INFO "[pflana] poll 3\n");
+
 	if (!skb_queue_empty(&fb_priv->backlog))
 		mask |= POLLIN | POLLRDNORM;
+	printk(KERN_INFO "[pflana] poll 4\n");
 
 	return mask;
 }
@@ -414,12 +425,19 @@ static int lana_proto_recvmsg(struct kiocb *iocb, struct sock *sk,
 	rcu_read_lock();
 	fb_priv = rcu_dereference(fb->private_data);
 	rcu_read_unlock();
+//	printk(KERN_INFO "[fb_pflana] wait for packets\n");			
+	
+	wait_event_interruptible(wait_queue_pf_lana, !skb_queue_empty(&fb_priv->backlog)); 
+//	printk(KERN_INFO "[fb_pflana] wait for packets done\n");			
+
 //	do {
 		skb = skb_dequeue(&fb_priv->backlog);
 //	} while (!skb);
 	if (!skb) {
 		return -EAGAIN;
 	}
+//	printk(KERN_INFO "[fb_pflana] wait for packets done - packet here\n");			
+
 	//printk(KERN_INFO "[fb_pflana] rx packet received\n");			
 
 	atomic_sub(skb->len, &fb_priv->backlog_used);

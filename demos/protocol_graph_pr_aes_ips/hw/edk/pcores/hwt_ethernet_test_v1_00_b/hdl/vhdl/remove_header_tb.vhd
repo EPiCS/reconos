@@ -44,13 +44,12 @@ architecture Behavioral of remove_header_tb is
   		o_global_addr : out std_logic_vector(3 downto 0);
   		o_local_addr : out std_logic_vector(1 downto 0);
   		o_direction : out std_logic;
-  		o_priority : out std_logic_vector(1 downto 0);
-  		o_latency_critical : out std_logic;	
+  		o_priority : out std_logic;
+  		o_latency_critical : out std_logic_vector(1 downto 0);	
   		o_src_idp : out  std_logic_vector(31 downto 0);
   		o_dst_idp : out  std_logic_vector(31 downto 0);
   		
   		-- comm to setup hash and address mapping table
-		i_config_in_progress : in std_logic;
   		i_set_idp : in std_logic;
   		i_set_address : in std_logic;
   		i_hash	: in std_logic_vector(63 downto 0);
@@ -77,7 +76,7 @@ end component;
 	signal address_valid : std_logic;
 	signal dst_address : std_logic_vector(5 downto 0);
 	
-	type testing_state_t is (STATE_INIT, STATE_SET_1, STATE_SET_2, STATE_SET_3, STATE_GET, STATE_GET_2, STATE_SET_ADDR, STATE_DUMMY, STATE_SEND, STATE_WAIT);
+	type testing_state_t is (STATE_INIT, STATE_SET_1, STATE_SET_2, STATE_SET_3, STATE_GET, STATE_GET_2, STATE_SET_ADDR, STATE_DUMMY, STATE_SEND);
 	signal state 	    : testing_state_t;
 	signal state_next   : testing_state_t;
 		
@@ -85,8 +84,8 @@ end component;
 	signal global_addr : std_logic_vector(3 downto 0);
 	signal local_addr : std_logic_vector(1 downto 0);
 	signal direction : std_logic;
-	signal priority : std_logic_vector(1 downto 0);
-	signal latency_critical : std_logic; 
+	signal priority : std_logic;
+	signal latency_critical : std_logic_vector(1 downto 0); 
 	signal src_idp : std_logic_vector(31 downto 0);
 	signal dst_idp : std_logic_vector(31 downto 0);
 	
@@ -117,9 +116,6 @@ end component;
 
 	signal rx_packet_count 	    : std_logic_vector(31 downto 0);
 	signal rx_packet_count_next : std_logic_vector(31 downto 0);
-	signal config_in_progress : std_logic;
-	signal counter : integer range 0 to 100;
-	signal counter_next : integer range 0 to 100;
 	
 	
 begin
@@ -151,7 +147,6 @@ begin
   		o_dst_idp => dst_idp,
   		
   		-- comm to setup hash and address mapping table
-		i_config_in_progress => config_in_progress,
   		i_set_idp => set_idp,
   		i_set_address => set_address,
   		i_hash	=> hash,
@@ -234,7 +229,7 @@ begin
 
 
 
-   	test_proc : process(state, idp_out, int_idp_valid, address_out, counter)
+   	test_proc : process(state, idp_out, int_idp_valid, address_out)
 	begin
 		hash  <= (others  => '0');
 		idp_in  <= (others  => '0');
@@ -248,36 +243,20 @@ begin
 		dst_address  <= (others  => '0');
 		int_idp_valid_next  <= int_idp_valid;
 		config_done  <= '0';
-		config_in_progress <= '0';
     case state is
 	    	when STATE_INIT  => 
 	    		state_next  <= STATE_SET_1;
 	    	when STATE_SET_1  => 
-			config_in_progress <= '1';
 	    		hash  <= x"ABABABABABABABAB";
 	    		idp_in  <= x"12344321";
 	    		set_idp  <= '1';
 	    		state_next  <= STATE_SET_2;
 	    	when STATE_SET_2  => 
-			config_in_progress <= '1';
 	    	 	hash  <= x"EEFFFFEE55667788";
 	    		idp_in  <= x"56788765";
 	    		set_idp  <= '1';
-	    		state_next  <= STATE_WAIT;
-		when STATE_WAIT => 
-			config_in_progress <= '1';
-
-			if counter > 25 then
-				state_next <= STATE_SET_3;
-				counter_next <= 0;
-			end if;
-			counter_next <= counter + 1;
-			config_done <= '1'; --config is not done, but we want to see,
-			--whether the module handels packet correctly that arrive
-			--during reconfig.
-			--end if;	
+	    		state_next  <= STATE_SET_3;
 	    	when STATE_SET_3  => 
-			config_in_progress <= '1';
 	    		set_address  <= '1';
 	    		address_in  <= "001100";
 	    		idp_in  <= x"12344321";
@@ -327,7 +306,6 @@ begin
 			packet_state  <= P_STATE_INIT;
 			rx_packet_count  <= (others  => '0');
 			testing_state  <= T_STATE_INIT;
-			counter <= 0;
 	    elsif rising_edge(clk) then
 	     	state  <= state_next;
 	     	int_idp_valid  <= int_idp_valid_next;
@@ -335,7 +313,6 @@ begin
 	     	packet_state  <= packet_state_next;
 	     	testing_state  <= testing_state_next;
 	     	rx_packet_count  <= rx_packet_count_next;
-		counter <= counter_next;
 	    end if;
 	end process;
 	
