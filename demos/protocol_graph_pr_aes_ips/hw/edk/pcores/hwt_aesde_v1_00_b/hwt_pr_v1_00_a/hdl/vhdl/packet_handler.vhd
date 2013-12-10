@@ -3,12 +3,6 @@ use ieee.std_logic_1164.all;
 use ieee.std_logic_arith.all;
 use ieee.std_logic_unsigned.all;
 
-library proc_common_v3_00_a;
-use proc_common_v3_00_a.proc_common_pkg.all;
-
-library ana_v1_00_a;
-use ana_v1_00_a.anaPkg.all;
-
 library yyang_v1_00_a;
 use yyang_v1_00_a.yyangPkg.all;
 
@@ -272,7 +266,13 @@ begin
 			receive_packet_done <= '0';
 			case receive_step is
 				when "00" => -- get start of frame
-					if (noc_rx_src_rdy='1' and noc_rx_sof='1') then
+					if (noc_rx_src_rdy='1' and noc_rx_sof='1' and rx_dst_rdy_2_noc='0') then -- src_rdy='1' before dst_rdy='1'
+						fifo_in_write <= '0';
+						fifo_in_data_in (7 downto 0) <= noc_rx_data (7 downto 0);
+						fifo_in_data_in (8) <= '1'; -- sof
+						fifo_in_data_in (9) <= '0'; -- eof
+						receive_step <= "01";
+					elsif (noc_rx_src_rdy='1' and noc_rx_sof='1') then
 						fifo_in_write <= '1';
 						fifo_in_data_in (7 downto 0) <= noc_rx_data (7 downto 0);
 						fifo_in_data_in (8) <= '1'; -- sof
@@ -330,8 +330,8 @@ begin
 			fifo_out_read <= '0';
 			case send_step is
 				when "000" => -- store first word
-					noc_tx_data(7 downto 0) <= fifo_out_data_out(7 downto 0);
-					tx_data_2_noc(7 downto 0) <= fifo_out_data_out(7 downto 0);
+					noc_tx_data(7 downto 0) <=   "00000001"; --fifo_out_data_out(7 downto 0); -- test : ( TODO change this line back to fifo_out_data ) 
+					tx_data_2_noc(7 downto 0) <= "00000001"; --fifo_out_data_out(7 downto 0); -- test: ( TODO change this line back to fifo_out_data ) 
 					noc_tx_sof <= '1';
 					noc_tx_eof <= '0';
 					tx_sof_2_noc <= '1';
