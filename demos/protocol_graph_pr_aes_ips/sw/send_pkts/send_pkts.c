@@ -42,14 +42,22 @@ void send_packet(char *type, int packet_len){
 	}
 //#ifdef aes
 	if(strncmp(type, "cd", 2) == 0){
-		for(j = 0; j < 5; j++){
+	//we can only process packets with a length of multiple of 16 bytes + 2.
+	j = (packet_len - 22) / 16;
+	packet_len = j * 16;
+//	printf("packet_len %d \n", packet_len);
+		for(j = 0; j < packet_len; j = j + 16){
+		//	printf("j = %d\n", j);
 			for(i = 0; i < 16; i++){
 				sendbuf[tx_len++] = aes_payload[i];
 			}
 		}
-		for (i = 102; i < packet_len; i++){
-		sendbuf[tx_len++] = (char) 1; //(rand() % 256 + 1);
-		}
+		j = htons(packet_len);
+		memcpy(sendbuf + tx_len, &j, 2);
+		tx_len += 2;
+	//	for (i = 102; i < packet_len - 2; i++){
+	//	sendbuf[tx_len++] = (char) 1; //(rand() % 256 + 1);
+	//	}
 	}
 	else{
 //#endif
