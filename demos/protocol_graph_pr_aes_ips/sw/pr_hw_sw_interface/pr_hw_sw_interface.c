@@ -107,7 +107,7 @@ void config_eth_ips(int addr){
 
 	u32 config_eth_hash_1 = 0xabababab;
 	u32 config_eth_hash_2 = 0xabababab;
-	u32 config_eth_idp = 0x2; //TODO
+	u32 config_eth_idp = 0x3; //TODO
 	u32 config_eth_address = addr; //global 0, local 1 -> aes
 	mbox_put(&eth_mb_put, config_eth_hash_1 );
 	mbox_put(&eth_mb_put, config_eth_hash_2);
@@ -329,8 +329,8 @@ static int hw_sw_interface_thread_entry(void *arg)
 			config_eth(5);
 			config_eth_ips(5);
 
-			if (current_mapping == 2){
-				current_mapping = 3;
+			if (current_mapping == 3){
+				current_mapping = 2;
 				mbox_put(&dpr_mb_put,0xffffffff);
 				reconfig_done = 0;
 				reconos_slot_reset(DPR_HWT_SLOT_NR,1);
@@ -345,10 +345,12 @@ static int hw_sw_interface_thread_entry(void *arg)
 
 			}
 			else {
-				current_mapping = 2;
+				current_mapping = 3;
 				mbox_put(&dpr_mb_put,0xffffffff);
 				reconfig_done = 0;
 				reconos_slot_reset(DPR_HWT_SLOT_NR,1);
+				wake_up_interruptible(&wait_queue);
+				wait_event_interruptible(wait_queue, reconfig_done == 1); 
 				reconos_hwt_setresources(&dpr_hwt,dpr_res,2);
 				reconos_hwt_create(&dpr_hwt,DPR_HWT_SLOT_NR,NULL);
 				config_ips();
@@ -475,8 +477,8 @@ static int schedular_procfs_read(char *page, char **start, off_t offset,
 
 	}
 	*eof = 1;
-	//return 16;
-	return 14;
+	return 16;
+	//return 14;
 }
 
 
