@@ -267,7 +267,11 @@ end component;
 
 	signal nox_rx_srcIdp : std_logic_vector(31 downto 0);
 	signal nox_rx_dstIdp : std_logic_vector(31 downto 0);
-	
+
+	signal blocking : std_logic;
+	signal sending : std_logic;
+	signal eth_is_blocked : std_logic;
+	signal rx_ll_src_rdy_blockable_n : std_logic;	
 
 begin
 	
@@ -398,7 +402,7 @@ begin
   	    	i_rx_ll_data    => rx_ll_data,    
         	i_rx_ll_sof_n    => rx_ll_sof_n,   
         	i_rx_ll_eof_n    => rx_ll_eof_n,   
-        	i_rx_ll_src_rdy_n => rx_ll_src_rdy_n,  
+        	i_rx_ll_src_rdy_n => rx_ll_src_rdy_blockable_n, --rx_ll_src_rdy_n,  
         	o_rx_ll_dst_rdy_n  => rx_ll_dst_rdy_n, 
          	
   		-- comm with next blocks (with internal switch)
@@ -494,7 +498,7 @@ begin
 		    tx_packet_count_next <= (others => '0');
 		    tx_testing_state_next <= T_STATE_RCV;
 		when T_STATE_RCV =>
-		    if tx_ll_src_rdy_n = '0' and tx_ll_eof_n = '0' and tx_ll_dst_rdy_n = '0' then
+		    if tx_ll_src_rdy_n = '0' and tx_ll_eof_n = '0' and tx_ll_dst_rdy_n = '0' and eth_is_blocked='0' then
 			tmp := unsigned(tx_packet_count) + 1;
 			tx_packet_count_next <= std_logic_vector(tmp);
 		    end if;
@@ -524,6 +528,31 @@ begin
 
 	-- END OF YOUR OWN PROCESSES
 
+	rx_ll_src_rdy_blockable_n <= rx_ll_src_rdy_n or eth_is_blocked;
+
+	do_block: process (rst,rx_ll_sof_n,sending,blocking) is
+	begin
+		if (rst = '1') then
+			eth_is_blocked <= '0';
+		--elsif (blocking='0' and rx_ll_sof_n='0') then
+		elsif (blocking='0') then
+			eth_is_blocked <= '0';
+		elsif (blocking='1' and sending='0') then -- is this enough?
+			eth_is_blocked <= '1'; -- this will 
+		end if;
+	end process;
+
+	check_if_packet_is_sent : process (rst,rx_ll_sof_n, rx_ll_eof_n, rx_ll_dst_rdy_n) is
+	begin
+		if (rst='1') then
+			sending <= '0';
+		elsif (rx_ll_sof_n='0') then
+			sending <= '1';
+		elsif (rx_ll_eof_n='0' and rx_ll_dst_rdy_n='0') then
+			sending <= '0';
+		end if;
+	end process;
+
 
     -- ADJUST THE RECONOS_FSM TO YOUR NEEDS.		
 	-- os and memory synchronisation state machine
@@ -546,6 +575,7 @@ begin
 			hash <= (others => '0');
 			idp_in <= (others => '0');
 			address_in <= (others => '0');
+			blocking <= '0';
 
             -- RESET YOUR OWN SIGNALS HERE
 		elsif rising_edge(clk) then
@@ -562,7 +592,13 @@ begin
 					if done then
 						if (data = X"FFFFFFFF") then
 							state <= STATE_THREAD_EXIT;
-						else
+						elsif (data = X"00000001") then
+						-- block hwt_eth (do not forward incoming packets to NoC)
+							blocking <= '1';
+						elsif (data = X"00000002") then
+						-- unblock hwt_eth
+							blocking <= '0';
+						else 
 							hash(63 downto 32) <= data;
 							state <= STATE_SET_IDP_2;
 						end if;

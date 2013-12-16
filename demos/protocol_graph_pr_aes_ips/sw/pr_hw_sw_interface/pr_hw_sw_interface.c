@@ -50,6 +50,7 @@ char * shared_mem_h2s;
 char * shared_mem_s2h;
 
 struct task_struct *receive_thread;
+struct task_struct *block_thread;
 int config;
 
 int reconfig_done = 0;
@@ -58,6 +59,10 @@ int current_mapping = 0; //sw
 static struct proc_dir_entry *example_dir;
 static struct proc_dir_entry *scheduler_proc;
 DECLARE_WAIT_QUEUE_HEAD(wait_queue);
+
+int do_reconfig = 0;
+
+int packet_count = 0;
 
 
 //static uint32_t init_data = 0xDEADBEEF;
@@ -108,16 +113,25 @@ void config_eth_ips(int addr){
 	u32 config_eth_hash_1 = 0xabababab;
 	u32 config_eth_hash_2 = 0xabababab;
 	u32 config_eth_idp = 0x3; //TODO
-	u32 config_eth_address = addr; //global 0, local 1 -> aes
+	u32 config_eth_address = addr; //global 0, local 1 -> ips
 	mbox_put(&eth_mb_put, config_eth_hash_1 );
 	mbox_put(&eth_mb_put, config_eth_hash_2);
 	mbox_put(&eth_mb_put, config_eth_idp);
 	mbox_put(&eth_mb_put, config_eth_address);
 	int ret = mbox_get(&eth_mb_get);
 //	printk(KERN_INFO "[XT_NOCX] setup for eth done, ret = %d", ret);
-
-
 }
+
+void block_eth(){
+	u32 block_id = 0x1; 
+	mbox_put(&eth_mb_put, block_id );
+}
+
+void unblock_eth(){
+	u32 unblock_id = 0x2; 
+	mbox_put(&eth_mb_put, unblock_id );
+}
+
 
 void config_aes(){
 		printk(KERN_INFO "[XT_NOCX] setup for aes");
@@ -164,8 +178,14 @@ void config_ips(){
 	mbox_put(&dpr_mb_put, address);
 	int ret = mbox_get(&dpr_mb_get);
 	printk(KERN_INFO "[XT_NOCX] setup for ips done: ret = %d\n", ret);
+}
 
-
+void config_pr_a(){
+	printk(KERN_INFO "[XT_NOCX] setup for pr_a");
+	u32 address = 5; 	//send to sw
+	mbox_put(&dpr_mb_put, address);
+	int ret = mbox_get(&dpr_mb_get);
+	printk(KERN_INFO "[XT_NOCX] setup for pr_a done: ret = %d\n", ret);
 }
 
 void copy_packet(int len, int start_val, char * addr, int global, int local){
@@ -199,22 +219,65 @@ void print_packet(struct noc_pkt * pkt){
 	printk(KERN_INFO "dst idp: %d\n", pkt->dst_idp);
 }
 
+#define AES_IPS_1 1
+
+static int block_thread_entry(void *arg)
+{
+	#ifndef AES_IPS_1
+	int i;
+	while (42)
+	{
+		for (i=0;i<200;i++) msleep(100); // sleep 20 seconds
+		printk(KERN_INFO "----------  block eth  ----------\n");
+		block_eth();
+		for (i=0;i<200;i++) msleep(100); // sleep 20 seconds
+		printk(KERN_INFO "++++++++++ unblock eth ++++++++++\n");
+		unblock_eth();
+		
+	}
+	#else
+	int dst_idp,i,result;
+	struct noc_pkt * rcv_pkt;
+
+	while(likely(!kthread_should_stop())){
+		result = mbox_get(&h2s_mb_get);
+		packet_count++;
+		rcv_pkt = (struct noc_pkt *)shared_mem_h2s;
+		mbox_put(&h2s_mb_put, (unsigned int) shared_mem_h2s);
+
+		memcpy(&dst_idp, shared_mem_h2s + 8, 4);
+		if (packet_count %250 == 0){
+			printk(KERN_INFO "destination idp: %d, len = %d\n", dst_idp, result);
+			for (i = 0; i < 20; i+=4){
+				printk(KERN_ERR "%#x %#x %#x %#x", shared_mem_h2s[i], shared_mem_h2s[i+1], shared_mem_h2s[i+2], shared_mem_h2s[i+3]);
+
+			}
+		}
+		if (packet_count %10000 == 0 && do_reconfig == 0) do_reconfig = 1;
+	}
+	#endif
+}
+
+
 static int hw_sw_interface_thread_entry(void *arg)
 {
-	struct noc_pkt * rcv_pkt;
+	//struct noc_pkt * rcv_pkt;
 	unsigned char packet_content[64];
-	int result, j,ret;
-	int packet_count = 0;
-	int dst_idp;
+	//int result, j,ret;
+	//int packet_count = 0;
+	//int dst_idp;
 	int i = 0;
 	while(likely(!kthread_should_stop())){
+
+		msleep(100);
+
 //		if (packet_count%10 == 0) {
 		//	printk(KERN_INFO "[pr_hw_sw_interface] wait for message %d\n", packet_count );
 //		}
 	//	msleep(500);
-		result = mbox_get(&h2s_mb_get);
-		packet_count++;
-		rcv_pkt = (struct noc_pkt *)shared_mem_h2s;
+		//result = mbox_get(&h2s_mb_get);
+		//packet_count++;
+		//rcv_pkt = (struct noc_pkt *)shared_mem_h2s;
 	//	printk(KERN_INFO "[reconos-interface] packet received with len from mbox %d, from memory %d\n", result, rcv_pkt->payload_len);		
 	//	printk(KERN_INFO "packet received\n");
 	//	print_packet(rcv_pkt);
@@ -225,7 +288,7 @@ static int hw_sw_interface_thread_entry(void *arg)
 	//		printk(KERN_INFO "%02x %02x  %02x %02x  %02x %02x  %02x %02x\n", packet_content[(j*8)+0],packet_content[(j*8)+1],packet_content[(j*8)+2],packet_content[(j*8)+3], 
 	//			packet_content[(j*8)+4],packet_content[(j*8)+5],packet_content[(j*8)+6],packet_content[(j*8)+7]);
 	//	}
-		mbox_put(&h2s_mb_put, (unsigned int) shared_mem_h2s);
+		//mbox_put(&h2s_mb_put, (unsigned int) shared_mem_h2s);
 
 		// try this reconfiguration
 		// a) redirect packets directly from eth to sw
@@ -309,7 +372,17 @@ static int hw_sw_interface_thread_entry(void *arg)
 		}
 
 #endif
-		memcpy(&dst_idp, shared_mem_h2s + 8, 4);
+	//memcpy(&dst_idp, shared_mem_h2s + 8, 4);
+	//if (packet_count %100 == 0){
+	//	printk(KERN_INFO "destination idp: %d, len = %d\n", dst_idp, result);
+	//	for (i = 0; i < 20; i+=4){
+	//		printk(KERN_ERR "%#x %#x %#x %#x", shared_mem_h2s[i], shared_mem_h2s[i+1], shared_mem_h2s[i+2], shared_mem_h2s[i+3]);
+	//
+	//	}
+	//}
+
+#ifdef AES_IPS_1
+		//memcpy(&dst_idp, shared_mem_h2s + 8, 4);
 	//	printk(KERN_INFO "destination idp: %d, len = %d\n", dst_idp, result);
 //		if (dst_idp == 0){
 	//	for (i = 0; i < 20; i+=4){
@@ -317,48 +390,62 @@ static int hw_sw_interface_thread_entry(void *arg)
 
 	//	}
 	//	}
-		if (packet_count %1000 == 0){
-		printk(KERN_INFO "destination idp: %d, len = %d\n", dst_idp, result);
-		for (i = 0; i < 20; i+=4){
-			printk(KERN_ERR "%#x %#x %#x %#x", shared_mem_h2s[i], shared_mem_h2s[i+1], shared_mem_h2s[i+2], shared_mem_h2s[i+3]);
-
-		}
+		//if (packet_count+1 %1000 == 0){
+		if (do_reconfig == 1){
+		//printk(KERN_INFO "destination idp: %d, len = %d\n", dst_idp, result);
+		//for (i = 0; i < 20; i+=4){
+		//	printk(KERN_ERR "%#x %#x %#x %#x", shared_mem_h2s[i], shared_mem_h2s[i+1], shared_mem_h2s[i+2], shared_mem_h2s[i+3]);
+		//
+		//}
 	//	if (packet_count %10 == 0){
 
 			printk(KERN_INFO "beginning reconfig%d\n", packet_count);
+			block_eth();
+			msleep(100);
 			config_eth(5);
 			config_eth_ips(5);
-
-			if (current_mapping == 3){
+			//config_eth(4); // try to send 0 packets to H2S for some time -> goes over switches... -> this does not help
+			//config_eth_ips(4);
+			msleep(100);
+			if (current_mapping == 3){ // AES -> HW
 				current_mapping = 2;
 				mbox_put(&dpr_mb_put,0xffffffff);
 				reconfig_done = 0;
+				//msleep(400);
 				reconos_slot_reset(DPR_HWT_SLOT_NR,1);
 				wake_up_interruptible(&wait_queue);
 				wait_event_interruptible(wait_queue, reconfig_done == 1); 
 				reconos_hwt_setresources(&dpr_hwt,dpr_res,2);
 				reconos_hwt_create(&dpr_hwt,DPR_HWT_SLOT_NR,NULL);
+				//msleep(100);
+				//config_ips();
+				//config_eth_ips(1);
 				config_aes();
+				//config_pr_a();
 				config_eth(1);
 
 
-
 			}
-			else {
+			else { // IPS -> HW
 				current_mapping = 3;
 				mbox_put(&dpr_mb_put,0xffffffff);
 				reconfig_done = 0;
+				//msleep(400);
 				reconos_slot_reset(DPR_HWT_SLOT_NR,1);
 				wake_up_interruptible(&wait_queue);
 				wait_event_interruptible(wait_queue, reconfig_done == 1); 
 				reconos_hwt_setresources(&dpr_hwt,dpr_res,2);
 				reconos_hwt_create(&dpr_hwt,DPR_HWT_SLOT_NR,NULL);
+				//msleep(100);
+				//config_aes();
+				//config_eth(1);
 				config_ips();
+				//config_pr_a();
 				config_eth_ips(1);
-
-
-
 			}
+			msleep(100);
+			unblock_eth();
+
 		//	mbox_put(&dpr_mb_put,0xffffffff);
 		//	reconfig_done = 0;
 		//	reconos_slot_reset(DPR_HWT_SLOT_NR,1);
@@ -373,9 +460,9 @@ static int hw_sw_interface_thread_entry(void *arg)
 		//	config_eth(1);
 		//	config_eth_ips(1);
 			printk(KERN_INFO "ending reconfig\n");
-
+			do_reconfig = 0;
 		}
-
+#endif
 
 	//	mbox_put(&h2s_mb_put, (unsigned int) shared_mem_h2s);
 
@@ -460,20 +547,24 @@ static int schedular_procfs_read(char *page, char **start, off_t offset,
 
 	wait_event_interruptible(wait_queue, last_mapping != current_mapping); //&&current_mapping != 1
 	//current_mapping = 2;
-	if(current_mapping == 1){
+	if(current_mapping == 1){  // SW
 		printk(KERN_INFO "[lana] both processes in SW, the userspace does not care");
 		sprintf(page, "none");
 	}
-	if(current_mapping == 2){
+	if(current_mapping == 2){  // HW: AES
 		printk(KERN_INFO "[lana] mapping aes hw, ips sw");
 		//sprintf(page, "partial_aes.bit");
 		sprintf(page, "partial_aes.bit");
+		//sprintf(page, "partial_ips.bit"); //test
+		//sprintf(page, "partial_pra.bit"); // test2
 		
 	}
-	if(current_mapping == 3){
+	if(current_mapping == 3){  // HW: IPS 
 		printk(KERN_INFO "[lana] mapping aes sw, ips hw");
 		//sprintf(page, "partial_ips.bit");
 		sprintf(page, "partial_ips.bit");
+		//sprintf(page, "partial_aes.bit"); // test
+		//sprintf(page, "partial_pra.bit"); // test2
 
 	}
 	*eof = 1;
@@ -574,7 +665,9 @@ static int __init init_pr_hw_sw_interface_module(void)
 	memset(shared_mem_h2s, 0, 3000);
 
 	config = 0;
-	config_ips();
+	//config_ips();
+	config_aes();
+	//config_pr_a();
 	
 	/*while(1){
 		result = mbox_get(&h2s_mb_get);
@@ -621,6 +714,14 @@ static int __init init_pr_hw_sw_interface_module(void)
         }
 
         wake_up_process(receive_thread);
+
+	block_thread = kthread_create(block_thread_entry, 0,"block_thread");
+        if (IS_ERR(block_thread)) {
+                printk(KERN_ERR "[pr_hw_sw_interface] Error creating 'block' thread!\n");
+                return -EIO;
+        }
+
+        wake_up_process(block_thread);
 
 out:
 	return 0;
