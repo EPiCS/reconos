@@ -202,7 +202,7 @@ void reconfig_hw_block(char *name){
 //		printk(KERN_INFO "[XT_NOCX] setup for aes_dummy done: ret = %d\n", ret);
 #endif
 
-#ifdef AES_WORKING
+//#ifdef AES_WORKING
 		u32 config_data_start=1;
 		u32 config_rcv=0;
 		u32 config_data_mode=0;	//"....1100"=12=mode128, mode192=13, mode256=14,15
@@ -234,10 +234,10 @@ void reconfig_hw_block(char *name){
 		mbox_put(&noc[AES_SLOT].mb_put, config_data_key7);
 		config_rcv=mbox_get(&noc[AES_SLOT].mb_get);
 		printk(KERN_INFO "[XT_NOCX] setup for aes done ret = %d\n", config_rcv);
-#endif
+//#endif
 	}
 	if(memcmp(name, "ips", 3) == 0){
-//#ifdef TESTING
+#ifdef TESTING
 		int ret = 0;
 	//	printk(KERN_INFO "[XT_NOCX] setup for ips_dummy");
 		u32 address = 5; 	//send to sw
@@ -245,8 +245,8 @@ void reconfig_hw_block(char *name){
 		ret = mbox_get(&noc[IPS_SLOT].mb_get);
 	//	printk(KERN_INFO "[XT_NOCX] setup for ips_dummy done: ret = %d\n", ret);
 
-//#endif
-#ifdef AES_WORKING
+#endif
+//#ifdef AES_WORKING
 		int ret = 0;
 		u32 address = 5; 	//send to sw
 		u32 header_len = ('h' << 24) | 1;	//the data vs. control byte
@@ -255,7 +255,7 @@ void reconfig_hw_block(char *name){
 		mbox_put(&noc[IPS_SLOT].mb_put, address);
 		ret = mbox_get(&noc[IPS_SLOT].mb_get);
 		printk(KERN_INFO "[XT_NOCX] setup for ips done: ret = %d\n", ret);
-#endif
+//#endif
 
 
 	}
@@ -723,7 +723,10 @@ static int scheduler (void *arg)
 	int delta_packets = 0;
 	int delta_aes_packets = 0;
 	int delta_ips_packets = 0;
+	int old_delta_aes = -1;
+	int old_delta_ips = -1;
 	int i = 0;
+	int init = 0;
 
 	int counter = 0;
 	msleep(40000); // sleep 20 second;
@@ -755,6 +758,21 @@ static int scheduler (void *arg)
 		delta_ips_packets = cur_ips_packets - prev_ips_packets;
 		prev_aes_packets = cur_aes_packets;
 		prev_ips_packets = cur_ips_packets;
+
+		//moving avg
+		if (old_delta_aes == -1 ){
+			old_delta_aes = delta_aes_packets;
+			init = 1;
+		}
+		if (old_delta_ips == -1 ){
+			old_delta_ips = delta_ips_packets;
+			init = 1;
+		}
+		delta_aes_packets = (66*delta_aes_packets + 44 * old_delta_aes)/100;
+		old_delta_aes = delta_aes_packets;
+		delta_ips_packets = (66*delta_ips_packets + 44 * old_delta_ips)/100;
+		old_delta_ips = delta_ips_packets;
+
 
 	//	printk(KERN_INFO "[----------- 5] %lld\n", cur_aes_packets);
 	//	printk(KERN_INFO "[----------- 2] %lld\n", cur_ips_packets);
@@ -802,7 +820,8 @@ static int scheduler (void *arg)
 
 
 		//case 2, aes hw, ips sw
-		else if(delta_aes_packets > delta_ips_packets){
+		else if((delta_aes_packets > 11 * delta_ips_packets / 10) || ((init == 1) && (delta_aes_packets > delta_ips_packets))){
+			init = 0;
 			if(current_mapping != 2){
 				current_mapping = 2;
 				//unset ips
@@ -858,7 +877,8 @@ static int scheduler (void *arg)
 
 
 		//case 3, aes sw, ips hw
-		else  if(delta_ips_packets > delta_aes_packets){
+		else  if((delta_ips_packets > 11 * delta_aes_packets / 10) || ((init == 1) && (delta_ips_packets > delta_aes_packets))){
+			init = 0;
 			if(current_mapping != 3){
 				current_mapping = 3;
 			//	printk(KERN_INFO "[m3--------- 5] %d\n", delta_aes_packets);
