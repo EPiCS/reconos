@@ -1,8 +1,0 @@
-##############################################################################
-## Filename:          hwt_init_exit_test_v2_1_0.pao
-## Description:       Init_data and thread_exit Test
-## Date:              Tue Sep 13 12:47:26 2011 (by Create and Import Peripheral Wizard)
-##############################################################################
-
-lib reconos_v3_00_a reconos_pkg vhdl
-lib hwt_init_exit_test_v1_00_a hwt_init_exit_test vhdl

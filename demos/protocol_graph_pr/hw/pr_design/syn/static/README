@@ -1,5 +1,0 @@
-insert static netlists (.ngc-files from '../edk/implementation/' folder)
-
-this includes the top netlist file ('system.ngc') and all other static files ('system_*.ngc')
-
-But: you have to remove the partial netlist/s (e.g. 'system_hwt_pr_0_wrapper.ngc')

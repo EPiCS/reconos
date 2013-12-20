@@ -99,7 +99,7 @@ void *sort_thread(void* data)
 
 void print_mmu_stats()
 {
-	uint32 hits,misses,pgfaults;
+	int hits,misses,pgfaults;
 
 	reconos_mmu_stats(&hits,&misses,&pgfaults);
 
@@ -130,7 +130,6 @@ int main(int argc, char ** argv)
 	int sw_threads;
 	int running_threads;
 	int buffer_size;
-	int slice_size;
 	unsigned int *data, *copy;
 
 	timing_t t_start, t_stop;
@@ -150,7 +149,6 @@ int main(int argc, char ** argv)
 
 	// Base unit is bytes. Use macros TO_WORDS, TO_PAGES and TO_BLOCKS for conversion.
 	buffer_size = atoi(argv[3])*PAGE_SIZE*PAGES_PER_THREAD;
-	slice_size  = PAGE_SIZE*PAGES_PER_THREAD;
 
 	running_threads = hw_threads + sw_threads;
 
@@ -161,7 +159,7 @@ int main(int argc, char ** argv)
         mbox_init(&mb_stop ,TO_BLOCKS(buffer_size));
 
 	// init reconos and communication resources
-	reconos_init(14,15);
+	reconos_init();
 
 	res[0].type = RECONOS_TYPE_MBOX;
 	res[0].ptr  = &mb_start;	  	
@@ -195,7 +193,7 @@ int main(int argc, char ** argv)
 	// create pages and generate data
 	t_start = gettime();
 
-	printf("malloc page aligned ...\n");
+	printf("malloc page aligned of %d bytes...\n", TO_PAGES(buffer_size));
 	data = malloc_page_aligned(TO_PAGES(buffer_size));
 	copy = malloc_page_aligned(TO_PAGES(buffer_size));
 	printf("generate data ...\n");
@@ -205,7 +203,6 @@ int main(int argc, char ** argv)
 	t_stop = gettime();
 	t_generate = calc_timediff_ms(t_start,t_stop);
 
-	// print data of first page
 	printf("Printing of generated data skipped. \n");
 	//print_data(data, TO_WORDS(buffer_size));
 
@@ -215,9 +212,12 @@ int main(int argc, char ** argv)
 
 	printf("Putting %i blocks into job queue: ", TO_BLOCKS(buffer_size));
 	fflush(stdout);
+
+	reconos_cache_flush();
+
 	for (i=0; i<TO_BLOCKS(buffer_size); i++)
 	{
-	  printf(" %i",i);fflush(stdout);
+	  printf(" %i",i); fflush(stdout);
 	  mbox_put(&mb_start,(unsigned int)data+(i*BLOCK_SIZE));
 	}
 	printf("\n");
@@ -234,6 +234,8 @@ int main(int argc, char ** argv)
 
 	t_stop = gettime();
 	t_sort = calc_timediff_ms(t_start,t_stop);
+
+	reconos_cache_flush();
 
 
 	// merge data
@@ -264,7 +266,7 @@ int main(int argc, char ** argv)
 	ret = check_data( data, copy, TO_WORDS(buffer_size));
 	if (ret >= 0)
 	  {
-	    printf("failure at word index %i\n", -ret);
+	    printf("failure at word index %i\n", ret);
 	    printf("expected 0x%08X    found 0x%08X\n",copy[ret],data[ret]);
             printf("dumping the first 2048 words:\n");
             for(i = 0; i < 2048; i++){

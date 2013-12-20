@@ -1,0 +1,8 @@
+##############################################################################
+## Filename:          hwt_sort_demo_v2_1_0.pao
+## Description:       Sort Demo
+## Date:              Tue Sep 13 12:47:26 2011 (by Create and Import Peripheral Wizard)
+##############################################################################
+
+lib proc_common_v3_00_a  proc_common_pkg vhdl
+lib reconos_hwt_idle_v1_00_a reconos_hwt_idle vhdl

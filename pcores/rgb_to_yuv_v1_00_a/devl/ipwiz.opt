@@ -1,8 +1,0 @@
--batch 
--create ran_num_generator 
--ver 1.00.a 
--dir "/home/huangy/work/ran_num_generator" 
--lang vhdl 
--bus plbv46 s 
--reg 1 
--xps 

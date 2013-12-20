@@ -1,7 +1,0 @@
-pr port /dev/ttyUSB0
-pu baudrate 9600
-pr bits 8
-pr parity N
-pu stopbits 1
-pu rtscts No
-pu minit

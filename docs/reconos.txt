@@ -1,0 +1,294 @@
+                                                       ____  _____
+                           ________  _________  ____  / __ \/ ___/
+                          / ___/ _ \/ ___/ __ \/ __ \/ / / /\__ \
+                         / /  /  __/ /__/ /_/ / / / / /_/ /___/ /
+                        /_/   \___/\___/\____/_/ /_/\____//____/
+
+======================================================================
+
+  title:        ReconOS
+
+  project:      ReconOS
+  author:       Christoph Rüthing, University of Paderborn
+  description:  This is an introduction to ReconOS. It gives you an
+                overview over the system and how to use it.
+
+  History
+  Date     | Rev | Author        | What
+  ---------+-----+---------------+------------------------
+  28.03.13 | 1.0 | C. Rüthing    | Initial Version
+  ---------+-----+---------------+------------------------
+
+======================================================================
+
+1. Introduction
+
+ReconOS is a programming model, an execution environment, an operating
+system extension, a hardware architecture, a research project, and a
+development playground.
+
+Originally developed within the context of a university research
+project and a PhD thesis, ReconOS is a way to bring some of the
+convenience of a software-like programming model to the detail-ridden
+world of dynamically reconfigurable hardware design. With ReconOS, you
+can model a concurrent application for reconfigurable systems-on-chip
+(rSoC) using both software and hardware threads. The interactions
+between all threads are handled through common POSIX-like abstractions
+such as mailboxes, semaphores, or shared memory, hiding the
+complexities of bus access protocols, memory spaces, register files
+and interrupt handling.
+
+
+2. Prerequisites
+
+The ReconOS toolchain depends on a few other tools you need to install
+before you can start over. This guide will not cover how to setup
+these tools, but it should be fairly easy. At least you need the
+following:
+
+ - Linux as your operating system
+   (under windows you won't be able to use the reconos scripts)
+ - The Xilinx FPGA synthesis and implementation tools
+ - A compiler toolchain for your targeted architecture
+ - Python for some scripts
+
+
+3. The ReconOS repository
+
+All ReconOS files are maintained in a git repository under
+https://github.com/EPiCS/reconos. To start over you have to clone this
+repository to your workstation.
+
+The repository looks like the following:
+
+  /doc:
+    Contains all documentation on ReconOS.
+
+  /lib
+    The ReconOS library. Do not try to compile it here, instead
+    use the os folders.
+
+  /pcores
+    All hardware components of ReconOS.
+
+  /tools
+    A collection of scripts to simplify the use of ReconOS like setup
+    or boot-scripts.
+
+  /designs
+    A collection of base designs used by the setup script.
+
+  /demos
+    Many different demo applications for ReconOS. Feel free to add your
+    own ones.
+
+  /linux
+    All components needed to run ReconOS with Linux.
+
+  /xilkernel
+    All components needed to run ReconOS with the Xilkernel.
+
+
+4. The ReconOS toolchain
+
+The ReconOS toolchain is a set of scripts which supports you on working
+with ReconOS. The toolchain itself can be configured to your needs by a
+simple configuration file.
+
+To setup the toolchain simply source the main setup script by
+  > source /tools/environment/setup_reconos_toolchain.sh [config]
+You can specify a configuration if you want or simply use the default
+configuration.
+
+4.1 Configure the toolchain
+
+While setting up the toolchain you can specify a configuration. These
+configurations are stored under /tools/environment and you can add as
+many configurations as you wish. You can also define the default
+configuration by creating a symlink "default.sh" in the configs
+directory pointing to one of the configuration files.
+
+The configuration files itself contains assignemnts to the following
+variables:
+
+  - xil_tools     path to your Xilinx tools installation folder
+                  e.g. /opt/Xilinx/14.6/
+  - gnutools      path to the gnutools you want to use
+                  e.g. /opt/Xilinx/14.6/ISE_DS/EDK/gnu/arm/lin/bin/arm-xilinx-linux-gnueabi-
+  - reconos_arch  architecture string
+                  e.g. zynq, microblaze
+  - reconos_os    operation system used
+                  e.g. linux, xilkernel
+  - reconos_mmu   if mmu used or not
+                  e.g. true, false (only these two, case sensitive!)
+
+4.2 Scripts provided by the toolchain
+
+The ReconOS toolchain contains the following scripts:
+
+  - reconos_setup.sh
+      This script is used to create a complete ReconOS EDK projekt out
+      of your HWTs. It expects a configuration file which specifies
+      the base design and which HWTs you which to include by setting
+      three variables:
+        base_design  name of the base design you want to use
+        num_hwts     number of HWTs
+        hwts         a list of HWTs of the form hwt_name[#count] ...
+
+      Calling reconos_setup.sh <config> creates a edk folder in the
+      current folder containing a complete edk projekt which can be
+      opened by xps and implemented.
+
+  - reconos_download_bitstream.sh
+      This script can be used to simply program the FPGA with a
+      bitstream. For the different architectures you may have to pass
+      different arguments.
+
+  - reconos_download_executable.sh
+      This script can be used to simply download an executable to the
+      main memory and execute it.
+
+  - reconos_build_reconf.sh
+      This script can be called inside of an reconfigurable EDK project
+      and builds all partial and complete bitstreams.
+
+Furthermore the setup_reconos_toolchain-script setups all needed
+environment variables to compile the linux kernel, the reconos
+libraries and drivers and also your own applications.
+
+
+5 The ReconOS architecture
+
+Although you can develop application without knowlegde of the ReconOS
+architecture it useful to understand its basic principles.
+
+5.1 Overall system architecture
+
+Each HWT is connected via its own FIFO link to the CPU. For every HWT
+a delegate thread runs on the CPU and handles the requests submitted
+by the HWTs. To allow fast memory access the HWTs are also connected
+to the ReconOS memory subsystem with full support for virtual
+addresses and page faults.
+Figure 1 shows the overall system architecture which consists out of
+the FIFO interfaces to the processor (there is also an interrupt
+controller to connect the FIFO interrupts to the CPU which is not
+shown), the delegate threads running on the CPU, the proc control
+and the memory subsystem which is explained in detail in section 5.2.
+The proc control is connected to several components and allows to
+reset the HWTs, the entire system or to read out statistics. For the
+sake of clarity not all connections of the proc control are shown in
+Figure 1.
+
+     +-------------------------------+
+     |              CPU              |
+     |  +-----+             +-----+  |
+     |  | DT0 |     ...     | DTn |  |
+     |  +-----+             +-----+  |
+     +-------------------------------+
+                     |                              System Bus
+    =========================================================== 
+        v     ^             v     ^        |         |
+      +---+ +---+         +---+ +---+      |  +--------------+
+      | F | | F |         | F | | F |      |  | Proc control |
+      | I | | I |         | I | | I |      |  +--------------+
+      | F | | F |         | F | | F |      |
+      | O | | O |         | O | | O |      |
+      +---+ +---+         +---+ +---+      |
+        v     ^             v     ^        |
+     +-----------+       +-----------+     |
+     |   HWT 0   |  ...  |   HWT n   |     |
+     +-----------+       +-----------+     |
+        v     ^             v     ^        |
+      +---+ +---+         +---+ +---+      |
+      | F | | F |         | F | | F |      |
+      | I | | I |         | I | | I |      |
+      | F | | F |         | F | | F |      |
+      | O | | O |         | O | | O |      |
+      +---+ +---+         +---+ +---+      |
+        v     ^             v     ^        |
+   +----------------------------------+    |
+   |     ReconOS Memory Subsystem     |----+
+   +----------------------------------+
+
+             Figure 1: Overall system architecture
+
+5.2 Memory Subsystem
+
+ReconOS' memory subsystem allows the HWT to access the main memory the
+same way the threads on the CPU do including support for virtual
+addressing and paging.
+The following figure gives an overview of the entire system and shows
+the interaction of the different components.
+
+                +------------+     +------------+
+                |    HWT0    | ... |    HWTn    |
+                +------------+     +------------+
+                   v      ^           v      ^   
+                 +---+  +---+       +---+  +---+ 
+                 | F |  | F |       | F |  | F | 
+                 | I |  | I |       | I |  | I | 
+                 | F |  | F |       | F |  | F | 
+                 | O |  | O |       | O |  | O | 
+                 +---+  +---+       +---+  +---+ 
+                   v      ^    ...    v      ^   
+                +-------------------------------+
+                |      transaction control      |
+                +-------------------------------+
+                       v                   | ^
+                 +-----------+             | |
+                 |   burst   |             | |
+                 | converter |             | |
+                 +-----------+             | |
+                       v                   | |
+                 +-----------+             | |
+                 |    MMU    |             | |
+                 +-----------+             | |
+                   |  | ^  |               | |
+                   |  | |  +------------+  | |
+                   v  v |               v  v |
+                +-------------------------------+
+                |  dual port memory controller  |
+                +-------------------------------+
+
+                 Figure 2: The memory subsystem
+
+The different HWTs are connected via two FIFOs to the memory subsystem,
+one for each direction. Through these FIFOs all data and commands are
+transmitted and buffered if needed.
+All theses FIFOs are connected to the transaction control. It acts as
+an arbiter and seperates commands and data.
+The data input and output is then connected directly to the memory
+controller whereas the control output needs some further processing if
+virtual addresses are used.
+The translation of virtual addresse is done by the MMU for which it
+needs a seperate connection to the memory to read the page tables and
+perform a page table walk. Because a request to the memory subsystem
+can expand over severeal pages these requests has to be split according
+to the page borders. This is done by the burst converter. If virtual
+addressing is not needed both burst converter and MMU can be left out
+and port 1 of the memory controller stays unconnected.
+The internal components of the memory subsystem are connected through
+the known FIFO interface to avoid extra delays no seperate FIFOs are
+introduced but the components themselves handles the FIFO transactions.
+
+5.2.1 Transaction control
+The transaction control schedules the different request of the HWTs by
+using a kind of round robin schedule which guarentees a relatively
+fair distribution. If a HWT is selected the sent command is read and
+put into the command FIFO and the HWT FIFOs are multiplexed to the
+memory controller. If all data is transmitted the next request will
+be served.
+
+5.2.2 MMU
+The MMU handles the entire address translation. Therefore it performs
+a page table walk and rewrites the address in the command word with
+the translated one. It also raises page faults which are handled via
+the proc controlt by the CPU. To speed up the translation process the
+MMU uses a TLB to cache the most recent translations.
+REMARK: At the moment the MMU is not notified of TLB invalidations
+which should be considered by accessing the memory.
+
+5.2.3 Multi port memory controller
+The memory controller has two ports one for the MMU and one for the
+HWTs. These ports are not equally handled so you should take care to
+connect them correctly.

@@ -6,39 +6,51 @@ use ieee.std_logic_unsigned.all;
 library proc_common_v3_00_a;
 use proc_common_v3_00_a.proc_common_pkg.all;
 
-library reconos_v3_00_b;
-use reconos_v3_00_b.reconos_pkg.all;
+library reconos_v3_01_a;
+use reconos_v3_01_a.reconos_pkg.all;
 
 entity hwt_sort_demo is
 	port (
-		-- OSIF FSL
-		
-		OSFSL_S_Read    : out std_logic;                 -- Read signal, requiring next available input to be read
-		OSFSL_S_Data    : in  std_logic_vector(0 to 31); -- Input data
-		OSFSL_S_Control : in  std_logic;                 -- Control Bit, indicating the input data are control word
-		OSFSL_S_Exists  : in  std_logic;                 -- Data Exist Bit, indicating data exist in the input FSL bus
-		
-		OSFSL_M_Write   : out std_logic;                 -- Write signal, enabling writing to output FSL bus
-		OSFSL_M_Data    : out std_logic_vector(0 to 31); -- Output data
-		OSFSL_M_Control : out std_logic;                 -- Control Bit, indicating the output data are contol word
-		OSFSL_M_Full    : in  std_logic;                 -- Full Bit, indicating output FSL bus is full
-		
-		-- FIFO Interface
-		FIFO32_S_Data : in std_logic_vector(31 downto 0);
-		FIFO32_M_Data : out std_logic_vector(31 downto 0);
-		FIFO32_S_Fill : in std_logic_vector(15 downto 0);
-		FIFO32_M_Rem : in std_logic_vector(15 downto 0);
-		FIFO32_S_Rd : out std_logic;
-		FIFO32_M_Wr : out std_logic;
-		
-		-- HWT reset and clock
-		clk           : in std_logic;
-		rst           : in std_logic
+		-- OSIF FIFO ports
+		OSIF_FIFO_Sw2Hw_Data    : in  std_logic_vector(31 downto 0);
+		OSIF_FIFO_Sw2Hw_Fill    : in  std_logic_vector(15 downto 0);
+		OSIF_FIFO_Sw2Hw_Empty   : in  std_logic;
+		OSIF_FIFO_Sw2Hw_RE      : out std_logic;
+
+		OSIF_FIFO_Hw2Sw_Data    : out std_logic_vector(31 downto 0);
+		OSIF_FIFO_Hw2Sw_Rem     : in  std_logic_vector(15 downto 0);
+		OSIF_FIFO_Hw2Sw_Full    : in  std_logic;
+		OSIF_FIFO_Hw2Sw_WE      : out std_logic;
+
+		-- MEMIF FIFO ports
+		MEMIF_FIFO_Hwt2Mem_Data    : out std_logic_vector(31 downto 0);
+		MEMIF_FIFO_Hwt2Mem_Rem     : in  std_logic_vector(15 downto 0);
+		MEMIF_FIFO_Hwt2Mem_Full    : in  std_logic;
+		MEMIF_FIFO_Hwt2Mem_WE      : out std_logic;
+
+		MEMIF_FIFO_Mem2Hwt_Data    : in  std_logic_vector(31 downto 0);
+		MEMIF_FIFO_Mem2Hwt_Fill    : in  std_logic_vector(15 downto 0);
+		MEMIF_FIFO_Mem2Hwt_Empty   : in  std_logic;
+		MEMIF_FIFO_Mem2Hwt_RE      : out std_logic;
+
+		HWT_Clk   : in  std_logic;
+		HWT_Rst   : in  std_logic;
+
+		DEBUG_DATA : out std_logic_vector(5 downto 0)
 	);
 
-end entity;
+	attribute SIGIS   : string;
+
+	attribute SIGIS of HWT_Clk   : signal is "Clk";
+	attribute SIGIS of HWT_Rst   : signal is "Rst";
+
+end entity hwt_sort_demo;
 
 architecture implementation of hwt_sort_demo is
+	-- just for simpler use
+	signal clk   : std_logic;
+	signal rst   : std_logic;
+
 	type STATE_TYPE is (
 					STATE_GET_ADDR,STATE_READ,STATE_SORTING,
 					STATE_WRITE,STATE_ACK,STATE_THREAD_EXIT);
@@ -73,8 +85,8 @@ architecture implementation of hwt_sort_demo is
 
 	type LOCAL_MEMORY_T is array (0 to C_LOCAL_RAM_SIZE-1) of std_logic_vector(31 downto 0);
 	
-	constant MBOX_RECV  : std_logic_vector(C_FSL_WIDTH-1 downto 0) := x"00000000";
-	constant MBOX_SEND  : std_logic_vector(C_FSL_WIDTH-1 downto 0) := x"00000001";
+	constant MBOX_RECV  : std_logic_vector(31 downto 0) := x"00000000";
+	constant MBOX_SEND  : std_logic_vector(31 downto 0) := x"00000001";
 
 	signal addr     : std_logic_vector(31 downto 0);
 	signal len      : std_logic_vector(23 downto 0);
@@ -101,11 +113,21 @@ architecture implementation of hwt_sort_demo is
 
 	shared variable local_ram : LOCAL_MEMORY_T;
 
-	signal ignore   : std_logic_vector(C_FSL_WIDTH-1 downto 0);
+	signal ignore   : std_logic_vector(31 downto 0);
 
 	signal sort_start : std_logic := '0';
 	signal sort_done  : std_logic := '0';
 begin
+
+	DEBUG_DATA(5) <= '1' when state = STATE_GET_ADDR else '0';
+	DEBUG_DATA(4) <= '1' when state = STATE_READ else '0';
+	DEBUG_DATA(3) <= '1' when state = STATE_SORTING else '0';
+	DEBUG_DATA(2) <= '1' when state = STATE_WRITE else '0';
+	DEBUG_DATA(1) <= '1' when state = STATE_ACK else '0';
+	DEBUG_DATA(0) <= '1' when state = STATE_THREAD_EXIT else '0';
+
+	clk <= HWT_Clk;
+	rst <= HWT_Rst;
 	
 	-- local dual-port RAM
 	local_ram_ctrl_1 : process (clk) is
@@ -149,36 +171,40 @@ begin
 			done      => sort_done
 	);
 
-	fsl_setup(
+	-- ReconOS initilization
+	osif_setup (
 		i_osif,
 		o_osif,
-		OSFSL_S_Data,
-		OSFSL_S_Exists,
-		OSFSL_M_Full,
-		OSFSL_M_Data,
-		OSFSL_S_Read,
-		OSFSL_M_Write,
-		OSFSL_M_Control
+		OSIF_FIFO_Sw2Hw_Data,
+		OSIF_FIFO_Sw2Hw_Fill,
+		OSIF_FIFO_Sw2Hw_Empty,
+		OSIF_FIFO_Hw2Sw_Rem,
+		OSIF_FIFO_Hw2Sw_Full,
+		OSIF_FIFO_Sw2Hw_RE,
+		OSIF_FIFO_Hw2Sw_Data,
+		OSIF_FIFO_Hw2Sw_WE
 	);
-		
-	memif_setup(
+
+	memif_setup (
 		i_memif,
 		o_memif,
-		FIFO32_S_Data,
-		FIFO32_S_Fill,
-		FIFO32_S_Rd,
-		FIFO32_M_Data,
-		FIFO32_M_Rem,
-		FIFO32_M_Wr
+		MEMIF_FIFO_Mem2Hwt_Data,
+		MEMIF_FIFO_Mem2Hwt_Fill,
+		MEMIF_FIFO_Mem2Hwt_Empty,
+		MEMIF_FIFO_Hwt2Mem_Rem,
+		MEMIF_FIFO_Hwt2Mem_Full,
+		MEMIF_FIFO_Mem2Hwt_RE,
+		MEMIF_FIFO_Hwt2Mem_Data,
+		MEMIF_FIFO_Hwt2Mem_WE
 	);
 	
-	ram_setup(
+	ram_setup (
 		i_ram,
 		o_ram,
-		o_RAMAddr_reconos_2,		
+		o_RAMAddr_reconos_2,
+		o_RAMWE_reconos,
 		o_RAMData_reconos,
-		i_RAMData_reconos,
-		o_RAMWE_reconos
+		i_RAMData_reconos
 	);
 	
 	o_RAMAddr_reconos(0 to C_LOCAL_RAM_ADDRESS_WIDTH-1) <= o_RAMAddr_reconos_2((32-C_LOCAL_RAM_ADDRESS_WIDTH) to 31);

@@ -1,0 +1,67 @@
+######################################################################
+#
+#     XILINX IS PROVIDING THIS DESIGN, CODE, OR INFORMATION "AS IS"
+#     SOLELY FOR USE IN DEVELOPING PROGRAMS AND SOLUTIONS FOR
+#     XILINX DEVICES.  BY PROVIDING THIS DESIGN, CODE, OR INFORMATION
+#     AS ONE POSSIBLE IMPLEMENTATION OF THIS FEATURE, APPLICATION
+#     OR STANDARD, XILINX IS MAKING NO REPRESENTATION THAT THIS
+#     IMPLEMENTATION IS FREE FROM ANY CLAIMS OF INFRINGEMENT,
+#     AND YOU ARE RESPONSIBLE FOR OBTAINING ANY RIGHTS YOU MAY REQUIRE
+#     FOR YOUR IMPLEMENTATION.  XILINX EXPRESSLY DISCLAIMS ANY
+#     WARRANTY WHATSOEVER WITH RESPECT TO THE ADEQUACY OF THE
+#     IMPLEMENTATION, INCLUDING BUT NOT LIMITED TO ANY WARRANTIES OR
+#     REPRESENTATIONS THAT THIS IMPLEMENTATION IS FREE FROM CLAIMS OF
+#     INFRINGEMENT, IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+#     FOR A PARTICULAR PURPOSE.
+#     
+#     (c) Copyright 2006 Xilinx, Inc.
+#     All rights reserved.
+# 
+######################################################################
+
+# The following are defined in config.make
+# LIBS - Do Build Profile Libraries 
+include config.make
+
+CC=powerpc-eabi-gcc
+AR=powerpc-eabi-ar
+CP=cp
+MV=mv
+CC_FLAGS=$(subst -pg, , $(COMPILER_FLAGS))
+ECC_FLAGS=$(subst -pg, , $(EXTRA_COMPILER_FLAGS))
+LIB=libxil.a
+
+RELEASEDIR=../../../lib
+INCLUDEDIR=../../../include
+INCLUDES=-I./. -I${INCLUDEDIR}
+BOOTOBJ = boot.o
+
+OUTS = *.o 
+
+LIB_CSOURCES=*.c
+LIB_SSOURCES=*.S
+INCLUDEFILES=*.h
+
+libs: $(LIBS) clean
+
+standalone_libs:
+	echo "Compiling standalone"
+	$(CC) $(CC_FLAGS) $(ECC_FLAGS) $(INCLUDES) $(LIB_CSOURCES)
+	$(CC) $(CC_FLAGS) $(ECC_FLAGS) $(INCLUDES) $(LIB_SSOURCES)
+	$(AR) -r ${RELEASEDIR}/${LIB} ${OUTS} 
+	$(MV) ${BOOTOBJ} ${RELEASEDIR}
+
+profile_libs:
+	$(MAKE) -C profile COMPILER_FLAGS="$(CC_FLAGS)" EXTRA_COMPILER_FLAGS="$(ECC_FLAGS)" COMPILER="$(CC)" ARCHIVER="$(AR)" libs
+
+include: standalone_includes profile_includes
+
+standalone_includes:
+	${CP} ${INCLUDEFILES} ${INCLUDEDIR}
+
+profile_includes:
+	$(MAKE) -C profile COMPILER_FLAGS="$(CC_FLAGS)" EXTRA_COMPILER_FLAGS="$(ECC_FLAGS)" COMPILER="$(CC)" ARCHIVER="$(AR)" include
+
+clean:
+	rm -rf ${OUTS}
+	$(MAKE) -C profile COMPILER_FLAGS="$(CC_FLAGS)" EXTRA_COMPILER_FLAGS="$(ECC_FLAGS)" COMPILER="$(CC)" ARCHIVER="$(AR)" clean

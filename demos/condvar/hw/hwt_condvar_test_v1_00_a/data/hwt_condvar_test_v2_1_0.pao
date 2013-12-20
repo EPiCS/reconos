@@ -1,8 +1,0 @@
-##############################################################################
-## Filename:          /home/andreas/reconos_v3/step_a/pcores/fsl_ctrl_regs_v1_00_a/data/fsl_ctrl_regs_v2_1_0.pao
-## Description:       Test core for conditional variables
-## Date:              Tue Sep 13 12:47:26 2011 (by Create and Import Peripheral Wizard)
-##############################################################################
-
-lib reconos_v3_00_a reconos_pkg vhdl
-lib hwt_condvar_test_v1_00_a hwt_condvar_test vhdl

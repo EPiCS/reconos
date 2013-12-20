@@ -19,8 +19,8 @@ use ieee.std_logic_unsigned.all;
 library proc_common_v3_00_a;
 use proc_common_v3_00_a.proc_common_pkg.all;
 
-library reconos_v3_00_b;
-use reconos_v3_00_b.reconos_pkg.all;
+library reconos_v3_01_a;
+use reconos_v3_01_a.reconos_pkg.all;
 
 ------------------------------------------------------------------------------
 -- Entity Section
@@ -28,30 +28,37 @@ use reconos_v3_00_b.reconos_pkg.all;
 
 entity hwt_matrixmul is
 	port (
-		-- OSIF FSL
-		
-		OSFSL_S_Read    : out std_logic;                 -- Read signal, requiring next available input to be read
-		OSFSL_S_Data    : in  std_logic_vector(0 to 31); -- Input data
-		OSFSL_S_Control : in  std_logic;                 -- Control Bit, indicating the input data are control word
-		OSFSL_S_Exists  : in  std_logic;                 -- Data Exist Bit, indicating data exist in the input FSL bus
-		
-		OSFSL_M_Write   : out std_logic;                 -- Write signal, enabling writing to output FSL bus
-		OSFSL_M_Data    : out std_logic_vector(0 to 31); -- Output data
-		OSFSL_M_Control : out std_logic;                 -- Control Bit, indicating the output data are contol word
-		OSFSL_M_Full    : in  std_logic;                 -- Full Bit, indicating output FSL bus is full
-		
-		-- FIFO Interface
-		FIFO32_S_Data : in std_logic_vector(31 downto 0);
-		FIFO32_M_Data : out std_logic_vector(31 downto 0);
-		FIFO32_S_Fill : in std_logic_vector(15 downto 0);
-		FIFO32_M_Rem : in std_logic_vector(15 downto 0);
-		FIFO32_S_Rd : out std_logic;
-		FIFO32_M_Wr : out std_logic;
-		
-		-- HWT reset and clock
-		clk           : in std_logic;
-		rst           : in std_logic
+		-- OSIF FIFO ports
+		OSIF_FIFO_Sw2Hw_Data    : in  std_logic_vector(31 downto 0);
+		OSIF_FIFO_Sw2Hw_Fill    : in  std_logic_vector(15 downto 0);
+		OSIF_FIFO_Sw2Hw_Empty   : in  std_logic;
+		OSIF_FIFO_Sw2Hw_RE      : out std_logic;
+
+		OSIF_FIFO_Hw2Sw_Data    : out std_logic_vector(31 downto 0);
+		OSIF_FIFO_Hw2Sw_Rem     : in  std_logic_vector(15 downto 0);
+		OSIF_FIFO_Hw2Sw_Full    : in  std_logic;
+		OSIF_FIFO_Hw2Sw_WE      : out std_logic;
+
+		-- MEMIF FIFO ports
+		MEMIF_FIFO_Hwt2Mem_Data    : out std_logic_vector(31 downto 0);
+		MEMIF_FIFO_Hwt2Mem_Rem     : in  std_logic_vector(15 downto 0);
+		MEMIF_FIFO_Hwt2Mem_Full    : in  std_logic;
+		MEMIF_FIFO_Hwt2Mem_WE      : out std_logic;
+
+		MEMIF_FIFO_Mem2Hwt_Data    : in  std_logic_vector(31 downto 0);
+		MEMIF_FIFO_Mem2Hwt_Fill    : in  std_logic_vector(15 downto 0);
+		MEMIF_FIFO_Mem2Hwt_Empty   : in  std_logic;
+		MEMIF_FIFO_Mem2Hwt_RE      : out std_logic;
+
+		HWT_Clk   : in  std_logic;
+		HWT_Rst   : in  std_logic
 	);
+
+	attribute SIGIS   : string;
+
+	attribute SIGIS of HWT_Clk   : signal is "Clk";
+	attribute SIGIS of HWT_Rst   : signal is "Rst";
+
 end hwt_matrixmul;
 
 ------------------------------------------------------------------------------
@@ -71,37 +78,37 @@ architecture implementation of hwt_matrixmul is
 	);
 	
 	component matrixmultiplier is
-		generic(
-			G_LINE_LEN_MATRIX					: integer	:= 128;
-			G_RAM_DATA_WIDTH					: integer	:= 32;
-			
-			G_RAM_SIZE_MATRIX_A_C			: integer	:= 128;
-			G_RAM_ADDR_WIDTH_MATRIX_A_C	: integer	:= 7;
-			
-			G_RAM_SIZE_MATRIX_B				: integer	:= 16384;
-			G_RAM_ADDR_WIDTH_MATRIX_B		: integer	:= 14
+		generic (
+			G_LINE_LEN_MATRIX             : integer  := 128;
+			G_RAM_DATA_WIDTH              : integer  := 32;
+
+			G_RAM_SIZE_MATRIX_A_C         : integer  := 128;
+			G_RAM_ADDR_WIDTH_MATRIX_A_C   : integer  := 7;
+
+			G_RAM_SIZE_MATRIX_B           : integer  := 16384;
+			G_RAM_ADDR_WIDTH_MATRIX_B     : integer := 14
 		);
-		port(
+		port (
 			clk	: in std_logic;
 			reset	: in std_logic;
 			start	: in std_logic;
 			done	: out std_logic;
 			
-			o_RAM_A_Addr	: out std_logic_vector(0 to G_RAM_ADDR_WIDTH_MATRIX_A_C - 1);
-			i_RAM_A_Data	: in std_logic_vector(0 to G_RAM_DATA_WIDTH - 1);
+			o_RAM_A_Addr    : out std_logic_vector(0 to G_RAM_ADDR_WIDTH_MATRIX_A_C - 1);
+			i_RAM_A_Data    : in std_logic_vector(0 to G_RAM_DATA_WIDTH - 1);
 			
-			o_RAM_B_Addr	: out std_logic_vector(0 to G_RAM_ADDR_WIDTH_MATRIX_B - 1);
-			i_RAM_B_Data	: in std_logic_vector(0 to G_RAM_DATA_WIDTH - 1);
+			o_RAM_B_Addr    : out std_logic_vector(0 to G_RAM_ADDR_WIDTH_MATRIX_B - 1);
+			i_RAM_B_Data    : in std_logic_vector(0 to G_RAM_DATA_WIDTH - 1);
 			
-			o_RAM_C_Addr	: out std_logic_vector(0 to G_RAM_ADDR_WIDTH_MATRIX_A_C - 1);
-			o_RAM_C_Data	: out std_logic_vector(0 to G_RAM_DATA_WIDTH - 1);
-			o_RAM_C_WE		: out std_logic
+			o_RAM_C_Addr    : out std_logic_vector(0 to G_RAM_ADDR_WIDTH_MATRIX_A_C - 1);
+			o_RAM_C_Data    : out std_logic_vector(0 to G_RAM_DATA_WIDTH - 1);
+			o_RAM_C_WE      : out std_logic
 		);
 	end component;
 	
-	constant C_LINE_LEN_MATRIX								: integer	:= 128;
+	--constant C_LINE_LEN_MATRIX								: integer	:= 128;
 	-- Use the following line for testing purposes.
-	--constant C_LINE_LEN_MATRIX								: integer	:= 32;
+	constant C_LINE_LEN_MATRIX								: integer	:= 4;
 	
 	-- const for matrixes A and C
 	constant C_LOCAL_RAM_SIZE_MATRIX_A_C				: integer	:= C_LINE_LEN_MATRIX;
@@ -116,9 +123,9 @@ architecture implementation of hwt_matrixmul is
 	type LOCAL_MEMORY_TYPE_MATRIX_B		is array(0 to C_LOCAL_RAM_SIZE_MATRIX_B   - 1) of std_logic_vector(31 downto 0);
 	
 	-- communication with microblaze core
-	constant C_MBOX_RECV	: std_logic_vector(C_FSL_WIDTH-1 downto 0)	:= x"00000000";
-	constant C_MBOX_SEND	: std_logic_vector(C_FSL_WIDTH-1 downto 0)	:= x"00000001";
-	signal ignore			: std_logic_vector(C_FSL_WIDTH-1 downto 0);
+	constant C_MBOX_RECV	: std_logic_vector(31 downto 0)	:= x"00000000";
+	constant C_MBOX_SEND	: std_logic_vector(31 downto 0)	:= x"00000001";
+	signal ignore			: std_logic_vector(31 downto 0);
 	
 	-- maddr is an acronym for "matrix address" (address that points to a matrix)
 	constant C_MADDRS		: integer	:= 3;
@@ -188,8 +195,13 @@ architecture implementation of hwt_matrixmul is
 	
 	signal multiplier_start	: std_logic;
 	signal multiplier_done	: std_logic;
+
+	signal clk, rst : std_logic;
 	
 begin
+
+	clk <= HWT_Clk;
+	rst <= HWT_Rst;
 	
 	-- local BRAM read and write access
 	local_ram_ctrl_1 : process (clk) is
@@ -249,54 +261,58 @@ begin
 	);
 	
 	-- setup interfaces (FIFOs, FSL,...)
-	fsl_setup(
+	-- ReconOS initilization
+	osif_setup (
 		i_osif,
 		o_osif,
-		OSFSL_S_Data,
-		OSFSL_S_Exists,
-		OSFSL_M_Full,
-		OSFSL_M_Data,
-		OSFSL_S_Read,
-		OSFSL_M_Write,
-		OSFSL_M_Control
+		OSIF_FIFO_Sw2Hw_Data,
+		OSIF_FIFO_Sw2Hw_Fill,
+		OSIF_FIFO_Sw2Hw_Empty,
+		OSIF_FIFO_Hw2Sw_Rem,
+		OSIF_FIFO_Hw2Sw_Full,
+		OSIF_FIFO_Sw2Hw_RE,
+		OSIF_FIFO_Hw2Sw_Data,
+		OSIF_FIFO_Hw2Sw_WE
 	);
-		
-	memif_setup(
+
+	memif_setup (
 		i_memif,
 		o_memif,
-		FIFO32_S_Data,
-		FIFO32_S_Fill,
-		FIFO32_S_Rd,
-		FIFO32_M_Data,
-		FIFO32_M_Rem,
-		FIFO32_M_Wr
+		MEMIF_FIFO_Mem2Hwt_Data,
+		MEMIF_FIFO_Mem2Hwt_Fill,
+		MEMIF_FIFO_Mem2Hwt_Empty,
+		MEMIF_FIFO_Hwt2Mem_Rem,
+		MEMIF_FIFO_Hwt2Mem_Full,
+		MEMIF_FIFO_Mem2Hwt_RE,
+		MEMIF_FIFO_Hwt2Mem_Data,
+		MEMIF_FIFO_Hwt2Mem_WE
 	);
 	
-	ram_setup(
+	ram_setup (
 		i_ram_A,
 		o_ram_A,
 		o_RAM_A_Addr_reconos_2,
+		o_RAM_A_WE_reconos,
 		o_RAM_A_Data_reconos,
-		i_RAM_A_Data_reconos,
-		o_RAM_A_WE_reconos
+		i_RAM_A_Data_reconos
 	);
 	
-	ram_setup(
+	ram_setup (
 		i_ram_B,
 		o_ram_B,
 		o_RAM_B_Addr_reconos_2,
+		o_RAM_B_WE_reconos,
 		o_RAM_B_Data_reconos,
-		i_RAM_B_Data_reconos,
-		o_RAM_B_WE_reconos
+		i_RAM_B_Data_reconos
 	);
 	
-	ram_setup(
+	ram_setup (
 		i_ram_C,
 		o_ram_C,
 		o_RAM_C_Addr_reconos_2,
+		o_RAM_C_WE_reconos,
 		o_RAM_C_Data_reconos,
-		i_RAM_C_Data_reconos,
-		o_RAM_C_WE_reconos
+		i_RAM_C_Data_reconos
 	);
 	
 	o_RAM_A_Addr_reconos(0 to C_LOCAL_RAM_ADDR_WIDTH_MATRIX_A_C - 1) <= o_RAM_A_Addr_reconos_2((32-C_LOCAL_RAM_ADDR_WIDTH_MATRIX_A_C) to 31);

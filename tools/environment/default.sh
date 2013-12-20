@@ -1,0 +1,1 @@
+zynq_linux.sh

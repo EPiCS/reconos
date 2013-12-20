@@ -1,8 +1,0 @@
--batch 
--create xps_mem 
--ver 1.00.a 
--dir "/home/andreas/reconos_v3/step_b" 
--lang vhdl 
--bus plbv46 ms 
--burst m 32 
--xps 

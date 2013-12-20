@@ -1,1 +1,0 @@
-echo -e 'cleancablelock\nexit' | impact -batch

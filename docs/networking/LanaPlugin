@@ -1,8 +1,0 @@
-How to add a new plugin?
-////////////////////////
-
-Steps:
-
- * Make a copy of linux/net/fb_dummy.c and create a new file for your plugin.
- * Replace function name prefixes with something meaningful.
- * Start hacking your plugin, add it to the Makefile.
