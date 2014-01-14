@@ -1,3 +1,5 @@
+#!/bin/sh
+#
 #                                                        ____  _____
 #                            ________  _________  ____  / __ \/ ___/
 #                           / ___/ _ \/ ___/ __ \/ __ \/ / / /\__ \
@@ -12,8 +14,6 @@
 #                 It loads the needed modules and ceates the device files.
 # 
 # ======================================================================
-#
-#!/bin/sh
 
 echo "Loading kernel module ..."
 mkdir -p /lib/modules/`uname -r`
