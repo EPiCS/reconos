@@ -112,3 +112,8 @@ else
 		python ${RECONOS}/tools/python/mhsaddhwts.py "-nommu" $RECONOS_ARCH system.mhs.orig $num_static_hwts 0 $static_hwts > system.mhs
 	fi
 fi
+
+if [ -f setup.sh ]
+then
+	./setup.sh
+fi
