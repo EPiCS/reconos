@@ -338,8 +338,8 @@ which must be created.
   3. Boot Linux
      To boot Linux on Zynq you can use the user defined script zynq_boot_jtag.sh
      > zynq_boot_jtag.sh $WD/linux-xlnx/arch/arm/boot/uImage
-                         $RECONOS/demos/sort_demo/hw/edk/device_tree.dtb
-                         $RECONOS/demos/sort_demo/hw/edk/SDK/SDK_Export/hw/ps7_init.tcl
+                         $RECONOS/demos/sort_demo/hw/edk_zynq_linux/device_tree.dtb
+                         $RECONOS/demos/sort_demo/hw/edk_zynq_linux/ps7_init.tcl
                          $WD/u-boot-xlnx/u-boot
      This scripts caches the last used files and uses these if you call
      zynq_boot_jtag.sh without parameters. So you do not have to specify
