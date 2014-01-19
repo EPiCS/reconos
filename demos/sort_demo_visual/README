@@ -1,0 +1,17 @@
+Sort Demo Visual:
+
+To run this demo you need a link to the ncurses library in the linux directory named ncurses.
+To compile ncurses do the following:
+
+Download it from http://ftp.gnu.org/pub/gnu/ncurses/
+
+For Zynq:
+./configure --host=arm-xilinx-linux-gnueabi --target=arm-xilinx-linux-gnueabi --without-cxx --without-cxx-binding --without-manpages
+make -j3
+make install DESTDIR=_install
+
+For Microblaze:
+./configure --host=microblazeel-xilinx-linux-gnu --target=microblazeel-xilinx-linux-gnu --without-cxx --without-cxx-binding --without-manpages
+make -j3
+make install DESTDIR=_install
+
