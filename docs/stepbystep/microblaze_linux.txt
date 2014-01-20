@@ -237,6 +237,7 @@ it from the ReconOS homepage and extract it to $WD/nfs
      echo "++ Mounting filesystem"
      mount -t proc none /proc
      mount -t sysfs none /sys
+     mount -t devtmpfs none /dev
 
      ttydev=`cat /sys/class/tty/ttyUL1/dev`
      ttymajor=${ttydev%%:*}
