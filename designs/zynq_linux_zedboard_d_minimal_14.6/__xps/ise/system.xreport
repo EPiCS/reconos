@@ -1,12 +1,12 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <report-views version="2.0" >
  <header>
-  <DateModified>2013-11-14T18:48:03</DateModified>
+  <DateModified>2014-01-28T10:06:46</DateModified>
   <ModuleName>system</ModuleName>
-  <SummaryTimeStamp>2013-11-14T18:48:03</SummaryTimeStamp>
-  <SavedFilePath>/home/christoph/Documents/reconos_zynq/reconos_zynq/designs/zynq_linux_zedboard_minimal_14.6/__xps/ise/system.xreport</SavedFilePath>
+  <SummaryTimeStamp>2014-01-28T10:06:46</SummaryTimeStamp>
+  <SavedFilePath>/home/christoph/Documents/reconos/zynq/reconos/designs/zynq_linux_zedboard_d_minimal_14.6/__xps/ise/system.xreport</SavedFilePath>
   <FilterFile>filter.filter</FilterFile>
-  <SavedFilterFilePath>/home/christoph/Documents/reconos_zynq/reconos_zynq/designs/zynq_linux_zedboard_minimal_14.6/__xps/ise</SavedFilterFilePath>
+  <SavedFilterFilePath>/home/christoph/Documents/reconos/zynq/reconos/designs/zynq_linux_zedboard_d_minimal_14.6/__xps/ise</SavedFilterFilePath>
   <DateInitialized>2013-11-14T18:48:03</DateInitialized>
   <EnableMessageFiltering>false</EnableMessageFiltering>
  </header>

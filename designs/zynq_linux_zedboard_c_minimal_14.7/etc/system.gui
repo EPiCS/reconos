@@ -19,9 +19,9 @@
       <SELECTIONS/>
     </STATUS>
     <SEQUENCES IS_DEF_SEQUENCES="TRUE">
-      <VARIABLE ID="processing_system7_0" IS_EXPANDED="TRUE" ROW_INDEX="2"/>
-      <VARIABLE ID="axi_acp" ROW_INDEX="0"/>
       <VARIABLE ID="axi_hwt" ROW_INDEX="1"/>
+      <VARIABLE ID="axi_acp" ROW_INDEX="0"/>
+      <VARIABLE ID="processing_system7_0" IS_EXPANDED="TRUE" ROW_INDEX="2"/>
     </SEQUENCES>
   </SET>
 
@@ -84,9 +84,7 @@
     </HEADERS>
     <SPLITTERS COLLAPSIBLE="1" HANDLEWIDTH="4" MARKER="255" ORIENTATION="1" RESIZE="1" SIZES="180,450,200" VERSION="0"/>
     <STATUS>
-      <SELECTIONS>
-        <VARIABLE ID="TTC_0" PARENT="processing_system7_0"/>
-      </SELECTIONS>
+      <SELECTIONS/>
     </STATUS>
     <SEQUENCES IS_DEF_SEQUENCES="TRUE">
       <VARIABLE ID="ExternalPorts" ROW_INDEX="0"/>
