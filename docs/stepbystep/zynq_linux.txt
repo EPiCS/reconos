@@ -146,7 +146,6 @@ To boot and compile Linux you first have to compile U-Boot:
   3. Disable features disabled in reference designs
        - Open $WD/u-boot-xlnx/include/configs/zynq_zed.h
        - Disable unsupported features by deleting or commenting out
-          #define CONFIG_ZYNQ_SDHCI0
           #define CONFIG_ZYNQ_QSPI
           #define CONFIG_ZYNQ_BOOT_FREEBSD
 
