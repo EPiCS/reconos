@@ -1490,7 +1490,7 @@ package body reconos_pkg is
 			when 0 =>
 				fifo_push_word(i_memif, o_memif, MEMIF_CMD_WRITE & X"000004", 1);
 			when 1 =>
-				fifo_push_word(i_memif, o_memif, addr, 2);
+				fifo_push_word(i_memif, o_memif, addr(31 downto 2) & "00", 2);
 			when 2 =>
 				fifo_push_word(i_memif, o_memif, data, 3);
 			when others =>
@@ -1514,7 +1514,7 @@ package body reconos_pkg is
 			when 0 =>
 				fifo_push_word(i_memif, o_memif, MEMIF_CMD_READ & X"000004", 1);
 			when 1 =>
-				fifo_push_word(i_memif, o_memif, addr, 2);
+				fifo_push_word(i_memif, o_memif, addr(31 downto 2) & "00", 2);
 			when 2 =>
 				fifo_pull_word(i_memif, o_memif, data, 3, False);
 			when others =>
@@ -1541,7 +1541,7 @@ package body reconos_pkg is
 			when 0 =>
 				o_ram.addr <= src_addr;
 				o_ram.remainder <= len(C_MEMIF_LENGTH_WIDTH - 1 downto 2);
-				o_ram.remote_addr <= dst_addr;
+				o_ram.remote_addr <= dst_addr(31 downto 2) & "00";
 
 				o_memif.step <= 1;
 
@@ -1597,7 +1597,7 @@ package body reconos_pkg is
 			when 0 =>
 				o_ram.addr <= dst_addr;
 				o_ram.remainder <= len(C_MEMIF_LENGTH_WIDTH - 1 downto 2);
-				o_ram.remote_addr <= src_addr;
+				o_ram.remote_addr <= src_addr(31 downto 2) & "00";
 
 				o_memif.step <= 1;
 
