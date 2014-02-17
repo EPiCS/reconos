@@ -1050,6 +1050,7 @@ package body reconos_pkg is
 			when others =>
 				o_ram.we <= '0';
 				o_ram.step <= 0;
+				o_fifo.s_re <= '0';
 				o_fifo.step <= next_step;
 		end case;
 	end procedure fifo_pull;
@@ -1085,8 +1086,8 @@ package body reconos_pkg is
 				end if;
 			when others =>
 				o_ram.addr <= i_ram.addr - 2;
-				o_fifo.m_we <= '0';
 				o_ram.step <= 0;
+				o_fifo.m_we <= '0';
 				o_fifo.step <= next_step;
 		end case;
 	end procedure fifo_push;
