@@ -1,0 +1,8 @@
+<?xml version="1.0"?>
+<Project Name="config_pr_b" FileVersion="1.2" ProjectVersion="2.0">
+	<Partition Name="/system" State="import" ImportLocation="../config_pr_a">
+		<Partition Name="/system/hwt_pr_block_0" State="implement" ImportLocation="NONE" Reconfigurable="true" ReconfigModuleName="hwt_pr_b">
+		</Partition>
+	</Partition>
+</Project>
+

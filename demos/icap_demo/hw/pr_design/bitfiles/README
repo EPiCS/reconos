@@ -1,0 +1,12 @@
+1) Insert the following bitfiles to this folder:
+
+- system_add.bit
+- system_sub.bit
+- partial_add.bit
+- partial_sub.bit
+
+
+2) Insert the Linux kernel image to this folder
+
+- simpleImage.icap
+

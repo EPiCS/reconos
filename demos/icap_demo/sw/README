@@ -1,0 +1,13 @@
+/test_icap/.
+---------------------
+  application to test the partial reconfigurable system
+  in a while loop: 
+      (1) configure add module, check add module
+      (2) configure sub module, check add module
+  The application test_icap has to be copied to the compact flash card.
+  The partial bitstreams partial_xxx.bit have to be copied to the folder 'partial_bitstreams' on the compact flash card
+
+config.sh
+---------
+   commands for the Linux shell (on minicom) to set up the icap demo
+ 
