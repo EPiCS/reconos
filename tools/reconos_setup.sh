@@ -16,6 +16,8 @@
 # 
 # ======================================================================
 
+set -e
+
 if [ $# -ne 1 ]
 then
 	echo "ERROR: No configuration file specified"
