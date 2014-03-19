@@ -145,5 +145,8 @@ NET  "ddr_memory_we_n"		 LOC = "B17" ;
 # additional constraints
 #
 
-NET "CLK" TNM_NET = sys_clk_pin;
-TIMESPEC TS_sys_clk_pin = PERIOD sys_clk_pin 200000 kHz;
+NET "CLK" TNM_NET = "sys_clk_pin";
+TIMESPEC TS_sys_clk_pin = PERIOD "sys_clk_pin" 200000 kHz;
+
+NET "clk_100_0000MHzMMCM0" TNM_NET = "sys_clk";
+TIMESPEC TS_sys_clk = PERIOD "sys_clk" 100 MHz;
