@@ -63,6 +63,7 @@ END Program post_map_trce
 Program par
 -w;                 # Overwrite existing placed and routed ncd
 -ol high;              # Overall effort level
+-xe c;
 -mt 4;
 <inputdir><design>_map.ncd;  # Input mapped NCD file
 <design>.ncd;                # Output placed and routed NCD
