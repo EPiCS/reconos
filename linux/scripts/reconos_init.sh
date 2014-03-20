@@ -17,27 +17,24 @@
 
 echo "Loading kernel module ..."
 mkdir -p /lib/modules/`uname -r`
-rmmod mreconos
+rmmod mreconos 2> /dev/null
 insmod mreconos.ko
 
-echo ""
-
-echo "Creating device files ..."
-if [ -d "/dev/reconos" ]
-then
-	rm -r /dev/reconos
-fi
-mkdir -p /dev/reconos
-
-for dir in /sys/class/misc/reconos-*
-do
-	minor=`cat $dir/dev`
-	minor=${minor##*:}
-	devname=${dir#*-}
-
-	echo "  /dev/reconos/$devname with 10:$minor"
-	mknod /dev/reconos/$devname c 10 $minor
-done
+# We do not need to do this for devtmpfs
+#
+#echo ""
+#
+#echo "Creating device files ..."
+#
+#for dir in /sys/class/misc/reconos-*
+#do
+#	minor=`cat $dir/dev`
+#	minor=${minor##*:}
+#	devname=${dir#*-}
+#
+#	echo "  /dev/reconos/$devname with 10:$minor"
+#	mknod /dev/reconos-$devname c 10 $minor
+#done
 
 echo ""
 
