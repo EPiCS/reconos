@@ -2,7 +2,7 @@ base_design=ml605_minimal_14.7
 num_static_hwts=16
 static_hwts="hwt_sort_demo_v1_00_c#16"
 
-#num_reconf_regions=14
+#num_reconf_regions=8
 #num_reconf_hwts=1
 #reconf_hwts="hwt_sort_demo_v1_00_c"
 
