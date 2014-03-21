@@ -180,8 +180,6 @@ int main(int argc, char **argv) {
 	struct sort_demo_visual demo;
 	struct display display;
 
-	unsigned int rate;
-
 	reconos_init();
 
 	// override reconos signal handlers
