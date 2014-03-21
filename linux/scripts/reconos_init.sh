@@ -36,7 +36,5 @@ insmod mreconos.ko
 #	mknod /dev/reconos-$devname c 10 $minor
 #done
 
-echo ""
-
 echo "ReconOS setup finished successfully"
 
