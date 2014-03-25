@@ -1,0 +1,16 @@
+HOWTO SET UP AN NFS-KERNEL-SERVER ON YOUR WORKSTATION
+-----------------------------------------------------
+
+1. install nfs-kernel-server
+
+2. copy your Linux root file system to /export/rfs
+
+4. add local IP address
+> sudo ifconfig eth0:1 192.168.35.1
+
+5. configure NFS kernel server
+> sudo gedit /etc/exports
+insert: "/exports 192.168.35.0/255.255.255.0(rw,insecure,no_root_squash,no_all_squash,no_subtree_check)"
+
+6. restart NFS kernel server
+sudo service nfs-kernel-server restart

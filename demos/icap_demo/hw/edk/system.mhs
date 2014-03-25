@@ -23,6 +23,19 @@
  PORT fpga_0_DDR3_SDRAM_DDR3_Reset_n_pin = fpga_0_DDR3_SDRAM_DDR3_Reset_n_pin, DIR = O
  PORT fpga_0_DDR3_SDRAM_DDR3_DQS_pin = fpga_0_DDR3_SDRAM_DDR3_DQS_pin, DIR = IO, VEC = [3:0]
  PORT fpga_0_DDR3_SDRAM_DDR3_DQS_n_pin = fpga_0_DDR3_SDRAM_DDR3_DQS_n_pin, DIR = IO, VEC = [3:0]
+ PORT fpga_0_Ethernet_MAC_PHY_tx_clk_pin = fpga_0_Ethernet_MAC_PHY_tx_clk_pin, DIR = I
+ PORT fpga_0_Ethernet_MAC_PHY_rx_clk_pin = fpga_0_Ethernet_MAC_PHY_rx_clk_pin, DIR = I
+ PORT fpga_0_Ethernet_MAC_PHY_crs_pin = fpga_0_Ethernet_MAC_PHY_crs_pin, DIR = I
+ PORT fpga_0_Ethernet_MAC_PHY_dv_pin = fpga_0_Ethernet_MAC_PHY_dv_pin, DIR = I
+ PORT fpga_0_Ethernet_MAC_PHY_rx_data_pin = fpga_0_Ethernet_MAC_PHY_rx_data_pin, DIR = I, VEC = [3:0]
+ PORT fpga_0_Ethernet_MAC_PHY_col_pin = fpga_0_Ethernet_MAC_PHY_col_pin, DIR = I
+ PORT fpga_0_Ethernet_MAC_PHY_rx_er_pin = fpga_0_Ethernet_MAC_PHY_rx_er_pin, DIR = I
+ PORT fpga_0_Ethernet_MAC_PHY_rst_n_pin = fpga_0_Ethernet_MAC_PHY_rst_n_pin, DIR = O
+ PORT fpga_0_Ethernet_MAC_PHY_tx_en_pin = fpga_0_Ethernet_MAC_PHY_tx_en_pin, DIR = O
+ PORT fpga_0_Ethernet_MAC_PHY_tx_data_pin = fpga_0_Ethernet_MAC_PHY_tx_data_pin, DIR = O, VEC = [3:0]
+ PORT fpga_0_Ethernet_MAC_PHY_MDC_pin = fpga_0_Ethernet_MAC_PHY_MDC_pin, DIR = O
+ PORT fpga_0_Ethernet_MAC_PHY_MDIO_pin = fpga_0_Ethernet_MAC_PHY_MDIO_pin, DIR = IO
+ PORT fpga_0_Ethernet_MAC_MDINT_pin = fpga_0_Ethernet_MAC_MDINT_pin, DIR = I, SIGIS = INTERRUPT, SENSITIVITY = LEVEL_LOW, INTERRUPT_PRIORITY = MEDIUM
  PORT fpga_0_clk_1_sys_clk_p_pin = dcm_clk_s, DIR = I, SIGIS = CLK, DIFFERENTIAL_POLARITY = P, CLK_FREQ = 200000000
  PORT fpga_0_clk_1_sys_clk_n_pin = dcm_clk_s, DIR = I, SIGIS = CLK, DIFFERENTIAL_POLARITY = N, CLK_FREQ = 200000000
  PORT fpga_0_rst_1_sys_rst_pin = sys_rst_s, DIR = I, SIGIS = RST, RST_POLARITY = 1
@@ -225,8 +238,29 @@ BEGIN xps_intc
  PARAMETER C_HIGHADDR = 0x8180ffff
  PARAMETER C_NUM_INTR_INPUTS = 8
  BUS_INTERFACE SPLB = mb_plb
- PORT Intr = mdm_0_Interrupt & xps_timer_0_Interrupt & xps_hwicap_0_IP2INTC_Irpt & RS232_Uart_1_Interrupt & gnd2int_0_gnd15 & gnd2int_0_gnd14 & gnd2int_0_gnd13 & gnd2int_0_gnd12 & gnd2int_0_gnd11 & gnd2int_0_gnd10 & gnd2int_0_gnd9 & gnd2int_0_gnd8 & gnd2int_0_gnd7 & gnd2int_0_gnd6 & gnd2int_0_gnd5 & gnd2int_0_gnd4 & fsl_v20_3a_FSL_Has_Data & fsl_v20_2a_FSL_Has_Data & fsl_v20_1a_FSL_Has_Data & fsl_v20_0a_FSL_Has_Data & xps_sysace_0_SysACE_IRQ
+ PORT Intr = mdm_0_Interrupt & Ethernet_MAC_IP2INTC_Irpt & xps_timer_0_Interrupt & xps_hwicap_0_IP2INTC_Irpt & RS232_Uart_1_Interrupt & gnd2int_0_gnd15 & gnd2int_0_gnd14 & gnd2int_0_gnd13 & gnd2int_0_gnd12 & gnd2int_0_gnd11 & gnd2int_0_gnd10 & gnd2int_0_gnd9 & gnd2int_0_gnd8 & gnd2int_0_gnd7 & gnd2int_0_gnd6 & gnd2int_0_gnd5 & gnd2int_0_gnd4 & fsl_v20_3a_FSL_Has_Data & fsl_v20_2a_FSL_Has_Data & fsl_v20_1a_FSL_Has_Data & fsl_v20_0a_FSL_Has_Data & xps_sysace_0_SysACE_IRQ
  PORT Irq = microblaze_0_Interrupt
+END
+
+BEGIN xps_ethernetlite
+ PARAMETER INSTANCE = Ethernet_MAC
+ PARAMETER HW_VER = 4.00.a
+ PARAMETER C_BASEADDR = 0x81000000
+ PARAMETER C_HIGHADDR = 0x8100ffff
+ BUS_INTERFACE SPLB = mb_plb
+ PORT PHY_tx_clk = fpga_0_Ethernet_MAC_PHY_tx_clk_pin
+ PORT PHY_rx_clk = fpga_0_Ethernet_MAC_PHY_rx_clk_pin
+ PORT PHY_crs = fpga_0_Ethernet_MAC_PHY_crs_pin
+ PORT PHY_dv = fpga_0_Ethernet_MAC_PHY_dv_pin
+ PORT PHY_rx_data = fpga_0_Ethernet_MAC_PHY_rx_data_pin
+ PORT PHY_col = fpga_0_Ethernet_MAC_PHY_col_pin
+ PORT PHY_rx_er = fpga_0_Ethernet_MAC_PHY_rx_er_pin
+ PORT PHY_rst_n = fpga_0_Ethernet_MAC_PHY_rst_n_pin
+ PORT PHY_tx_en = fpga_0_Ethernet_MAC_PHY_tx_en_pin
+ PORT PHY_tx_data = fpga_0_Ethernet_MAC_PHY_tx_data_pin
+ PORT PHY_MDC = fpga_0_Ethernet_MAC_PHY_MDC_pin
+ PORT PHY_MDIO = fpga_0_Ethernet_MAC_PHY_MDIO_pin
+ PORT IP2INTC_Irpt = Ethernet_MAC_IP2INTC_Irpt
 END
 
 # Fix for newer SO-DIMM / external memory.
