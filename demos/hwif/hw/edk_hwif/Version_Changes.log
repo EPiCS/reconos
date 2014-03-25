@@ -1,0 +1,8 @@
+ The following files will be modified:
+  system.mhs
+--------------------------------------
+ The following changes will be made:
+ Core microblaze 8.20.a will be replaced by 8.50.c
+ Core mpmc 6.05.a will be replaced by 6.06.a
+ Core mdm 2.00.b will be replaced by 2.10.a
+ Core fsl_v20 2.11.e will be replaced by 2.11.f

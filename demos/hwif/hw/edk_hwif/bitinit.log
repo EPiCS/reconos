@@ -1,0 +1,391 @@
+
+bitinit version Xilinx EDK 14.7 Build EDK_P.20131013
+Copyright (c) Xilinx Inc. 2002.
+
+Parsing MHS File system.mhs...
+WARNING:EDK:2028 - Option "CORE_STATE" in
+   /home/meise/git/reconos_epics/demos/hwif/hw/edk_hwif/pcores/fifo32_arbiter_v1
+   _00_b/data/fifo32_arbiter_v2_1_0.mpd line 7  is deprecated. Please use Option
+   ARCH_SUPPORT_MAP instead. 
+
+Overriding IP level properties ...
+orig_family is virtex6
+INFO:EDK:4130 - IPNAME: xps_ethernetlite, INSTANCE:Ethernet_MAC - tcl is
+   overriding PARAMETER C_FAMILY value to virtex6 -
+   /opt/Xilinx/14.7/ISE_DS/EDK/hw/XilinxProcessorIPLib/pcores/xps_ethernetlite_v
+   4_00_a/data/xps_ethernetlite_v2_1_0.mpd line 80 
+INFO:EDK:4130 - IPNAME: mpmc, INSTANCE:DDR3_SDRAM - tcl is overriding PARAMETER
+   C_BASEFAMILY value to virtex6 -
+   /opt/Xilinx/14.7/ISE_DS/EDK/hw/XilinxProcessorIPLib/pcores/mpmc_v6_06_a/data/
+   mpmc_v2_1_0.mpd line 155 
+INFO:EDK:4130 - IPNAME: mpmc, INSTANCE:DDR3_SDRAM - tcl is overriding PARAMETER
+   C_IODELAY_GRP value to DDR3_SDRAM -
+   /opt/Xilinx/14.7/ISE_DS/EDK/hw/XilinxProcessorIPLib/pcores/mpmc_v6_06_a/data/
+   mpmc_v2_1_0.mpd line 182 
+INFO:EDK:4130 - IPNAME: mpmc, INSTANCE:DDR3_SDRAM - tcl is overriding PARAMETER
+   C_USE_MIG_V6_PHY value to 1 -
+   /opt/Xilinx/14.7/ISE_DS/EDK/hw/XilinxProcessorIPLib/pcores/mpmc_v6_06_a/data/
+   mpmc_v2_1_0.mpd line 218 
+INFO:EDK:4130 - IPNAME: mpmc, INSTANCE:DDR3_SDRAM - tcl is overriding PARAMETER
+   C_MEM_PART_DATA_DEPTH value to 64 -
+   /opt/Xilinx/14.7/ISE_DS/EDK/hw/XilinxProcessorIPLib/pcores/mpmc_v6_06_a/data/
+   mpmc_v2_1_0.mpd line 266 
+INFO:EDK:4130 - IPNAME: mpmc, INSTANCE:DDR3_SDRAM - tcl is overriding PARAMETER
+   C_MEM_PART_DATA_WIDTH value to 16 -
+   /opt/Xilinx/14.7/ISE_DS/EDK/hw/XilinxProcessorIPLib/pcores/mpmc_v6_06_a/data/
+   mpmc_v2_1_0.mpd line 267 
+INFO:EDK:4130 - IPNAME: mpmc, INSTANCE:DDR3_SDRAM - tcl is overriding PARAMETER
+   C_MEM_PART_NUM_BANK_BITS value to 3 -
+   /opt/Xilinx/14.7/ISE_DS/EDK/hw/XilinxProcessorIPLib/pcores/mpmc_v6_06_a/data/
+   mpmc_v2_1_0.mpd line 268 
+INFO:EDK:4130 - IPNAME: mpmc, INSTANCE:DDR3_SDRAM - tcl is overriding PARAMETER
+   C_MEM_PART_NUM_COL_BITS value to 10 -
+   /opt/Xilinx/14.7/ISE_DS/EDK/hw/XilinxProcessorIPLib/pcores/mpmc_v6_06_a/data/
+   mpmc_v2_1_0.mpd line 270 
+INFO:EDK:4130 - IPNAME: mpmc, INSTANCE:DDR3_SDRAM - tcl is overriding PARAMETER
+   C_MEM_PART_TRAS value to 37500 -
+   /opt/Xilinx/14.7/ISE_DS/EDK/hw/XilinxProcessorIPLib/pcores/mpmc_v6_06_a/data/
+   mpmc_v2_1_0.mpd line 271 
+INFO:EDK:4130 - IPNAME: mpmc, INSTANCE:DDR3_SDRAM - tcl is overriding PARAMETER
+   C_MEM_PART_TRASMAX value to 70200000 -
+   /opt/Xilinx/14.7/ISE_DS/EDK/hw/XilinxProcessorIPLib/pcores/mpmc_v6_06_a/data/
+   mpmc_v2_1_0.mpd line 272 
+INFO:EDK:4130 - IPNAME: mpmc, INSTANCE:DDR3_SDRAM - tcl is overriding PARAMETER
+   C_MEM_PART_TRC value to 50625 -
+   /opt/Xilinx/14.7/ISE_DS/EDK/hw/XilinxProcessorIPLib/pcores/mpmc_v6_06_a/data/
+   mpmc_v2_1_0.mpd line 273 
+INFO:EDK:4130 - IPNAME: mpmc, INSTANCE:DDR3_SDRAM - tcl is overriding PARAMETER
+   C_MEM_PART_TRCD value to 13130 -
+   /opt/Xilinx/14.7/ISE_DS/EDK/hw/XilinxProcessorIPLib/pcores/mpmc_v6_06_a/data/
+   mpmc_v2_1_0.mpd line 274 
+INFO:EDK:4130 - IPNAME: mpmc, INSTANCE:DDR3_SDRAM - tcl is overriding PARAMETER
+   C_MEM_PART_TWR value to 15000 -
+   /opt/Xilinx/14.7/ISE_DS/EDK/hw/XilinxProcessorIPLib/pcores/mpmc_v6_06_a/data/
+   mpmc_v2_1_0.mpd line 276 
+INFO:EDK:4130 - IPNAME: mpmc, INSTANCE:DDR3_SDRAM - tcl is overriding PARAMETER
+   C_MEM_PART_TRP value to 13130 -
+   /opt/Xilinx/14.7/ISE_DS/EDK/hw/XilinxProcessorIPLib/pcores/mpmc_v6_06_a/data/
+   mpmc_v2_1_0.mpd line 277 
+INFO:EDK:4130 - IPNAME: mpmc, INSTANCE:DDR3_SDRAM - tcl is overriding PARAMETER
+   C_MEM_PART_TRRD value to 10000 -
+   /opt/Xilinx/14.7/ISE_DS/EDK/hw/XilinxProcessorIPLib/pcores/mpmc_v6_06_a/data/
+   mpmc_v2_1_0.mpd line 279 
+INFO:EDK:4130 - IPNAME: mpmc, INSTANCE:DDR3_SDRAM - tcl is overriding PARAMETER
+   C_MEM_PART_TRFC value to 110000 -
+   /opt/Xilinx/14.7/ISE_DS/EDK/hw/XilinxProcessorIPLib/pcores/mpmc_v6_06_a/data/
+   mpmc_v2_1_0.mpd line 280 
+INFO:EDK:4130 - IPNAME: mpmc, INSTANCE:DDR3_SDRAM - tcl is overriding PARAMETER
+   C_MEM_PART_TREFI value to 7800000 -
+   /opt/Xilinx/14.7/ISE_DS/EDK/hw/XilinxProcessorIPLib/pcores/mpmc_v6_06_a/data/
+   mpmc_v2_1_0.mpd line 281 
+INFO:EDK:4130 - IPNAME: mpmc, INSTANCE:DDR3_SDRAM - tcl is overriding PARAMETER
+   C_MEM_PART_TCCD value to 4 -
+   /opt/Xilinx/14.7/ISE_DS/EDK/hw/XilinxProcessorIPLib/pcores/mpmc_v6_06_a/data/
+   mpmc_v2_1_0.mpd line 283 
+INFO:EDK:4130 - IPNAME: mpmc, INSTANCE:DDR3_SDRAM - tcl is overriding PARAMETER
+   C_MEM_PART_TWTR value to 7500 -
+   /opt/Xilinx/14.7/ISE_DS/EDK/hw/XilinxProcessorIPLib/pcores/mpmc_v6_06_a/data/
+   mpmc_v2_1_0.mpd line 284 
+INFO:EDK:4130 - IPNAME: mpmc, INSTANCE:DDR3_SDRAM - tcl is overriding PARAMETER
+   C_MEM_PART_CAS_A_FMAX value to 333.0 -
+   /opt/Xilinx/14.7/ISE_DS/EDK/hw/XilinxProcessorIPLib/pcores/mpmc_v6_06_a/data/
+   mpmc_v2_1_0.mpd line 290 
+INFO:EDK:4130 - IPNAME: mpmc, INSTANCE:DDR3_SDRAM - tcl is overriding PARAMETER
+   C_MEM_PART_CAS_A value to 5 -
+   /opt/Xilinx/14.7/ISE_DS/EDK/hw/XilinxProcessorIPLib/pcores/mpmc_v6_06_a/data/
+   mpmc_v2_1_0.mpd line 291 
+INFO:EDK:4130 - IPNAME: mpmc, INSTANCE:DDR3_SDRAM - tcl is overriding PARAMETER
+   C_MEM_PART_CAS_B_FMAX value to 400.0 -
+   /opt/Xilinx/14.7/ISE_DS/EDK/hw/XilinxProcessorIPLib/pcores/mpmc_v6_06_a/data/
+   mpmc_v2_1_0.mpd line 292 
+INFO:EDK:4130 - IPNAME: mpmc, INSTANCE:DDR3_SDRAM - tcl is overriding PARAMETER
+   C_MEM_PART_CAS_B value to 6 -
+   /opt/Xilinx/14.7/ISE_DS/EDK/hw/XilinxProcessorIPLib/pcores/mpmc_v6_06_a/data/
+   mpmc_v2_1_0.mpd line 293 
+INFO:EDK:4130 - IPNAME: mpmc, INSTANCE:DDR3_SDRAM - tcl is overriding PARAMETER
+   C_MEM_PART_CAS_C_FMAX value to 533.0 -
+   /opt/Xilinx/14.7/ISE_DS/EDK/hw/XilinxProcessorIPLib/pcores/mpmc_v6_06_a/data/
+   mpmc_v2_1_0.mpd line 294 
+INFO:EDK:4130 - IPNAME: mpmc, INSTANCE:DDR3_SDRAM - tcl is overriding PARAMETER
+   C_MEM_PART_CAS_C value to 7 -
+   /opt/Xilinx/14.7/ISE_DS/EDK/hw/XilinxProcessorIPLib/pcores/mpmc_v6_06_a/data/
+   mpmc_v2_1_0.mpd line 295 
+INFO:EDK:4130 - IPNAME: mpmc, INSTANCE:DDR3_SDRAM - tcl is overriding PARAMETER
+   C_MEM_PART_CAS_D_FMAX value to 1.0 -
+   /opt/Xilinx/14.7/ISE_DS/EDK/hw/XilinxProcessorIPLib/pcores/mpmc_v6_06_a/data/
+   mpmc_v2_1_0.mpd line 296 
+INFO:EDK:4130 - IPNAME: mpmc, INSTANCE:DDR3_SDRAM - tcl is overriding PARAMETER
+   C_MEM_BANKADDR_WIDTH value to 3 -
+   /opt/Xilinx/14.7/ISE_DS/EDK/hw/XilinxProcessorIPLib/pcores/mpmc_v6_06_a/data/
+   mpmc_v2_1_0.mpd line 309 
+INFO:EDK:4130 - IPNAME: mpmc, INSTANCE:DDR3_SDRAM - tcl is overriding PARAMETER
+   C_MEM_DM_WIDTH value to 4 -
+   /opt/Xilinx/14.7/ISE_DS/EDK/hw/XilinxProcessorIPLib/pcores/mpmc_v6_06_a/data/
+   mpmc_v2_1_0.mpd line 312 
+INFO:EDK:4130 - IPNAME: mpmc, INSTANCE:DDR3_SDRAM - tcl is overriding PARAMETER
+   C_MEM_DQS_WIDTH value to 4 -
+   /opt/Xilinx/14.7/ISE_DS/EDK/hw/XilinxProcessorIPLib/pcores/mpmc_v6_06_a/data/
+   mpmc_v2_1_0.mpd line 313 
+
+Computing clock values...
+INFO:EDK:1039 - Did not update the value for parameter:
+   fsl_v20_0a:C_READ_CLOCK_PERIOD. Top-level frequency could not be propagated
+   to this IP. Please make sure that you have specified the frequency of the
+   top-level clock port, and that the clocks are properly connected.
+INFO:EDK:1039 - Did not update the value for parameter:
+   fsl_v20_0b:C_READ_CLOCK_PERIOD. Top-level frequency could not be propagated
+   to this IP. Please make sure that you have specified the frequency of the
+   top-level clock port, and that the clocks are properly connected.
+INFO:EDK:1039 - Did not update the value for parameter:
+   fsl_v20_1a:C_READ_CLOCK_PERIOD. Top-level frequency could not be propagated
+   to this IP. Please make sure that you have specified the frequency of the
+   top-level clock port, and that the clocks are properly connected.
+INFO:EDK:1039 - Did not update the value for parameter:
+   fsl_v20_1b:C_READ_CLOCK_PERIOD. Top-level frequency could not be propagated
+   to this IP. Please make sure that you have specified the frequency of the
+   top-level clock port, and that the clocks are properly connected.
+INFO:EDK:1039 - Did not update the value for parameter:
+   fsl_v20_2a:C_READ_CLOCK_PERIOD. Top-level frequency could not be propagated
+   to this IP. Please make sure that you have specified the frequency of the
+   top-level clock port, and that the clocks are properly connected.
+INFO:EDK:1039 - Did not update the value for parameter:
+   fsl_v20_2b:C_READ_CLOCK_PERIOD. Top-level frequency could not be propagated
+   to this IP. Please make sure that you have specified the frequency of the
+   top-level clock port, and that the clocks are properly connected.
+INFO:EDK:1039 - Did not update the value for parameter:
+   fsl_v20_3a:C_READ_CLOCK_PERIOD. Top-level frequency could not be propagated
+   to this IP. Please make sure that you have specified the frequency of the
+   top-level clock port, and that the clocks are properly connected.
+INFO:EDK:1039 - Did not update the value for parameter:
+   fsl_v20_3b:C_READ_CLOCK_PERIOD. Top-level frequency could not be propagated
+   to this IP. Please make sure that you have specified the frequency of the
+   top-level clock port, and that the clocks are properly connected.
+INFO:EDK:1039 - Did not update the value for parameter:
+   fsl_v20_4a:C_READ_CLOCK_PERIOD. Top-level frequency could not be propagated
+   to this IP. Please make sure that you have specified the frequency of the
+   top-level clock port, and that the clocks are properly connected.
+INFO:EDK:1039 - Did not update the value for parameter:
+   fsl_v20_4b:C_READ_CLOCK_PERIOD. Top-level frequency could not be propagated
+   to this IP. Please make sure that you have specified the frequency of the
+   top-level clock port, and that the clocks are properly connected.
+INFO:EDK:1039 - Did not update the value for parameter:
+   fsl_v20_5a:C_READ_CLOCK_PERIOD. Top-level frequency could not be propagated
+   to this IP. Please make sure that you have specified the frequency of the
+   top-level clock port, and that the clocks are properly connected.
+INFO:EDK:1039 - Did not update the value for parameter:
+   fsl_v20_5b:C_READ_CLOCK_PERIOD. Top-level frequency could not be propagated
+   to this IP. Please make sure that you have specified the frequency of the
+   top-level clock port, and that the clocks are properly connected.
+INFO:EDK:1039 - Did not update the value for parameter:
+   fsl_v20_6a:C_READ_CLOCK_PERIOD. Top-level frequency could not be propagated
+   to this IP. Please make sure that you have specified the frequency of the
+   top-level clock port, and that the clocks are properly connected.
+INFO:EDK:1039 - Did not update the value for parameter:
+   fsl_v20_6b:C_READ_CLOCK_PERIOD. Top-level frequency could not be propagated
+   to this IP. Please make sure that you have specified the frequency of the
+   top-level clock port, and that the clocks are properly connected.
+INFO:EDK:1039 - Did not update the value for parameter:
+   fsl_v20_7a:C_READ_CLOCK_PERIOD. Top-level frequency could not be propagated
+   to this IP. Please make sure that you have specified the frequency of the
+   top-level clock port, and that the clocks are properly connected.
+INFO:EDK:1039 - Did not update the value for parameter:
+   fsl_v20_7b:C_READ_CLOCK_PERIOD. Top-level frequency could not be propagated
+   to this IP. Please make sure that you have specified the frequency of the
+   top-level clock port, and that the clocks are properly connected.
+INFO:EDK:1039 - Did not update the value for parameter:
+   fsl_v20_8a:C_READ_CLOCK_PERIOD. Top-level frequency could not be propagated
+   to this IP. Please make sure that you have specified the frequency of the
+   top-level clock port, and that the clocks are properly connected.
+INFO:EDK:1039 - Did not update the value for parameter:
+   fsl_v20_8b:C_READ_CLOCK_PERIOD. Top-level frequency could not be propagated
+   to this IP. Please make sure that you have specified the frequency of the
+   top-level clock port, and that the clocks are properly connected.
+INFO:EDK:1039 - Did not update the value for parameter:
+   fsl_v20_9a:C_READ_CLOCK_PERIOD. Top-level frequency could not be propagated
+   to this IP. Please make sure that you have specified the frequency of the
+   top-level clock port, and that the clocks are properly connected.
+INFO:EDK:1039 - Did not update the value for parameter:
+   fsl_v20_9b:C_READ_CLOCK_PERIOD. Top-level frequency could not be propagated
+   to this IP. Please make sure that you have specified the frequency of the
+   top-level clock port, and that the clocks are properly connected.
+INFO:EDK:1039 - Did not update the value for parameter:
+   fsl_v20_10a:C_READ_CLOCK_PERIOD. Top-level frequency could not be propagated
+   to this IP. Please make sure that you have specified the frequency of the
+   top-level clock port, and that the clocks are properly connected.
+INFO:EDK:1039 - Did not update the value for parameter:
+   fsl_v20_10b:C_READ_CLOCK_PERIOD. Top-level frequency could not be propagated
+   to this IP. Please make sure that you have specified the frequency of the
+   top-level clock port, and that the clocks are properly connected.
+INFO:EDK:1039 - Did not update the value for parameter:
+   fsl_v20_11a:C_READ_CLOCK_PERIOD. Top-level frequency could not be propagated
+   to this IP. Please make sure that you have specified the frequency of the
+   top-level clock port, and that the clocks are properly connected.
+INFO:EDK:1039 - Did not update the value for parameter:
+   fsl_v20_11b:C_READ_CLOCK_PERIOD. Top-level frequency could not be propagated
+   to this IP. Please make sure that you have specified the frequency of the
+   top-level clock port, and that the clocks are properly connected.
+INFO:EDK:1039 - Did not update the value for parameter:
+   fsl_v20_12a:C_READ_CLOCK_PERIOD. Top-level frequency could not be propagated
+   to this IP. Please make sure that you have specified the frequency of the
+   top-level clock port, and that the clocks are properly connected.
+INFO:EDK:1039 - Did not update the value for parameter:
+   fsl_v20_12b:C_READ_CLOCK_PERIOD. Top-level frequency could not be propagated
+   to this IP. Please make sure that you have specified the frequency of the
+   top-level clock port, and that the clocks are properly connected.
+INFO:EDK:1039 - Did not update the value for parameter:
+   fsl_v20_13a:C_READ_CLOCK_PERIOD. Top-level frequency could not be propagated
+   to this IP. Please make sure that you have specified the frequency of the
+   top-level clock port, and that the clocks are properly connected.
+INFO:EDK:1039 - Did not update the value for parameter:
+   fsl_v20_13b:C_READ_CLOCK_PERIOD. Top-level frequency could not be propagated
+   to this IP. Please make sure that you have specified the frequency of the
+   top-level clock port, and that the clocks are properly connected.
+INFO:EDK:1039 - Did not update the value for parameter:
+   fsl_v20_14a:C_READ_CLOCK_PERIOD. Top-level frequency could not be propagated
+   to this IP. Please make sure that you have specified the frequency of the
+   top-level clock port, and that the clocks are properly connected.
+INFO:EDK:1039 - Did not update the value for parameter:
+   fsl_v20_14b:C_READ_CLOCK_PERIOD. Top-level frequency could not be propagated
+   to this IP. Please make sure that you have specified the frequency of the
+   top-level clock port, and that the clocks are properly connected.
+INFO:EDK:1039 - Did not update the value for parameter:
+   fsl_v20_15a:C_READ_CLOCK_PERIOD. Top-level frequency could not be propagated
+   to this IP. Please make sure that you have specified the frequency of the
+   top-level clock port, and that the clocks are properly connected.
+INFO:EDK:1039 - Did not update the value for parameter:
+   fsl_v20_15b:C_READ_CLOCK_PERIOD. Top-level frequency could not be propagated
+   to this IP. Please make sure that you have specified the frequency of the
+   top-level clock port, and that the clocks are properly connected.
+
+Performing IP level DRCs on properties...
+
+Running DRC Tcl procedures for OPTION IPLEVEL_DRC_PROC...
+Address Map for Processor microblaze_0
+  (0000000000-0x0fffffff) DDR3_SDRAM	mb_plb
+  (0000000000-0x0fffffff) DDR3_SDRAM	microblaze_0_DXCL
+  (0000000000-0x0fffffff) DDR3_SDRAM	microblaze_0_IXCL
+  (0x80000000-0x800fffff) plb2hwif_0	mb_plb
+  (0x81000000-0x8100ffff) Ethernet_MAC	mb_plb
+  (0x81800000-0x8180ffff) xps_intc_0	mb_plb
+  (0x84000000-0x8400ffff) RS232_Uart_1	mb_plb
+  (0x84400000-0x8440ffff) mdm_0	mb_plb
+  (0x85000000-0x850000ff) xps_timer_0	mb_plb
+INFO:EDK:4130 - IPNAME: mpmc, INSTANCE:DDR3_SDRAM - tool is overriding PARAMETER
+   C_SPLB0_P2P value to 0 -
+   /opt/Xilinx/14.7/ISE_DS/EDK/hw/XilinxProcessorIPLib/pcores/mpmc_v6_06_a/data/
+   mpmc_v2_1_0.mpd line 369 
+INFO:EDK:4087 - IPNAME: xps_ethernetlite, INSTANCE: Ethernet_MAC - This design
+   requires design constraints to guarantee performance.
+   Please refer to the data sheet for details.  
+   The PLB clock frequency must be greater than or equal to 50 MHz for 100 Mbs
+   Ethernet operation and greater than or equal to 5.0 MHz for 10 Mbs Ethernet
+   operation. - /home/meise/git/reconos_epics/demos/hwif/hw/edk_hwif/system.mhs
+   line 142
+INFO:EDK:4130 - IPNAME: microblaze, INSTANCE:microblaze_0 - tool is overriding
+   PARAMETER C_DPLB_DWIDTH value to 64 -
+   /opt/Xilinx/14.7/ISE_DS/EDK/hw/XilinxProcessorIPLib/pcores/microblaze_v8_50_c
+   /data/microblaze_v2_1_0.mpd line 204 
+INFO:EDK:4130 - IPNAME: microblaze, INSTANCE:microblaze_0 - tool is overriding
+   PARAMETER C_IPLB_DWIDTH value to 64 -
+   /opt/Xilinx/14.7/ISE_DS/EDK/hw/XilinxProcessorIPLib/pcores/microblaze_v8_50_c
+   /data/microblaze_v2_1_0.mpd line 208 
+INFO:EDK:4130 - IPNAME: plb_v46, INSTANCE:mb_plb - tool is overriding PARAMETER
+   C_PLBV46_NUM_MASTERS value to 3 -
+   /opt/Xilinx/14.7/ISE_DS/EDK/hw/XilinxProcessorIPLib/pcores/plb_v46_v1_05_a/da
+   ta/plb_v46_v2_1_0.mpd line 79 
+INFO:EDK:4130 - IPNAME: plb_v46, INSTANCE:mb_plb - tool is overriding PARAMETER
+   C_PLBV46_NUM_SLAVES value to 7 -
+   /opt/Xilinx/14.7/ISE_DS/EDK/hw/XilinxProcessorIPLib/pcores/plb_v46_v1_05_a/da
+   ta/plb_v46_v2_1_0.mpd line 80 
+INFO:EDK:4130 - IPNAME: xps_uartlite, INSTANCE:RS232_Uart_1 - tool is overriding
+   PARAMETER C_SPLB_DWIDTH value to 64 -
+   /opt/Xilinx/14.7/ISE_DS/EDK/hw/XilinxProcessorIPLib/pcores/xps_uartlite_v1_02
+   _a/data/xps_uartlite_v2_1_0.mpd line 81 
+INFO:EDK:4130 - IPNAME: xps_uartlite, INSTANCE:RS232_Uart_1 - tool is overriding
+   PARAMETER C_SPLB_MID_WIDTH value to 2 -
+   /opt/Xilinx/14.7/ISE_DS/EDK/hw/XilinxProcessorIPLib/pcores/xps_uartlite_v1_02
+   _a/data/xps_uartlite_v2_1_0.mpd line 83 
+INFO:EDK:4130 - IPNAME: xps_uartlite, INSTANCE:RS232_Uart_1 - tool is overriding
+   PARAMETER C_SPLB_NUM_MASTERS value to 3 -
+   /opt/Xilinx/14.7/ISE_DS/EDK/hw/XilinxProcessorIPLib/pcores/xps_uartlite_v1_02
+   _a/data/xps_uartlite_v2_1_0.mpd line 84 
+INFO:EDK:4130 - IPNAME: xps_ethernetlite, INSTANCE:Ethernet_MAC - tool is
+   overriding PARAMETER C_SPLB_DWIDTH value to 64 -
+   /opt/Xilinx/14.7/ISE_DS/EDK/hw/XilinxProcessorIPLib/pcores/xps_ethernetlite_v
+   4_00_a/data/xps_ethernetlite_v2_1_0.mpd line 85 
+INFO:EDK:4130 - IPNAME: xps_ethernetlite, INSTANCE:Ethernet_MAC - tool is
+   overriding PARAMETER C_SPLB_MID_WIDTH value to 2 -
+   /opt/Xilinx/14.7/ISE_DS/EDK/hw/XilinxProcessorIPLib/pcores/xps_ethernetlite_v
+   4_00_a/data/xps_ethernetlite_v2_1_0.mpd line 87 
+INFO:EDK:4130 - IPNAME: xps_ethernetlite, INSTANCE:Ethernet_MAC - tool is
+   overriding PARAMETER C_SPLB_NUM_MASTERS value to 3 -
+   /opt/Xilinx/14.7/ISE_DS/EDK/hw/XilinxProcessorIPLib/pcores/xps_ethernetlite_v
+   4_00_a/data/xps_ethernetlite_v2_1_0.mpd line 88 
+INFO:EDK:4130 - IPNAME: mpmc, INSTANCE:DDR3_SDRAM - tool is overriding PARAMETER
+   C_SPLB0_NUM_MASTERS value to 3 -
+   /opt/Xilinx/14.7/ISE_DS/EDK/hw/XilinxProcessorIPLib/pcores/mpmc_v6_06_a/data/
+   mpmc_v2_1_0.mpd line 367 
+INFO:EDK:4130 - IPNAME: mpmc, INSTANCE:DDR3_SDRAM - tool is overriding PARAMETER
+   C_SPLB0_MID_WIDTH value to 2 -
+   /opt/Xilinx/14.7/ISE_DS/EDK/hw/XilinxProcessorIPLib/pcores/mpmc_v6_06_a/data/
+   mpmc_v2_1_0.mpd line 368 
+INFO:EDK:4130 - IPNAME: mdm, INSTANCE:mdm_0 - tool is overriding PARAMETER
+   C_SPLB_DWIDTH value to 64 -
+   /opt/Xilinx/14.7/ISE_DS/EDK/hw/XilinxProcessorIPLib/pcores/mdm_v2_10_a/data/m
+   dm_v2_1_0.mpd line 116 
+INFO:EDK:4130 - IPNAME: mdm, INSTANCE:mdm_0 - tool is overriding PARAMETER
+   C_SPLB_MID_WIDTH value to 2 -
+   /opt/Xilinx/14.7/ISE_DS/EDK/hw/XilinxProcessorIPLib/pcores/mdm_v2_10_a/data/m
+   dm_v2_1_0.mpd line 118 
+INFO:EDK:4130 - IPNAME: mdm, INSTANCE:mdm_0 - tool is overriding PARAMETER
+   C_SPLB_NUM_MASTERS value to 3 -
+   /opt/Xilinx/14.7/ISE_DS/EDK/hw/XilinxProcessorIPLib/pcores/mdm_v2_10_a/data/m
+   dm_v2_1_0.mpd line 119 
+INFO:EDK:4130 - IPNAME: xps_intc, INSTANCE:xps_intc_0 - tool is overriding
+   PARAMETER C_SPLB_DWIDTH value to 64 -
+   /opt/Xilinx/14.7/ISE_DS/EDK/hw/XilinxProcessorIPLib/pcores/xps_intc_v2_01_a/d
+   ata/xps_intc_v2_1_0.mpd line 81 
+INFO:EDK:4130 - IPNAME: xps_intc, INSTANCE:xps_intc_0 - tool is overriding
+   PARAMETER C_SPLB_NUM_MASTERS value to 3 -
+   /opt/Xilinx/14.7/ISE_DS/EDK/hw/XilinxProcessorIPLib/pcores/xps_intc_v2_01_a/d
+   ata/xps_intc_v2_1_0.mpd line 83 
+INFO:EDK:4130 - IPNAME: xps_intc, INSTANCE:xps_intc_0 - tool is overriding
+   PARAMETER C_SPLB_MID_WIDTH value to 2 -
+   /opt/Xilinx/14.7/ISE_DS/EDK/hw/XilinxProcessorIPLib/pcores/xps_intc_v2_01_a/d
+   ata/xps_intc_v2_1_0.mpd line 84 
+INFO:EDK:4130 - IPNAME: xps_timer, INSTANCE:xps_timer_0 - tool is overriding
+   PARAMETER C_SPLB_DWIDTH value to 64 -
+   /opt/Xilinx/14.7/ISE_DS/EDK/hw/XilinxProcessorIPLib/pcores/xps_timer_v1_02_a/
+   data/xps_timer_v2_1_0.mpd line 85 
+INFO:EDK:4130 - IPNAME: xps_timer, INSTANCE:xps_timer_0 - tool is overriding
+   PARAMETER C_SPLB_MID_WIDTH value to 2 -
+   /opt/Xilinx/14.7/ISE_DS/EDK/hw/XilinxProcessorIPLib/pcores/xps_timer_v1_02_a/
+   data/xps_timer_v2_1_0.mpd line 87 
+INFO:EDK:4130 - IPNAME: xps_timer, INSTANCE:xps_timer_0 - tool is overriding
+   PARAMETER C_SPLB_NUM_MASTERS value to 3 -
+   /opt/Xilinx/14.7/ISE_DS/EDK/hw/XilinxProcessorIPLib/pcores/xps_timer_v1_02_a/
+   data/xps_timer_v2_1_0.mpd line 88 
+INFO:EDK:4130 - IPNAME: xps_mem, INSTANCE:xps_mem_0 - tool is overriding
+   PARAMETER C_MPLB_DWIDTH value to 64 -
+   /home/meise/git/reconos_epics/demos/hwif/hw/edk_hwif/pcores/xps_mem_v1_00_b/d
+   ata/xps_mem_v2_1_0.mpd line 28 
+INFO:EDK:4130 - IPNAME: plb2hwif, INSTANCE:plb2hwif_0 - tool is overriding
+   PARAMETER C_SPLB_DWIDTH value to 64 -
+   /home/meise/git/reconos_epics/demos/hwif/hw/edk_hwif/pcores/plb2hwif_v1_00_a/
+   data/plb2hwif_v2_1_0.mpd line 45 
+INFO:EDK:4130 - IPNAME: plb2hwif, INSTANCE:plb2hwif_0 - tool is overriding
+   PARAMETER C_SPLB_NUM_MASTERS value to 3 -
+   /home/meise/git/reconos_epics/demos/hwif/hw/edk_hwif/pcores/plb2hwif_v1_00_a/
+   data/plb2hwif_v2_1_0.mpd line 46 
+INFO:EDK:4130 - IPNAME: plb2hwif, INSTANCE:plb2hwif_0 - tool is overriding
+   PARAMETER C_SPLB_MID_WIDTH value to 2 -
+   /home/meise/git/reconos_epics/demos/hwif/hw/edk_hwif/pcores/plb2hwif_v1_00_a/
+   data/plb2hwif_v2_1_0.mpd line 47 
+
+Checking platform address map ...
+
+Initializing Memory...
+No bram_block IP found in MHS file to initialize. Skipping Data2Mem
+Copying implementation/system.bit to implementation/download.bit...
+Memory Initialization completed successfully.
+
