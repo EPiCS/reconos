@@ -178,7 +178,8 @@ static irqreturn_t osif_intc_interrupt(int irq, void *data) {
 		dev->irq_reg[i] = ioread32(dev->mem + i * 4) & dev->irq_enable[i];
 	}
 
-	__printk(KERN_DEBUG "[reconos-osif-intc] ... osif interrupt: 0x%x with mask 0x%x\n", dev->irq_reg[0], dev->irq_enable[0]);
+	__printk(KERN_DEBUG "[reconos-osif-intc] "
+	                    "... osif interrupt: 0x%x with mask 0x%x\n", dev->irq_reg[0], dev->irq_enable[0]);
 
 	// disabling all triggered interrupts
 	for (i = 0; i < dev->irq_reg_count; i++) {
