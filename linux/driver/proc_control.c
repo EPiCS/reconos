@@ -85,12 +85,6 @@ void proc_control_write_reg(struct proc_control_dev *dev,
 	iowrite32(data, dev->mem + reg);
 }
 
-static int proc_control_open(struct inode *inode, struct file *filp) {
-	filp->private_data = &proc_control_dev;
-
-	return 0;
-}
-
 
 #ifdef RECONOS_ARCH_zynq
 // do page table walk
@@ -168,6 +162,13 @@ static void flush_cache(void) {
 #endif
 
 
+
+static int proc_control_open(struct inode *inode, struct file *filp) {
+	filp->private_data = &proc_control_dev;
+
+	return 0;
+}
+
 static long proc_control_ioctl(struct file *filp, unsigned int cmd,
                                unsigned long arg) {
 	struct proc_control_dev *dev = filp->private_data;
@@ -240,7 +241,7 @@ static long proc_control_ioctl(struct file *filp, unsigned int cmd,
 		//      of the reset capabilities. Another method to pass an entire
 		//      reset vector would be useful.
 		case RECONOS_PROC_CONTROL_SET_HWT_RESET:
-			copy_from_user(&hwt_num, (int *) arg, sizeof(int));
+			copy_from_user(&hwt_num, (int *)arg, sizeof(int));
 
 			spin_lock_irqsave(&dev->lock, flags);
 
@@ -412,6 +413,7 @@ int proc_control_exit() {
 	__printk(KERN_INFO "[reconos-proc-control] "
 	                   "removing driver ...\n");
 
+	misc_deregister(&proc_control_dev.mdev);
 
 	kfree(proc_control_dev.hwt_reset);
 
@@ -419,9 +421,6 @@ int proc_control_exit() {
 
 	iounmap(proc_control_dev.mem);
 	release_mem_region(proc_control_dev.addr, PROC_CONTROL_MEM_SIZE);
-
-	misc_deregister(&proc_control_dev.mdev);
-
 
 	return 0;
 }
