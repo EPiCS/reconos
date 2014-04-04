@@ -1,9 +1,9 @@
 CC = microblaze-unknown-linux-gnu-gcc
-CFLAGS=-O0 -g -std=c99 -Wall -static
+CFLAGS=-O0 -g -std=c99 -Wall -static -D_POSIX_C_SOURCE=200112L
 
 HOST_CC = gcc
-HOST_CFLAGS = -O0 -g -m32 -std=c99 -Wall  -DHOST_COMPILE -static
-# -m32
+HOST_CFLAGS = -O0 -g -m32 -std=c99  -Wall -static -D_POSIX_C_SOURCE=200112L
+# -m32 
 
 APP_OBJS = hwif.o
 
@@ -19,7 +19,8 @@ LDFLAGS =
 
 .PHONY: clean
 
-all: hwif_tool
+all: hwif_tool gpio
+
 #cmdline sort_demo sort_demo_shadowed fault_injection
  
 #cmdline:
@@ -28,6 +29,10 @@ all: hwif_tool
 
 hwif_tool: $(APP_OBJS) 
 	$(CC) $(APP_OBJS) $(CFLAGS) $(LIBPATH) $(INCLUDEPATH) hwif_tool.c -o hwif_tool $(LDFLAGS)
+
+gpio: $(APP_OBJS)
+	$(CC) $(CFLAGS) $(LIBPATH) $(INCLUDEPATH) gpio-dev-mem-test.c -o gpio_tool $(LDFLAGS)
+
 
 #sort_demo_shadowed: $(APP_OBJS) cmdline
 # recompile needed object files for shadowing
@@ -39,11 +44,11 @@ hwif_tool: $(APP_OBJS)
 #	$(CC) $(CFLAGS) -L ../../../linux/reconos/libreconos-us -I ../../../linux/reconos/libreconos-us -o fault_injection fault_injection.c -lreconos -lpthread
 	
 clean:
-	rm -f *.o hwif_tool
+	rm -f *.o hwif_tool gpio_tool
 
 install:
 	#./genBenchmark.py benchmark.sh
-	cp hwif_tool /exports/rootfs_mb/demos/hwif/
+	cp hwif_tool gpio_tool /exports/rootfs_mb/demos/hwif/
 
 %.o: %.c
 	$(CC) -c $(CFLAGS) $(LIBPATH) $(INCLUDEPATH) -o $@ $<

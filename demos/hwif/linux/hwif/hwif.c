@@ -68,14 +68,61 @@ void hwif_close(){
 
 uint32_t hwif_read(uint32_t module_nr, uint32_t reg_nr){
 	uint32_t * hwif_base = (uint32_t *)(mapped_hwif + page_offset);
-	uint32_t *retval_address =  hwif_base + module_nr*(1<<(C_HWIF_ADDRESS_SPACE_BITS-2))+reg_nr;
-	printf ("Reading address %p ", retval_address);
+	volatile uint32_t *retval_address =  hwif_base + module_nr*(1<<(C_HWIF_ADDRESS_SPACE_BITS-2))+reg_nr;
+	//printf ("Reading address %p \n", retval_address);
 	return *retval_address;
 }
 
 void hwif_write(uint32_t module_nr, uint32_t reg_nr, uint32_t value){
 	uint32_t * hwif_base = (uint32_t *)(mapped_hwif + page_offset);
-    uint32_t *write_address =  hwif_base + module_nr*(1<<(C_HWIF_ADDRESS_SPACE_BITS-2))+reg_nr;
-    printf ("Writing to address %p ", write_address);
+    volatile uint32_t *write_address =  hwif_base + module_nr*(1<<(C_HWIF_ADDRESS_SPACE_BITS-2))+reg_nr;
+    //printf ("Writing to address %p \n", write_address);
     *write_address = value;
+}
+
+
+uint32_t perfmon_base_offset = 8; // in register, not byte offset
+#define PERFMON_ID_REG_OFFSET    0
+#define PERFMON_LEN_REG_OFFSET    1
+#define PERFMON_CONF_REG_OFFSET  2
+#define PERFMON_COUNT_REG_OFFSET    3
+
+void hwif_perfmon_debug_print(uint32_t module_nr){
+	int i;
+	int mmap_length = hwif_read(module_nr,perfmon_base_offset+PERFMON_LEN_REG_OFFSET);
+	for (i = 0; i < mmap_length/4; ++i) {
+		printf("0x%08X ", hwif_read(module_nr,perfmon_base_offset+i));
+		if (i%7 == 6){printf("\n");}
+	}
+	printf("\n");
+}
+
+void hwif_perfmon_reset(uint32_t module_nr){
+	hwif_write(module_nr, perfmon_base_offset+PERFMON_CONF_REG_OFFSET, 0x1);
+}
+
+void hwif_perfmon_activate(uint32_t module_nr){
+	uint32_t temp;
+	printf("Activating perfmon %i\n",module_nr);
+	temp = hwif_read(module_nr,perfmon_base_offset+PERFMON_CONF_REG_OFFSET);
+	temp |= 0x2; // set enable bit;
+	hwif_write(module_nr, perfmon_base_offset+PERFMON_CONF_REG_OFFSET, temp);
+}
+
+void hwif_perfmon_deactivate(uint32_t module_nr){
+	uint32_t temp;
+	temp = hwif_read(module_nr,perfmon_base_offset+PERFMON_CONF_REG_OFFSET);
+	temp &= ~(0x2); // delete enable bit;
+	hwif_write(module_nr, perfmon_base_offset+PERFMON_CONF_REG_OFFSET, temp);
+}
+
+uint8_t hwif_perfmon_get_number_of_counters(uint32_t module_nr){
+	uint32_t temp;
+	temp = hwif_read(module_nr,perfmon_base_offset+PERFMON_CONF_REG_OFFSET);
+	temp >>= 24;
+	return temp;
+}
+
+uint32_t hwif_perfmon_read_counter(uint32_t module_nr, uint8_t counter_nr){
+	return hwif_read(module_nr,perfmon_base_offset+PERFMON_COUNT_REG_OFFSET+counter_nr);
 }

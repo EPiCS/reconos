@@ -63,11 +63,12 @@ uint32_t hwif_read_cap(uint32_t module_nr);
 /*
  * The following APIs should go into separate library files, to support the modularization.
  */
+void hwif_perfmon_debug_print(uint32_t module_nr);
 void hwif_perfmon_reset(uint32_t module_nr);
 void hwif_perfmon_activate(uint32_t module_nr);
 void hwif_perfmon_deactivate(uint32_t module_nr);
-void hwif_perfmon_get_number_of_counters(uint32_t module_nr);
-void hwif_perfmon_read_counter(uint32_t module_nr);
+uint8_t hwif_perfmon_get_number_of_counters(uint32_t module_nr);
+uint32_t hwif_perfmon_read_counter(uint32_t module_nr, uint8_t counter_nr);
 
 
 #endif /* HWIF_H_ */
