@@ -3,7 +3,7 @@
 # CROSS_COMPILE
 CC = $(CROSS_COMPILE)gcc
 
-CFLAGS += -O0 -g -Wall -static -L $(RECONOS)/linux/lib -I $(RECONOS)/linux/lib/include
+CFLAGS += -O0 -g -Wall -static -L $(RECONOS)/linux/lib -I $(RECONOS)/linux/lib/include -pg
 
 APP_OBJS = bubblesort.o data.o merge.o timing.o
 
