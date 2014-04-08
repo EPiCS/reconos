@@ -31,7 +31,8 @@
 #include <sys/ioctl.h>
 #include "pthread.h"
 
-#define PROC_CONTROL_DEV "/dev/reconos/proc-control"
+#define PROC_CONTROL_DEV "/dev/reconos-proc-control"
+#define OSIF_DEV "/dev/reconos-osif-%d"
 
 
 /* == OSIF related functions ============================================ */
@@ -43,7 +44,7 @@ int reconos_osif_open(int num) {
 	if (num < 0)
 		return -1;
 
-	snprintf(dev, 25, "/dev/reconos/osif-%d", num);
+	snprintf(dev, 25, OSIF_DEV, num);
 	fd = open(dev, O_RDWR);
 	if (fd < 0)
 		panic("[reconos_core] error while opening osif %d\n", num);
