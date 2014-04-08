@@ -95,7 +95,7 @@ static inline void osif_intc_enable_interrupt(struct osif_intc_dev *dev,
 	dev->irq_enable[irq / 32] |= 0x1 << irq % 32;
 	osif_intc_write_irq_enable(dev);
 
-	__printk(KERN_DEBUG "[reconos-osif-intc] ... enabling interrupts: %x\n", dev->irq_enable[0]);
+	__printk(KERN_DEBUG "[reconos-osif-intc] ... enabling interrupts: 0x%x\n", dev->irq_enable[0]);
 
 	spin_unlock_irqrestore(&dev->lock, flags);
 }
@@ -128,11 +128,11 @@ static int osif_intc_open(struct inode *inode, struct file *filp) {
 
 static long osif_intc_ioctl(struct file *filp, unsigned int cmd,
                                unsigned long arg) {
-	struct osif_intc_dev *dev = filp->private_data;
+	struct osif_intc_dev *dev = (struct osif_intc_dev *)filp->private_data;
 
 	unsigned int index;
 
-	index = copy_from_user(&index, (unsigned int *)arg, sizeof(unsigned int));
+	copy_from_user(&index, (unsigned int *)arg, sizeof(unsigned int));
 	if (index > NUM_HWTS) {
 		__printk(KERN_WARNING "[reconos-osif-intc] "
 		                      "index out of range, aborting wait ...\n");
@@ -142,15 +142,22 @@ static long osif_intc_ioctl(struct file *filp, unsigned int cmd,
 
 	switch (cmd) {
 		case RECONOS_OSIF_INTC_WAIT:
+			__printk(KERN_DEBUG "[reconos-osif-intc] "
+			                    "waiting for interrupt %d\n", index);
+
 			osif_intc_enable_interrupt(dev, index);
 
-			// wait for irq_reg becoming (like in osif_intc_get_irq)
-			//if (wait_event_interruptible(dev->wait, (dev->irq_reg[index / 32] >> index % 32) & 0x1) < 0) {
-			//	__printk(KERN_INFO "[reconos-osif-intc] "
-			//	                   "interrupted in waiting, aborting ...\n");
+			// wait for irq (like in osif_intc_get_irq)
+			if (wait_event_interruptible(dev->wait, osif_intc_get_irq(dev, index)) < 0) {
+				__printk(KERN_INFO "[reconos-osif-intc] "
+				                   "interrupted in waiting, aborting ...\n");
 
-			//	osif_intc_disable_interrupt(dev, index);
-			//}
+				osif_intc_disable_interrupt(dev, index);
+			} else {
+				__printk(KERN_DEBUG "[reconos-osif-intc] "
+				                    "interrupt %d raised\n", index);
+			}
+
 			break;
 
 		default:
@@ -171,11 +178,14 @@ static struct file_operations osif_intc_fops = {
 
 static irqreturn_t osif_intc_interrupt(int irq, void *data) {
 	int i;
-	struct osif_intc_dev *dev = data;
+	unsigned long flags;
+	struct osif_intc_dev *dev = (struct osif_intc_dev *)data;
 
-	// read irq-registers and mask interrupts
+	spin_lock_irqsave(&dev->lock, flags);
+
+	// read irqs and mask interrupts
 	for (i = 0; i < dev->irq_reg_count; i++) {
-		dev->irq_reg[i] = ioread32(dev->mem + i * 4) & dev->irq_enable[i];
+		dev->irq_reg[i] |= ioread32(dev->mem + i * 4) & dev->irq_enable[i];
 	}
 
 	__printk(KERN_DEBUG "[reconos-osif-intc] "
@@ -186,6 +196,8 @@ static irqreturn_t osif_intc_interrupt(int irq, void *data) {
 		dev->irq_enable[i] &= ~dev->irq_reg[i];
 	}
 	osif_intc_write_irq_enable(dev);
+
+	spin_unlock_irqrestore(&dev->lock, flags);
 
 	wake_up_interruptible(&dev->wait);
 
