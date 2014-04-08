@@ -20,6 +20,7 @@
 #ifdef RECONOS_OS_linux
 
 #include "arch.h"
+#include "../utils.h"
 
 #include "../../linux/driver/include/reconos.h"
 
@@ -64,6 +65,9 @@ int osif_intc_fd, proc_control_fd;
 struct osif_fifo_dev *osif_fifo_dev;
 
 int reconos_osif_open(int num) {
+	debug("[reconos-osif-%d] "
+	      "opening ...\n", num);
+
 	if (num < 0 || num >= NUM_HWTS)
 		return -1;
 	else
@@ -93,10 +97,12 @@ static inline unsigned int osif_fifo_sw2hw_rem(struct osif_fifo_dev *dev) {
 
 uint32_t reconos_osif_read(int fd) {
 	struct osif_fifo_dev *dev = &osif_fifo_dev[fd];
-
-	printf("Reading from fifo %d\n", fd);
+	uint32_t data;
 
 	if (dev->fifo_fill == 0) {
+		debug("[reconos-osif-%d] "
+		      "reading, waiting for data ...\n", fd);
+
 		dev->fifo_fill = osif_fifo_hw2sw_fill(dev);
 
 		while (dev->fifo_fill == 0) {
@@ -105,14 +111,21 @@ uint32_t reconos_osif_read(int fd) {
 		}
 	}
 
+	data = dev->ptr[OSIF_FIFO_RECV_REG];
 	dev->fifo_fill--;
-	return dev->ptr[OSIF_FIFO_RECV_REG];
+
+	debug("[reconos-osif-%d] "
+	      "reading finished 0x%x\n", fd, data);
+
+
+	return data;
 }
 
 void reconos_osif_write(int fd, uint32_t data) {
 	struct osif_fifo_dev *dev = &osif_fifo_dev[fd];
 
-	printf("Writing to fifo %d: 0x%x\n", fd, data);
+	debug("[reconos-osif-%d] "
+	      "writing 0x%x ...\n", fd, data);
 
 	// do busy waiting here
 	do {
@@ -120,10 +133,15 @@ void reconos_osif_write(int fd, uint32_t data) {
 	} while (dev->fifo_rem == 0);
 
 	dev->ptr[OSIF_FIFO_SEND_REG] = data;
+
+	debug("[reconos-osif-%d] "
+	      "writing finished\n", fd, data);
+
 }
 
 void reconos_osif_close(int fd) {
-	// nothing to do here
+	debug("[reconos-osif-%d] "
+	      "closing ...\n", fd);
 }
 
 
@@ -272,7 +290,8 @@ void reconos_drv_init() {
 	// opening proc control device
 	fd = open(PROC_CONTROL_DEV, O_RDWR);
 	if (fd < 0)
-		panic("[reconos-core] error while opening proc control\n");
+		panic("[reconos-core] "
+		      "error while opening proc control\n");
 	else
 		proc_control_fd = fd;
 
@@ -280,7 +299,8 @@ void reconos_drv_init() {
 	// opening osif intc device
 	fd = open(OSIF_INTC_DEV, O_RDWR);
 	if (fd < 0)
-		panic("[reconos-core] error while opening osif intc\n");
+		panic("[reconos-core] "
+		      "error while opening osif intc\n");
 	else
 		osif_intc_fd = fd;
 
@@ -296,17 +316,20 @@ void reconos_drv_init() {
 	// create mapping for osif
 	fd = open("/dev/mem", O_RDWR | O_SYNC);
 	if (fd < 0)
-		panic("[reconos-osif] failed to open /dev/mem\n");
+		panic("[reconos-osif] "
+		      "failed to open /dev/mem\n");
 
 	mem = (char *)mmap(0, 0x10000, PROT_READ | PROT_WRITE, MAP_SHARED, fd, OSIF_FIFO_BASE_ADDR);
 	if (mem == MAP_FAILED)
-		panic("[reconos-osif] failed to mmap osif memory\n");
+		panic("[reconos-osif] "
+		      "failed to mmap osif memory\n");
 
 
 	// allocate and initialize osif devices
 	osif_fifo_dev = (struct osif_fifo_dev*)malloc(NUM_HWTS * sizeof(struct osif_fifo_dev));
 	if (!osif_fifo_dev)
-		panic("[reconos-osif] failed to allocate memory\n");
+		panic("[reconos-osif] "
+		      "failed to allocate memory\n");
 
 	for (i = 0; i < NUM_HWTS; i++) {
 		osif_fifo_dev[i].index = i;
