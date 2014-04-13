@@ -203,7 +203,9 @@ void reconos_proc_control_hwt_reset(int fd, int num, int reset) {
 }
 
 void reconos_proc_control_cache_flush(int fd) {
+#ifdef	RECONOS_ARCH_microblaze
 	ioctl(fd, RECONOS_PROC_CONTROL_CACHE_FLUSH, NULL);
+#endif
 }
 
 void reconos_proc_control_close(int fd) {
