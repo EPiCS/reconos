@@ -18,3 +18,5 @@ Edit config.sub and replace all occurences of "microblaze" by "microblazeel"
 make -j3
 make install DESTDIR=/.../_install (must be absoulte path)
 
+
+You also need to copy the terminfo files to your root filesystem (_install/usr/share*)
