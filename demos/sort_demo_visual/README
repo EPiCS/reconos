@@ -11,6 +11,9 @@ make -j3
 make install DESTDIR=_install
 
 For Microblaze:
+
+Edit config.sub and replace all occurences of "microblaze" by "microblazeel"
+
 ./configure --host=microblazeel-xilinx-linux-gnu --target=microblazeel-xilinx-linux-gnu --without-cxx --without-cxx-binding --without-manpages
 make -j3
 make install DESTDIR=_install
