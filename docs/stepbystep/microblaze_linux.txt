@@ -210,18 +210,13 @@ it from the ReconOS homepage and extract it to $WD/nfs
      >=== $WD/nfs/etc/inittab ===>
      ::sysinit:/etc/init.d/rcS
 
-     # /bin/sh
-     # 
      # Start an askfirst shell on the serial ports
-
      ttyUL1::respawn:-/bin/sh
 
      # What to do when restarting the init process
-
      ::restart:/sbin/init
 
      # What to do before rebooting
-
      ::shutdown:/bin/umount -a -r
      >=== $WD/nfs/etc/inittab ===>
 
