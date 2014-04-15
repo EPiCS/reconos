@@ -156,6 +156,7 @@ Xilinx tools and use the ReconOS scripts.
          by replacing /nfs/zynqn by /home/<your username>/reconos/nfs (the path to your nfs share) and eventually the ip addresses
        Networking support -> Networking options -> IP: kernel level autoconfiguration: yes
        File systems -> Network File Systems -> Root file system on NFS: yes
+       Device Drivers -> Generic Driver Options -> Maintain devtmpfs to mount at /dev: yes
 
      If you whish you can further adjust the configuration to your needs
 
@@ -238,16 +239,6 @@ it from the ReconOS homepage and extract it to $WD/nfs
      mount -t proc none /proc
      mount -t sysfs none /sys
      mount -t devtmpfs none /dev
-
-     ttydev=`cat /sys/class/tty/ttyUL1/dev`
-     ttymajor=${ttydev%%:*}
-     ttyminor=${ttydev##*:}
-     if [ -c /dev/ttyUL1 ]
-     then
-             rm /dev/ttyUL1
-     fi
-
-     mknod /dev/ttyUL1 c $ttymajor $ttyminor
 
      echo "rcS Complete"
      >=== $WD/nfs/etc/init.d/rcS ===>
