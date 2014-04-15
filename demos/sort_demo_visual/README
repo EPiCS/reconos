@@ -8,7 +8,7 @@ Download it from http://ftp.gnu.org/pub/gnu/ncurses/
 For Zynq:
 ./configure --host=arm-xilinx-linux-gnueabi --target=arm-xilinx-linux-gnueabi --without-cxx --without-cxx-binding --without-manpages
 make -j3
-make install DESTDIR=_install
+make install DESTDIR=/../_install (must be absolute path)
 
 For Microblaze:
 
@@ -16,5 +16,5 @@ Edit config.sub and replace all occurences of "microblaze" by "microblazeel"
 
 ./configure --host=microblazeel-xilinx-linux-gnu --target=microblazeel-xilinx-linux-gnu --without-cxx --without-cxx-binding --without-manpages
 make -j3
-make install DESTDIR=_install
+make install DESTDIR=/.../_install (must be absoulte path)
 
