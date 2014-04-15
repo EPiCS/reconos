@@ -36,7 +36,7 @@ xpartition()
 	i=0
 	for xst in $xsts
 	do
-		idle=`grep "reconos_hwt_idle" $xst`
+		idle=`grep "reconos_hwt_idle" $xst || true`
 		if [ -z "$idle" ]
 		then
 			echo '    <Partition Name="/system/hwt_reconf_'$i'" State="implement" ImportLocation="NONE" Reconfigurable="true" ReconfigModuleName="'$config'"></Partition>' >> xpartition.pxml
