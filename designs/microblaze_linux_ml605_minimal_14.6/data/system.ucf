@@ -24,6 +24,26 @@ NET Ethernet_Lite_TX_EN LOC = "AJ10"  |  IOSTANDARD = "LVCMOS25";
 NET RESET LOC = "H10"  |  IOSTANDARD = "SSTL15"  |  TIG;
 NET RS232_Uart_1_sin LOC = "J24"  |  IOSTANDARD = "LVCMOS25";
 NET RS232_Uart_1_sout LOC = "J25"  |  IOSTANDARD = "LVCMOS25";
+NET axi_sysace_0_SysACE_CEN_pin LOC = "AJ14"  |  IOSTANDARD = "LVCMOS25";
+NET axi_sysace_0_SysACE_CLK_pin LOC = "AE16"  |  IOSTANDARD = "LVCMOS25";
+NET axi_sysace_0_SysACE_MPA_pin[0] LOC = "AC15"  |  IOSTANDARD = "LVCMOS25";
+NET axi_sysace_0_SysACE_MPA_pin[1] LOC = "AP15"  |  IOSTANDARD = "LVCMOS25";
+NET axi_sysace_0_SysACE_MPA_pin[2] LOC = "AG17"  |  IOSTANDARD = "LVCMOS25";
+NET axi_sysace_0_SysACE_MPA_pin[3] LOC = "AH17"  |  IOSTANDARD = "LVCMOS25";
+NET axi_sysace_0_SysACE_MPA_pin[4] LOC = "AG15"  |  IOSTANDARD = "LVCMOS25";
+NET axi_sysace_0_SysACE_MPA_pin[5] LOC = "AF15"  |  IOSTANDARD = "LVCMOS25";
+NET axi_sysace_0_SysACE_MPA_pin[6] LOC = "AK14"  |  IOSTANDARD = "LVCMOS25";
+NET axi_sysace_0_SysACE_MPD_pin[0] LOC = "AM15"  |  IOSTANDARD = "LVCMOS25";
+NET axi_sysace_0_SysACE_MPD_pin[1] LOC = "AJ17"  |  IOSTANDARD = "LVCMOS25";
+NET axi_sysace_0_SysACE_MPD_pin[2] LOC = "AJ16"  |  IOSTANDARD = "LVCMOS25";
+NET axi_sysace_0_SysACE_MPD_pin[3] LOC = "AP16"  |  IOSTANDARD = "LVCMOS25";
+NET axi_sysace_0_SysACE_MPD_pin[4] LOC = "AG16"  |  IOSTANDARD = "LVCMOS25";
+NET axi_sysace_0_SysACE_MPD_pin[5] LOC = "AH15"  |  IOSTANDARD = "LVCMOS25";
+NET axi_sysace_0_SysACE_MPD_pin[6] LOC = "AF16"  |  IOSTANDARD = "LVCMOS25";
+NET axi_sysace_0_SysACE_MPD_pin[7] LOC = "AN15"  |  IOSTANDARD = "LVCMOS25";
+NET axi_sysace_0_SysACE_MPIRQ_pin LOC = "L9"  |  IOSTANDARD = "LVCMOS25"  |  TIG;
+NET axi_sysace_0_SysACE_OEN_pin LOC = "AL15"  |  IOSTANDARD = "LVCMOS25";
+NET axi_sysace_0_SysACE_WEN_pin LOC = "AL14"  |  IOSTANDARD = "LVCMOS25";
 
 
 NET  "ddr_memory_addr[0]"		 LOC = "L14" ;

@@ -219,7 +219,7 @@
 			interrupt-controller ;
 			reg = < 0x41200000 0x10000 >;
 			xlnx,kind-of-intr = <0x6>;
-			xlnx,num-intr-inputs = <0x5>;
+			xlnx,num-intr-inputs = <0x6>;
 		} ;
 		rs232_uart_1: serial@40600000 {
 			clock-frequency = <100000000>;
@@ -238,11 +238,19 @@
 		} ;
 		reconos_osif: misc@75a00000 {
 			interrupt-parent = <&microblaze_0_intc>;
-			interrupts = < 3 0 >;
+			interrupts = < 4 0 >;
 		} ;
 		reconos_proc_control: misc@6fe00000 {
                 	interrupt-parent = <&microblaze_0_intc>;
-			interrupts = < 4 0 >;
+			interrupts = < 5 0 >;
+		} ;
+		axi_sysace_0: sysace@41800000 {
+			compatible = "xlnx,xps-sysace-1.00.a";
+			interrupt-parent = <&microblaze_0_intc>;
+			interrupts = < 3 2 >;
+			reg = < 0x41800000 0x10000 >;
+			xlnx,family = "virtex6";
+			xlnx,mem-width = <0x8>;
 		} ;
 	} ;
 } ;
