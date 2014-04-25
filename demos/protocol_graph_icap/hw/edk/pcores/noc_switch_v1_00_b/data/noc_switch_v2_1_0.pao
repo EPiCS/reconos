@@ -1,0 +1,20 @@
+lib noc_switch_v1_00_b switch/utilPkg.vhd vhdl
+lib noc_switch_v1_00_b switch/header/headerPkg.vhd vhdl
+lib noc_switch_v1_00_b switch/switchPkg.vhd vhdl
+
+lib noc_switch_v1_00_b switch/endOfPacket/endOfPacketDetector.vhd vhdl
+lib noc_switch_v1_00_b switch/header/headerDecoder.vhd vhdl
+lib noc_switch_v1_00_b switch/header/headerDetector.vhd vhdl
+lib noc_switch_v1_00_b switch/router/extTxPortSelect.vhd vhdl
+lib noc_switch_v1_00_b switch/router/headerFetch.vhd vhdl
+lib noc_switch_v1_00_b switch/router/headerSelect.vhd vhdl
+lib noc_switch_v1_00_b switch/router/intTxPortSelect.vhd vhdl
+lib noc_switch_v1_00_b switch/router/rxPort.vhd vhdl
+lib noc_switch_v1_00_b switch/router/txFifo.vhd vhdl
+lib noc_switch_v1_00_b switch/router/txFifoSelect.vhd vhdl
+lib noc_switch_v1_00_b switch/router/txPort.vhd vhdl
+lib noc_switch_v1_00_b switch/router/router.vhd vhdl
+lib noc_switch_v1_00_b switch/switch.vhd vhdl
+
+
+lib noc_switch_v1_00_b noc_switch.vhd vhdl

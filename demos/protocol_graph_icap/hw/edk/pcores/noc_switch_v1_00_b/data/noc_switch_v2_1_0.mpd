@@ -1,0 +1,58 @@
+
+BEGIN noc_switch
+
+## Peripheral Options
+OPTION IPTYPE = PERIPHERAL
+OPTION IMP_NETLIST = TRUE
+OPTION HDL = VHDL
+OPTION IP_GROUP = MICROBLAZE:PPC:USER
+OPTION DESC = NOC_SWITCH
+OPTION ARCH_SUPPORT_MAP = (others=DEVELOPMENT)
+OPTION STYLE = MIX
+
+## Parameters
+PARAMETER C_ENABLE_ILA = 0, DT = integer, RANGE = (0:1)
+
+## Bus Interfaces
+#BUS_INTERFACE BUS=downstream0, BUS_STD=noc_switch_downstream, BUS_TYPE=INITIATOR
+#BUS_INTERFACE BUS=downstream1, BUS_STD=noc_switch_downstream, BUS_TYPE=INITIATOR
+#BUS_INTERFACE BUS=upstream0, BUS_STD=noc_switch_upstream, BUS_TYPE=INITIATOR
+#BUS_INTERFACE BUS=upstream1, BUS_STD=noc_switch_upstream, BUS_TYPE=INITIATOR
+BUS_INTERFACE BUS=ringInput, BUS_STD=noc_ring, BUS_TYPE=TARGET
+BUS_INTERFACE BUS=ringOutput, BUS_STD=noc_ring, BUS_TYPE=INITIATOR
+
+## Generics for VHDL or Parameters for Verilog
+PARAMETER globalAddr=0b0000, ASSIGNMENT=REQUIRE, DESC="The global address of the switch (must be unique in the design)", DT=std_logic_vector, PERMIT=BASE_USER, TYPE=HDL
+
+## Ports
+PORT reset="", DIR=I, SIGIS=RST
+PORT clk125="", DIR=I, SIGIS=Clk
+
+PORT downstream0ReadEnable=downstream0ReadEnable, ASSIGNMENT=REQUIRE,DIR=I
+PORT o_downstream0_rdy=o_downstream0_rdy, ASSIGNMENT=REQUIRE,DIR=O
+PORT downstream0Data=downstream0Data, DIR=O, ASSIGNMENT=REQUIRE,VEC=[0:8]
+PORT downstream0ReadClock=downstream0ReadClock, SIGIS=Clk, ASSIGNMENT=REQUIRE,DIR=I
+
+PORT downstream1ReadEnable=downstream1ReadEnable, ASSIGNMENT=REQUIRE,DIR=I #, BUS=downstream1
+PORT o_downstream1_rdy=o_downstream1_rdy, ASSIGNMENT=REQUIRE,DIR=O #, BUS=downstream1
+PORT downstream1Data=downstream1Data, DIR=O, ASSIGNMENT=REQUIRE,VEC=[0:8] #, BUS=downstream1, VEC=[0:8]
+PORT downstream1ReadClock=downstream1ReadClock, SIGIS=Clk, ASSIGNMENT=REQUIRE,DIR=I #, BUS=downstream1
+
+PORT upstream0WriteEnable=upstream0WriteEnable, ASSIGNMENT=REQUIRE,DIR=I #, BUS=upstream0
+PORT upstream0Data=upstream0Data, DIR=I, ASSIGNMENT=REQUIRE,VEC=[0:8] #, BUS=upstream0, VEC=[0:8]
+PORT o_upstream0_rdy=o_upstream0_rdy, ASSIGNMENT=REQUIRE,DIR=O #, BUS=upstream0
+PORT upstream0WriteClock=upstream0WriteClock, SIGIS=Clk, ASSIGNMENT=REQUIRE,DIR=I #, BUS=upstream0
+
+PORT upstream1WriteEnable=upstream1WriteEnable, ASSIGNMENT=REQUIRE,DIR=I #, BUS=upstream1
+PORT upstream1Data=upstream1Data, DIR=I, ASSIGNMENT=REQUIRE,VEC=[0:8] #, BUS=upstream1, VEC=[0:8]
+PORT o_upstream1_rdy=o_upstream1_rdy, ASSIGNMENT=REQUIRE,DIR=O #, BUS=upstream1
+PORT upstream1WriteClock=upstream1WriteClock, SIGIS=Clk, ASSIGNMENT=REQUIRE,DIR=I #, BUS=upstream1
+
+PORT ringInputEmpty=ringEmpty, DIR=I, BUS=ringInput, VEC=[0:3], ASSIGNMENT=REQUIRE
+PORT ringInputData=ringData, DIR=I, BUS=ringInput, VEC=[0:35], ASSIGNMENT=REQUIRE
+PORT ringInputReadEnable=ringReadEnable, DIR=O, BUS=ringInput, VEC=[0:3], ASSIGNMENT=REQUIRE
+
+PORT ringOutputReadEnable=ringReadEnable, DIR=I, BUS=ringOutput, VEC=[0:3], ASSIGNMENT=REQUIRE
+PORT ringOutputData=ringData, DIR=O, BUS=ringOutput, VEC=[0:35], ASSIGNMENT=REQUIRE
+PORT ringOutputEmpty=ringEmpty, DIR=O, BUS=ringOutput, VEC=[0:3], ASSIGNMENT=REQUIRE
+END

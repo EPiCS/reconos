@@ -22,7 +22,8 @@
 
 static struct reconos_process reconos_proc;
 
-static void reconos_slot_reset(int num, int reset)
+//static void reconos_slot_reset(int num, int reset)
+void reconos_slot_reset(int num, int reset)
 {
 	int i;
 	uint32_t cmd, mask = 0;
@@ -204,10 +205,14 @@ static inline void reconos_assert_type_and_res(struct reconos_hwt *hwt,
 static void reconos_delegate_process_mbox_get(struct reconos_hwt *hwt)
 {
 	uint32_t handle = fsl_read(hwt->slot);
+	uint32_t ret = 0; // try
 
 	reconos_assert_type_and_res(hwt, handle, RECONOS_TYPE_MBOX);
 
-	fsl_write(hwt->slot, mbox_get(hwt->resources[handle].ptr));
+	ret = mbox_get(hwt->resources[handle].ptr); // try
+	if (ret!=0xFFFFFFFF) fsl_write(hwt->slot, ret); // try
+
+	//fsl_write(hwt->slot, mbox_get(hwt->resources[handle].ptr));
 }
 
 static void reconos_delegate_process_mbox_put(struct reconos_hwt *hwt)
