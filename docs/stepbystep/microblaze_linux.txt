@@ -98,7 +98,7 @@ not want to compile busybox and use the provided root filesystem.
 At first we need to checkout the ReconOS repository:
 
   > cd $WD
-  > git clone https://github.com/EPiCS/reconos.git
+  > git clone https://github.com/ReconOS/reconos.git
 
 To use the ReconOS toolchain you must configure it to your needs. Therefore,
 open $WD/reconos/tools/environment/microblaze_linux.sh and adjust it to
