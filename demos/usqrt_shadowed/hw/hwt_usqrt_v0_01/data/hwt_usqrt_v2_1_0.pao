@@ -1,0 +1,10 @@
+##############################################################################
+## Filename:          hwt_usqrt_v2_1_0.pao
+## Description:       Hardwarethread usqrt used in MiBenchHybrid
+## Date:              08.03.2013 15:32:01
+##############################################################################
+
+lib proc_common_v3_00_a  proc_common_pkg vhdl
+lib reconos_v3_00_a reconos_pkg vhdl
+lib hwt_usqrt_v1_01_a usqrt vhdl
+lib hwt_usqrt_v1_01_a hwt_usqrt vhdl

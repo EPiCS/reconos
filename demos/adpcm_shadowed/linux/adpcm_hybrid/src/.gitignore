@@ -1,0 +1,10 @@
+*
+!.gitignore
+!adpcm.2
+!*.c
+!*.h
+!*.o
+!hello.adpcm.uu
+!Makefile
+!README
+
