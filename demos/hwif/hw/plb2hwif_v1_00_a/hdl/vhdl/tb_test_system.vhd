@@ -98,6 +98,15 @@ begin
 
   tb : process
     
+    procedure idle
+    is
+    begin
+      tb_Bus2IP_Addr <= (others => '0');
+      tb_Bus2IP_Data <= (others => '0');
+      tb_Bus2IP_CS <= (others => '0');
+      tb_Bus2IP_RNW <= '0';
+    end procedure;
+    
     procedure write (
       constant hwt  : in integer;
       constant addr : in std_logic_vector(tb_Bus2IP_Addr'range);
@@ -109,6 +118,10 @@ begin
       tb_Bus2IP_Data <= data;
       tb_Bus2IP_CS <=  "1";
       tb_Bus2IP_RNW <= '0';
+      wait until tb_IP2Bus_WrAck = '1';
+      wait for clk_cycle;
+      idle;
+      wait for clk_cycle;
     end procedure;
 
     procedure read (
@@ -116,20 +129,15 @@ begin
       constant addr : in std_logic_vector(tb_Bus2IP_Addr'range)
       )is
     begin
-      tb_Bus2IP_Addr <= std_logic_vector(to_unsigned(hwt,C_SLV_AWIDTH-C_HWIF_ADDRESS_SPACE_BITS)) &
+      tb_Bus2IP_Addr <= std_logic_vector('1' & to_unsigned(hwt,C_SLV_AWIDTH-C_HWIF_ADDRESS_SPACE_BITS-1)) &
                         addr(C_SLV_AWIDTH-C_HWIF_ADDRESS_SPACE_BITS to C_SLV_AWIDTH-1);
       tb_Bus2IP_Data <= (others => '0');
       tb_Bus2IP_CS <= "1";
       tb_Bus2IP_RNW <= '1';
-    end procedure;
-
-    procedure idle
-    is
-    begin
-      tb_Bus2IP_Addr <= (others => '0');
-      tb_Bus2IP_Data <= (others => '0');
-      tb_Bus2IP_CS <= (others => '0');
-      tb_Bus2IP_RNW <= '0';
+      wait until tb_IP2Bus_RdAck = '1';
+      wait for clk_cycle;
+      idle;
+      wait for clk_cycle;
     end procedure;
     
   begin
@@ -142,41 +150,35 @@ begin
     tb_desc <= "Read HWT0 ID Reg";
     for i in 0 to 5 loop
       read(0, std_logic_vector(to_unsigned(i*4, tb_Bus2IP_Addr'length)));
-      wait for clk_cycle;
     end loop;  -- i
 
     tb_desc <= "Read HWT1 ID Reg";
     for i in 0 to 5 loop
       read(1, std_logic_vector(to_unsigned(i*4, tb_Bus2IP_Addr'length)));
-      wait for clk_cycle;
     end loop;  -- i
 
     tb_desc <= "Read Perfmon0   ";
     for i in 8 to 15 loop
       read(0, std_logic_vector(to_unsigned(i*4, tb_Bus2IP_Addr'length)));
-      wait for clk_cycle;
     end loop;  -- i
 
     tb_desc <= "Read Perfmon1   ";
     for i in 8 to 15 loop
       read(1, std_logic_vector(to_unsigned(i*4, tb_Bus2IP_Addr'length)));
-      wait for clk_cycle;
     end loop;  -- i
 
     tb_desc <= "ActivatePerfmon0";
     write(0, std_logic_vector(to_unsigned(C_ID_MEM_SPACE_SIZE_BYTES+2*4, tb_Bus2IP_Addr'length)), X"00000002");
-    wait for clk_cycle;
+
 
     tb_desc <= "Read Perfmon0   ";
     for i in 8 to 15 loop
       read(0, std_logic_vector(to_unsigned(i*4, tb_Bus2IP_Addr'length)));
-      wait for clk_cycle;
     end loop;  -- i
 
     tb_desc <= "Read Perfmon1   ";
     for i in 8 to 15 loop
       read(1, std_logic_vector(to_unsigned(i*4, tb_Bus2IP_Addr'length)));
-      wait for clk_cycle;
     end loop;  -- i
 
 

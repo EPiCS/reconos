@@ -39,6 +39,8 @@ entity hwif_subsystem is
     -- in-/outputs of internal submodules
     increments : in std_logic_vector (C_Perf_Counters_Num-1 downto 0);
     -- other
+    debug      : out std_logic_vector(109 downto 0);
+    
     clk        : in std_logic;
     rst        : in std_logic);
 end entity hwif_subsystem;
@@ -47,7 +49,7 @@ architecture structural of hwif_subsystem is
 
   constant C_ADDR_RANGE_ARRAY_A : SLV32_ARRAY_TYPE :=
     (X"00000000", X"0000001F",          -- Identification Module, 5 Register
-     X"00000020", X"0000003F");         -- Performance monitor, 3 + 2 Register
+     X"00000020", X"0000005F");         -- Performance monitor, 3 + 8 Register
   
   -----------------------------------------------------------------------------
   -- connections between the address decoder and the sub-modules
@@ -136,6 +138,7 @@ begin  -- architecture structural
       HWT2IP_Data  => A_SUB2DEC_A_Data,
       HWT2IP_RdAck => A_SUB2DEC_A_RdAck,
       HWT2IP_WrAck => A_SUB2DEC_A_WrAck,
+      debug        => open,
       clk          => clk,
       rst          => rst
       );
@@ -155,6 +158,7 @@ begin  -- architecture structural
       HWT2IP_RdAck => A_SUB2DEC_B_RdAck,
       HWT2IP_WrAck => A_SUB2DEC_B_WrAck,
       increments   => increments,
+      debug        => debug,
       clk          => clk,
       rst          => rst
       );

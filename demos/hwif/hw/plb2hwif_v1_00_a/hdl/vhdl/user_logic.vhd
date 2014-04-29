@@ -63,8 +63,11 @@ use proc_common_v3_00_a.ipif_pkg.all;
 
 --USER libraries added here
 
-library work;
-use work.hwif_pck.all;
+--library work;
+--use work.hwif_pck.all;
+library plb2hwif_v1_00_a;
+use plb2hwif_v1_00_a.hwif_pck.all;
+
 
 ------------------------------------------------------------------------------
 -- Entity section

@@ -215,7 +215,10 @@ implementation/system_mmu_0_wrapper.ngc \
 implementation/system_xps_mem_0_wrapper.ngc \
 implementation/system_proc_control_0_wrapper.ngc \
 implementation/system_gnd2int_0_wrapper.ngc \
-implementation/system_plb2hwif_0_wrapper.ngc
+implementation/system_plb2hwif_0_wrapper.ngc \
+implementation/system_chipscope_icon_0_wrapper.ngc \
+implementation/system_chipscope_ila_0_wrapper.ngc \
+implementation/system_chipscope_ila_1_wrapper.ngc
 
 POSTSYN_NETLIST = implementation/$(SYSTEM).ngc
 

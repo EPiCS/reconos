@@ -115,6 +115,8 @@ PORT Sl_MIRQ = Sl_MIRQ, DIR = O, VEC = [0:(C_SPLB_NUM_MASTERS-1)], BUS = SPLB
 
 ## USER PORTS: HWIF ports
 
+PORT Debug = , DIR= O, VEC= [109 : 0]
+
 PORT IP2HWT_Addr_A = IP2HWT_Addr, DIR= O, VEC= [0 :(C_SPLB_AWIDTH-1)],       BUS= HWIF_A
 PORT IP2HWT_Data_A = IP2HWT_Data, DIR= O, VEC= [(C_SPLB_NATIVE_DWIDTH-1):0], BUS= HWIF_A
 PORT IP2HWT_RdCE_A = IP2HWT_RdCE, DIR= O,                                    BUS= HWIF_A

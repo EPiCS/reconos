@@ -43,6 +43,8 @@ entity hwt_sort_demo_rq_hwif is
     DEC2HWIF_RdAck : out std_logic;
     DEC2HWIF_WrAck : out std_logic;
 
+    debug: out std_logic_vector(209 downto 0);
+    
     -- HWT reset and clock
     clk : in std_logic;
     rst : in std_logic
@@ -97,6 +99,7 @@ architecture implementation of hwt_sort_demo_rq_hwif is
       -- in-/outputs of internal submodules
       increments : in std_logic_vector (C_Perf_Counters_Num-1 downto 0);
       -- other
+      debug      : out std_logic_vector(109 downto 0);
       clk        : in std_logic;
       rst        : in std_logic);
   end component;
@@ -147,9 +150,32 @@ architecture implementation of hwt_sort_demo_rq_hwif is
   signal sort_done  : std_logic := '0';
 
   signal increments : std_logic_vector (C_Perf_Counters_Num-1 downto 0);
+
+  signal debugged_DEC2HWIF_Data : std_logic_vector(C_SLV_DWIDTH-1 downto 0);
+  signal debugged_DEC2HWIF_RdAck: std_logic;
+  signal debugged_DEC2HWIF_WrAck: std_logic;
+  signal hwif_subsystem_rst : std_logic := '0';  -- decouple hwif reset from hw
+                                               -- thread reset
   
 begin
 
+  -----------------------------------------------------------------------------
+  -- Debug
+  -----------------------------------------------------------------------------
+
+  
+  debug(99 downto 68) <=  HWIF2DEC_Addr;
+  debug(67 downto 36 ) <= HWIF2DEC_Data;
+  debug(35) <= HWIF2DEC_RdCE;
+  debug(34) <= HWIF2DEC_WrCE;
+  debug(33 downto 2 ) <= debugged_DEC2HWIF_Data;
+  debug(1) <= debugged_DEC2HWIF_RdAck;
+  debug(0) <= debugged_DEC2HWIF_WrAck;
+
+  DEC2HWIF_Data  <= debugged_DEC2HWIF_Data  ;
+  DEC2HWIF_RdAck <= debugged_DEC2HWIF_RdAck ;
+  DEC2HWIF_WrAck <= debugged_DEC2HWIF_WrAck ; 
+  
   -- local dual-port RAM
   local_ram_ctrl_1 : process (clk) is
   begin
@@ -206,15 +232,16 @@ begin
     HWIF2DEC_Data  => HWIF2DEC_Data,
     HWIF2DEC_RdCE  => HWIF2DEC_RdCE,
     HWIF2DEC_WrCE  => HWIF2DEC_WrCE,
-    DEC2HWIF_Data  => DEC2HWIF_Data,
-    DEC2HWIF_RdAck => DEC2HWIF_RdAck,
-    DEC2HWIF_WrAck => DEC2HWIF_WrAck,
+    DEC2HWIF_Data  => debugged_DEC2HWIF_Data,
+    DEC2HWIF_RdAck => debugged_DEC2HWIF_RdAck,
+    DEC2HWIF_WrAck => debugged_DEC2HWIF_WrAck,
 
     -- in-/outputs of internal submodules
     increments => increments,
     -- other
+    debug      => debug(209 downto 100),
     clk        => clk,
-    rst        => rst);
+    rst        => hwif_subsystem_rst);
  
 
 fsl_setup(
@@ -269,7 +296,7 @@ begin
       -- signal to runtime system we don't have any state now and are ready to be replaced
       -- with another thread
       when STATE_THREAD_YIELD =>
-        increments <= (0 => '1', others=>'0');
+        increments <= (7 => '1', others=>'0');
         -- return value is stored to data_len, because it is not needed and data_len will 
         -- be overwritten in next state.
         osif_thread_yield(i_osif, o_osif, data_len, done);
@@ -279,7 +306,7 @@ begin
 
       -- get data length via reconos queue
       when STATE_GET_LENGTH =>
-        increments <= (1 => '1', others=>'0');
+        increments <= (6 => '1', others=>'0');
         osif_rq_receive (i_osif, o_osif, i_ram, o_ram, RQ_RECV, X"00000004", X"00000000", result, done);
         if done then
           o_ram.addr <= (others => '0');
@@ -288,13 +315,13 @@ begin
 
       -- length parameter is now in RAM; set RAM Address to get it back
       when STATE_SET_RAM_ADDRESS =>
-        increments <= (2 => '1', others=>'0');
+        increments <= (5 => '1', others=>'0');
         o_ram.addr <= (others => '0');
         state      <= STATE_READ_RAM;
 
       -- length parameter is in RAM; address set, now read it
       when STATE_READ_RAM =>
-        increments <= (3 => '1', others=>'0');
+        increments <= (4 => '1', others=>'0');
         data_len <= i_ram.data;
         if (i_ram.data = X"FFFFFFFF") then
           -- exit command received
@@ -306,7 +333,7 @@ begin
 
       -- copy data via reconos queue
       when STATE_READ =>
-        increments <= (4 => '1', others=>'0');
+        increments <= (3 => '1', others=>'0');
         osif_rq_receive (i_osif, o_osif, i_ram, o_ram, RQ_RECV, data_len, X"00000000", result, done);
         if done then
           sort_start <= '1';
@@ -315,7 +342,7 @@ begin
 
       -- sort the words in local RAM
       when STATE_SORTING =>
-        increments <= (5 => '1', others=>'0');
+        increments <= (2 => '1', others=>'0');
         sort_start <= '0';
         if sort_done = '1' then
           state <= STATE_WRITE;
@@ -323,7 +350,7 @@ begin
 
       -- copy data from local memory to main memory
       when STATE_WRITE =>
-        increments <= (6 => '1', others=>'0');
+        increments <= (1 => '1', others=>'0');
         osif_rq_send (i_osif, o_osif, i_ram, o_ram, RQ_SEND, data_len, X"00000000", result, done);
         if done then
           state <= STATE_THREAD_YIELD;
@@ -331,7 +358,7 @@ begin
 
       -- thread exit
       when STATE_THREAD_EXIT =>
-        increments <= (7 => '1', others=>'0');
+        increments <= (0 => '1', others=>'0');
         osif_thread_exit(i_osif, o_osif);
         
     end case;

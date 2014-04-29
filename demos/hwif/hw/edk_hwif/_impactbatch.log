@@ -1,6 +1,6 @@
 iMPACT Version: Oct 13 2013 08:43:40
 
-iMPACT log file Started on Mon Mar 24 16:16:28 2014
+iMPACT log file Started on Fri Apr  4 17:19:29 2014
 
 Preference Table
 Name                 Setting             
@@ -29,11 +29,9 @@ Type = 0x0004.
  Cable Type = 3, Revision = 0.
  Setting cable speed to 6 MHz.
 Cable connection established.
-Firmware version = 1028.
+Firmware version = 1303.
 File version of /opt/Xilinx/14.7/ISE_DS/ISE/data/xusb_xlp.hex = 1303.
 Firmware hex file version = 1303.
-Downloading /opt/Xilinx/14.7/ISE_DS/ISE/data/xusb_xlp.hex.
-Downloaded firmware version = 1303.
 PLD file version = 0012h.
  PLD version = 0012h.
 Type = 0x0004.
@@ -63,9 +61,9 @@ INFO:iMPACT:501 - '2': Added Device xc6vlx240t successfully.
 Maximum TCK operating frequency for this device chain: 16700000.
 Validating chain...
 Boundary-scan chain validated successfully.
-2: Device Temperature: Current Reading:   39.55 C, Min. Reading:   25.27 C, Max.Reading:   40.04 C
-2: VCCINT Supply: Current Reading:   1.011 V, Min. Reading:   1.008 V, Max.Reading:   1.014 V
-2: VCCAUX Supply: Current Reading:   2.496 V, Min. Reading:   2.490 V, Max.Reading:   2.505 V
+2: Device Temperature: Current Reading:   46.44 C, Min. Reading:   42.01 C, Max.Reading:   48.90 C
+2: VCCINT Supply: Current Reading:   1.008 V, Min. Reading:   1.005 V, Max.Reading:   1.011 V
+2: VCCAUX Supply: Current Reading:   2.490 V, Min. Reading:   2.484 V, Max.Reading:   2.496 V
 '2': Programming device...
  Match_cycle = 2.
  LCK_cycle = NoWait.

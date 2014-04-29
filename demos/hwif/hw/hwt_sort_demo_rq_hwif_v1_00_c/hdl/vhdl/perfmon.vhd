@@ -50,6 +50,9 @@ entity perfmon is
 
     -- Performance Monitors custom signals
     increments : in std_logic_vector (C_Counters_Num-1 downto 0);
+
+    debug: out std_logic_vector(109 downto 0);
+    
     clk        : in std_logic;
     rst        : in std_logic);
 end perfmon;
@@ -67,17 +70,26 @@ architecture Behavioral of perfmon is
   signal enable_bit: std_logic;
   signal reset_bit: std_logic;
   
-  --alias id_reg is registers(C_id_reg_addr);
-  --alias size_reg is registers(C_size_reg_addr);
-
-  --alias config_reg is registers(C_config_reg_addr);
-  --alias reset_bit is registers(C_config_reg_addr)(0);
-  --alias enable_bit is registers(C_config_reg_addr)(1); --config_reg(1);
-  --alias counters_num_bits : std_logic_vector(7 downto 0) is registers(C_config_reg_addr)(31 downto 24);
-
-  --alias counters : register_array_t(0 to C_Counters_Num - 1) is registers(C_Fixed_Reg_Count to C_Counters_Num + C_Fixed_Reg_Count - 1);
+  signal debugged_HWT2IP_Data : std_logic_vector(C_SLV_DWIDTH-1 downto 0);
+  signal debugged_HWT2IP_RdAck: std_logic;
+  signal debugged_HWT2IP_WrAck: std_logic;
 
 begin
+  debug(109 downto 102) <= increments;
+  debug(101)          <= clk;
+  debug(100)          <= rst;
+  debug(99 downto 68) <=  IP2HWT_Addr;
+  debug(67 downto 36 ) <= IP2HWT_Data;
+  debug(35) <= IP2HWT_RdCE;
+  debug(34) <= IP2HWT_WrCE;
+  debug(33 downto 2 ) <= debugged_HWT2IP_Data;
+  debug(1) <= debugged_HWT2IP_RdAck;
+  debug(0) <= debugged_HWT2IP_WrAck;
+
+  HWT2IP_Data  <= debugged_HWT2IP_Data  ;
+  HWT2IP_RdAck <= debugged_HWT2IP_RdAck ;
+  HWT2IP_WrAck <= debugged_HWT2IP_WrAck ;
+
 
 -- Reads to all registers and read/writes to config register.
   register_read_write : process(clk, rst, reset_bit, registers)
@@ -87,12 +99,12 @@ begin
       --registers(C_config_reg_addr)(1)   <= '0';
       reset_bit <= '0';
       enable_bit <= '0';
-      HWT2IP_WrAck <= '0';
-      HWT2IP_RdAck <= '0';
-      HWT2IP_Data  <= (others => '0');
+      debugged_HWT2IP_WrAck <= '0';
+      debugged_HWT2IP_RdAck <= '0';
+      debugged_HWT2IP_Data  <= (others => '0');
     elsif clk'event and clk = '1' then
-      HWT2IP_WrAck <= '0';
-      HWT2IP_RdAck <= '0';
+      debugged_HWT2IP_WrAck <= '0';
+      debugged_HWT2IP_RdAck <= '0';
       -- RO Registers
       if (IP2HWT_RdCE or IP2HWT_WrCE) = '1' then
         if IP2HWT_WrCE = '1' then
@@ -100,23 +112,32 @@ begin
             reset_bit <= IP2HWT_Data(0);
             enable_bit <= IP2HWT_Data(1);
          end if;
-         HWT2IP_WrAck <= '1';
+         debugged_HWT2IP_WrAck <= '1';
         end if;
+        -- Acknowledgements are not allowed to be '1' for longer than 1 clock cycle
+        if debugged_HWT2IP_WrAck = '1' then
+          debugged_HWT2IP_WrAck <= '0';
+        end if;
+        
         if IP2HWT_RdCE = '1' then
-          HWT2IP_RdAck <= '1';
+          debugged_HWT2IP_RdAck <= '1';
+        end if;
+        -- Acknowledgements are not allowed to be '1' for longer than 1 clock cycle 
+        if debugged_HWT2IP_RdAck = '1' then
+          debugged_HWT2IP_RdAck <= '0';
         end if;
 
         case to_integer(unsigned(IP2HWT_Addr(0 to 29))) is
         when C_id_reg_addr =>
-          HWT2IP_Data <= C_ID_PERFMON;
+          debugged_HWT2IP_Data <= C_ID_PERFMON;
         when C_size_reg_addr =>
-          HWT2IP_Data <= std_logic_vector(to_unsigned((2**ceil_power_of_2(C_Fixed_Reg_Count+C_Counters_Num)*4), 32));
+          debugged_HWT2IP_Data <= std_logic_vector(to_unsigned((2**ceil_power_of_2(C_Fixed_Reg_Count+C_Counters_Num)*4), 32));
         when C_config_reg_addr =>
-          HWT2IP_Data <= std_logic_vector(to_unsigned(C_Counters_Num, 8)) & X"0000" & "000000" & enable_bit & reset_bit;
+          debugged_HWT2IP_Data <= std_logic_vector(to_unsigned(C_Counters_Num, 8)) & X"0000" & "000000" & enable_bit & reset_bit;
         when C_Fixed_Reg_Count to C_Fixed_Reg_Count+ C_Counters_Num-1 =>
-          HWT2IP_Data <= registers(to_integer(unsigned(IP2HWT_Addr(0 to 29)))-C_Fixed_Reg_Count);
+          debugged_HWT2IP_Data <= registers(to_integer(unsigned(IP2HWT_Addr(0 to 29)))-C_Fixed_Reg_Count);
         when others =>
-          HWT2IP_Data <= (others=> '0');
+          debugged_HWT2IP_Data <= (others=> '0');
         end case;
         
       end if;

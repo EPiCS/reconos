@@ -305,6 +305,9 @@ entity plb2hwif is
       HWT2IP_Data_N  : in  std_logic_vector(C_SPLB_NATIVE_DWIDTH-1 downto 0);
       HWT2IP_RdAck_N : in  std_logic;
       HWT2IP_WrAck_N : in  std_logic;
+
+      debug : out std_logic_vector(109 downto 0);
+      
     -- ADD USER PORTS ABOVE THIS LINE ------------------
 
     -- DO NOT EDIT BELOW THIS LINE ---------------------
@@ -436,8 +439,30 @@ architecture IMP of plb2hwif is
   signal user_IP2Bus_WrAck              : std_logic;
   signal user_IP2Bus_Error              : std_logic;
 
+  signal my_Bus2IP_CS                 : std_logic_vector(0 to ((IPIF_ARD_ADDR_RANGE_ARRAY'length)/2)-1);
+  signal my_Bus2IP_RNW                : std_logic;
 begin
 
+  -----------------------------------------------------------------------------
+  -- Debug port
+  -----------------------------------------------------------------------------
+  debug(109 downto 109) <= my_Bus2IP_CS ;      -- ? bits
+  debug(108           ) <= my_Bus2IP_RNW ;      -- ? bits
+  debug(107 downto 107) <= ipif_Bus2IP_WrCE ;      -- ? bits
+  debug(106 downto 106) <= ipif_Bus2IP_RdCE ;      -- ? bits
+  debug(105           ) <= user_IP2Bus_Error;          -- 1 bit
+  debug(104           ) <= user_IP2Bus_WrAck;          -- 1 bit
+  debug(103           ) <= user_IP2Bus_RdAck;          -- 1 bit
+  debug(102 downto 71 ) <= user_IP2Bus_Data;          -- 32 bit vector
+  debug(70  downto 67 ) <= ipif_Bus2IP_BE;  -- 4 bit vector
+  debug(66            ) <= ipif_Bus2IP_RNW;  -- 1 bit
+  debug(65  downto 65 ) <= ipif_Bus2IP_CS;  -- 1 bit vector
+  debug(64  downto 33 ) <= ipif_Bus2IP_Data;  --32 bit vector
+  debug(32  downto 1  ) <= ipif_Bus2IP_Addr;  --32 bit vector
+  debug(0             ) <= ipif_Bus2IP_Reset;
+  
+  my_Bus2IP_RNW <= ipif_Bus2IP_RdCE(0);
+  my_Bus2IP_CS(0 to 0)  <= ipif_Bus2IP_RdCE or ipif_Bus2IP_WrCE;
   ------------------------------------------
   -- instantiate plbv46_slave_single
   ------------------------------------------
@@ -662,7 +687,7 @@ begin
       IP2Bus_WrAck                   => user_IP2Bus_WrAck,
       IP2Bus_Error                   => user_IP2Bus_Error
     );
-
+  
   ------------------------------------------
   -- connect internal signals
   ------------------------------------------
