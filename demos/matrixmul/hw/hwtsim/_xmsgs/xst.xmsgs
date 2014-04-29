@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- IMPORTANT: This is an internal file that has been generated
+     by the Xilinx ISE software.  Any direct editing or
+     changes made to this file may result in unpredictable
+     behavior or data corruption.  It is strongly advised that
+     users do not edit the contents of this file. -->
+<messages>
+<msg type="error" file="HDLCompiler" num="104" delta="new" >"/home/aloesch/hwts/matrixmul/hwt_matrixmul_v1_00_a/hdl/vhdl/hwt_matrixmul.vhd" Line 17: Cannot find &lt;<arg fmt="%s" index="1">proc_common_pkg</arg>&gt; in library &lt;<arg fmt="%s" index="2">proc_common_v3_00_a</arg>&gt;. Please ensure that the library was compiled, and that a library and a use clause are present in the VHDL file.
+</msg>
+
+<msg type="error" file="HDLCompiler" num="104" delta="new" >"/home/aloesch/hwts/matrixmul/hwt_matrixmul_v1_00_a/hdl/vhdl/hwt_matrixmul.vhd" Line 20: Cannot find &lt;<arg fmt="%s" index="1">reconos_pkg</arg>&gt; in library &lt;<arg fmt="%s" index="2">reconos_v3_00_b</arg>&gt;. Please ensure that the library was compiled, and that a library and a use clause are present in the VHDL file.
+</msg>
+
+<msg type="error" file="HDLCompiler" num="854" delta="new" >"/home/aloesch/hwts/matrixmul/hwt_matrixmul_v1_00_a/hdl/vhdl/hwt_matrixmul.vhd" Line 26: Unit &lt;<arg fmt="%s" index="1">hwt_matrixmul</arg>&gt; ignored due to previous errors.
+</msg>
+
+<msg type="error" file="HDLCompiler" num="374" delta="new" >"/home/aloesch/hwts/matrixmul/hwt_matrixmul_v1_00_a/hdl/vhdl/hwt_matrixmul.vhd" Line 58: Entity &lt;<arg fmt="%s" index="1">hwt_matrixmul</arg>&gt; is not yet compiled.
+</msg>
+
+<msg type="error" file="HDLCompiler" num="806" delta="new" >"/home/aloesch/hwts/matrixmul/hwt_matrixmul_v1_00_a/hdl/vhdl/hwt_matrixmul.vhd" Line 59: Syntax error near &quot;<arg fmt="%s" index="1">(</arg>&quot;.
+</msg>
+
+<msg type="error" file="HDLCompiler" num="69" delta="new" >"/home/aloesch/hwts/matrixmul/hwt_matrixmul_v1_00_a/hdl/vhdl/hwt_matrixmul.vhd" Line 65: &lt;<arg fmt="%s" index="1">std_logic</arg>&gt; is not declared.
+</msg>
+
+<msg type="error" file="HDLCompiler" num="69" delta="new" >"/home/aloesch/hwts/matrixmul/hwt_matrixmul_v1_00_a/hdl/vhdl/hwt_matrixmul.vhd" Line 66: &lt;<arg fmt="%s" index="1">std_logic</arg>&gt; is not declared.
+</msg>
+
+<msg type="error" file="HDLCompiler" num="69" delta="new" >"/home/aloesch/hwts/matrixmul/hwt_matrixmul_v1_00_a/hdl/vhdl/hwt_matrixmul.vhd" Line 70: &lt;<arg fmt="%s" index="1">integer</arg>&gt; is not declared.
+</msg>
+
+<msg type="error" file="HDLCompiler" num="69" delta="new" >"/home/aloesch/hwts/matrixmul/hwt_matrixmul_v1_00_a/hdl/vhdl/hwt_matrixmul.vhd" Line 71: &lt;<arg fmt="%s" index="1">integer</arg>&gt; is not declared.
+</msg>
+
+<msg type="error" file="HDLCompiler" num="69" delta="new" >"/home/aloesch/hwts/matrixmul/hwt_matrixmul_v1_00_a/hdl/vhdl/hwt_matrixmul.vhd" Line 72: &lt;<arg fmt="%s" index="1">integer</arg>&gt; is not declared.
+</msg>
+
+<msg type="error" file="HDLCompiler" num="69" delta="new" >"/home/aloesch/hwts/matrixmul/hwt_matrixmul_v1_00_a/hdl/vhdl/hwt_matrixmul.vhd" Line 74: &lt;<arg fmt="%s" index="1">c_local_ram_size</arg>&gt; is not declared.
+</msg>
+
+<msg type="error" file="HDLCompiler" num="24" delta="new" >"/home/aloesch/hwts/matrixmul/hwt_matrixmul_v1_00_a/hdl/vhdl/hwt_matrixmul.vhd" Line 74: <arg fmt="%s" index="1">&quot;**&quot;</arg> expects <arg fmt="%d" index="2">2</arg> arguments
+</msg>
+
+<msg type="error" file="HDLCompiler" num="69" delta="new" >"/home/aloesch/hwts/matrixmul/hwt_matrixmul_v1_00_a/hdl/vhdl/hwt_matrixmul.vhd" Line 76: &lt;<arg fmt="%s" index="1">std_logic_vector</arg>&gt; is not declared.
+</msg>
+
+<msg type="error" file="HDLCompiler" num="69" delta="new" >"/home/aloesch/hwts/matrixmul/hwt_matrixmul_v1_00_a/hdl/vhdl/hwt_matrixmul.vhd" Line 77: &lt;<arg fmt="%s" index="1">std_logic_vector</arg>&gt; is not declared.
+</msg>
+
+<msg type="error" file="HDLCompiler" num="69" delta="new" >"/home/aloesch/hwts/matrixmul/hwt_matrixmul_v1_00_a/hdl/vhdl/hwt_matrixmul.vhd" Line 82: &lt;<arg fmt="%s" index="1">std_logic_vector</arg>&gt; is not declared.
+</msg>
+
+<msg type="error" file="HDLCompiler" num="69" delta="new" >"/home/aloesch/hwts/matrixmul/hwt_matrixmul_v1_00_a/hdl/vhdl/hwt_matrixmul.vhd" Line 84: &lt;<arg fmt="%s" index="1">i_osif_t</arg>&gt; is not declared.
+</msg>
+
+<msg type="error" file="HDLCompiler" num="69" delta="new" >"/home/aloesch/hwts/matrixmul/hwt_matrixmul_v1_00_a/hdl/vhdl/hwt_matrixmul.vhd" Line 85: &lt;<arg fmt="%s" index="1">o_osif_t</arg>&gt; is not declared.
+</msg>
+
+<msg type="error" file="HDLCompiler" num="69" delta="new" >"/home/aloesch/hwts/matrixmul/hwt_matrixmul_v1_00_a/hdl/vhdl/hwt_matrixmul.vhd" Line 86: &lt;<arg fmt="%s" index="1">i_memif_t</arg>&gt; is not declared.
+</msg>
+
+<msg type="error" file="HDLCompiler" num="69" delta="new" >"/home/aloesch/hwts/matrixmul/hwt_matrixmul_v1_00_a/hdl/vhdl/hwt_matrixmul.vhd" Line 87: &lt;<arg fmt="%s" index="1">o_memif_t</arg>&gt; is not declared.
+</msg>
+
+</messages>
+
