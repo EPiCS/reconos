@@ -26,6 +26,7 @@
  PORT ddr_memory_cas_n = ddr_memory_cas_n, DIR = O
  PORT ddr_memory_ba = ddr_memory_ba, DIR = O, VEC = [2:0]
  PORT ddr_memory_addr = ddr_memory_addr, DIR = O, VEC = [12:0]
+ PORT ddr_memory_row13 = ddr_memory_row13, DIR = O
  PORT RS232_Uart_1_sout = RS232_Uart_1_sout, DIR = O
  PORT RS232_Uart_1_sin = RS232_Uart_1_sin, DIR = I
  PORT RESET = RESET, DIR = I, SIGIS = RST, RST_POLARITY = 1
@@ -304,3 +305,11 @@ BEGIN axi_hwicap
  PORT ICAP_Clk = clk_100_0000MHzMMCM0
 END
 
+BEGIN util_reduced_logic
+ PARAMETER INSTANCE = ddr_fix
+ PARAMETER C_OPERATION = and
+ PARAMETER C_SIZE = 2
+ PARAMETER HW_VER = 1.00.a
+ PORT Op1 = 0b0 & 0b0
+ PORT Res = ddr_memory_row13
+END

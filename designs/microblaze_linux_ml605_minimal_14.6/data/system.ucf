@@ -159,6 +159,7 @@ NET  "ddr_memory_odt"		 LOC = "F18" ;
 NET  "ddr_memory_ras_n"		 LOC = "L19" ;
 NET  "ddr_memory_ddr3_rst"		 LOC = "E18" ;
 NET  "ddr_memory_we_n"		 LOC = "B17" ;
+NET  "ddr_memory_row13"		 LOC = "J15" | IOSTANDARD = "SSTL15" ;
 
 
 #
