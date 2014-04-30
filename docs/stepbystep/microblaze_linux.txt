@@ -22,7 +22,7 @@ for an FPGA and setup the appropriate tools and your board. The
 following list includes all prerequisites:
 
   - Linux workstation with a distribution of your choice including
-     * minicom
+     * picocom
      * NFS server
 
   - Xilinx ISE Design Tools (Version 14.6 or 14.7 for this guide)
@@ -33,7 +33,7 @@ following list includes all prerequisites:
      * Xilinx Microprocessor Debugger (XMD)
 
   - Evaluation board connected to your workstation
-    Currently only the ML605 board is supported
+    Currently only the ML605 board is supported out of the box
      * JTAG connection to program the FPGA
      * UART connection to interact with the board
 
@@ -43,9 +43,6 @@ the follwing tested versions or can try it with the newest ones
 available:
 
   - Linux Kernel: http://github.com/Xilinx/linux-xlnx
-    tag: xilinx-v14.7
-
-  - U-Boot: http://github.com/Xilinx/u-boot-xlnx
     tag: xilinx-v14.7
 
   - Busybox: http://git.busybox.net/busybox
@@ -85,7 +82,8 @@ This guide assumes this structure, so be aware if you change it.
 To compile applications for the microblaze processor we need a
 compiler toolchain. The microblaze processor lacks a stable
 toolchain and therefore we need to use different ones for
-different purposes.
+different purposes. You can skip this step (2.1) if you do
+not want to compile busybox and use the provided root filesystem.
 
   1. Checkout toolchain repository
      > cd $WD
@@ -100,7 +98,7 @@ different purposes.
 At first we need to checkout the ReconOS repository:
 
   > cd $WD
-  > git clone https://github.com/EPiCS/reconos.git
+  > git clone https://github.com/ReconOS/reconos.git
 
 To use the ReconOS toolchain you must configure it to your needs. Therefore,
 open $WD/reconos/tools/environment/microblaze_linux.sh and adjust it to
@@ -248,13 +246,13 @@ it from the ReconOS homepage and extract it to $WD/nfs
 For the development it has proved advantegeous to mount the root filesystem
 via NFS.
 WARNING: If you develop with other people on the same network make
-         shure that you do not use the same ip.
+         sure that you do not use the same ip.
 
   1. Configure NFS
      Add the following line to your NFS config under /etc/exports
-     $HOME/reconos/nfs 192.168.42.2(rw,no_root_squash,no_subtree_check)
+     $HOME/reconos/nfs 192.168.42.2(rw,no_subtree_check,anonuid=<unixuserid>,anongid=<unixgroupid>)
 
-  2. Create virutal network interface to communicate with your board
+  2. Create virtual network interface to communicate with your board
      > sudo ifconfig eth0:1 192.168.42.1 up
      You need to restart the NFS server after this
 
@@ -274,9 +272,6 @@ root filesystem.
      > cp $RECONOS/linux/driver/mreconos.ko $WD/nfs/opt/reconos
      > cp $RECONOS/linux/scripts/reconos_init.sh $WD/nfs/opt/reconos
      > chmod +x $WD/nfs/opt/reconos/reconos_init.sh
-
-You can then simply initialize the entire ReconOS system by executing
-reconos_init.sh on the microblaze processor.
 
 
 5. Compile ReconOS library
@@ -302,7 +297,7 @@ which must be created.
      > reconos_setup.sh setup_microblaze
 
   3. Build project
-     > cd edk_zynq_linux
+     > cd edk_microblaze_linux
      > xps -nw system
      xps> run hwclean
      xps> run bits
@@ -331,9 +326,9 @@ which must be created.
      > cd $RECONOS/demos/sort_demo/hw/edk_microblaze_linux
      > reconos_download_bitstream.sh implementation/system.bit
 
-  3. Open Minicom
+  3. Open Picocom
      You need to open minicom to interact with the ML605
-     > minicom -D /dev/ttyUSB0 -b11520
+     > picocom /dev/ttyUSB0 -b115200
 
   4. Boot Linux
      > cd $WD/linux-xlnx
