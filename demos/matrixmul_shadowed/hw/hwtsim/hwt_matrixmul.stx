@@ -1,0 +1,79 @@
+Release 14.4 - xst P.49d (lin)
+Copyright (c) 1995-2012 Xilinx, Inc.  All rights reserved.
+--> 
+Parameter TMPDIR set to /home/aloesch/hwts/matrixmul/hwtsim/xst/projnav.tmp
+
+
+Total REAL time to Xst completion: 1.00 secs
+Total CPU time to Xst completion: 0.15 secs
+ 
+--> 
+Parameter xsthdpdir set to /home/aloesch/hwts/matrixmul/hwtsim/xst
+
+
+Total REAL time to Xst completion: 1.00 secs
+Total CPU time to Xst completion: 0.15 secs
+ 
+--> 
+Reading design: hwt_matrixmul.prj
+
+TABLE OF CONTENTS
+  1) Synthesis Options Summary
+  2) HDL Parsing
+  3) HDL Elaboration
+  4) HDL Synthesis
+       4.1) HDL Synthesis Report
+  5) Advanced HDL Synthesis
+       5.1) Advanced HDL Synthesis Report
+  6) Low Level Synthesis
+  7) Partition Report
+  8) Design Summary
+       8.1) Primitive and Black Box Usage
+       8.2) Device utilization summary
+       8.3) Partition Resource Summary
+       8.4) Timing Report
+            8.4.1) Clock Information
+            8.4.2) Asynchronous Control Signals Information
+            8.4.3) Timing Summary
+            8.4.4) Timing Details
+            8.4.5) Cross Clock Domains Report
+
+
+=========================================================================
+*                          HDL Parsing                                  *
+=========================================================================
+Parsing VHDL file "/home/aloesch/hwts/matrixmul/hwt_matrixmul_v1_00_a/hdl/vhdl/matrixmultiplier.vhd" into library work
+Parsing entity <matrixmultiplier>.
+Parsing architecture <Behavioral> of entity <matrixmultiplier>.
+Parsing VHDL file "/home/aloesch/hwts/matrixmul/hwt_matrixmul_v1_00_a/hdl/vhdl/hwt_matrixmul.vhd" into library work
+ERROR:HDLCompiler:104 - "/home/aloesch/hwts/matrixmul/hwt_matrixmul_v1_00_a/hdl/vhdl/hwt_matrixmul.vhd" Line 17: Cannot find <proc_common_pkg> in library <proc_common_v3_00_a>. Please ensure that the library was compiled, and that a library and a use clause are present in the VHDL file.
+ERROR:HDLCompiler:104 - "/home/aloesch/hwts/matrixmul/hwt_matrixmul_v1_00_a/hdl/vhdl/hwt_matrixmul.vhd" Line 20: Cannot find <reconos_pkg> in library <reconos_v3_00_b>. Please ensure that the library was compiled, and that a library and a use clause are present in the VHDL file.
+Parsing entity <hwt_matrixmul>.
+ERROR:HDLCompiler:854 - "/home/aloesch/hwts/matrixmul/hwt_matrixmul_v1_00_a/hdl/vhdl/hwt_matrixmul.vhd" Line 26: Unit <hwt_matrixmul> ignored due to previous errors.
+Parsing architecture <implementation> of entity <hwt_matrixmul>.
+ERROR:HDLCompiler:374 - "/home/aloesch/hwts/matrixmul/hwt_matrixmul_v1_00_a/hdl/vhdl/hwt_matrixmul.vhd" Line 58: Entity <hwt_matrixmul> is not yet compiled.
+ERROR:HDLCompiler:806 - "/home/aloesch/hwts/matrixmul/hwt_matrixmul_v1_00_a/hdl/vhdl/hwt_matrixmul.vhd" Line 59: Syntax error near "(".
+ERROR:HDLCompiler:69 - "/home/aloesch/hwts/matrixmul/hwt_matrixmul_v1_00_a/hdl/vhdl/hwt_matrixmul.vhd" Line 65: <std_logic> is not declared.
+ERROR:HDLCompiler:69 - "/home/aloesch/hwts/matrixmul/hwt_matrixmul_v1_00_a/hdl/vhdl/hwt_matrixmul.vhd" Line 66: <std_logic> is not declared.
+ERROR:HDLCompiler:69 - "/home/aloesch/hwts/matrixmul/hwt_matrixmul_v1_00_a/hdl/vhdl/hwt_matrixmul.vhd" Line 70: <integer> is not declared.
+ERROR:HDLCompiler:69 - "/home/aloesch/hwts/matrixmul/hwt_matrixmul_v1_00_a/hdl/vhdl/hwt_matrixmul.vhd" Line 71: <integer> is not declared.
+ERROR:HDLCompiler:69 - "/home/aloesch/hwts/matrixmul/hwt_matrixmul_v1_00_a/hdl/vhdl/hwt_matrixmul.vhd" Line 72: <integer> is not declared.
+ERROR:HDLCompiler:69 - "/home/aloesch/hwts/matrixmul/hwt_matrixmul_v1_00_a/hdl/vhdl/hwt_matrixmul.vhd" Line 74: <c_local_ram_size> is not declared.
+ERROR:HDLCompiler:24 - "/home/aloesch/hwts/matrixmul/hwt_matrixmul_v1_00_a/hdl/vhdl/hwt_matrixmul.vhd" Line 74: "**" expects 2 arguments
+ERROR:HDLCompiler:69 - "/home/aloesch/hwts/matrixmul/hwt_matrixmul_v1_00_a/hdl/vhdl/hwt_matrixmul.vhd" Line 76: <std_logic_vector> is not declared.
+ERROR:HDLCompiler:69 - "/home/aloesch/hwts/matrixmul/hwt_matrixmul_v1_00_a/hdl/vhdl/hwt_matrixmul.vhd" Line 77: <std_logic_vector> is not declared.
+ERROR:HDLCompiler:69 - "/home/aloesch/hwts/matrixmul/hwt_matrixmul_v1_00_a/hdl/vhdl/hwt_matrixmul.vhd" Line 82: <std_logic_vector> is not declared.
+ERROR:HDLCompiler:69 - "/home/aloesch/hwts/matrixmul/hwt_matrixmul_v1_00_a/hdl/vhdl/hwt_matrixmul.vhd" Line 84: <i_osif_t> is not declared.
+ERROR:HDLCompiler:69 - "/home/aloesch/hwts/matrixmul/hwt_matrixmul_v1_00_a/hdl/vhdl/hwt_matrixmul.vhd" Line 85: <o_osif_t> is not declared.
+ERROR:HDLCompiler:69 - "/home/aloesch/hwts/matrixmul/hwt_matrixmul_v1_00_a/hdl/vhdl/hwt_matrixmul.vhd" Line 86: <i_memif_t> is not declared.
+ERROR:HDLCompiler:69 - "/home/aloesch/hwts/matrixmul/hwt_matrixmul_v1_00_a/hdl/vhdl/hwt_matrixmul.vhd" Line 87: <o_memif_t> is not declared.
+Sorry, too many errors..
+--> 
+
+
+Total memory usage is 111948 kilobytes
+
+Number of errors   :   19 (   0 filtered)
+Number of warnings :    0 (   0 filtered)
+Number of infos    :    0 (   0 filtered)
+

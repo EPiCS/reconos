@@ -1,0 +1,4 @@
+vhdl proc_common_v3_00_a "../../../../../opt/Xilinx/14.4/ISE_DS/EDK/hw/XilinxProcessorIPLib/pcores/proc_common_v3_00_a/hdl/vhdl/proc_common_pkg.vhd"
+vhdl reconos_v3_00_b "../../../reconos/pcores/reconos_v3_00_b/hdl/vhdl/reconos_pkg.vhd"
+vhdl isim_temp "../hwt_matrixmul_v2_00_a/hdl/vhdl/matrixmultiplier.vhd"
+vhdl isim_temp "../hwt_matrixmul_v2_00_a/hdl/vhdl/hwt_matrixmul.vhd"
