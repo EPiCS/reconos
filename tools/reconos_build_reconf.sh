@@ -165,10 +165,6 @@ mkdir -p reconos_reconf/bin
 for bin in $bins
 do
 	name=`basename $bin`
-
-	if [ "$RECONOS_ARCH" = "zynq" ]
-	then
-		reconos_bin2xdevcfg.sh $bin reconos_reconf/bin/$name
-	fi
+	reconos_revbin.sh $bin reconos_reconf/bin/$name
 done
 
