@@ -5,8 +5,9 @@
 
 void std_matrix_mul(int *i_matrix_a, int *i_matrix_b, int *o_matrix_c, int matrix_size) {
 	int i, j, k;
+	printf("std_matrix_mul i:");fflush(0);
 	for (i=0; i<matrix_size; ++i) {
-		printf("std_matrix_mul i: %i\n", i);
+		printf(" %i ", i);fflush(0);
 		for (j=0; j<matrix_size; ++j) {
 			int temp = 0;
 			int pos = i*matrix_size;
@@ -16,4 +17,5 @@ void std_matrix_mul(int *i_matrix_a, int *i_matrix_b, int *o_matrix_c, int matri
 			o_matrix_c[pos+j] = temp;
 		}
 	}
+	printf ("\n");
 }

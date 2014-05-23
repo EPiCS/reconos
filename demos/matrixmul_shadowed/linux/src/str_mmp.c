@@ -4,6 +4,7 @@
 #include "matrix_functions.h"
 #include "common.h"
 #include <stdlib.h>
+#include <stdio.h>
 
 void get_matrix(int *i_matrix, int **o_matrix, int posY, int posX, int i_matrix_size) {
 	int o_matrix_size = i_matrix_size/2;
@@ -35,11 +36,25 @@ void set_matrix(int *o_matrix, int *i_matrix, int posY, int posX, int i_matrix_s
 	}
 }
 
+void print_matrixes(MATRIXES **std_mmp_matrixes, int matrix_size){
+	MATRIXES * ptr = *std_mmp_matrixes;
+	int i = 0;
+	while (ptr != NULL){
+		printf("Submatrix %i\n",i++);
+		print_matrix(ptr->matrixes[0],'a', matrix_size);
+		print_matrix(ptr->matrixes[1],'b', matrix_size);
+		print_matrix(ptr->matrixes[2],'c', matrix_size);
+		ptr =  ptr->next;
+	}
+
+}
+
 void str_matrix_split(int *i_matrix_a, int *i_matrix_b, MATRIXES **std_mmp_matrixes, int i_matrix_size) {
 	int o_matrix_size = i_matrix_size/2;
 	int *o_matrixes[7][3];
 
 	int i;
+	printf("str_matrix_split: mallocing memory...\n");
 	for (i=0; i<7; ++i) {
 		o_matrixes[i][0] = malloc(o_matrix_size*o_matrix_size*sizeof(int));
 		o_matrixes[i][1] = malloc(o_matrix_size*o_matrix_size*sizeof(int));
@@ -50,6 +65,7 @@ void str_matrix_split(int *i_matrix_a, int *i_matrix_b, MATRIXES **std_mmp_matri
 	int *a11, *a12, *a21, *a22;
 	int *b11, *b12, *b21, *b22;
 
+	printf("str_matrix_split: getting matrixes...\n");
 	get_matrix(i_matrix_a, &a11, 1, 1, i_matrix_size);
 	get_matrix(i_matrix_a, &a12, 1, 2, i_matrix_size);
 	get_matrix(i_matrix_a, &a21, 2, 1, i_matrix_size);
@@ -60,6 +76,7 @@ void str_matrix_split(int *i_matrix_a, int *i_matrix_b, MATRIXES **std_mmp_matri
 	get_matrix(i_matrix_b, &b21, 2, 1, i_matrix_size);
 	get_matrix(i_matrix_b, &b22, 2, 2, i_matrix_size);
 
+	printf("str_matrix_split: combining sub-matrixes...\n");
 	// mmp #1 preparation
 	add_matrixes(o_matrixes[0][0], a11, a22, o_matrix_size);
 	add_matrixes(o_matrixes[0][1], b11, b22, o_matrix_size);
@@ -88,13 +105,16 @@ void str_matrix_split(int *i_matrix_a, int *i_matrix_b, MATRIXES **std_mmp_matri
 	sub_matrixes(o_matrixes[6][0], a12, a22, o_matrix_size);
 	add_matrixes(o_matrixes[6][1], b21, b22, o_matrix_size);
 
+	printf("str_matrix_split: freeing pointers...\n");
 	free(a11); free(a12); free(a21); free(a22);
 	free(b11); free(b12); free(b21); free(b22);
 
 	if (o_matrix_size <= STD_MMP_MATRIX_SIZE) {
+		printf("str_matrix_split appending to list...\n");
 		append_list(std_mmp_matrixes, o_matrixes);
 	} else {
 		// recursive strassen mmp algorithm
+		printf("str_matrix_split: recursing...\n");
 		for (i=0; i<7; ++i) {
 			str_matrix_split(o_matrixes[i][0], o_matrixes[i][1], std_mmp_matrixes, o_matrix_size);
 		}

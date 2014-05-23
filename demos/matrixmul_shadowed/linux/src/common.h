@@ -5,6 +5,8 @@
 
 #include "mmp.h"
 
+#define PAGE_SIZE 4096
+
 unsigned int time_ms();
 
 void generate_data(int *input_matrixes[2], int **output_matrix, int matrix_size);

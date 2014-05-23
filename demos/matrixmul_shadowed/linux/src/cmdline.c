@@ -38,7 +38,7 @@ const char *gengetopt_args_info_detailed_help[] = {
   "  -h, --hwt=number              Number of HW Threads used for matrix \n                                  multiplication.",
   "  -s, --swt=number              Number of SW Threads used for matrix \n                                  multiplication.",
   "  -m, --mt=number               Number of MainCPU Threads used for matrix \n                                  multiplication.  (default=`0')",
-  "  -b, --matrix-size=number      Size of matrices to multiply. Only powers of 2, \n                                  bigger than 128 allowed. Default is 512.  \n                                  (possible values=\"128\", \"256\", \"512\", \n                                  \"1024\", \"2048\", \"4096\", \"8192\", \n                                  \"16384\" default=`512')",
+  "  -b, --matrix-size=number      Size of matrices to multiply. Only powers of 2, \n                                  bigger than 128 allowed. Default is 512.  \n                                  (possible values=\"256\", \"512\", \"1024\", \n                                  \"2048\" default=`512')",
   "  -t, --thread-interface=number Which interface shall be used to communicate \n                                  with worker threads?  (possible values=\"0\", \n                                  \"1\", \"2\" default=`0')",
   "  0= SHMEM, 1= MBOX, 2= RQUEUE",
   "\nShadowing Options:",
@@ -88,7 +88,7 @@ cmdline_parser_internal (int argc, char **argv, struct gengetopt_args_info *args
 static int
 cmdline_parser_required2 (struct gengetopt_args_info *args_info, const char *prog_name, const char *additional_error);
 
-const char *cmdline_parser_matrix_size_values[] = {"128", "256", "512", "1024", "2048", "4096", "8192", "16384", 0}; /*< Possible values for matrix-size. */
+const char *cmdline_parser_matrix_size_values[] = {"256", "512", "1024", "2048", 0}; /*< Possible values for matrix-size. */
 const char *cmdline_parser_thread_interface_values[] = {"0", "1", "2", 0}; /*< Possible values for thread-interface. */
 const char *cmdline_parser_shadow_schedule_values[] = {"0", "1", 0}; /*< Possible values for shadow-schedule. */
 

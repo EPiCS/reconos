@@ -2,14 +2,15 @@ CC = microblaze-unknown-linux-gnu-gcc
 CFLAGS=-O0 -g -std=c99 -Wall -static
 
 HOST_CC = gcc
-HOST_CFLAGS = -O0 -g -m32 -std=c99 -Wall  -DHOST_COMPILE -static
+HOST_CFLAGS = -O0 -g -m32 -std=c99 -Wall  -DHOST_COMPILE 
+#-static
 # -m32
 
 APP_OBJS = common.o matrix_functions.o std_mmp.o str_mmp.o logging.o
 
 
 
-host:
+#host:
 #CC=$(HOST_CC)
 #CFLAGS=$(HOST_CFLAGS)
 
@@ -20,7 +21,7 @@ LDFLAGS = -lreconos -lpthread -lm -lrt
 .PHONY: clean
 
 all: matrixmul matrixmul_shadowed 
- 
+
 cmdline:
 	LD_LIBRARY_PATH="" gengetopt < cmdline.ggo
 	$(CC) -c $(CFLAGS) $(LIBPATH) $(INCLUDEPATH) -o cmdline.o cmdline.c

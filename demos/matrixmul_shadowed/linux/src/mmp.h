@@ -23,6 +23,7 @@ typedef struct matrix_list {
 	struct matrix_list* next;
 } MATRIXES;
 
+void print_matrixes(MATRIXES **std_mmp_matrixes, int matrix_size);
 void str_matrix_split(int *i_matrix_a, int *i_matrix_b, MATRIXES **std_mmp_matrixes, int i_matrix_size);
 int *str_matrix_combine(MATRIXES **std_mmp_matrixes, int i_matrix_size, int o_matrix_size);
 

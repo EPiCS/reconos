@@ -26,7 +26,7 @@
 
 #define NUM_MAX_HWTS 14
 #define NUM_MAX_SWTS 0
-#define NUM_MAX_MTS 1
+#define NUM_MAX_MTS 8
 
 // Thread Interfaces
 #define TI_SHMEM  0
@@ -39,9 +39,9 @@ struct gengetopt_args_info args_info;
 // Total number of compute threads running
 int running_threads;
 
-// software threads
-pthread_t swt[NUM_MAX_SWTS];
-pthread_attr_t swt_attr[NUM_MAX_SWTS];
+// main threads
+pthread_t mt[NUM_MAX_MTS];
+pthread_attr_t mt_attr[NUM_MAX_MTS];
 
 // hardware threads
 struct reconos_resource res[2];
@@ -57,18 +57,20 @@ void *matrixmul_thread(void *data) {
 	struct mbox *mb_stop  = res[1].ptr;
 	unsigned int ret;
 	int **ret2;
-
+	printf("### Matrixmul Thread Start\n");
 	while (1) {
+		printf("### Matrixmul Thread mbox_get(), mb_start: %p\n", mb_start);
 		ret = mbox_get(mb_start);
+		printf("### Matrixmul Thread mbox_get() finished\n");
 		if (ret == UINT_MAX) {
 			pthread_exit((void *)0);
 		}
-
+		printf("### Matrixmul Thread checked for exit value.\n");
 		ret2 = (int **)ret;
-
+		printf("### Matrixmul Thread std_matrix_mul call\n");
 		std_matrix_mul(ret2[0], ret2[1], ret2[2], STD_MMP_MATRIX_SIZE);
-
-		mbox_put(mb_stop, 23);
+		printf("### Matrixmul Thread std_matrix_mul finish\n");
+		mbox_put(mb_stop, (int)ret2[2]);
 	}
 	return NULL;
 }
@@ -171,12 +173,12 @@ int main(int argc, char **argv) {
 	unsigned generate_data_time;
 	unsigned generate_check_result_time;
 	unsigned init_hwt_time;
-	unsigned init_swt_time;
+	unsigned init_mt_time;
 	unsigned str_mmp_split;
 	unsigned std_mmp_time;
 	unsigned str_mmp_combine;
 	unsigned terminate_hwt_time;
-	unsigned terminate_swt_time;
+	unsigned terminate_mt_time;
 	unsigned comparision_time;
 	unsigned calculation_time_std;
 	unsigned calculation_time_str;
@@ -186,12 +188,14 @@ int main(int argc, char **argv) {
 
 	int hw_threads = args_info.hwt_arg;
 	int sw_threads = args_info.swt_arg;
+	int main_threads = args_info.mt_arg;
 
 	int std_matrix_size	= STD_MMP_MATRIX_SIZE; // Fixed by hardware thread
 	int str_matrix_size = args_info.matrix_size_arg; //STR_MMP_INPUT_MATRIX_SIZE;
 
 	int mbox_size = (int) pow(7, ((int)log2(args_info.matrix_size_arg)) - ((int)log2(STD_MMP_MATRIX_SIZE)));
 	printf("Size of mailboxes: %i\n", mbox_size);
+	printf("Address of mb_start: %p\n", &mb_start);
 
 	int *i_matrixes[2]	= {NULL, NULL};
 	int *o_matrix		= NULL;
@@ -202,7 +206,10 @@ int main(int argc, char **argv) {
 	mbox_init(&mb_start, mbox_size);
 	mbox_init(&mb_stop,  mbox_size);
 
+#ifndef HOST_COMPILE
+	printf("Initializing reconos...\n");
 	reconos_init(14, 15);
+#endif
 
 	res[0].type = RECONOS_TYPE_MBOX;
 	res[0].ptr  = &mb_start;
@@ -223,20 +230,22 @@ int main(int argc, char **argv) {
 	// init hw-threads
 	INFO("Creating %i hw-thread(s).\n", hw_threads);
 	init_hwt_time = time_ms();
+#ifndef HOST_COMPILE
 	for (i = 0; i < hw_threads; i++) {
 		reconos_hwt_setresources(&(hwt[i]),res,2);
 		reconos_hwt_create(&(hwt[i]),i,NULL);
 	}
+#endif
 	init_hwt_time = time_ms() - init_hwt_time;
 
 	// init sw-threads
-	INFO("Creating %i sw-threads.\n", sw_threads);
-	init_swt_time = time_ms();
-	for (i = 0; i < sw_threads; i++) {
-		pthread_attr_init(&swt_attr[i]);
-		pthread_create(&swt[i], &swt_attr[i], matrixmul_thread, (void*)res);
+	INFO("Creating %i main threads.\n", main_threads);
+	init_mt_time = time_ms();
+	for (i = 0; i < main_threads; i++) {
+		pthread_attr_init(&mt_attr[i]);
+		pthread_create(&mt[i], &mt_attr[i], matrixmul_thread, (void*)res);
 	}
-	init_swt_time = time_ms() - init_swt_time;
+	init_mt_time = time_ms() - init_mt_time;
 
 	// split input matrixes recursively (strassen algorithm part 1)
 	INFO("Running Strassen algorithm part 1 - split.\n");
@@ -248,22 +257,29 @@ int main(int argc, char **argv) {
 	INFO("Putting matrix pointers in mbox.\n");
 	std_mmp_time = time_ms();
 	MATRIXES *ptr = std_mmp_matrixes;
+
+	//print_matrix(i_matrixes[0], 'a', str_matrix_size);
+	//print_matrix(i_matrixes[1], 'b', str_matrix_size);
+	print_matrixes(&ptr, STD_MMP_MATRIX_SIZE);
+
+
 	for (i=0; i<mbox_size; ++i) {
+		printf("Putting pointer to matrixes into mbox: %p, %p, %p\n", ptr->matrixes[0],ptr->matrixes[1],ptr->matrixes[2]);
 		mbox_put(&mb_start,(unsigned int)(ptr->matrixes));
 		ptr = ptr->next;
 	}
 	INFO("Waiting for acknowledgements...\n");
 	for (i=0; i<mbox_size; ++i) {
-		mbox_get(&mb_stop);
+		printf("Getting pointer to matrixes from mbox: %p\n", (void*)mbox_get(&mb_stop));
 	}
 	std_mmp_time = time_ms() - std_mmp_time;
 	INFO("Got acknowledgments.\n");
 
 	// terminate threads
-	INFO("Sending terminate message to %i thread(s).\n", hw_threads + sw_threads);
+	INFO("Sending terminate message to %i thread(s).\n", hw_threads + sw_threads + main_threads);
 	terminate_hwt_time = time_ms();
-	terminate_swt_time = terminate_hwt_time;
-	for (i = 0; i < hw_threads + sw_threads; i++) {
+	terminate_mt_time = terminate_hwt_time;
+	for (i = 0; i < hw_threads + sw_threads + main_threads; i++) {
 		mbox_put(&mb_start,UINT_MAX);
 	}
 
@@ -272,9 +288,9 @@ int main(int argc, char **argv) {
 	}
 	terminate_hwt_time = time_ms() - terminate_hwt_time;
 	for (i=0; i<sw_threads; i++) {
-		pthread_join(swt[i],NULL);
+		pthread_join(mt[i],NULL);
 	}
-	terminate_swt_time = time_ms() - terminate_swt_time;
+	terminate_mt_time = time_ms() - terminate_mt_time;
 	INFO("Threads have been terminated.\n");
 
 	// combine results (strassen algorithm part 2)
@@ -292,29 +308,29 @@ int main(int argc, char **argv) {
 		INFO("\nResult is correct.\n\n");
 	} else {
 		INFO("\nBad result.\n");
-#if 0
-		print_matrix(input_matrixes[0], 'A', NUM_INPUT_MATRIXLINE_LEN);
-		print_matrix(input_matrixes[1], 'B', NUM_INPUT_MATRIXLINE_LEN);
-		print_matrix(output_matrix    , 'C', NUM_INPUT_MATRIXLINE_LEN);
-		print_matrix(compare          , 'Z', NUM_INPUT_MATRIXLINE_LEN);
+#if 1
+		print_matrix(i_matrixes[0], 'A', str_matrix_size);
+		print_matrix(i_matrixes[1], 'B', str_matrix_size);
+		print_matrix(o_matrix    , 'C', str_matrix_size);
+		print_matrix(compare          , 'Z', str_matrix_size);
 #endif
 		INFO("\n");
 	}
 
 	calculation_time_std = generate_check_result_time;
-	calculation_time_str = init_hwt_time + init_swt_time + str_mmp_split + std_mmp_time + terminate_swt_time + str_mmp_combine;
+	calculation_time_str = init_hwt_time + init_mt_time + str_mmp_split + std_mmp_time + terminate_mt_time + str_mmp_combine;
 
 	INFO("Timing information\n");
 	INFO("==================\n");
 	INFO("Generate input data:   %u ms\n", generate_data_time);
 	INFO("Generate check result: %u ms\n", generate_check_result_time);
 	INFO("Initializing HWT:      %u ms\n", init_hwt_time);
-	INFO("Initializing SWT:      %u ms\n", init_swt_time);
+	INFO("Initializing MT:       %u ms\n", init_mt_time);
 	INFO("Str. split (part 1):   %u ms\n", str_mmp_split);
 	INFO("Std. MMP:              %u ms\n", std_mmp_time);
 	INFO("Str. combine (part 2): %u ms\n", str_mmp_combine);
 	INFO("~Thread term. HWT:     %u ms\n", terminate_hwt_time);
-	INFO("~Thread term. SWT:     %u ms\n", terminate_swt_time);
+	INFO("~Thread term. MT:      %u ms\n", terminate_mt_time);
 	INFO("Check HWT result:      %u ms\n\n", comparision_time);
 	INFO("Important timing results\n");
 	INFO("========================\n");

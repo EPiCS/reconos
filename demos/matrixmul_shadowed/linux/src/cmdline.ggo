@@ -23,7 +23,7 @@ option "swt" s "Number of SW Threads used for matrix multiplication."
 option "mt" m "Number of MainCPU Threads used for matrix multiplication." 
 	int typestr="number" default="0" optional	
 option "matrix-size" b "Size of matrices to multiply. Only powers of 2, bigger than 128 allowed. Default is 512." 
-	int typestr="number"  values="128", "256", "512", "1024", "2048", "4096", "8192", "16384" default="512" optional
+	int typestr="number"  values="256", "512", "1024", "2048" default="512" optional
 #option "blocksize" l "Size of a block in bytes. Per default one block is 8KB big." 
 #	int typestr="number" default="8192" optional	
 option "thread-interface" t "Which interface shall be used to communicate with worker threads?" 
