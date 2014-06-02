@@ -208,10 +208,8 @@ void install_sighandlers(){
 	sigaction(SIGFPE, &act, NULL);
 }
 
-/*
-args_info
-buffer_size
-running_threads
+/**
+ * @brief Parses the command line arguments and checks for errors and limits parameters.
  */
 void handle_commandline(int argc, char** argv){
 	//
@@ -604,7 +602,7 @@ void faultinject_deactivate(int error_count){
 }
 
 /**
- * @bief Main function
+ * @brief Main function
  */
 int main(int argc, char ** argv) {
 	struct parallel_sort_params_in pin;
