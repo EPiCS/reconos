@@ -22,7 +22,7 @@
 #include "common.h"
 #include "logging.h"
 #include "cmdline.h"
-
+#include "matrixmul.h"
 
 #define NUM_MAX_HWTS 14
 #define NUM_MAX_SWTS 0
@@ -57,19 +57,19 @@ void *matrixmul_thread(void *data) {
 	struct mbox *mb_stop  = res[1].ptr;
 	unsigned int ret;
 	int **ret2;
-	printf("### Matrixmul Thread Start\n");
+	//printf("### Matrixmul Thread Start\n");
 	while (1) {
-		printf("### Matrixmul Thread mbox_get(), mb_start: %p\n", mb_start);
+		//printf("### Matrixmul Thread mbox_get(), mb_start: %p\n", mb_start);
 		ret = mbox_get(mb_start);
-		printf("### Matrixmul Thread mbox_get() finished\n");
+		//printf("### Matrixmul Thread mbox_get() finished\n");
 		if (ret == UINT_MAX) {
 			pthread_exit((void *)0);
 		}
-		printf("### Matrixmul Thread checked for exit value.\n");
+		//printf("### Matrixmul Thread checked for exit value.\n");
 		ret2 = (int **)ret;
-		printf("### Matrixmul Thread std_matrix_mul call\n");
+		//printf("### Matrixmul Thread std_matrix_mul call\n");
 		std_matrix_mul(ret2[0], ret2[1], ret2[2], STD_MMP_MATRIX_SIZE);
-		printf("### Matrixmul Thread std_matrix_mul finish\n");
+		//printf("### Matrixmul Thread std_matrix_mul finish\n");
 		mbox_put(mb_stop, (int)ret2[2]);
 	}
 	return NULL;
@@ -260,17 +260,17 @@ int main(int argc, char **argv) {
 
 	//print_matrix(i_matrixes[0], 'a', str_matrix_size);
 	//print_matrix(i_matrixes[1], 'b', str_matrix_size);
-	print_matrixes(&ptr, STD_MMP_MATRIX_SIZE);
+	//print_matrixes(&std_mmp_matrixes, STD_MMP_MATRIX_SIZE);
 
 
 	for (i=0; i<mbox_size; ++i) {
-		printf("Putting pointer to matrixes into mbox: %p, %p, %p\n", ptr->matrixes[0],ptr->matrixes[1],ptr->matrixes[2]);
+		//printf("Putting pointer to matrixes into mbox: %p, %p, %p\n", ptr->matrixes[0],ptr->matrixes[1],ptr->matrixes[2]);
 		mbox_put(&mb_start,(unsigned int)(ptr->matrixes));
 		ptr = ptr->next;
 	}
 	INFO("Waiting for acknowledgements...\n");
 	for (i=0; i<mbox_size; ++i) {
-		printf("Getting pointer to matrixes from mbox: %p\n", (void*)mbox_get(&mb_stop));
+		//printf("Getting pointer to matrixes from mbox: %p\n", (void*)mbox_get(&mb_stop));
 	}
 	std_mmp_time = time_ms() - std_mmp_time;
 	INFO("Got acknowledgments.\n");
@@ -293,6 +293,8 @@ int main(int argc, char **argv) {
 	terminate_mt_time = time_ms() - terminate_mt_time;
 	INFO("Threads have been terminated.\n");
 
+	//print_matrixes(&std_mmp_matrixes, STD_MMP_MATRIX_SIZE);
+
 	// combine results (strassen algorithm part 2)
 	INFO("Running Strassen algorithm part 2 - combine.\n");
 	str_mmp_combine = time_ms();
@@ -304,11 +306,17 @@ int main(int argc, char **argv) {
 	int correct_result =  compare_result(o_matrix, compare, str_matrix_size);
 	comparision_time = time_ms() - comparision_time;
 
-	if (correct_result) {
+
+	//print_matrix(i_matrixes[0], 'A', str_matrix_size);
+	//print_matrix(i_matrixes[1], 'B', str_matrix_size);
+	//print_matrix(o_matrix    , 'C', str_matrix_size);
+	//print_matrix(compare          , 'Z', str_matrix_size);
+	if (correct_result == -1) {
 		INFO("\nResult is correct.\n\n");
 	} else {
 		INFO("\nBad result.\n");
-#if 1
+		printf("Comparison failed at index %i.Correct: %i, Actual result: %i.\n", correct_result, compare[correct_result], o_matrix[correct_result] );
+#if 0
 		print_matrix(i_matrixes[0], 'A', str_matrix_size);
 		print_matrix(i_matrixes[1], 'B', str_matrix_size);
 		print_matrix(o_matrix    , 'C', str_matrix_size);

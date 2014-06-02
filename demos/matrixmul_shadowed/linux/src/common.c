@@ -5,6 +5,7 @@
 #include "common.h"
 #include "mmp.h"
 #include "timing.h"
+#include "xutils.h"
 
 
 unsigned int time_ms(){
@@ -14,20 +15,20 @@ unsigned int time_ms(){
 }
 
 void generate_data(int *input_matrixes[2], int **output_matrix, int matrix_size) {
-	input_matrixes[0]	= malloc(matrix_size*matrix_size*sizeof(int));
-	input_matrixes[1]	= malloc(matrix_size*matrix_size*sizeof(int));
-	*output_matrix		= malloc(matrix_size*matrix_size*sizeof(int));
+	input_matrixes[0]	= xmalloc_aligned(matrix_size*matrix_size*sizeof(int), PAGE_SIZE);
+	input_matrixes[1]	= xmalloc_aligned(matrix_size*matrix_size*sizeof(int), PAGE_SIZE);
+	*output_matrix		= xmalloc_aligned(matrix_size*matrix_size*sizeof(int), PAGE_SIZE);
 
 	int i;
 	for (i=0; i<matrix_size*matrix_size; ++i) {
-		input_matrixes[0][i]	= i-32;
-		input_matrixes[1][i]	= 32+i;
-		(*output_matrix)[i]		= 0;
+		input_matrixes[0][i]	= -1;//i-32;
+		input_matrixes[1][i]	= 2;//32+i;
+		(*output_matrix)[i]		= 55555;
 	}
 }
 
 void generate_result(int *input_matrixes[2], int **res, int matrix_size) {
-	*res = malloc(matrix_size*matrix_size*sizeof(int));
+	*res = xmalloc_aligned(matrix_size*matrix_size*sizeof(int), PAGE_SIZE);
 
 	std_matrix_mul(input_matrixes[0], input_matrixes[1], *res, matrix_size);
 }
@@ -45,14 +46,18 @@ void print_matrix(int *matrix, char matrix_name, int matrix_size) {
 	}
 }
 
+/*
+ * Compares two matrixes for equality.
+ * Return value is -1 if equal, else it returns the index where comparison failed.
+ */
 int compare_result(int *result, int *compare, int matrix_size) {
 	int i;
 	for (i=0; i<matrix_size*matrix_size; ++i) {
 		if (result[i] != compare[i]) {
-			return 0;
+			return i;
 		}
 	}
-	return 1;
+	return -1;
 }
 
 void append_list(MATRIXES **std_mmp_matrixes, int *i_matrixes[7][3]) {
@@ -62,12 +67,12 @@ void append_list(MATRIXES **std_mmp_matrixes, int *i_matrixes[7][3]) {
 
 	for (i=0; i<7; ++i) {
 		if (NULL == *std_mmp_matrixes) {
-			*std_mmp_matrixes = malloc(sizeof(MATRIXES));
+			*std_mmp_matrixes = xmalloc_aligned(sizeof(MATRIXES), PAGE_SIZE);
 			ptr = *std_mmp_matrixes;
 			pos = 0;
 		} else {
 			while (ptr->next != NULL) ptr = ptr->next;
-			ptr->next = malloc(sizeof(MATRIXES));
+			ptr->next = xmalloc_aligned(sizeof(MATRIXES), PAGE_SIZE);
 			pos = ptr->pos + 1;
 			ptr = ptr->next;
 		}
@@ -85,12 +90,12 @@ void append_list_single(MATRIXES **str_mmp_matrixes, int *i_matrix) {
 	int pos = -1;
 
 	if (NULL == *str_mmp_matrixes) {
-		*str_mmp_matrixes = malloc(sizeof(MATRIXES));
+		*str_mmp_matrixes = xmalloc_aligned(sizeof(MATRIXES), PAGE_SIZE);
 		ptr = *str_mmp_matrixes;
 		pos = 0;
 	} else {
 		while (ptr->next != NULL) ptr = ptr->next;
-		ptr->next = malloc(sizeof(MATRIXES));
+		ptr->next = xmalloc_aligned(sizeof(MATRIXES), PAGE_SIZE);
 		pos = ptr->pos + 1;
 		ptr = ptr->next;
 	}

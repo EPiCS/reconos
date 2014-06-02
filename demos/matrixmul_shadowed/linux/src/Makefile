@@ -11,8 +11,8 @@ APP_OBJS = common.o matrix_functions.o std_mmp.o str_mmp.o logging.o
 
 
 #host:
-#CC=$(HOST_CC)
-#CFLAGS=$(HOST_CFLAGS)
+CC=$(HOST_CC)
+CFLAGS=$(HOST_CFLAGS)
 
 LIBPATH = -L $(RECONOS)/linux/reconos/libreconos-us
 INCLUDEPATH = -I $(RECONOS)/linux/reconos/libreconos-us
