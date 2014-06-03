@@ -103,7 +103,7 @@ int process_packet(struct sk_buff *skb, enum path_type dir)
 	int ret;
 	idp_t cont;
 	struct fblock *fb;
-//	printk(KERN_INFO "[engine] process packet called\n");	
+	//printk(KERN_INFO "[engine] process packet called\n");	
 
 	BUG_ON(!rcu_read_lock_held());
 
@@ -121,8 +121,11 @@ pkt:
 	while ((cont = read_next_idp_from_skb(skb))) {
 		struct fblock_stats *stats;
 		u64 before, after;
+	//	printk(KERN_INFO "[engine] read IDP %d\n", cont);	
 
 		fb = __search_fblock(cont);
+	//	printk(KERN_INFO "[engine] next block %s\n", fb->name);	
+
 		if (unlikely(!fb)) {
 			kfree_skb(skb);
 			ret = PPE_ERROR;
@@ -140,19 +143,23 @@ pkt:
 			put_fblock(fb);
 			goto out_next;
 		}
+	//	printk(KERN_INFO "[engine] read IDP a %d\n", cont);	
 		
 		stats = this_cpu_ptr(fb->stats);
+	//	printk(KERN_INFO "[engine] read IDP b %d\n", cont);	
 
 		before = get_jiffies_64();
 		ret = fb->netfb_rx(fb, skb, &dir);
 		after = get_jiffies_64();
-
+	//	printk(KERN_INFO "[engine] read IDP c %d\n", cont);	
+#ifdef blub //TODO: there is somethinng wrong with the stats.
 		u64_stats_update_begin(&stats->syncp);
 		stats->packets++;
 		stats->bytes += skb->len;
 		u64_stats_update_end(&stats->syncp);
 		stats->time = after - before;;
-
+	//	printk(KERN_INFO "[engine] read IDP d %d\n", cont);	
+#endif 
 		engine_inc_fblock_stats();
 
 		if (ret == PPE_DROPPED) {
@@ -165,6 +172,8 @@ pkt:
 
 		if (ret == PPE_HALT_NO_REDUCE)
 			goto out;
+	//	printk(KERN_INFO "[engine] read IDP e %d\n", cont);	
+
 	}
 
 out_next:

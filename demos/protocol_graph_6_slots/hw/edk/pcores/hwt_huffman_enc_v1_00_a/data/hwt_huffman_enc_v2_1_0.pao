@@ -1,0 +1,14 @@
+##############################################################################
+## Filename:          hwt_sort_demo_v2_1_0.pao
+## Description:       Sort Demo
+## Date:              Tue Sep 13 12:47:26 2011 (by Create and Import Peripheral Wizard)
+##############################################################################
+
+lib proc_common_v3_00_a  proc_common_pkg vhdl
+lib reconos_v3_00_a reconos_pkg vhdl
+lib ana_v1_00_a anaPkg vhdl
+lib ana_v1_00_a packetEncoder vhdl
+lib ana_v1_00_a packetDecoder vhdl
+lib hwt_huffman_enc_v1_00_a Huffman_Pkg vhdl
+lib hwt_huffman_enc_v1_00_a Huffman_Encode vhdl
+lib hwt_huffman_enc_v1_00_a hwt_huffman_enc vhdl

@@ -204,10 +204,10 @@ begin
 		-- Decoded values of the packet
 		noc_tx_sof  			=> tx_ll_sof, 		
 		noc_tx_eof  			=> tx_ll_eof,
-		noc_tx_data	 		=> tx_ll_data,		
+		noc_tx_data	 			=> tx_ll_data,		
 		noc_tx_src_rdy 	 		=> tx_ll_src_rdy,		
-		noc_tx_globalAddress  		=> global_addr, --destination(5 downto 2), --"0000",--(others => '0'), --6 bits--(0:send it to hw/sw)		
-		noc_tx_localAddress  		=> local_addr, --destination(1 downto 0), --"01",-- (others  => '0'), --2 bits		
+		noc_tx_globalAddress  	=> global_addr, --destination(5 downto 2), --"0000",--(others => '0'), --6 bits--(0:send it to hw/sw)		
+		noc_tx_localAddress 	=> local_addr, --destination(1 downto 0), --"01",-- (others  => '0'), --2 bits		
 		noc_tx_direction 	 	=> direction, 		
 		noc_tx_priority 	 	=> priority,		
 		noc_tx_latencyCritical 	=> latencyCritical,	
@@ -356,7 +356,7 @@ begin
 				total_packet_len  <= i_RAMData_sender(16 to 31);
 				sending_state <= STATE_SRCIDP;
 				--sending_state <= STATE_IDLE;
-		--		packets_sent <= '1';
+				--packets_sent <= '1';
 				
 			when STATE_SRCIDP =>
 				o_RAMAddr_sender <= o_RAMAddr_sender + 1;		 -- Addr 1 valid, Addr 3
@@ -416,7 +416,8 @@ begin
 				end if;
 			when STATE_SEND_DATA_4 =>
 				if tx_ll_dst_rdy = '1' then
-					if (payload_count + 8) = unsigned(total_packet_len) then
+					if (payload_count + 8) >= unsigned(total_packet_len) then
+						payload_count <= payload_count + 4;
 						sending_state <= STATE_SEND_EOF_1;
 						tx_data_word <= i_RAMData_sender;
 						tx_ll_data <= i_RAMData_sender(0 to 7);
@@ -425,17 +426,30 @@ begin
 						sending_state <= STATE_SEND_DATA_1;
 						tx_data_word <= i_RAMData_sender;
 						tx_ll_data <= i_RAMData_sender(0 to 7);
-					end if;		
+					end if;	
+					if (payload_count + 5) = unsigned(total_packet_len) then
+						sending_state <= STATE_SEND_EOF_4;
+						tx_ll_eof <= '1';
+					end if;	
 				end if;
 			when STATE_SEND_EOF_1 => 
 				if tx_ll_dst_rdy = '1' then
 					sending_state <= STATE_SEND_EOF_2;
 					tx_ll_data <= tx_data_word(8 to 15);
+					if (payload_count + 2) = unsigned(total_packet_len) then
+						sending_state <= STATE_SEND_EOF_4;
+						tx_ll_eof <= '1';
+					end if;
 				end if;
 			when STATE_SEND_EOF_2 => 
 				if tx_ll_dst_rdy = '1' then
 					sending_state <= STATE_SEND_EOF_3;
 					tx_ll_data <= tx_data_word(16 to 23);
+					if (payload_count + 3) = unsigned(total_packet_len) then
+						sending_state <= STATE_SEND_EOF_4;
+						tx_ll_eof <= '1';
+					end if;
+
 				end if;
 			when STATE_SEND_EOF_3 =>
 				if tx_ll_dst_rdy = '1' then
@@ -445,8 +459,16 @@ begin
 				end if;
 			when STATE_SEND_EOF_4 =>
 				if tx_ll_dst_rdy = '1' then
-					sending_state <= STATE_WAIT; --mir ist unklar, wie ich aus einem geclockten process signale und nicht register raussende => .
-					packets_sent <= '1';
+					if unsigned(o_RAMAddr_sender + 1) >= unsigned(len(16 downto 2)) then -- = should be enough, but just to be sure ...
+						-- we sent all packets in this batch
+						sending_state <= STATE_WAIT; --mir ist unklar, wie ich aus einem geclockten process signale und nicht register raussende => .
+						packets_sent <= '1';
+					else
+						sending_state  <= STATE_READ_LEN_WAIT_A;
+						tx_ll_src_rdy <= '0';
+						payload_count <= 0;
+						o_RAMAddr_sender <= o_RAMAddr_sender + 1;
+					end if;
 				end if;
 			when STATE_WAIT =>
 					sending_state <= STATE_IDLE;
@@ -561,7 +583,7 @@ begin
 					end if;
 
 				when STATE_READ =>
-					memif_read(i_ram,o_ram,i_memif,o_memif, base_addr, X"00000000", len(23 downto 0), done); --len(23 downto 0), done);
+					memif_read(i_ram,o_ram,i_memif,o_memif, base_addr, X"00000000", unsigned(len(23 downto 0)) + 4, done); --add 4, testing and doesnt hurt
 					if done then
 						state <= STATE_WAIT;
 					end if;
@@ -571,6 +593,7 @@ begin
 					if packets_sent = '1' then
 						state <= STATE_PUT; --STATE_WRITE;
 						data_ready <= '0';
+						len  <= (others  => '0');
 					end if;
 					
 --				when STATE_WRITE =>
@@ -587,6 +610,8 @@ begin
 				-- Echo the data
 				when STATE_PUT =>
 					osif_mbox_put(i_osif, o_osif, MBOX_SEND, X"0000" & total_packet_len, ignore, done);
+				--	osif_mbox_put(i_osif, o_osif, MBOX_SEND, len, ignore, done);
+
 					if done then state <= STATE_GET_LEN; end if;
 				
 --				when STATE_PUT2 =>

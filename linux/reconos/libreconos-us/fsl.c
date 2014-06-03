@@ -129,7 +129,10 @@ void fsl_read_block(int num, void * block_start, size_t byte_count)
 
 	/* XXX: @aagne: what about checking return values? ---DB */
 	ret = read(fsl_fd[num], block_start, byte_count);
+<<<<<<< HEAD
 	FSL_DEBUG3("Thread %8li Read Block from FSL%2.2i: %li bytes\n",pthread_self(), num, byte_count);
+=======
+>>>>>>> e74d968ad900bf73cbbbfb531d3e853bb7374f92
 	if (ret < 0)
 		whine("fsl_read error: %s\n", strerror(errno));
 	//printf("fsl_read: slot %i value 0x%x\n", num, value);

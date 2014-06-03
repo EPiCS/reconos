@@ -17,6 +17,7 @@
 #define A_HWT_SLOT_NR 2
 #define E_HWT_SLOT_NR 3
 
+#define NR_OF_PAGES 2 //32768 (2^15)
 
 struct reconos_resource e_res[2];
 struct reconos_hwt e_hwt;
@@ -164,31 +165,39 @@ static int __init init_reconos_test_module(void)
 
 	//setup the hw -> sw thread
 	printk(KERN_INFO "[reconos-interface] Allocate memory\n");
-	shared_mem_h2s = get_zeroed_page(GFP_KERNEL);
+	shared_mem_h2s = alloc_pages_exact(NR_OF_PAGES, GFP_KERNEL); //get_zeroed_page(GFP_KERNEL);
+	memset(shared_mem_h2s, 0, 4096); 
 	printk(KERN_INFO "[reconos-interface] h2s memory %p\n", shared_mem_h2s);
 	mbox_put(&b_mb_put, shared_mem_h2s);
 
 	//setup the sw -> hw thread
-	shared_mem_s2h = get_zeroed_page(GFP_KERNEL);
+	shared_mem_s2h = alloc_pages_exact(NR_OF_PAGES, GFP_KERNEL); //get_zeroed_page(GFP_KERNEL);
 	printk(KERN_INFO "[reconos-interface] s2h memory %p\n", shared_mem_s2h);
 	mbox_put(&c_mb_put, shared_mem_s2h);
 	printk(KERN_INFO "[reconos-interface] HZ= %d\n", HZ);
 	jiffies_before = jiffies;
 
-//	for(i = 0; i < 10000; i++)
+//	for(i = 0; i < 100; i++)
 {
-		int packet_len = 100;
+		int packet_len = 64;
+		int nr_of_packets = 50;
 		int j = 0;
 		int result = 0;
-		memset(shared_mem_s2h, 0, 2 * packet_len);
+#ifdef blub
+	//	memset(shared_mem_s2h, 0, 2 * packet_len);
 		/************************************
 		 * send packet to hardware
 		 ************************************/
-                copy_packet(packet_len, 1, shared_mem_s2h, 1, 0);
-                mbox_put(&c_mb_put, packet_len + 12);
-		//printk(KERN_INFO "[reconos-interface] packet sent to hw\n");
-                result = mbox_get(&c_mb_get);
-         	printk(KERN_INFO "[reconos-interface] packet sent received ack from hw, total packet len %d \n", result);
+		for(j = 0; j < nr_of_packets; j++){
+			copy_packet(packet_len, j, shared_mem_s2h + j*(packet_len + 12), 1, 0);
+		}
+	//	copy_packet(packet_len, 100, shared_mem_s2h + packet_len + 12, 1, 0);
+		mbox_put(&c_mb_put, nr_of_packets * (packet_len + 12));
+	//	mbox_put(&c_mb_put, packet_len+12);
+	//	printk(KERN_INFO "[reconos-interface] packet sent to hw\n");
+		result = mbox_get(&c_mb_get);
+	//	printk(KERN_INFO "[reconos-interface] packet sent received ack from hw, total packet len %d \n", result);
+
 	
 		/************************************
 		 * send packet to hardware
@@ -200,23 +209,44 @@ static int __init init_reconos_test_module(void)
                 result = mbox_get(&c_mb_get);
          	printk(KERN_INFO "[reconos-interface] packet sent received ack from hw, total packet len %d \n", result);
 
-	
+#endif	
 		/************************************
 		 * receive packet from hardware
 		 ************************************/
-		//printk(KERN_INFO "[reconos-interface] wait for packet from hw\n");
+while(1){
+		printk(KERN_INFO "[reconos-interface] wait for packet from hw\n");
 		result = mbox_get(&b_mb_get);
+		printk(KERN_INFO "got");
 		struct noc_pkt * rcv_pkt = (struct noc_pkt *)shared_mem_h2s;
 	//	packet_len = *(int *)shared_mem_h2s;
 		printk(KERN_INFO "[reconos-interface] packet received with len from mbox %d, from memory %d\n", result, rcv_pkt->payload_len);
+		int len = 0;
+		char * cur = shared_mem_h2s;
+		while (len < result){
+			cur = cur + rcv_pkt->payload_len + 12; 
+			rcv_pkt = (struct noc_pkt*)cur;
+			printk(KERN_INFO "[reconos-interface] packet received with len %d\n", rcv_pkt->payload_len);
+			len += rcv_pkt->payload_len;
+		}
+//		printk(KERN_INFO "packet sent\n");
+//		print_packet(snd_pkt);		
+//		printk(KERN_INFO "packet received\n");
+//		print_packet(rcv_pkt);
+	//	for (j = 0; j < 200; j++){
+	//		printk(KERN_INFO "%x", shared_mem_h2s[j]);
+	//	} 
 
-		printk(KERN_INFO "packet sent\n");
-		print_packet(snd_pkt);		
+	mbox_put(&b_mb_put, result);
+} 
+#ifdef blub
+	  char * tmp = shared_mem_h2s + rcv_pkt->payload_len+12;
+	  rcv_pkt = (struct noc_pkt *)tmp;
+		printk(KERN_INFO "[reconos-interface] packet received with len from mbox %d, from memory %d\n", result, rcv_pkt->payload_len);
 		printk(KERN_INFO "packet received\n");
 		print_packet(rcv_pkt);
 
-
-		for (j = 0; j < packet_len + 12; j++){ 
+	
+		for (j = 0; j < result; j++){ 
 			unsigned char written_val = shared_mem_s2h[j];
 			unsigned char read_val = shared_mem_h2s[j];
 			printk(KERN_INFO "%x %x", written_val, read_val);
@@ -229,7 +259,7 @@ static int __init init_reconos_test_module(void)
 		}
 		printk(KERN_INFO "\n");
 	
-		mbox_put(&b_mb_put, shared_mem_h2s); //dummy_value. it will be the amount of data read in a ring buffer scenario
+		mbox_put(&b_mb_put, result); //dummy_value. it will be the amount of data read in a ring buffer scenario
 		
 
 
@@ -380,7 +410,7 @@ static int __init init_reconos_test_module(void)
 	
 		mbox_put(&b_mb_put, shared_mem_h2s); //dummy_value. it will be the amount of data read in a ring buffer scenario
 
-
+#endif
 
 		
 	}

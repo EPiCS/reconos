@@ -324,6 +324,7 @@ begin
 					if reconos_fsm_ready = '1' then
 						if rx_ll_src_rdy = '1' and rx_ll_sof = '1' then
 							--safe meta data for later, since we need to know the payload len
+							--meta_data(31 downto 24) <= rx_ll_data;
 							meta_data(31 downto 26)  <= (others  => '0'); --no address;			
 							meta_data(25 downto 24)  <= priority;
 							meta_data(23)				 <= direction;
