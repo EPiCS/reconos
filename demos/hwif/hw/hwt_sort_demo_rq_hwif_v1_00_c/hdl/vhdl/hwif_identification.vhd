@@ -18,7 +18,7 @@ use plb2hwif_v1_00_a.hwif_pck.all;
 --! 0x2 : Hardware thread ID: Which HWT is this?
 --! 0x3 : Version register, returning a version number
 --! 0x4 : Capabilities register, one bit per capability
-entity identification is
+entity hwif_identification is
   generic(
     C_HWT_ID       : std_logic_vector(31 downto 0) := X"DEADDEAD";  -- Unique ID number of this module
     C_VERSION      : std_logic_vector(31 downto 0) := X"000004ac";  -- Version Identifier
@@ -42,7 +42,7 @@ entity identification is
     rst        : in std_logic);
 end entity;
 
-architecture Behavioral of identification is
+architecture Behavioral of hwif_identification is
 
   constant C_id_reg_addr     : natural := 0;
   constant C_size_reg_addr   : natural := 1;

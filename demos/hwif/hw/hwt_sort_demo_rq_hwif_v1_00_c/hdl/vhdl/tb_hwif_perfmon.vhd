@@ -35,10 +35,10 @@ use ieee.numeric_std.all;
 library work;
 use work.hwif_pck.all;
 
-entity tb_perfmon is
-end tb_perfmon;
+entity tb_hwif_perfmon is
+end tb_hwif_perfmon;
 
-architecture behavior of tb_perfmon is
+architecture behavior of tb_hwif_perfmon is
 
   -- Component Declaration for the Unit Under Test (UUT)
   constant C_Counters_Num : integer := 8; 
@@ -48,7 +48,7 @@ constant C_id_reg_addr : natural := 0;
   constant C_config_reg_addr : natural := 2;
   constant C_Fixed_Reg_Count : natural := 3;
 
-  component perfmon
+  component hwif_perfmon
     generic(
       C_Counters_Num : integer := C_Counters_Num;
       C_SLV_DWIDTH   : integer := 32
@@ -90,7 +90,7 @@ constant C_id_reg_addr : natural := 0;
 begin
 
   -- Instantiate the Unit Under Test (UUT)
-  uut : perfmon
+  uut : hwif_perfmon
     generic map(
       C_Counters_Num => C_Counters_Num
       )

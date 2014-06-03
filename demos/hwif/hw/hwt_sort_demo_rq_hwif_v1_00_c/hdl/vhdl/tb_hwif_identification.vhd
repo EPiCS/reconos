@@ -36,14 +36,14 @@ use work.hwif_pck.all;
 -- arithmetic functions with Signed or Unsigned values
 --USE ieee.numeric_std.ALL;
  
-ENTITY tb_identification IS
-END tb_identification;
+ENTITY tb_hwif_identification IS
+END tb_hwif_identification;
  
-ARCHITECTURE behavior OF tb_identification IS 
+ARCHITECTURE behavior OF tb_hwif_identification IS 
  
     -- Component Declaration for the Unit Under Test (UUT)
  
-    COMPONENT identification
+    COMPONENT hwif_identification
     generic(
     C_HWT_ID       : std_logic_vector(31 downto 0) := X"DEADDEAD";  -- Unique ID number of this module
     C_VERSION      : std_logic_vector(31 downto 0) := X"000004ac";  -- Version Identifier
@@ -84,7 +84,7 @@ ARCHITECTURE behavior OF tb_identification IS
 BEGIN
  
 	-- Instantiate the Unit Under Test (UUT)
-   uut: identification 
+   uut: hwif_identification 
    generic map (
           C_HWT_ID       => X"DEADDEAD",  -- Unique ID number of this module
           C_VERSION      => X"000004ac",  -- Version Identifier

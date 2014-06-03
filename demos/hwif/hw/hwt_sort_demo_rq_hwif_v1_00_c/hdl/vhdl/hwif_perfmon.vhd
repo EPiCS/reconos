@@ -33,7 +33,7 @@ use plb2hwif_v1_00_a.hwif_pck.all;
 --! Counter Register: 32 bit wide unsigned integer, reflecting the number of clock 
 --!                   cycles the event (increments(i)) was active.
 --!
-entity perfmon is
+entity hwif_perfmon is
   generic(
     C_Counters_Num : integer := 8;  -- How many performance counters do you want?
     C_SLV_DWIDTH   : integer := 32
@@ -55,9 +55,9 @@ entity perfmon is
     
     clk        : in std_logic;
     rst        : in std_logic);
-end perfmon;
+end hwif_perfmon;
 
-architecture Behavioral of perfmon is
+architecture Behavioral of hwif_perfmon is
   
   constant C_id_reg_addr     : natural := 0;
   constant C_size_reg_addr   : natural := 1;

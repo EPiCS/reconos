@@ -15,8 +15,8 @@ use plb2hwif_v1_00_a.hwif_pck.all;
 -- For now, we include them seperately
 library work;
 use work.hwif_address_decoder;
-use work.perfmon;
-use work.identification;
+use work.hwif_perfmon;
+use work.hwif_identification;
 
 entity hwif_subsystem is
   generic(
@@ -122,7 +122,7 @@ begin  -- architecture structural
       );
 
 -- ID_register_0
-  id_0 : entity identification
+  id_0 : entity hwif_identification
     generic map (
       C_HWT_ID       => C_HWT_ID,    -- Unique ID number of this module
       C_VERSION      => C_VERSION,    -- Version Identifier
@@ -144,7 +144,7 @@ begin  -- architecture structural
       );
 
 -- Performance monitor 0
-  perfmon_0 : entity perfmon
+  perfmon_0 : entity hwif_perfmon
     generic map(
       C_Counters_Num => C_Perf_Counters_Num,
       C_SLV_DWIDTH   => C_SLV_DWIDTH
