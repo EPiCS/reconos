@@ -11,12 +11,9 @@ use reconos_v3_00_b.reconos_pkg.all;
 
 library plb2hwif_v1_00_a;
 use plb2hwif_v1_00_a.hwif_pck.all;
--- The HWIF interface and all components should be integrated into reconos lib.
--- For now, we include them seperately
-library work;
-use work.hwif_address_decoder;
-use work.hwif_perfmon;
-use work.hwif_identification;
+use plb2hwif_v1_00_a.hwif_address_decoder;
+use plb2hwif_v1_00_a.hwif_perfmon;
+use plb2hwif_v1_00_a.hwif_identification;
 
 entity hwif_subsystem is
   generic(
