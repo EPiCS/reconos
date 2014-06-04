@@ -21,12 +21,12 @@
  * ======================================================================
  */
 
-#ifndef RECONOS_DRV_OSIF_H
-#define RECONOS_DRV_OSIF_H
+#ifndef RECONOS_DRV_OSIF_INTC_H
+#define RECONOS_DRV_OSIF_INTC_H
 
 #include "reconos.h"
 
-extern int osif_init(void);
-extern int osif_exit(void);
+extern int osif_intc_init(void);
+extern int osif_intc_exit(void);
 
-#endif /* RECONOS_DRV_OSIF_H */
+#endif /* RECONOS_DRV_OSIF_INTC_H */

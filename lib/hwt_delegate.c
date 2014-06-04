@@ -70,10 +70,12 @@
 inline void resource_check_type(struct reconos_hwt *hwt,
                                 uint32_t handle, uint32_t type) {
 	if (handle >= hwt->cfg->resource_count)
-		panic("[reconos-core] resource out of range: %d\n", handle);
+		panic("[reconos-core] "
+		      "resource out of range: %d\n", handle);
 
 	if (hwt->cfg->resource[handle].type != type)
-		panic("[reconos-core] wrong resource type: %x expected %x\n", hwt->cfg->resource[handle].type, type);
+		panic("[reconos-core] "
+		      "wrong resource type: %x expected %x\n", hwt->cfg->resource[handle].type, type);
 }
 
 
@@ -85,74 +87,104 @@ uint32_t hwt_delegate_get_init_data(struct reconos_hwt *hwt) {
 uint32_t hwt_delegate_sem_post(struct reconos_hwt *hwt) {
 	uint32_t handle = reconos_osif_read(hwt->osif);
 
-	//printf("RECONOS DELEGATE THREAD %d: RES %d: SEM_POST\n", hwt->slot, handle);
+	debug("[reconos-delegate-%d] (sem_post on %d) ...\n", hwt->slot, handle);
 
 	resource_check_type(hwt, handle, RECONOS_RESOURCE_TYPE_SEM);
 
 	sem_post(hwt->cfg->resource[handle].ptr);
 
-	//printf("RECONOS DELEGATE THREAD %d: RES %d: SEM_POST DONE\n", hwt->slot, handle);
+	debug("[reconos-delegate-%d] (sem_post on %d) "
+	      "done\n", hwt->slot, handle);
 
 	return 0;
 }
 
 uint32_t hwt_delegate_sem_wait(struct reconos_hwt *hwt) {
 	uint32_t handle = reconos_osif_read(hwt->osif);
+	uint32_t ret;
 
-	//printf("RECONOS DELEGATE THREAD %d: RES %d: SEM_WAIT\n", hwt->slot, handle);
+	debug("[reconos-delegate-%d] (sem_wait on %d) ...\n", hwt->slot, handle);
 
 	resource_check_type(hwt, handle, RECONOS_RESOURCE_TYPE_SEM);
 
-	//printf("RECONOS DELEGATE THREAD %d: RES %d: SEM_WAIT DONE\n", hwt->slot, handle);
+	ret = sem_wait(hwt->cfg->resource[handle].ptr);
 
-	return sem_wait(hwt->cfg->resource[handle].ptr);
+	debug("[reconos-delegate-%d] (sem_wait on %d) "
+	      "done with status %d\n", hwt->slot, handle, ret);
+
+	return ret;
 }
 
 uint32_t hwt_delegate_mutex_lock(struct reconos_hwt *hwt) {
 	uint32_t handle = reconos_osif_read(hwt->osif);
+	uint32_t ret;
 
-	//printf("RECONOS DELEGATE THREAD %d: RES %d: MUTEX_LOCK\n", hwt->slot, handle);
+
+	debug("[reconos-delegate-%d] (mutex_lock on %d) ...\n", hwt->slot, handle);
 
 	resource_check_type(hwt, handle, RECONOS_RESOURCE_TYPE_MUTEX);
 
-	//printf("RECONOS DELEGATE THREAD %d: RES %d: MUTEX_LOCK DONE\n", hwt->slot, handle);
+	ret = pthread_mutex_lock(hwt->cfg->resource[handle].ptr);
 
-	return pthread_mutex_lock(hwt->cfg->resource[handle].ptr);
+	debug("[reconos-delegate-%d] (mutex_lock on %d) "
+	      "done with status %d\n", hwt->slot, handle, ret);
+
+	return ret;
 }
 
 uint32_t hwt_delegate_mutex_unlock(struct reconos_hwt *hwt) {
 	uint32_t handle = reconos_osif_read(hwt->osif);
 
-	//printf("RECONOS DELEGATE THREAD %d: RES %d: MUTEX_UNLOCK\n", hwt->slot, handle);
+	debug("[reconos-delegate-%d] (mutex_unlock on %d) ...\n", hwt->slot, handle);
 
 	resource_check_type(hwt, handle, RECONOS_RESOURCE_TYPE_MUTEX);
 
 	pthread_mutex_unlock(hwt->cfg->resource[handle].ptr);
 
-	//printf("RECONOS DELEGATE THREAD %d: RES %d: MUTEX_UNLOCK DONE\n", hwt->slot, handle);
+	debug("[reconos-delegate-%d] (mutex_unlock on %d) "
+	      "done\n", hwt->slot, handle);
 
 	return 0;
 }
 
 uint32_t hwt_delegate_mutex_trylock(struct reconos_hwt *hwt) {
 	uint32_t handle = reconos_osif_read(hwt->osif);
+	uint32_t ret;
+
+	debug("[reconos-delegate-%d] (mutex_trylock on %d) ...\n", hwt->slot, handle);
 
 	resource_check_type(hwt, handle, RECONOS_RESOURCE_TYPE_MUTEX);
 
-	return pthread_mutex_trylock(hwt->cfg->resource[handle].ptr);
+	ret = pthread_mutex_trylock(hwt->cfg->resource[handle].ptr);
+
+	debug("[reconos-delegate-%d] (mutex_trylock on %d) "
+	      "done with status %d\n", hwt->slot, handle, ret);
+
+	return ret;
 }
 
 uint32_t hwt_delegate_cond_wait(struct reconos_hwt *hwt) {
 #ifndef RECONOS_MINIMAL
 	uint32_t handle = reconos_osif_read(hwt->osif);
 	uint32_t handle2 = reconos_osif_read(hwt->osif);
+	uint32_t ret;
+
+	debug("[reconos-delegate-%d] (cond_wait on %d) ...\n", hwt->slot, handle);
 
 	resource_check_type(hwt, handle, RECONOS_RESOURCE_TYPE_COND);
 	resource_check_type(hwt, handle2, RECONOS_RESOURCE_TYPE_MUTEX);
 
-	return pthread_cond_wait(hwt->cfg->resource[handle].ptr,
-	                         hwt->cfg->resource[handle2].ptr);
+	ret = pthread_cond_wait(hwt->cfg->resource[handle].ptr,
+	                        hwt->cfg->resource[handle2].ptr);
+
+	debug("[reconos-delegate-%d] (cond_wait on %d) "
+	      "done\n", hwt->slot, handle);
+
+	return ret;
 #else
+	debug("[reconos-delegate-%d] (cond_wait on %d) "
+	      "operation not supported\n", hwt->slot, handle);
+
 	return 0;
 #endif
 }
@@ -161,12 +193,20 @@ uint32_t hwt_delegate_cond_signal(struct reconos_hwt *hwt) {
 #ifndef RECONOS_MINIMAL
 	uint32_t handle = reconos_osif_read(hwt->osif);
 
+	debug("[reconos-delegate-%d] (cond_signal on %d) ...\n", hwt->slot, handle);
+
 	resource_check_type(hwt, handle, RECONOS_RESOURCE_TYPE_COND);
 
 	pthread_cond_signal(hwt->cfg->resource[handle].ptr);
 
+	debug("[reconos-delegate-%d] (cond_signal on %d) "
+	      "done\n", hwt->slot, handle);
+
 	return 0;
 #else
+	debug("[reconos-delegate-%d] (cond_signal on %d) "
+	      "operation not supported\n", hwt->slot, handle);
+
 	return 0;
 #endif
 }
@@ -175,17 +215,26 @@ uint32_t hwt_delegate_cond_broadcast(struct reconos_hwt *hwt) {
 #ifndef RECONOS_MINIMAL
 	uint32_t handle = reconos_osif_read(hwt->osif);
 
+	debug("[reconos-delegate-%d] (cond_broadcast on %d) ...\n", hwt->slot, handle);
+
 	resource_check_type(hwt, handle, RECONOS_RESOURCE_TYPE_COND);
 
 	pthread_cond_broadcast(hwt->cfg->resource[handle].ptr);
 
+	debug("[reconos-delegate-%d] (cond_broadcast on %d) "
+	      "done\n", hwt->slot, handle);
+
 	return 0;
 #else
+	debug("[reconos-delegate-%d] (cond_broadcast on %d) "
+	      "operation not supported\n", hwt->slot, handle);
+
 	return 0;
 #endif
 }
 
 uint32_t hwt_delegate_rq_receive(struct reconos_hwt *hwt) {
+#if 0
 	int i;
 	ssize_t res;
 	uint32_t handle, arg0, msg_size, *msg;
@@ -215,11 +264,15 @@ uint32_t hwt_delegate_rq_receive(struct reconos_hwt *hwt) {
 
 out:
 	free(msg);
+#endif
+	debug("[reconos-delegate-%d] (rq_receive) "
+	      "operation not supported\n", hwt->slot);
 
 	return 0;
 }
 
 uint32_t hwt_delegate_rq_send(struct reconos_hwt *hwt) {
+#if 0
 	int i;
 	uint32_t handle, arg0, msg_size, *msg;
 
@@ -241,33 +294,41 @@ uint32_t hwt_delegate_rq_send(struct reconos_hwt *hwt) {
 	rq_send(hwt->cfg->resource[handle].ptr, msg, msg_size);
 
 	free(msg);
+#endif
+	debug("[reconos-delegate-%d] (rq_send) "
+	      "operation not supported\n", hwt->slot);
 
 	return 0;
 }
 
 uint32_t hwt_delegate_mbox_get(struct reconos_hwt *hwt) {
 	uint32_t handle = reconos_osif_read(hwt->osif);
+	uint32_t ret;
 
-	//printf("RECONOS DELEGATE THREAD %d: RES %d: MBOX_GET\n", hwt->slot, handle);
+	debug("[reconos-delegate-%d] (mbox_get on %d) ...\n", hwt->slot, handle);
 
 	resource_check_type(hwt, handle, RECONOS_RESOURCE_TYPE_MBOX);
 
-	//printf("RECONOS DELEGATE THREAD %d: RES %d: MBOX_GET DONE: %x\n", hwt->slot, handle, data);
+	ret = mbox_get(hwt->cfg->resource[handle].ptr);
 
-	return mbox_get(hwt->cfg->resource[handle].ptr);
+	debug("[reconos-delegate-%d] (mbox_get on %d) "
+	      "done, getted 0x%x\n", hwt->slot, handle, ret);
+
+	return ret;
 }
 
 uint32_t hwt_delegate_mbox_put(struct reconos_hwt *hwt) {
 	uint32_t handle = reconos_osif_read(hwt->osif);
 	uint32_t arg0 = reconos_osif_read(hwt->osif);
 
-	//printf("RECONOS DELEGATE THREAD %d: RES %d: MBOX_PUT\n", hwt->slot, handle);
+	debug("[reconos-delegate-%d] (mbox_put on %d) ...\n", hwt->slot, handle);
 
 	resource_check_type(hwt, handle, RECONOS_RESOURCE_TYPE_MBOX);
 
 	mbox_put(hwt->cfg->resource[handle].ptr, arg0);
 
-	//printf("RECONOS DELEGATE THREAD %d: RES %d: MBOX_PUT DONE: %x\n", hwt->slot, handle, arg0);
+	debug("[reconos-delegate-%d] (mbox_put on %d) "
+	      "done, putted 0x%x\n", hwt->slot, handle, arg0);
 
 	return 0;
 }
@@ -276,11 +337,16 @@ uint32_t hwt_delegate_mbox_tryget(struct reconos_hwt *hwt) {
 	uint32_t handle = reconos_osif_read(hwt->osif);
 	uint32_t data, ret;
 
+	debug("[reconos-delegate-%d] (mbox_tryget on %d) ...\n", hwt->slot, handle);
+
 	resource_check_type(hwt, handle, RECONOS_RESOURCE_TYPE_MBOX);
 
 	data = 0;
 	ret = mbox_tryget(hwt->cfg->resource[handle].ptr, &data);
 	reconos_osif_write(hwt->osif, data);
+
+	debug("[reconos-delegate-%d] (mbox_tryget on %d) "
+	      "done, getted 0x%x with status %d\n", hwt->slot, handle, data, ret);
 
 	return ret;
 }
@@ -288,10 +354,18 @@ uint32_t hwt_delegate_mbox_tryget(struct reconos_hwt *hwt) {
 uint32_t hwt_delegate_mbox_tryput(struct reconos_hwt *hwt) {
 	uint32_t handle = reconos_osif_read(hwt->osif);
 	uint32_t arg0 = reconos_osif_read(hwt->osif);
+	uint32_t ret;
+
+	debug("[reconos-delegate-%d] (mbox_tryput on %d) ...\n", hwt->slot, handle);
 
 	resource_check_type(hwt, handle, RECONOS_RESOURCE_TYPE_MBOX);
 
-	return mbox_tryput(hwt->cfg->resource[handle].ptr, arg0);
+	ret = mbox_tryput(hwt->cfg->resource[handle].ptr, arg0);
+
+	debug("[reconos-delegate-%d] (mbox_tryput on %d) "
+	      "done, putted 0x%x with status %d\n", hwt->slot, handle, arg0, ret);
+
+	return ret;
 }
 
 void *reconos_hwt_delegate(void *arg) {
@@ -304,12 +378,14 @@ void *reconos_hwt_delegate(void *arg) {
 	hwt->state = RECONOS_HWT_STATE_RUNNING;
 
 	while (1) {
-		//printf("... Waiting for command\n");
+		debug("[reconos-delegate-%d] "
+		      "waiting for command ...\n", hwt->slot);
 
 		cmd = reconos_osif_read(hwt->osif);
 		ret = 0;
 
-		//printf("... Received command %x on hwt %d\n", cmd, hwt->slot);
+		debug("[reconos-delegate-%d] "
+		      "received command 0x%x\n", hwt->slot, cmd);
 
 		// perfom OSIF calls that should be executed independent from scheduling
 		switch (cmd & OSIF_CMD_MASK) {
@@ -339,7 +415,8 @@ void *reconos_hwt_delegate(void *arg) {
 		// perfom scheduling
 		if (hwt->is_reconf && cmd & OSIF_CMD_YIELD_MASK ) {
 			if (!reconos_runtime.scheduler)
-				panic("[reconos_core] No scheduler defined\n");
+				panic("[reconos_core] "
+				      "No scheduler defined\n");
 
 			cfg = reconos_runtime.scheduler(hwt);
 			if (cfg) {

@@ -28,6 +28,9 @@
 #include <stdlib.h>
 
 
+//#define debug(...) printf(__VA_ARGS__)
+#define debug(...) 
+
 static inline void die() {
 	exit(EXIT_FAILURE);
 }

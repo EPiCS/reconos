@@ -19,7 +19,7 @@
 
 #include "reconos.h"
 
-#include "osif.h"
+#include "osif_intc.h"
 #include "proc_control.h"
 
 
@@ -31,12 +31,12 @@ static __init int reconos_init(void) {
 
 	proc_control_init();
 
-	if (osif_init() < 0)
-		goto osif_failed;
+	if (osif_intc_init() < 0)
+		goto osif_intc_failed;
 
 	goto out;
 
-osif_failed:
+osif_intc_failed:
 	proc_control_exit();
 	return -1;
 
@@ -47,7 +47,7 @@ out:
 static __exit void reconos_exit(void) {
 	__printk(KERN_INFO "[reconos] removing driver ...\n");
 
-	osif_exit();
+	osif_intc_exit();
 	proc_control_exit();
 
 	return;

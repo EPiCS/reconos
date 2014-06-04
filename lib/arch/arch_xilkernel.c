@@ -75,10 +75,13 @@ struct osif_fifo_dev *osif_fifo_dev;
 struct osif_intc_dev osif_intc_dev;
 
 int reconos_osif_open(int num) {
-	return num;
+	if (num < 0 || num >= NUM_HWTS)
+		return -1;
+	else
+		return num;
 }
 
-static unsigned int osif_fifo_hw2sw_fill(struct osif_fifo_dev *dev) {
+static inline unsigned int osif_fifo_hw2sw_fill(struct osif_fifo_dev *dev) {
 	uint32_t reg;
 
 	reg = dev->ptr[OSIF_FIFO_RECV_STATUS_REG];
