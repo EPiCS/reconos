@@ -23,9 +23,14 @@ package hwif_pck is
 
   constant M2S_ALL_ZEROS : master2slave_t := ((others=>'0'), (others=>'0'), '0', '0');
   constant S2M_ALL_ZEROS : slave2master_t := ((others=>'0'), '0', '0');
-  
+
+  -- Submodule IDs
   constant C_ID_PERFMON  : std_logic_vector(31 downto 0) := X"DEADAFFE";
   constant C_ID_IDENTITY : std_logic_vector(31 downto 0) := X"DEADBEEF";
+
+  -- Hardware thread IDs
+  constant C_ID_SORT_DEMO_RQ : std_logic_vector(31 downto 0) := X"DEADDEAD";
+  constant C_ID_ARBITER : std_logic_vector(31 downto 0) := X"BA5EB055";
 
   constant C_CAP_PERFMON : std_logic_vector(31 downto 0) := X"00000001";
   
