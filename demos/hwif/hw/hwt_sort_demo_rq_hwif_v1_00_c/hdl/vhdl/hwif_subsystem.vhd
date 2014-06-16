@@ -6,8 +6,8 @@ library proc_common_v3_00_a;
 use proc_common_v3_00_a.proc_common_pkg.all;
 use proc_common_v3_00_a.ipif_pkg.all;
 
-library reconos_v3_00_b;
-use reconos_v3_00_b.reconos_pkg.all;
+--library reconos_v3_00_b;
+--use reconos_v3_00_b.reconos_pkg.all;
 
 library plb2hwif_v1_00_a;
 use plb2hwif_v1_00_a.hwif_pck.all;

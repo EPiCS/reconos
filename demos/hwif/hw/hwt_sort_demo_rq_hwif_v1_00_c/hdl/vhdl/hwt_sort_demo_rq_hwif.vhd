@@ -9,6 +9,9 @@ use proc_common_v3_00_a.proc_common_pkg.all;
 library reconos_v3_00_b;
 use reconos_v3_00_b.reconos_pkg.all;
 
+library plb2hwif_v1_00_a;
+use plb2hwif_v1_00_a.hwif_pck.all;
+
 entity hwt_sort_demo_rq_hwif is
   generic(
       C_SLV_DWIDTH        : integer                       := 32
@@ -220,9 +223,9 @@ begin
 
   hwif : hwif_subsystem
     generic map(
-      C_HWT_ID            => X"DEADDEAD",  -- Unique ID number of this module
+      C_HWT_ID            => C_ID_SORT_DEMO_RQ,  -- Unique ID number of this module
       C_VERSION           => X"00000100",  -- Version Identifier
-      C_CAPABILITIES      => X"00000001",  --Every Bit specifies a capability like performance monitoring etc.
+      C_CAPABILITIES      => C_CAP_PERFMON,  --Every Bit specifies a capability like performance monitoring etc.
       C_Perf_Counters_Num => C_Perf_Counters_Num,  -- How many performance counters do you want?
       C_SLV_DWIDTH        => 32
       )
