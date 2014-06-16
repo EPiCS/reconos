@@ -1,0 +1,7 @@
+
+File PCK_CRC32_D32.vhd created via CRC Tool at http://www.easics.com/webtools/crctool
+Options: 
+- CRC Polynom: CRC32 - Ethernet/AAL5
+- Data Bus Width: 32 Bits
+- Bit Vector Type: std_logic_vector
+- Generated VHDL code
