@@ -10,6 +10,8 @@ OPTION LONG_DESC = FIFO32 Multiplexer and Arbiter for connecting multiple Hardwa
 
 
 ## Bus Interfaces
+BUS_INTERFACE BUS=HWIF, BUS_STD=HWIF_STD, BUS_TYPE=TARGET
+
 BUS_INTERFACE BUS=SFIFO32_MEMCTRL, BUS_STD=SFIFO32_STD, BUS_TYPE=INITIATOR
 BUS_INTERFACE BUS=MFIFO32_MEMCTRL, BUS_STD=MFIFO32_STD, BUS_TYPE=INITIATOR
 
@@ -64,12 +66,24 @@ BUS_INTERFACE BUS=MFIFO32_P, BUS_STD=MFIFO32_STD, BUS_TYPE=TARGET, ISVALID = (FI
 
 ## Generics for VHDL or Parameters for Verilog
 PARAMETER FIFO32_PORTS = 2, DT = INTEGER, RANGE = (1:16), LONG_DESC = Number of FIFO32 ports that connect to the arbiter
+PARAMETER ARBITRATION_ALGO = 0, DT = INTEGER, RANGE = (0), LONG_DESC = 0 is Round Robin, others not available atm.
+PARAMETER C_SLV_WIDTH = 32, DT = INTEGER, RANGE = (32), LONG_DESC = Data width of HWIF interface
+
 
 ## Peripheral ports
 
 # core clock and reset (should be the same as all bus clocks)
 PORT clk = "", DIR = I, SIGIS = CLK
 PORT Rst = "", DIR = I, SIGIS = RST
+
+# HWIF 
+PORT HWIF2DEC_Addr = IP2HWT_Addr, DIR= I, VEC= [0 :31],       BUS= HWIF
+PORT HWIF2DEC_Data = IP2HWT_Data, DIR= I, VEC= [31:0], BUS= HWIF
+PORT HWIF2DEC_RdCE = IP2HWT_RdCE, DIR= I,                                    BUS= HWIF
+PORT HWIF2DEC_WrCE = IP2HWT_WrCE, DIR= I, 				     BUS= HWIF
+PORT DEC2HWIF_Data = HWT2IP_Data, DIR= O, VEC= [31:0], BUS= HWIF
+PORT DEC2HWIF_RdAck= HWT2IP_RdAck,DIR= O,                                    BUS= HWIF
+PORT DEC2HWIF_WrAck= HWT2IP_WrAck,DIR= O,                                    BUS= HWIF
 
 # FIFO32 Port to memory controller
 PORT OUT_FIFO32_S_Data = FIFO32_S_Data, DIR=O, VEC=[0:31], BUS=SFIFO32_MEMCTRL

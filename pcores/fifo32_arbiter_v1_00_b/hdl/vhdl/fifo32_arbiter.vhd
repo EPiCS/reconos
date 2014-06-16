@@ -13,8 +13,12 @@ use ieee.numeric_std.all;  --! For unsigned and signed types and conversion from
 library proc_common_v3_00_a;
 use proc_common_v3_00_a.proc_common_pkg.all;
 
+library plb2hwif_v1_00_a;
+use plb2hwif_v1_00_a.hwif_pck.all;
+
 entity fifo32_arbiter is
   generic (
+    C_SLV_DWIDTH     : integer := 32;
     FIFO32_PORTS     : integer := 16;   --! 1 to 16 allowed
     ARBITRATION_ALGO : integer := 0  --! 0= Round Robin, others not available atm.
     );
@@ -143,11 +147,11 @@ entity fifo32_arbiter is
     IN_FIFO32_S_Data_P : in  std_logic_vector(31 downto 0);
     IN_FIFO32_S_Fill_P : in  std_logic_vector(15 downto 0);
     IN_FIFO32_S_Rd_P   : out std_logic;
-    
+
     IN_FIFO32_M_Data_P : out std_logic_vector(31 downto 0);
     IN_FIFO32_M_Rem_P  : in  std_logic_vector(15 downto 0);
     IN_FIFO32_M_Wr_P   : out std_logic;
-    
+
     -- Single FIFO32 Output
     OUT_FIFO32_S_Data : out std_logic_vector(31 downto 0);
     OUT_FIFO32_S_Fill : out std_logic_vector(15 downto 0);
@@ -157,9 +161,18 @@ entity fifo32_arbiter is
     OUT_FIFO32_M_Rem  : out std_logic_vector(15 downto 0);
     OUT_FIFO32_M_Wr   : in  std_logic;
 
+    -- Hardware Interface HWIF
+    HWIF2DEC_Addr  : in  std_logic_vector(0 to 31);
+    HWIF2DEC_Data  : in  std_logic_vector(C_SLV_DWIDTH-1 downto 0);
+    HWIF2DEC_RdCE  : in  std_logic;
+    HWIF2DEC_WrCE  : in  std_logic;
+    DEC2HWIF_Data  : out std_logic_vector(C_SLV_DWIDTH-1 downto 0);
+    DEC2HWIF_RdAck : out std_logic;
+    DEC2HWIF_WrAck : out std_logic;
+
     -- Misc
     Rst : in std_logic;
-    clk : in std_logic;                  -- separate clock for control logic
+    clk : in std_logic;                 -- separate clock for control logic
 
     -- Debug signals to ILA
     ila_signals : out std_logic_vector(130 downto 0)
@@ -212,6 +225,33 @@ architecture behavioural of fifo32_arbiter is
       );
   end component;
 
+
+  component hwif_subsystem is
+    generic(
+      C_HWT_ID            : std_logic_vector(31 downto 0) := X"DEADDEAD";  -- Unique ID number of this module
+      C_VERSION           : std_logic_vector(31 downto 0) := X"00000100";  -- Version Identifier
+      C_CAPABILITIES      : std_logic_vector(31 downto 0) := X"00000001";  --Every Bit specifies a capability like performance monitoring etc.
+      C_Perf_Counters_Num : integer                       := 8;  -- How many performance counters do you want?
+      C_SLV_DWIDTH        : integer                       := 32
+      );
+    port (
+      -- HWIF interface
+      HWIF2DEC_Addr  : in  std_logic_vector(0 to 31);
+      HWIF2DEC_Data  : in  std_logic_vector(C_SLV_DWIDTH-1 downto 0);
+      HWIF2DEC_RdCE  : in  std_logic;
+      HWIF2DEC_WrCE  : in  std_logic;
+      DEC2HWIF_Data  : out std_logic_vector(C_SLV_DWIDTH-1 downto 0);
+      DEC2HWIF_RdAck : out std_logic;
+      DEC2HWIF_WrAck : out std_logic;
+
+      -- in-/outputs of internal submodules
+      increments : in  std_logic_vector (C_Perf_Counters_Num-1 downto 0);
+      -- other
+      debug      : out std_logic_vector(109 downto 0);
+      clk        : in  std_logic;
+      rst        : in  std_logic);
+  end component;
+
 --------------------------------------------------------------------------------
 -- Signals
 --------------------------------------------------------------------------------
@@ -238,169 +278,175 @@ architecture behavioural of fifo32_arbiter is
   signal INT_OUT_FIFO32_S_Fill : std_logic_vector(15 downto 0);
   signal INT_OUT_FIFO32_M_Rem  : std_logic_vector(15 downto 0);
 
+  --! Signals from/to the HWIF subsystem
+  constant C_Perf_Counters_Num : integer := 8;  -- How many performance counters do you want?
+  signal increments : std_logic_vector (C_Perf_Counters_Num-1 downto 0);
+  signal hwif_subsystem_rst : std_logic := '0';  -- decouple hwif reset from hw
+                                                 -- thread reset
+
 begin  -- of architecture -------------------------------------------------------
 
   -- connect separate entity ports to internal signal vectors
-  A: if FIFO32_PORTS > 0 generate
+  A : if FIFO32_PORTS > 0 generate
     IN_FIFO32_S_Data((32 * (1 + 0))-1 downto 32 * 0) <= IN_FIFO32_S_Data_A;
     IN_FIFO32_S_Fill((16 * (1 + 0))-1 downto 16 * 0) <= IN_FIFO32_S_Fill_A;
-    IN_FIFO32_S_Rd_A  <= IN_FIFO32_S_Rd(0);
+    IN_FIFO32_S_Rd_A                                 <= IN_FIFO32_S_Rd(0);
 
-    IN_FIFO32_M_Data_A <= IN_FIFO32_M_Data((32 * (1 + 0))-1 downto 32 * 0);
-    IN_FIFO32_M_Rem((16 * (1 + 0))-1 downto 16 * 0)  <= IN_FIFO32_M_Rem_A;
-    IN_FIFO32_M_Wr_A   <= IN_FIFO32_M_Wr(0);
+    IN_FIFO32_M_Data_A                              <= IN_FIFO32_M_Data((32 * (1 + 0))-1 downto 32 * 0);
+    IN_FIFO32_M_Rem((16 * (1 + 0))-1 downto 16 * 0) <= IN_FIFO32_M_Rem_A;
+    IN_FIFO32_M_Wr_A                                <= IN_FIFO32_M_Wr(0);
   end generate;
 
-  B: if FIFO32_PORTS > 1 generate
-  IN_FIFO32_S_Data((32 * (1 + 1))-1 downto 32 * 1) <= IN_FIFO32_S_Data_B;
-  IN_FIFO32_S_Fill((16 * (1 + 1))-1 downto 16 * 1) <= IN_FIFO32_S_Fill_B;
-  IN_FIFO32_S_Rd_B  <= IN_FIFO32_S_Rd(1);
+  B : if FIFO32_PORTS > 1 generate
+    IN_FIFO32_S_Data((32 * (1 + 1))-1 downto 32 * 1) <= IN_FIFO32_S_Data_B;
+    IN_FIFO32_S_Fill((16 * (1 + 1))-1 downto 16 * 1) <= IN_FIFO32_S_Fill_B;
+    IN_FIFO32_S_Rd_B                                 <= IN_FIFO32_S_Rd(1);
 
-  IN_FIFO32_M_Data_B <= IN_FIFO32_M_Data((32 * (1 + 1))-1 downto 32 * 1);
-  IN_FIFO32_M_Rem((16 * (1 + 1))-1 downto 16 * 1)  <= IN_FIFO32_M_Rem_B;
-  IN_FIFO32_M_Wr_B   <= IN_FIFO32_M_Wr(1);
+    IN_FIFO32_M_Data_B                              <= IN_FIFO32_M_Data((32 * (1 + 1))-1 downto 32 * 1);
+    IN_FIFO32_M_Rem((16 * (1 + 1))-1 downto 16 * 1) <= IN_FIFO32_M_Rem_B;
+    IN_FIFO32_M_Wr_B                                <= IN_FIFO32_M_Wr(1);
   end generate;
 
-  C: if FIFO32_PORTS > 2 generate
-  IN_FIFO32_S_Data((32 * (1 + 2))-1 downto 32 * 2) <= IN_FIFO32_S_Data_C;
-  IN_FIFO32_S_Fill((16 * (1 + 2))-1 downto 16 * 2) <= IN_FIFO32_S_Fill_C;
-  IN_FIFO32_S_Rd_C  <= IN_FIFO32_S_Rd(2);
+  C : if FIFO32_PORTS > 2 generate
+    IN_FIFO32_S_Data((32 * (1 + 2))-1 downto 32 * 2) <= IN_FIFO32_S_Data_C;
+    IN_FIFO32_S_Fill((16 * (1 + 2))-1 downto 16 * 2) <= IN_FIFO32_S_Fill_C;
+    IN_FIFO32_S_Rd_C                                 <= IN_FIFO32_S_Rd(2);
 
-  IN_FIFO32_M_Data_C <= IN_FIFO32_M_Data((32 * (1 + 2))-1 downto 32 * 2);
-  IN_FIFO32_M_Rem((16 * (1 + 2))-1 downto 16 * 2)  <= IN_FIFO32_M_Rem_C;
-  IN_FIFO32_M_Wr_C   <= IN_FIFO32_M_Wr(2);
+    IN_FIFO32_M_Data_C                              <= IN_FIFO32_M_Data((32 * (1 + 2))-1 downto 32 * 2);
+    IN_FIFO32_M_Rem((16 * (1 + 2))-1 downto 16 * 2) <= IN_FIFO32_M_Rem_C;
+    IN_FIFO32_M_Wr_C                                <= IN_FIFO32_M_Wr(2);
   end generate;
 
-  D: if FIFO32_PORTS > 3 generate
-  IN_FIFO32_S_Data((32 * (1 + 3))-1 downto 32 * 3) <= IN_FIFO32_S_Data_D;
-  IN_FIFO32_S_Fill((16 * (1 + 3))-1 downto 16 * 3) <= IN_FIFO32_S_Fill_D;
-  IN_FIFO32_S_Rd_D  <= IN_FIFO32_S_Rd(3);
+  D : if FIFO32_PORTS > 3 generate
+    IN_FIFO32_S_Data((32 * (1 + 3))-1 downto 32 * 3) <= IN_FIFO32_S_Data_D;
+    IN_FIFO32_S_Fill((16 * (1 + 3))-1 downto 16 * 3) <= IN_FIFO32_S_Fill_D;
+    IN_FIFO32_S_Rd_D                                 <= IN_FIFO32_S_Rd(3);
 
-  IN_FIFO32_M_Data_D <= IN_FIFO32_M_Data((32 * (1 + 3))-1 downto 32 * 3);
-  IN_FIFO32_M_Rem((16 * (1 + 3))-1 downto 16 * 3)  <= IN_FIFO32_M_Rem_D;
-  IN_FIFO32_M_Wr_D   <= IN_FIFO32_M_Wr(3);
+    IN_FIFO32_M_Data_D                              <= IN_FIFO32_M_Data((32 * (1 + 3))-1 downto 32 * 3);
+    IN_FIFO32_M_Rem((16 * (1 + 3))-1 downto 16 * 3) <= IN_FIFO32_M_Rem_D;
+    IN_FIFO32_M_Wr_D                                <= IN_FIFO32_M_Wr(3);
   end generate;
 
-  E: if FIFO32_PORTS > 4 generate
-  IN_FIFO32_S_Data((32 * (1 + 4))-1 downto 32 * 4) <= IN_FIFO32_S_Data_E;
-  IN_FIFO32_S_Fill((16 * (1 + 4))-1 downto 16 * 4) <= IN_FIFO32_S_Fill_E;
-  IN_FIFO32_S_Rd_E  <= IN_FIFO32_S_Rd(4);
+  E : if FIFO32_PORTS > 4 generate
+    IN_FIFO32_S_Data((32 * (1 + 4))-1 downto 32 * 4) <= IN_FIFO32_S_Data_E;
+    IN_FIFO32_S_Fill((16 * (1 + 4))-1 downto 16 * 4) <= IN_FIFO32_S_Fill_E;
+    IN_FIFO32_S_Rd_E                                 <= IN_FIFO32_S_Rd(4);
 
-  IN_FIFO32_M_Data_E <= IN_FIFO32_M_Data((32 * (1 + 4))-1 downto 32 * 4);
-  IN_FIFO32_M_Rem((16 * (1 + 4))-1 downto 16 * 4)  <= IN_FIFO32_M_Rem_E;
-  IN_FIFO32_M_Wr_E   <= IN_FIFO32_M_Wr(4);
+    IN_FIFO32_M_Data_E                              <= IN_FIFO32_M_Data((32 * (1 + 4))-1 downto 32 * 4);
+    IN_FIFO32_M_Rem((16 * (1 + 4))-1 downto 16 * 4) <= IN_FIFO32_M_Rem_E;
+    IN_FIFO32_M_Wr_E                                <= IN_FIFO32_M_Wr(4);
   end generate;
 
-  F: if FIFO32_PORTS > 5 generate
-  IN_FIFO32_S_Data((32 * (1 + 5))-1 downto 32 * 5) <= IN_FIFO32_S_Data_F;
-  IN_FIFO32_S_Fill((16 * (1 + 5))-1 downto 16 * 5) <= IN_FIFO32_S_Fill_F;
-  IN_FIFO32_S_Rd_F  <= IN_FIFO32_S_Rd(5);
+  F : if FIFO32_PORTS > 5 generate
+    IN_FIFO32_S_Data((32 * (1 + 5))-1 downto 32 * 5) <= IN_FIFO32_S_Data_F;
+    IN_FIFO32_S_Fill((16 * (1 + 5))-1 downto 16 * 5) <= IN_FIFO32_S_Fill_F;
+    IN_FIFO32_S_Rd_F                                 <= IN_FIFO32_S_Rd(5);
 
-  IN_FIFO32_M_Data_F <= IN_FIFO32_M_Data((32 * (1 + 5))-1 downto 32 * 5);
-  IN_FIFO32_M_Rem((16 * (1 + 5))-1 downto 16 * 5)  <= IN_FIFO32_M_Rem_F;
-  IN_FIFO32_M_Wr_F   <= IN_FIFO32_M_Wr(5);
+    IN_FIFO32_M_Data_F                              <= IN_FIFO32_M_Data((32 * (1 + 5))-1 downto 32 * 5);
+    IN_FIFO32_M_Rem((16 * (1 + 5))-1 downto 16 * 5) <= IN_FIFO32_M_Rem_F;
+    IN_FIFO32_M_Wr_F                                <= IN_FIFO32_M_Wr(5);
   end generate;
 
-  G: if FIFO32_PORTS > 6 generate
-  IN_FIFO32_S_Data((32 * (1 + 6))-1 downto 32 * 6) <= IN_FIFO32_S_Data_G;
-  IN_FIFO32_S_Fill((16 * (1 + 6))-1 downto 16 * 6) <= IN_FIFO32_S_Fill_G;
-  IN_FIFO32_S_Rd_G  <= IN_FIFO32_S_Rd(6);
+  G : if FIFO32_PORTS > 6 generate
+    IN_FIFO32_S_Data((32 * (1 + 6))-1 downto 32 * 6) <= IN_FIFO32_S_Data_G;
+    IN_FIFO32_S_Fill((16 * (1 + 6))-1 downto 16 * 6) <= IN_FIFO32_S_Fill_G;
+    IN_FIFO32_S_Rd_G                                 <= IN_FIFO32_S_Rd(6);
 
-  IN_FIFO32_M_Data_G <= IN_FIFO32_M_Data((32 * (1 + 6))-1 downto 32 * 6);
-  IN_FIFO32_M_Rem((16 * (1 + 6))-1 downto 16 * 6)  <= IN_FIFO32_M_Rem_G;
-  IN_FIFO32_M_Wr_G   <= IN_FIFO32_M_Wr(6);
+    IN_FIFO32_M_Data_G                              <= IN_FIFO32_M_Data((32 * (1 + 6))-1 downto 32 * 6);
+    IN_FIFO32_M_Rem((16 * (1 + 6))-1 downto 16 * 6) <= IN_FIFO32_M_Rem_G;
+    IN_FIFO32_M_Wr_G                                <= IN_FIFO32_M_Wr(6);
   end generate;
 
-  H: if FIFO32_PORTS > 7 generate
-  IN_FIFO32_S_Data((32 * (1 + 7))-1 downto 32 * 7) <= IN_FIFO32_S_Data_H;
-  IN_FIFO32_S_Fill((16 * (1 + 7))-1 downto 16 * 7) <= IN_FIFO32_S_Fill_H;
-  IN_FIFO32_S_Rd_H  <= IN_FIFO32_S_Rd(7);
+  H : if FIFO32_PORTS > 7 generate
+    IN_FIFO32_S_Data((32 * (1 + 7))-1 downto 32 * 7) <= IN_FIFO32_S_Data_H;
+    IN_FIFO32_S_Fill((16 * (1 + 7))-1 downto 16 * 7) <= IN_FIFO32_S_Fill_H;
+    IN_FIFO32_S_Rd_H                                 <= IN_FIFO32_S_Rd(7);
 
-  IN_FIFO32_M_Data_H <= IN_FIFO32_M_Data((32 * (1 + 7))-1 downto 32 * 7);
-  IN_FIFO32_M_Rem((16 * (1 + 7))-1 downto 16 * 7)  <= IN_FIFO32_M_Rem_H;
-  IN_FIFO32_M_Wr_H   <= IN_FIFO32_M_Wr(7);
+    IN_FIFO32_M_Data_H                              <= IN_FIFO32_M_Data((32 * (1 + 7))-1 downto 32 * 7);
+    IN_FIFO32_M_Rem((16 * (1 + 7))-1 downto 16 * 7) <= IN_FIFO32_M_Rem_H;
+    IN_FIFO32_M_Wr_H                                <= IN_FIFO32_M_Wr(7);
   end generate;
 
-  I: if FIFO32_PORTS > 8 generate
-  IN_FIFO32_S_Data((32 * (1 + 8))-1 downto 32 * 8) <= IN_FIFO32_S_Data_I;
-  IN_FIFO32_S_Fill((16 * (1 + 8))-1 downto 16 * 8) <= IN_FIFO32_S_Fill_I;
-  IN_FIFO32_S_Rd_I  <= IN_FIFO32_S_Rd(8);
+  I : if FIFO32_PORTS > 8 generate
+    IN_FIFO32_S_Data((32 * (1 + 8))-1 downto 32 * 8) <= IN_FIFO32_S_Data_I;
+    IN_FIFO32_S_Fill((16 * (1 + 8))-1 downto 16 * 8) <= IN_FIFO32_S_Fill_I;
+    IN_FIFO32_S_Rd_I                                 <= IN_FIFO32_S_Rd(8);
 
-  IN_FIFO32_M_Data_I <= IN_FIFO32_M_Data((32 * (1 + 8))-1 downto 32 * 8);
-  IN_FIFO32_M_Rem((16 * (1 + 8))-1 downto 16 * 8)  <= IN_FIFO32_M_Rem_I;
-  IN_FIFO32_M_Wr_I   <= IN_FIFO32_M_Wr(8);
+    IN_FIFO32_M_Data_I                              <= IN_FIFO32_M_Data((32 * (1 + 8))-1 downto 32 * 8);
+    IN_FIFO32_M_Rem((16 * (1 + 8))-1 downto 16 * 8) <= IN_FIFO32_M_Rem_I;
+    IN_FIFO32_M_Wr_I                                <= IN_FIFO32_M_Wr(8);
   end generate;
 
-  J: if FIFO32_PORTS > 9 generate
-  IN_FIFO32_S_Data((32 * (1 + 9))-1 downto 32 * 9) <= IN_FIFO32_S_Data_J;
-  IN_FIFO32_S_Fill((16 * (1 + 9))-1 downto 16 * 9) <= IN_FIFO32_S_Fill_J;
-  IN_FIFO32_S_Rd_J  <= IN_FIFO32_S_Rd(9);
+  J : if FIFO32_PORTS > 9 generate
+    IN_FIFO32_S_Data((32 * (1 + 9))-1 downto 32 * 9) <= IN_FIFO32_S_Data_J;
+    IN_FIFO32_S_Fill((16 * (1 + 9))-1 downto 16 * 9) <= IN_FIFO32_S_Fill_J;
+    IN_FIFO32_S_Rd_J                                 <= IN_FIFO32_S_Rd(9);
 
-  IN_FIFO32_M_Data_J <= IN_FIFO32_M_Data((32 * (1 + 9))-1 downto 32 * 9);
-  IN_FIFO32_M_Rem((16 * (1 + 9))-1 downto 16 * 9)  <= IN_FIFO32_M_Rem_J;
-  IN_FIFO32_M_Wr_J   <= IN_FIFO32_M_Wr(9);
+    IN_FIFO32_M_Data_J                              <= IN_FIFO32_M_Data((32 * (1 + 9))-1 downto 32 * 9);
+    IN_FIFO32_M_Rem((16 * (1 + 9))-1 downto 16 * 9) <= IN_FIFO32_M_Rem_J;
+    IN_FIFO32_M_Wr_J                                <= IN_FIFO32_M_Wr(9);
   end generate;
 
-  K: if FIFO32_PORTS > 10 generate
-  IN_FIFO32_S_Data((32 * (1 + 10))-1 downto 32 * 10) <= IN_FIFO32_S_Data_K;
-  IN_FIFO32_S_Fill((16 * (1 + 10))-1 downto 16 * 10) <= IN_FIFO32_S_Fill_K;
-  IN_FIFO32_S_Rd_K  <= IN_FIFO32_S_Rd(10);
+  K : if FIFO32_PORTS > 10 generate
+    IN_FIFO32_S_Data((32 * (1 + 10))-1 downto 32 * 10) <= IN_FIFO32_S_Data_K;
+    IN_FIFO32_S_Fill((16 * (1 + 10))-1 downto 16 * 10) <= IN_FIFO32_S_Fill_K;
+    IN_FIFO32_S_Rd_K                                   <= IN_FIFO32_S_Rd(10);
 
-  IN_FIFO32_M_Data_K <= IN_FIFO32_M_Data((32 * (1 + 10))-1 downto 32 * 10);
-  IN_FIFO32_M_Rem((16 * (1 + 10))-1 downto 16 * 10)  <= IN_FIFO32_M_Rem_K;
-  IN_FIFO32_M_Wr_K   <= IN_FIFO32_M_Wr(10);
+    IN_FIFO32_M_Data_K                                <= IN_FIFO32_M_Data((32 * (1 + 10))-1 downto 32 * 10);
+    IN_FIFO32_M_Rem((16 * (1 + 10))-1 downto 16 * 10) <= IN_FIFO32_M_Rem_K;
+    IN_FIFO32_M_Wr_K                                  <= IN_FIFO32_M_Wr(10);
   end generate;
 
-  L: if FIFO32_PORTS > 11 generate
-  IN_FIFO32_S_Data((32 * (1 + 11))-1 downto 32 * 11) <= IN_FIFO32_S_Data_L;
-  IN_FIFO32_S_Fill((16 * (1 + 11))-1 downto 16 * 11) <= IN_FIFO32_S_Fill_L;
-  IN_FIFO32_S_Rd_L  <= IN_FIFO32_S_Rd(11);
+  L : if FIFO32_PORTS > 11 generate
+    IN_FIFO32_S_Data((32 * (1 + 11))-1 downto 32 * 11) <= IN_FIFO32_S_Data_L;
+    IN_FIFO32_S_Fill((16 * (1 + 11))-1 downto 16 * 11) <= IN_FIFO32_S_Fill_L;
+    IN_FIFO32_S_Rd_L                                   <= IN_FIFO32_S_Rd(11);
 
-  IN_FIFO32_M_Data_L <= IN_FIFO32_M_Data((32 * (1 + 11))-1 downto 32 * 11);
-  IN_FIFO32_M_Rem((16 * (1 + 11))-1 downto 16 * 11)  <= IN_FIFO32_M_Rem_L;
-  IN_FIFO32_M_Wr_L   <= IN_FIFO32_M_Wr(11);
+    IN_FIFO32_M_Data_L                                <= IN_FIFO32_M_Data((32 * (1 + 11))-1 downto 32 * 11);
+    IN_FIFO32_M_Rem((16 * (1 + 11))-1 downto 16 * 11) <= IN_FIFO32_M_Rem_L;
+    IN_FIFO32_M_Wr_L                                  <= IN_FIFO32_M_Wr(11);
   end generate;
 
-  M: if FIFO32_PORTS > 12 generate
-  IN_FIFO32_S_Data((32 * (1 + 12))-1 downto 32 * 12) <= IN_FIFO32_S_Data_M;
-  IN_FIFO32_S_Fill((16 * (1 + 12))-1 downto 16 * 12) <= IN_FIFO32_S_Fill_M;
-  IN_FIFO32_S_Rd_M  <= IN_FIFO32_S_Rd(12);
+  M : if FIFO32_PORTS > 12 generate
+    IN_FIFO32_S_Data((32 * (1 + 12))-1 downto 32 * 12) <= IN_FIFO32_S_Data_M;
+    IN_FIFO32_S_Fill((16 * (1 + 12))-1 downto 16 * 12) <= IN_FIFO32_S_Fill_M;
+    IN_FIFO32_S_Rd_M                                   <= IN_FIFO32_S_Rd(12);
 
-  IN_FIFO32_M_Data_M <= IN_FIFO32_M_Data((32 * (1 + 12))-1 downto 32 * 12);
-  IN_FIFO32_M_Rem((16 * (1 + 12))-1 downto 16 * 12)  <= IN_FIFO32_M_Rem_M;
-  IN_FIFO32_M_Wr_M   <= IN_FIFO32_M_Wr(12);
-  end generate;
-  
-  N: if FIFO32_PORTS > 13 generate
-  IN_FIFO32_S_Data((32 * (1 + 13))-1 downto 32 * 13) <= IN_FIFO32_S_Data_N;
-  IN_FIFO32_S_Fill((16 * (1 + 13))-1 downto 16 * 13) <= IN_FIFO32_S_Fill_N;
-  IN_FIFO32_S_Rd_N  <= IN_FIFO32_S_Rd(13);
-
-  IN_FIFO32_M_Data_N <= IN_FIFO32_M_Data((32 * (1 + 13))-1 downto 32 * 13);
-  IN_FIFO32_M_Rem((16 * (1 + 13))-1 downto 16 * 13)  <= IN_FIFO32_M_Rem_N;
-  IN_FIFO32_M_Wr_N   <= IN_FIFO32_M_Wr(13);
+    IN_FIFO32_M_Data_M                                <= IN_FIFO32_M_Data((32 * (1 + 12))-1 downto 32 * 12);
+    IN_FIFO32_M_Rem((16 * (1 + 12))-1 downto 16 * 12) <= IN_FIFO32_M_Rem_M;
+    IN_FIFO32_M_Wr_M                                  <= IN_FIFO32_M_Wr(12);
   end generate;
 
-  O: if FIFO32_PORTS > 14 generate
-  IN_FIFO32_S_Data((32 * (1 + 14))-1 downto 32 * 14) <= IN_FIFO32_S_Data_O;
-  IN_FIFO32_S_Fill((16 * (1 + 14))-1 downto 16 * 14) <= IN_FIFO32_S_Fill_O;
-  IN_FIFO32_S_Rd_O  <= IN_FIFO32_S_Rd(14);
+  N : if FIFO32_PORTS > 13 generate
+    IN_FIFO32_S_Data((32 * (1 + 13))-1 downto 32 * 13) <= IN_FIFO32_S_Data_N;
+    IN_FIFO32_S_Fill((16 * (1 + 13))-1 downto 16 * 13) <= IN_FIFO32_S_Fill_N;
+    IN_FIFO32_S_Rd_N                                   <= IN_FIFO32_S_Rd(13);
 
-  IN_FIFO32_M_Data_O <= IN_FIFO32_M_Data((32 * (1 + 14))-1 downto 32 * 14);
-  IN_FIFO32_M_Rem((16 * (1 + 14))-1 downto 16 * 14)  <= IN_FIFO32_M_Rem_O;
-  IN_FIFO32_M_Wr_O   <= IN_FIFO32_M_Wr(14);
+    IN_FIFO32_M_Data_N                                <= IN_FIFO32_M_Data((32 * (1 + 13))-1 downto 32 * 13);
+    IN_FIFO32_M_Rem((16 * (1 + 13))-1 downto 16 * 13) <= IN_FIFO32_M_Rem_N;
+    IN_FIFO32_M_Wr_N                                  <= IN_FIFO32_M_Wr(13);
   end generate;
 
-  P: if FIFO32_PORTS > 15 generate
-  IN_FIFO32_S_Data((32 * (1 + 15))-1 downto 32 * 15) <= IN_FIFO32_S_Data_P;
-  IN_FIFO32_S_Fill((16 * (1 + 15))-1 downto 16 * 15) <= IN_FIFO32_S_Fill_P;
-  IN_FIFO32_S_Rd_P  <= IN_FIFO32_S_Rd(15);
+  O : if FIFO32_PORTS > 14 generate
+    IN_FIFO32_S_Data((32 * (1 + 14))-1 downto 32 * 14) <= IN_FIFO32_S_Data_O;
+    IN_FIFO32_S_Fill((16 * (1 + 14))-1 downto 16 * 14) <= IN_FIFO32_S_Fill_O;
+    IN_FIFO32_S_Rd_O                                   <= IN_FIFO32_S_Rd(14);
 
-  IN_FIFO32_M_Data_P <= IN_FIFO32_M_Data((32 * (1 + 15))-1 downto 32 * 15);
-  IN_FIFO32_M_Rem((16 * (1 + 15))-1 downto 16 * 15)  <= IN_FIFO32_M_Rem_P;
-  IN_FIFO32_M_Wr_P   <= IN_FIFO32_M_Wr(15);
+    IN_FIFO32_M_Data_O                                <= IN_FIFO32_M_Data((32 * (1 + 14))-1 downto 32 * 14);
+    IN_FIFO32_M_Rem((16 * (1 + 14))-1 downto 16 * 14) <= IN_FIFO32_M_Rem_O;
+    IN_FIFO32_M_Wr_O                                  <= IN_FIFO32_M_Wr(14);
   end generate;
-  
+
+  P : if FIFO32_PORTS > 15 generate
+    IN_FIFO32_S_Data((32 * (1 + 15))-1 downto 32 * 15) <= IN_FIFO32_S_Data_P;
+    IN_FIFO32_S_Fill((16 * (1 + 15))-1 downto 16 * 15) <= IN_FIFO32_S_Fill_P;
+    IN_FIFO32_S_Rd_P                                   <= IN_FIFO32_S_Rd(15);
+
+    IN_FIFO32_M_Data_P                                <= IN_FIFO32_M_Data((32 * (1 + 15))-1 downto 32 * 15);
+    IN_FIFO32_M_Rem((16 * (1 + 15))-1 downto 16 * 15) <= IN_FIFO32_M_Rem_P;
+    IN_FIFO32_M_Wr_P                                  <= IN_FIFO32_M_Wr(15);
+  end generate;
+
   OUT_FIFO32_S_Fill <= INT_OUT_FIFO32_S_Fill;
   OUT_FIFO32_M_Rem  <= INT_OUT_FIFO32_M_Rem;
   -- Slave part of fifo link
@@ -489,6 +535,33 @@ begin  -- of architecture ------------------------------------------------------
       sel      => sel2fsm
       );
 
+
+  hwif : hwif_subsystem
+    generic map(
+      C_HWT_ID            => C_ID_ARBITER,  -- Unique ID number of this module
+      C_VERSION           => X"00000100",  -- Version Identifier
+      C_CAPABILITIES      => C_CAP_PERFMON,  --Every Bit specifies a capability like performance monitoring etc.
+      C_Perf_Counters_Num => C_Perf_Counters_Num,  -- How many performance counters do you want?
+      C_SLV_DWIDTH        => 32
+      )
+    port map(
+      -- HWIF interface
+      HWIF2DEC_Addr  => HWIF2DEC_Addr,
+      HWIF2DEC_Data  => HWIF2DEC_Data,
+      HWIF2DEC_RdCE  => HWIF2DEC_RdCE,
+      HWIF2DEC_WrCE  => HWIF2DEC_WrCE,
+      DEC2HWIF_Data  => DEC2HWIF_Data,
+      DEC2HWIF_RdAck => DEC2HWIF_RdAck,
+      DEC2HWIF_WrAck => DEC2HWIF_WrAck,
+
+      -- in-/outputs of internal submodules
+      increments => increments,
+      
+      -- other
+      debug      => open,
+      clk        => clk,
+      rst        => hwif_subsystem_rst);
+
   request_p : process (clk, rst, in_fifo32_s_fill)
     is
 
@@ -527,36 +600,36 @@ begin  -- of architecture ------------------------------------------------------
       -- for ILA debug
 
       case state is
-        when MODE_LENGTH => ila_signals(3 downto 2)<= "00";
-        when ADDRESS     => ila_signals(3 downto 2)<= "01";
-        when DATA_READ   => ila_signals(3 downto 2)<= "10";
-        when DATA_WRITE  => ila_signals(3 downto 2)<= "11";
-        when others => null;
+        when MODE_LENGTH => ila_signals(3 downto 2) <= "00";
+        when ADDRESS     => ila_signals(3 downto 2) <= "01";
+        when DATA_READ   => ila_signals(3 downto 2) <= "10";
+        when DATA_WRITE  => ila_signals(3 downto 2) <= "11";
+        when others      => null;
       end case;
 
       -- ila signals 0 to 7 are always present, but only available sel2fsm
       -- signals are connected. ila_signals(7) is a buffer to prevent an
       -- illegal assignment.
       ila_signals(clog2(FIFO32_PORTS)-1 downto 0) <= sel2fsm;
-      ila_signals(7 downto clog2(FIFO32_PORTS)) <= (others => '0');
-      
+      ila_signals(7 downto clog2(FIFO32_PORTS))   <= (others => '0');
+
       -- ila signals 8 to 15 are always present, but only available sel2mux
       -- signals are connected. ila_signals(15) is a buffer to prevent an
       -- illegal assignment.
       ila_signals(clog2(FIFO32_PORTS)-1+8 downto 8) <= sel2mux;
-      ila_signals(15 downto clog2(FIFO32_PORTS)+8) <= (others => '0');
+      ila_signals(15 downto clog2(FIFO32_PORTS)+8)  <= (others => '0');
 
       ila_signals(FIFO32_PORTS-1+16 downto 16) <= requests;
-      ila_signals(32 downto FIFO32_PORTS+16) <= (others => '0');
-      
-      ila_signals(64 downto 33 ) <= INT_OUT_FIFO32_S_Data;
-      ila_signals(80 downto 65) <= INT_OUT_FIFO32_S_Fill;
-      ila_signals(81) <= OUT_FIFO32_S_Rd;
+      ila_signals(32 downto FIFO32_PORTS+16)   <= (others => '0');
 
-      ila_signals(113 downto 82) <= OUT_FIFO32_M_Data;
+      ila_signals(64 downto 33) <= INT_OUT_FIFO32_S_Data;
+      ila_signals(80 downto 65) <= INT_OUT_FIFO32_S_Fill;
+      ila_signals(81)           <= OUT_FIFO32_S_Rd;
+
+      ila_signals(113 downto 82)  <= OUT_FIFO32_M_Data;
       ila_signals(129 downto 114) <= INT_OUT_FIFO32_M_Rem;
-      ila_signals(130) <= OUT_FIFO32_M_Wr;
-      
+      ila_signals(130)            <= OUT_FIFO32_M_Wr;
+
       -- default is to hold all outputs.
       state         := state;
       selection     := selection;
@@ -605,4 +678,16 @@ begin  -- of architecture ------------------------------------------------------
     end if;
   end process;
 
+  checksum : process(clk, rst)
+    is
+    
+  begin
+  -- TODO:
+  -- - include crc32 code, put it into external code directory
+  -- - include HWIF
+  -- programm register bank
+  -- sel2mux -- something to recognize which hwt is transferring data
+  -- OUT_FIFO32_S_Rd = '1'   --  downstream read command 
+  -- OUT_FIFO32_M_Wr = '1'   -- downstream write command
+  end process;
 end architecture;
