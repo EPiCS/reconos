@@ -27,24 +27,35 @@ use easics_v1_00_a.PCK_CRC32_D32.all;
 --! Address Map:
 --! 0x0 : ID Register, returning unique ID for this module
 --! 0x1 : length register, returning length of memory mapped area
---! 0x2 : reset register: resets individual checksum channels
---! 0x3 : enable register: enables individual checksum channels
---! 0x4 to C_NUM_CHANNELS+3 : checksum registers, read only
+--! 0x2 : config register, encodes number of channels and checksum algorithm
+--! 0x3 : reset register: resets individual checksum channels
+--! 0x4 : enable register: enables individual checksum channels
+--! 0x5 to C_NUM_CHANNELS+4 : checksum registers, read only
 --!
 --! Register Layout:
+--!
+--! Config Register:
+--! Stores the static configuration of this module, read-only.
+--! Bits 31 downto 24 ( 8 bits): Number of channels
+--! Bits 23 downto  4 (20 bits): none, keep value for compatibility
+--! Bits  3 downto  0 ( 4 bits): encodes checksum algo, 0 is crc32
 --!
 --! Reset Register:
 --! Every bit represents one checksum channel. LSB is channel 0,
 --! MSB is channel 31. If a bit is set to 1 its corresponding checksum register
---! is resetted to zero.
+--! is resetted to zero, as well as its enable bit. Bits automatically reset to
+--! 0 after a successful reset.
 --!
 --! Enable Register:
 --! Every bit represents one checksum channel. LSB is channel 0,
 --! MSB is channel 31. If a bit is set to 1 its corresponding checksum channel
 --! is enabled, which means that the checksum will be updated if the channel
---! receives data.
+--! receives data. If set to 0 the current checksum will not change.
 --!
---! Checksum Register: 32 bit wide unsigned integer, reflecting the number checksum.
+--! Checksum Register:
+--! 32 bit wide unsigned integer, reflecting the checksum according
+--! to the set checksum algorithm. Default reset value: 0x00000000
+--! Read-only
 --!
 entity hwif_checksum is
   generic(
@@ -163,11 +174,19 @@ begin
           debugged_HWT2IP_Data <= enables;
         when C_Fixed_Reg_Count to C_Fixed_Reg_Count+ C_NUM_CHANNELS-1 =>
           debugged_HWT2IP_Data <= registers(to_integer(unsigned(IP2HWT_Addr(0 to 29)))-C_Fixed_Reg_Count);
-        when others =>
+
+          when others =>
           debugged_HWT2IP_Data <= (others=> '0');
-        end case;
-        
+        end case;        
       end if;
+
+      -- Automatically reset the reset bits
+       for i in 0 to C_Num_Channels - 1 loop
+        if resets(i) = '1' then
+          resets(i) <= '0';
+          enables(i)<= '0';
+        end if;
+      end loop;
     end if;
   end process;
 
@@ -175,15 +194,20 @@ begin
   counting : process(clk, rst, registers, resets, enables)
   begin
     if rst = '1'then
-      registers(0 to C_NUM_CHANNELS - 1) <= (others=>(others => '0'));
+      registers <= (others=>(others => '0'));
     elsif clk'event and clk = '1' then
-      if enables(0) = '1' then
-        for i in 0 to C_NUM_CHANNELS - 1 loop
+      if enables(to_integer(unsigned(channel))) = '1' then
+        
           if data_valid = '1'  then
-            registers(i) <= std_logic_vector(unsigned(registers(i)) +1);
+            registers(to_integer(unsigned(channel))) <= not nextCRC32_D32(data, not registers(to_integer(unsigned(channel))));
           end if;
-        end loop;
+        
       end if;
+      for i in 0 to C_Num_Channels - 1 loop
+        if resets(i) = '1' then
+          registers(i) <= (others =>'0');
+        end if;
+      end loop;
     end if;
   end process;
 
