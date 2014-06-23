@@ -228,11 +228,13 @@ architecture behavioural of fifo32_arbiter is
 
   component hwif_subsystem is
     generic(
-      C_HWT_ID            : std_logic_vector(31 downto 0) := X"DEADDEAD";  -- Unique ID number of this module
-      C_VERSION           : std_logic_vector(31 downto 0) := X"00000100";  -- Version Identifier
-      C_CAPABILITIES      : std_logic_vector(31 downto 0) := X"00000001";  --Every Bit specifies a capability like performance monitoring etc.
-      C_Perf_Counters_Num : integer                       := 8;  -- How many performance counters do you want?
-      C_SLV_DWIDTH        : integer                       := 32
+      C_HWT_ID                : std_logic_vector(31 downto 0) := X"DEADDEAD";  -- Unique ID number of this module
+      C_VERSION               : std_logic_vector(31 downto 0) := X"00000100";  -- Version Identifier
+      C_CAPABILITIES          : std_logic_vector(31 downto 0) := X"00000001";  --Every Bit specifies a capability like performance monitoring etc.
+      C_Perf_Counters_Num     : integer                       := 8;  -- How many performance counters do you want?
+      C_CHECKSUM_NUM_CHANNELS : integer                       := 32;
+      C_CHECKSUM_ALGO         : integer                       := 0;
+      C_SLV_DWIDTH            : integer                       := 32
       );
     port (
       -- HWIF interface
@@ -244,21 +246,41 @@ architecture behavioural of fifo32_arbiter is
       DEC2HWIF_RdAck : out std_logic;
       DEC2HWIF_WrAck : out std_logic;
 
-      -- in-/outputs of internal submodules
-      increments : in  std_logic_vector (C_Perf_Counters_Num-1 downto 0);
+      -- In-/outputs of internal submodules
+      -- Performance Monitors custom signals
+      increments : in std_logic_vector (C_Perf_Counters_Num-1 downto 0);
+
+      -- Checksum generators custom signals
+      read_data       : in std_logic_vector(31 downto 0);
+      read_data_valid : in std_logic;
+      read_channel    : in std_logic_vector(clog2(C_CHECKSUM_NUM_CHANNELS)-1 downto 0);
+
+      write_data       : in std_logic_vector(31 downto 0);
+      write_data_valid : in std_logic;
+      write_channel    : in std_logic_vector(clog2(C_CHECKSUM_NUM_CHANNELS)-1 downto 0);
+
+      -- GPIO 
+      write_inhibit : in std_logic_vector(31 downto 0);
+
       -- other
-      debug      : out std_logic_vector(109 downto 0);
-      clk        : in  std_logic;
-      rst        : in  std_logic);
+      debug : out std_logic_vector(109 downto 0);
+
+      clk : in std_logic;
+      rst : in std_logic);
   end component;
 
+--------------------------------------------------------------------------------
+-- Constants
+--------------------------------------------------------------------------------
+
+  constant C_CHECKSUM_NUM_CHANNELS : integer := 16;
 --------------------------------------------------------------------------------
 -- Signals
 --------------------------------------------------------------------------------
   -- Internal signal vectors to unify all 16 FIFO32 ports
-  signal IN_FIFO32_S_Data : std_logic_vector((32*FIFO32_PORTS)-1 downto 0);
-  signal IN_FIFO32_S_Fill : std_logic_vector((16*FIFO32_PORTS)-1 downto 0);
-  signal IN_FIFO32_S_Rd   : std_logic_vector(FIFO32_PORTS-1 downto 0);
+  signal IN_FIFO32_S_Data          : std_logic_vector((32*FIFO32_PORTS)-1 downto 0);
+  signal IN_FIFO32_S_Fill          : std_logic_vector((16*FIFO32_PORTS)-1 downto 0);
+  signal IN_FIFO32_S_Rd            : std_logic_vector(FIFO32_PORTS-1 downto 0);
 
   signal IN_FIFO32_M_Data : std_logic_vector((32*FIFO32_PORTS)-1 downto 0);
   signal IN_FIFO32_M_Rem  : std_logic_vector((16*FIFO32_PORTS)-1 downto 0);
@@ -279,11 +301,23 @@ architecture behavioural of fifo32_arbiter is
   signal INT_OUT_FIFO32_M_Rem  : std_logic_vector(15 downto 0);
 
   --! Signals from/to the HWIF subsystem
-  constant C_Perf_Counters_Num : integer := 8;  -- How many performance counters do you want?
-  signal increments : std_logic_vector (C_Perf_Counters_Num-1 downto 0);
-  signal hwif_subsystem_rst : std_logic := '0';  -- decouple hwif reset from hw
-                                                 -- thread reset
+  constant C_Perf_Counters_Num : integer   := 8;  -- How many performance counters do you want?
+  signal increments            : std_logic_vector (C_Perf_Counters_Num-1 downto 0);
+  signal hwif_subsystem_rst    : std_logic := '0';  -- decouple hwif reset from hw
+                                                    -- thread reset
 
+
+  signal read_data       : std_logic_vector(31 downto 0);
+  signal read_data_valid : std_logic;
+  signal read_channel    : std_logic_vector(clog2(C_CHECKSUM_NUM_CHANNELS)-1 downto 0);
+
+  signal write_data       : std_logic_vector(31 downto 0);
+  signal write_data_valid : std_logic;
+  signal write_channel    : std_logic_vector(clog2(C_CHECKSUM_NUM_CHANNELS)-1 downto 0);
+
+  -- GPIO 
+  signal write_inhibit : std_logic_vector(31 downto 0);
+  
 begin  -- of architecture -------------------------------------------------------
 
   -- connect separate entity ports to internal signal vectors
@@ -538,11 +572,13 @@ begin  -- of architecture ------------------------------------------------------
 
   hwif : hwif_subsystem
     generic map(
-      C_HWT_ID            => C_ID_ARBITER,  -- Unique ID number of this module
-      C_VERSION           => X"00000100",  -- Version Identifier
-      C_CAPABILITIES      => C_CAP_PERFMON,  --Every Bit specifies a capability like performance monitoring etc.
-      C_Perf_Counters_Num => C_Perf_Counters_Num,  -- How many performance counters do you want?
-      C_SLV_DWIDTH        => 32
+      C_HWT_ID                => C_ID_ARBITER,  -- Unique ID number of this module
+      C_VERSION               => X"00000100",   -- Version Identifier
+      C_CAPABILITIES          => C_CAP_PERFMON,  --Every Bit specifies a capability like performance monitoring etc.
+      C_Perf_Counters_Num     => C_Perf_Counters_Num,  -- How many performance counters do you want?
+      C_CHECKSUM_NUM_CHANNELS => C_CHECKSUM_NUM_CHANNELS,
+      C_CHECKSUM_ALGO         => 0,
+      C_SLV_DWIDTH            => 32
       )
     port map(
       -- HWIF interface
@@ -554,13 +590,26 @@ begin  -- of architecture ------------------------------------------------------
       DEC2HWIF_RdAck => DEC2HWIF_RdAck,
       DEC2HWIF_WrAck => DEC2HWIF_WrAck,
 
-      -- in-/outputs of internal submodules
+      -- In-/outputs of internal submodules
+      -- Performance Monitors custom signals
       increments => increments,
-      
+
+      -- Checksum generators custom signals
+      read_data       => read_data,
+      read_data_valid => read_data_valid,
+      read_channel    => read_channel,
+
+      write_data       => write_data,
+      write_data_valid => write_data_valid,
+      write_channel    => write_channel,
+
+      -- GPIO 
+      write_inhibit => write_inhibit,
+
       -- other
-      debug      => open,
-      clk        => clk,
-      rst        => hwif_subsystem_rst);
+      debug => open,
+      clk   => clk,
+      rst   => hwif_subsystem_rst);
 
   request_p : process (clk, rst, in_fifo32_s_fill)
     is
@@ -679,15 +728,16 @@ begin  -- of architecture ------------------------------------------------------
   end process;
 
   checksum : process(clk, rst)
-    is
+  is
     
   begin
-  -- TODO:
-  -- - include crc32 code, put it into external code directory
-  -- - include HWIF
-  -- programm register bank
-  -- sel2mux -- something to recognize which hwt is transferring data
-  -- OUT_FIFO32_S_Rd = '1'   --  downstream read command 
-  -- OUT_FIFO32_M_Wr = '1'   -- downstream write command
+      read_data       <= OUT_FIFO32_M_Data;
+      read_data_valid <= OUT_FIFO32_M_Wr;
+      read_channel    <= sel2mux;
+
+      write_data       <= INT_OUT_FIFO32_S_Data;
+      write_data_valid <= OUT_FIFO32_S_Rd;
+      write_channel    <= sel2mux;
   end process;
+  
 end architecture;

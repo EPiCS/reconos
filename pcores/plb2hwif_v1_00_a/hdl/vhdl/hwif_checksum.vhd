@@ -74,7 +74,7 @@ entity hwif_checksum is
     HWT2IP_RdAck : out std_logic;
     HWT2IP_WrAck : out std_logic;
 
-    -- Performance Monitors custom signals
+    -- Checksum generators custom signals
     data       : in std_logic_vector(31 downto 0);
     data_valid : in std_logic;
     channel    : in std_logic_vector(clog2(C_NUM_CHANNELS)-1 downto 0);
