@@ -46,38 +46,16 @@ extern void mbox_destroy(struct mbox *mb);
  *   mb  - pointer to the mbox
  *   msg - message to put into the mbox
  */
-extern int mbox_put(struct mbox *mb, uint32_t msg);
-
-
-/*
- * Puts a single word into the mbox and blocks if it is full.
- *
- *   mb  - pointer to the mbox
- *   msg - message to put into the mbox
- *
- *   @returns -1 if interrupted, otherwise 0
- */
-extern int mbox_put_interruptible(struct mbox *mb, uint32_t msg);
+extern void mbox_put(struct mbox *mb, uint32_t msg);
 
 /*
  * Gets a single word out of the mbox and blocks if it is full.
  *
  *   mb - pointer to the mbox
  *
- *   @returns the message out of the mbox
+ *   returns the message out of the mbox
  */
 extern uint32_t mbox_get(struct mbox *mb);
-
-/*
- * Gets a single word out the mbox and blocks if it is full.
- *
- *   mb  - pointer to the mbox
- *   msg - message out of the mbox
- *
- *   @returns -1 if interrupted, otherwise 0
- *
- */
- extern int mbox_get_interruptible(struct mbox *mb, uint32_t *msg);
 
 /*
  * Tries to get a single word out of the mbox but does not block.

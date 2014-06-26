@@ -7,7 +7,7 @@
  *
  * ======================================================================
  *
- *   title:        ReconOS library - Delegate thread
+ *   title:        ReconOS library - Utils
  *
  *   project:      ReconOS
  *   author:       Andreas Agne, University of Paderborn
@@ -15,14 +15,43 @@
  *                 Daniel Borkmann, ETH Zürich
  *                 Sebastian Meisner, University of Paderborn
  *                 Christoph Rüthing, University of Paderborn
- *   description:  Delegate methods to handle call from HWTs.
+ *   description:  Some simple helper funtions
  *
  * ======================================================================
  */
 
-#ifndef RECONOS_HWT_DELEGATE_H
-#define RECONOS_HWT_DELEGATE_H
+#ifndef RECONOS_UTILS_H
+#define RECONOS_UTILS_H
 
-void *reconos_hwt_delegate(void *arg);
+#ifdef RECONOS_DEBUG
+ #define debug(...) printf(__VA_ARGS__)
+#else
+ #define debug(...)
+#endif
 
-#endif /* RECONOS_HWT_DELEGATE_H */
+static inline void die() {
+	exit(EXIT_FAILURE);
+}
+
+static inline void panic(char *msg, ...) {
+	va_list vl;
+
+	va_start(vl, msg);
+	vfprintf(stderr, msg, vl);
+	va_end(vl);
+
+	fflush(stderr);
+	die();
+}
+
+static inline void whine(char *msg, ...) {
+	va_list vl;
+
+	va_start(vl, msg);
+	vfprintf(stderr, msg, vl);
+	va_end(vl);
+
+	fflush(stderr);
+}
+
+#endif /* RECONOS_UTILS_H */

@@ -30,7 +30,6 @@
 extern int reconos_osif_open(int num);
 extern uint32_t reconos_osif_read(int fd);
 extern void reconos_osif_write(int fd, uint32_t data);
-extern void reconos_osif_break(int fd);
 extern void reconos_osif_close(int fd);
 
 
@@ -45,7 +44,6 @@ extern void reconos_proc_control_clear_page_fault(int fd);
 extern void reconos_proc_control_set_pgd(int fd);
 extern void reconos_proc_control_sys_reset(int fd);
 extern void reconos_proc_control_hwt_reset(int fd, int num, int reset);
-extern void reconos_proc_control_hwt_signal(int fd, int num, int signal);
 extern void reconos_proc_control_cache_flush(int fd);
 extern void reconos_proc_control_close(int fd);
 

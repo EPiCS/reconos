@@ -35,105 +35,216 @@
 #include <asm/uaccess.h>
 #include <linux/spinlock.h>
 
-// these ones could be made accessible by the user via module_param
-#define OSIF_INTC_BASE_ADDR  0x7B400000
-#define OSIF_INTC_MEM_SIZE   0x10000
+/*
+ * Definition of memory
+ *
+ *   base_addr - base address as configured in the hardware design
+ *   mem_siz   - size of the memory region available
+ */
+#define BASE_ADDR  0x7B400000
+#define MEM_SIZE   0x10000
 
-#ifdef RECONOS_ARCH_zynq
-#define OSIF_INTC_IRQ        90
+/*
+ * Definition of interrupt numbers (architecture specific)
+ *
+ *   irq - interrupt number to which the proc control is connected
+ */
+#if defined(RECONOS_ARCH_zynq)
+#define IRQ       90
+#elif defined(RECONOS_ARCH_microblaze)
+#define IRQ       4
 #endif
 
-#ifdef RECONOS_ARCH_microblaze
-#define OSIF_INTC_IRQ        4
-#endif
+/*
+ * Register definitions as offset from base address
+ *
+ *   irq_enable_reg    - write to set interrupt enable
+ */
+#define IRQ_ENABLE_REG(hwt)    (0x00 + HWT_REG_OFFSET(hwt) * 4)
 
-
+/*
+ * Struct representing the interrupt controller device
+ *
+ *   name            - name to identify the device driver
+ *   base_addr       - base addr (should always be BASE_ADDR)
+ *   mem_size        - memory size (should always be MEM_SIZE)
+ *   irq             - irq number (should always be IRQ)
+ *
+ *   mem             - pointer to the io memory
+ *   wait            - wait queue for interrupts
+ *   irq_reg         - array representing the interrupt signals
+ *   irq_enable      - array representing the interrupt enables
+ *   irq_break       - array indicating whether breaked in wait
+ *
+ *   mdev            - misc device data structure
+ *
+ *   lock            - spinlock for synchronization
+ */
 struct osif_intc_dev {
 	char name[25];
-	unsigned int addr;
+	uint32_t base_addr;
+	int mem_size;
 	int irq;
 
 	void __iomem *mem;
-
-	uint32_t *irq_reg;
-	size_t irq_reg_count;
-	uint32_t *irq_enable;
-
 	wait_queue_head_t wait;
-	spinlock_t lock;
+	uint32_t *irq_reg;
+	uint32_t *irq_enable;
+	uint32_t *irq_break;
 
 	struct miscdevice mdev;
+
+	spinlock_t lock;
 };
 
+static struct osif_intc_dev osif_intc;
 
-static struct osif_intc_dev osif_intc_dev;
 
+/* == Low level functions ============================================== */
 
-// some low level functions
-
-static inline void osif_intc_write_irq_enable(struct osif_intc_dev *dev) {
+/*
+ * Reads the interrupt register
+ *
+ *   dev - pointer to the interrupt controller struct
+ */
+static inline void read_interrupt(struct osif_intc_dev *dev) {
 	int i;
 
-	//TODO It would be nice only to write the changed registers but its
-	//     not possible to figure out the changes
-	for (i = 0; i < dev->irq_reg_count; i++) {
+	for (i = 0; i < DYNAMIC_REG_COUNT; i++) {
+		dev->irq_reg[i] |= ioread32(dev->mem + i * 4) & dev->irq_enable[i];
+	}
+}
+/*
+ * Writes the interrupt enable registers
+ *
+ *   dev - pointer to the interrupt controller struct
+ */
+static inline void write_interrupt_enable(struct osif_intc_dev *dev) {
+	int i;
+
+	for (i = 0; i < DYNAMIC_REG_COUNT; i++) {
 		iowrite32(dev->irq_enable[i], dev->mem + i * 4);
 	}
 }
 
-
-// functions to control irqs
-
-static inline void osif_intc_enable_interrupt(struct osif_intc_dev *dev,
-                                              unsigned int irq) {
-	unsigned long flags;
-
-	spin_lock_irqsave(&dev->lock, flags);
-
+/*
+ * Enables an interrupt
+ *
+ *   dev - pointer to the interrupt controller struct
+ *   irq - interrupt index to enable
+ */
+static inline void enable_interrupt(struct osif_intc_dev *dev,
+                                    int irq) {
 	dev->irq_reg[irq / 32] &= ~(0x1 << irq % 32);
 
 	dev->irq_enable[irq / 32] |= 0x1 << irq % 32;
-	osif_intc_write_irq_enable(dev);
+	write_interrupt_enable(dev);
 
-	__printk(KERN_DEBUG "[reconos-osif-intc] ... enabling interrupts: 0x%x\n", dev->irq_enable[0]);
-
-	spin_unlock_irqrestore(&dev->lock, flags);
+	__printk(KERN_DEBUG "[reconos-osif-intc] "
+	                    "enabling interrupt %d\n", irq);
 }
 
-static inline void osif_intc_disable_interrupt(struct osif_intc_dev *dev,
-                                               unsigned int irq) {
-	unsigned long flags;
-
-	spin_lock_irqsave(&dev->lock, flags);
-
+/*
+ * Disables an interrupt
+ *
+ *   dev - pointer to the interrupt controller struct
+ *   irq - interrupt index to enable
+ */
+static inline void disable_interrupt(struct osif_intc_dev *dev,
+                                     int irq) {
 	dev->irq_enable[irq / 32] &= ~(0x1 << irq % 32);
-	osif_intc_write_irq_enable(dev);
+	write_interrupt_enable(dev);
 
-	spin_unlock_irqrestore(&dev->lock, flags);
+	__printk(KERN_DEBUG "[reconos-osif-intc] "
+	                    "disabling interrupt %d\n", irq);
 }
 
-static inline int osif_intc_get_irq(struct osif_intc_dev *dev,
-                                    unsigned int irq) {
+/*
+ * Disables all active interrupts
+ *
+ *   dev - pointer to interrupt controller struct
+ */
+static inline void disable_interrupt_active(struct osif_intc_dev *dev) {
+	int i;
+
+	for (i = 0; i < DYNAMIC_REG_COUNT; i++) {
+		dev->irq_enable[i] &= ~dev->irq_reg[i];
+	}
+	write_interrupt_enable(dev);
+}
+
+/*
+ * Returns the status of an interrupt
+ *
+ *   dev - pointer to the interrupt controller struct
+ *   irq - interrupt index to get
+ */
+static inline int get_interrupt(struct osif_intc_dev *dev,
+                                int irq) {
 	return (dev->irq_reg[irq / 32] >> irq % 32) & 0x1;
 }
 
+/*
+ * Enables the break signal
+ *
+ *   dev - pointer to interrupt controller struct
+ *   irq - interrupt index to set
+ */
+static inline void enable_break(struct osif_intc_dev *dev,
+                                int irq) {
+	dev->irq_break[irq / 32] |= 0x1 << irq % 32;
+}
 
-// intc file operations
+/*
+ * Disables the break signal
+ *
+ *   dev - pointer to interrupt controller struct
+ *   irq - interrupt index to set
+ */
+static inline void disable_break(struct osif_intc_dev *dev,
+                                 int irq) {
+	dev->irq_break[irq / 32] &= ~(0x1 << irq % 32);
+}
 
+/*
+ * Returns the break signal of an interrupt
+ *
+ *   dev - pointer to interrupt controller struct
+ *   irq - interrupt index to set
+ */
+static inline int get_break(struct osif_intc_dev *dev,
+                             int irq) {
+	return (dev->irq_break[irq / 32] >> irq % 32) & 0x1;
+}
+
+/* == File operations ================================================== */
+
+/*
+ * Function called when opening the device
+ *
+ *    @see kernel documentation
+ */
 static int osif_intc_open(struct inode *inode, struct file *filp) {
-	filp->private_data = &osif_intc_dev;
+	filp->private_data = &osif_intc;
 
 	return 0;
 }
 
+/*
+ * Function called when issuing an ioctl
+ *
+ * @see kernel documentation
+ */
 static long osif_intc_ioctl(struct file *filp, unsigned int cmd,
                                unsigned long arg) {
-	struct osif_intc_dev *dev = (struct osif_intc_dev *)filp->private_data;
+	struct osif_intc_dev *dev;
+	int irq;
+	unsigned long ret, flags;
 
-	unsigned int index;
+	dev = (struct osif_intc_dev *)filp->private_data;
 
-	copy_from_user(&index, (unsigned int *)arg, sizeof(unsigned int));
-	if (index > NUM_HWTS) {
+	ret = copy_from_user(&irq, (unsigned int *)arg, sizeof(unsigned int));
+	if (irq > NUM_HWTS) {
 		__printk(KERN_WARNING "[reconos-osif-intc] "
 		                      "index out of range, aborting wait ...\n");
 
@@ -143,21 +254,34 @@ static long osif_intc_ioctl(struct file *filp, unsigned int cmd,
 	switch (cmd) {
 		case RECONOS_OSIF_INTC_WAIT:
 			__printk(KERN_DEBUG "[reconos-osif-intc] "
-			                    "waiting for interrupt %d\n", index);
+			                    "waiting for interrupt %d\n", irq);
 
-			osif_intc_enable_interrupt(dev, index);
+			spin_lock_irqsave(&dev->lock, flags);
+			disable_break(dev, irq);
+			enable_interrupt(dev, irq);
+			spin_unlock_irqrestore(&dev->lock, flags);
 
-			// wait for irq (like in osif_intc_get_irq)
-			if (wait_event_interruptible(dev->wait, osif_intc_get_irq(dev, index)) < 0) {
+			if (wait_event_interruptible(dev->wait, get_interrupt(dev, irq) || get_break(dev, irq)) < 0) {
 				__printk(KERN_INFO "[reconos-osif-intc] "
 				                   "interrupted in waiting, aborting ...\n");
 
-				osif_intc_disable_interrupt(dev, index);
+				spin_lock_irqsave(&dev->lock, flags);
+				disable_interrupt(dev, irq);
+				spin_unlock_irqrestore(&dev->lock, flags);
 			} else {
 				__printk(KERN_DEBUG "[reconos-osif-intc] "
-				                    "interrupt %d raised\n", index);
+				                    "interrupted %d (irq: %d, signal: %d)\n",
+				                    irq, get_interrupt(dev, irq), get_break(dev, irq));
 			}
+			break;
 
+		case RECONOS_OSIF_INTC_BREAK:
+			spin_lock_irqsave(&dev->lock, flags);
+			enable_break(dev, irq);
+			disable_interrupt(dev, irq);
+			spin_unlock_irqrestore(&dev->lock, flags);
+
+			wake_up_interruptible(&dev->wait);
 			break;
 
 		default:
@@ -167,6 +291,11 @@ static long osif_intc_ioctl(struct file *filp, unsigned int cmd,
 	return 0;
 }
 
+/*
+ * Struct for file operations to register driver
+ *
+ *    @see kernel documentation
+ */
 static struct file_operations osif_intc_fops = {
 	.owner          = THIS_MODULE,
 	.open           = osif_intc_open,
@@ -174,30 +303,27 @@ static struct file_operations osif_intc_fops = {
 };
 
 
-// interrupt controller functions
+/* == Interrupt handling =============================================== */
 
-static irqreturn_t osif_intc_interrupt(int irq, void *data) {
-	int i;
+/*
+ * Interrupt handler for handling page faults
+ *
+ *   @see kernel documentation
+ */
+static irqreturn_t interrupt(int irq, void *data) {
+	struct osif_intc_dev *dev;
 	unsigned long flags;
-	struct osif_intc_dev *dev = (struct osif_intc_dev *)data;
 
+	dev = (struct osif_intc_dev *)data;
+
+	// read irqs and disable active ones
 	spin_lock_irqsave(&dev->lock, flags);
-
-	// read irqs and mask interrupts
-	for (i = 0; i < dev->irq_reg_count; i++) {
-		dev->irq_reg[i] |= ioread32(dev->mem + i * 4) & dev->irq_enable[i];
-	}
+	read_interrupt(dev);
+	disable_interrupt_active(dev);
+	spin_unlock_irqrestore(&dev->lock, flags);
 
 	__printk(KERN_DEBUG "[reconos-osif-intc] "
-	                    "... osif interrupt: 0x%x with mask 0x%x\n", dev->irq_reg[0], dev->irq_enable[0]);
-
-	// disabling all triggered interrupts
-	for (i = 0; i < dev->irq_reg_count; i++) {
-		dev->irq_enable[i] &= ~dev->irq_reg[i];
-	}
-	osif_intc_write_irq_enable(dev);
-
-	spin_unlock_irqrestore(&dev->lock, flags);
+	                    " osif interrupt: 0x%x\n", dev->irq_reg[0]);
 
 	wake_up_interruptible(&dev->wait);
 
@@ -205,58 +331,66 @@ static irqreturn_t osif_intc_interrupt(int irq, void *data) {
 }
 
 
-// external init and exit functions
+/* == Init and exit functions ========================================== */
 
+/*
+ * @see header
+ */
 int osif_intc_init() {
-	struct osif_intc_dev *dev = &osif_intc_dev;
+	struct osif_intc_dev *dev;
+
+	dev = &osif_intc;
 
 	// set some general information of intc
 	strncpy(dev->name, "reconos-osif-intc", 25);
-	dev->irq = OSIF_INTC_IRQ;
-	dev->addr = OSIF_INTC_BASE_ADDR;
-	dev->irq_reg_count = NUM_HWTS / 32 + 1;
+	dev->base_addr = BASE_ADDR;
+	dev->mem_size = MEM_SIZE;
+	dev->irq = IRQ;
 
 	init_waitqueue_head(&dev->wait);
 	spin_lock_init(&dev->lock);
 
-
 	// allocating interrupt-register
-	dev->irq_reg = kcalloc(dev->irq_reg_count, sizeof(uint32_t), GFP_KERNEL);
+	dev->irq_reg = kcalloc(DYNAMIC_REG_COUNT, sizeof(uint32_t), GFP_KERNEL);
 	if (!dev->irq_reg) {
 		__printk(KERN_WARNING "[reconos-osif-intc] "
 		                      "cannot allocate irq-memory\n");
 		goto irqreg_failed;
 	}
 
-	dev->irq_enable = kcalloc(dev->irq_reg_count, sizeof(uint32_t), GFP_KERNEL);
+	dev->irq_enable = kcalloc(DYNAMIC_REG_COUNT, sizeof(uint32_t), GFP_KERNEL);
 	if (!dev->irq_enable) {
 		__printk(KERN_WARNING "[reconos-osif-intc] "
 		                      "cannot allocate irq-enable\n");
 		goto irqenable_failed;
 	}
 
+	dev->irq_break = kcalloc(DYNAMIC_REG_COUNT, sizeof(uint32_t), GFP_KERNEL);
+	if (!dev->irq_break) {
+		__printk(KERN_WARNING "[reconos-osif-intc] "
+		                      "cannot allocate irq-break\n");
+		goto irqbreak_failed;
+	}
 
 	// allocation io memory to read intc registers
-	if (!request_mem_region(dev->addr, OSIF_INTC_MEM_SIZE, dev->name)) {
+	if (!request_mem_region(BASE_ADDR, MEM_SIZE, dev->name)) {
 		__printk(KERN_WARNING "[reconos-osif-intc] "
 		                      "memory region busy\n");
 		goto req_failed;
 	}
 
-	dev->mem = ioremap(dev->addr, OSIF_INTC_MEM_SIZE);
+	dev->mem = ioremap(BASE_ADDR, MEM_SIZE);
 	if(!dev->mem) {
 		__printk(KERN_WARNING "[reconos-osif-intc] "
 		                      "ioremap failed\n");
 		goto map_failed;
 	}
 
-
 	// disable all interrupts to avoid useless interrupts
-	osif_intc_write_irq_enable(dev);
-
+	write_interrupt_enable(dev);
 
 	// requesting interrupt
-	if(request_irq(dev->irq, osif_intc_interrupt, 0, "reconos-osif-intc", dev)) {
+	if(request_irq(IRQ, interrupt, 0, "reconos-osif-intc", dev)) {
 		__printk(KERN_WARNING "[reconos-osif-intc] "
 		                      "can't get irq\n");
 		goto irq_failed;
@@ -270,7 +404,6 @@ int osif_intc_init() {
 	if (misc_register(&dev->mdev) < 0) {
 		__printk(KERN_WARNING "[reconos-osif-intc] "
 		                      "error while registering misc-device\n");
-
 		goto reg_failed;
 	}
 
@@ -282,13 +415,16 @@ int osif_intc_init() {
 
 reg_failed:
 irq_failed:
-	free_irq(dev->irq, dev);
+	free_irq(IRQ, dev);
 	iounmap(dev->mem);
 
 map_failed:
-	release_mem_region(dev->addr, OSIF_INTC_MEM_SIZE);
+	release_mem_region(BASE_ADDR, MEM_SIZE);
 
 req_failed:
+	kfree(dev->irq_break);
+
+irqbreak_failed:
 	kfree(dev->irq_enable);
 
 irqenable_failed:
@@ -301,21 +437,25 @@ out:
 	return 0;
 }
 
+/*
+ * @see header
+ */
 int osif_intc_exit() {
-	struct osif_intc_dev *dev = &osif_intc_dev;
+	struct osif_intc_dev *dev = &osif_intc;
 
 	__printk(KERN_INFO "[reconos-osif-intc] "
 	                   "removing driver ...\n");
 
 	misc_deregister(&dev->mdev);
 
-	free_irq(dev->irq, dev);
+	free_irq(IRQ, dev);
 
 	iounmap(dev->mem);
-	release_mem_region(dev->addr, OSIF_INTC_MEM_SIZE);
+	release_mem_region(BASE_ADDR, MEM_SIZE);
 
 	kfree(dev->irq_enable);
 	kfree(dev->irq_reg);
+	kfree(dev->irq_break);
 
 	return 0;
 }

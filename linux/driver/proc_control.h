@@ -24,7 +24,31 @@
 
 #include "reconos.h"
 
+/*
+ * Reads the number of hardware threads without need of initialization
+ *
+ *   no parameters
+ *
+ *   @returns -1 on failure, otherwise the number of hardware threads
+ */
+extern int proc_control_num_hwts_static(void);
+
+/*
+ * Initialization function called by module loading
+ *
+ *   no parameters
+ *
+ *   @returns -1 on failure, otherwise 0
+ */
 extern int proc_control_init(void);
+
+/*
+ * Exit function called by module unloading
+ *
+ *   no parameters
+ *
+ *   @returns always 0
+ */
 extern int proc_control_exit(void);
 
 #endif /* RECONOS_DRV_OSIF_H */

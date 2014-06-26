@@ -20,11 +20,7 @@
 #ifndef RECONOS_PRIVATE_H
 #define RECONOS_PRIVATE_H
 
-#include "reconos.h"
 #include "utils.h"
-
-#include <stdint.h>
-#include <semaphore.h>
 
 
 /* == ReconOS hwslot =================================================== */
@@ -81,14 +77,14 @@ struct hwslot {
  *
  *   slot - pointer to the ReconOS slot
  */
-void hwslot_init(struct hwslot *slot, int id, int osif);
+void hwslot_init(struct reconos_hwslot *slot, int id, int osif);
 
 /*
  * Reset the slot.
  *
  *   slot  - pointer to the ReconOS slot
  */
-void hwslot_reset(struct hwslot *slot);
+void hwslot_reset(struct reconos_hwslot *slot);
 
 /*
  * Sets the reset of the slot.
@@ -96,21 +92,21 @@ void hwslot_reset(struct hwslot *slot);
  *   slot  - pointer to the ReconOS slot
  *   reset - zero or one to set the reset
  */
-void hwslot_setreset(struct hwslot *slot, int reset);
+void hwslot_setreset(struct reconos_hwslot *slot, int reset);
 
 /*
  * Creates a new delegate thread if not present.
  *
  *   slot - pointer to the ReconOS slot
  */
-void hwslot_createdelegate(struct hwslot *slot);
+void hwslot_createdelegate(struct reconos_hwslot *slot);
 
 /*
  * Stops the delegate thread at an appropriate point in time
  *
  *   slot - pointer to the ReconOS slot
  */
-void hwslot_stopdelegate(struct hwslot *slot);
+void hwslot_stopdelegate(struct reconos_hwslot *slot);
 
 /*
  * Executes the given ReconOS thread in the slot by resetting
@@ -120,7 +116,7 @@ void hwslot_stopdelegate(struct hwslot *slot);
  *   slot - pointer to the ReconOS slot
  *   rt   - pointer to the ReconOS thread
  */
-void hwslot_createthread(struct hwslot *slot,
+void hwslot_createthread(struct reconos_hwslot *slot,
                          struct reconos_thread *rt);
 
 /*
@@ -129,7 +125,7 @@ void hwslot_createthread(struct hwslot *slot,
  *
  *   slot - pointer to the ReconOS slot
  */
-void hwslot_suspendthread(struct hwslot *slot);
+void hwslot_suspendthread(struct reconos_hwslot *slot);
 
 /*
  * Resumes the thread by restoring its state. Running threads will be
@@ -137,7 +133,7 @@ void hwslot_suspendthread(struct hwslot *slot);
  *
  *   slot - pointer to the ReconOS slot
  */
-void hwslot_resumethread(struct hwslot *slot,
+void hwslot_resumethread(struct reconos_hwslot *slot,
                          struct reconos_thread *rt);
 
 /*
@@ -145,7 +141,7 @@ void hwslot_resumethread(struct hwslot *slot,
  *
  *   slot - pointer to the ReconOS slot
  */
-void hwslot_killthread(struct hwslot *slot);
+void hwslot_killthread(struct reconos_hwslot *slot);
 
 
 /* == ReconOS delegate ================================================= */
@@ -173,14 +169,32 @@ void hwslot_killthread(struct hwslot *slot);
 #define OSIF_CMD_MASK                  0x000000FF
 #define OSIF_CMD_YIELD_MASK            0x80000000
 
-#define OSIF_CMD_THREAD_START          0x01000000
-#define OSIF_CMD_THREAD_RESUME         0x01000001
-
 /*
  * Global method of the delegate thread
  *
  *   arg - pointer to the ReconOS hwslot
  */
 void *dt_delegate(void *arg);
+
+/*
+ * Methods for handling the actual syscall.
+ *
+ *   rt - pointer to the ReconOS hwslot
+ *
+ *   @returns data to write back to hardware thread
+ */
+uint32_t dt_get_init_data(struct hwslot *slot);
+uint32_t dt_sem_post(struct hwslot *slot);
+uint32_t dt_sem_wait(struct hwslot *slot);
+uint32_t dt_mutex_lock(struct hwslot *slot);
+uint32_t dt_mutex_unlock(struct hwslot *slot);
+uint32_t dt_mutex_trylock(struct hwslot *slot);
+uint32_t dt_cond_wait(struct hwslot *slot);
+uint32_t dt_cond_signal(struct hwslot *slot);
+uint32_t dt_cond_broadcast(struct hwslot *slot);
+uint32_t dt_mbox_get(struct hwslot *slot);
+uint32_t dt_mbox_put(struct hwslot *slot);
+uint32_t dt_mbox_tryget(struct hwslot *slot);
+uint32_t dt_mbox_tryput(struct hwslot *slot);
 
 #endif /* RECONOS_PRIVATE_H */

@@ -26,7 +26,22 @@
 
 #include "reconos.h"
 
+/*
+ * Initialization function called by module loading
+ *
+ *   no parameters
+ *
+ *   @returns -1 on failure, otherwise 0
+ */
 extern int osif_intc_init(void);
+
+/*
+ * Exit function called by module unloading
+ *
+ *   no parameters
+ *
+ *   @returns always 0
+ */
 extern int osif_intc_exit(void);
 
 #endif /* RECONOS_DRV_OSIF_INTC_H */

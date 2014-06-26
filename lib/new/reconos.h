@@ -22,7 +22,7 @@
 
 #define RECONOS_VERSION_STRING "v3.1"
 
-extern int RECONOS_NUM_HWTS;
+ extern int RECONOS_NUM_HWTS;
 
 /* == ReconOS resource ================================================= */
 
@@ -105,7 +105,7 @@ struct reconos_thread {
 	int resource_count;
 
 	int state;
-	volatile void *state_data;
+	void *state_data;
 
 	struct hwslot *hwslot;
 
@@ -117,13 +117,9 @@ struct reconos_thread {
  * Initializes the ReconOS thread. Must be called before all other
  * methods.
  *
- *   rt         - pointer to the ReconOS thread
- *   name       - name of the thread (can be null)
- *   state_size - size in bytes for the state of the thread
+ *   rt - pointer to the ReconOS thread
  */
-void reconos_thread_init(struct reconos_thread *rt,
-                         char* name,
-                         int state_size);
+void reconos_thread_init(struct reconos_thread *rt, char* name);
 
 /*
  * Associates initialization data to this thread.

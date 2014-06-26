@@ -27,6 +27,8 @@
 --                   Reg5: ReconOS reset (reset everything) - Write only
 --                   Reg6: HWT reset (multiple registers) - Write only
 --                         | x , x-1, ... | x-32 , x-33, ... 0 |
+--                   Reg7: HWT signal - Write only
+--                         | x , x-1, ... | x-32 , x-33, ... 0 |
 --
 --                   Page fault handling works the following:
 --                     1.) MMU raises MMU_Pgf
@@ -77,42 +79,43 @@ entity reconos_proc_control is
 	);
 	port (
 		-- Proc control ports
-		PROC_Clk        : in  std_logic;
-		PROC_Rst        : in  std_logic;
+		PROC_Clk             : in  std_logic;
+		PROC_Rst             : in  std_logic;
 		-- BEGIN GENERATE LOOP
-		PROC_Hwt_Rst_#i#    : out std_logic;
+		PROC_Hwt_Rst_#i#     : out std_logic;
+		PROC_Hwt_Signal_#i#  : out std_logic;
 		-- END GENERATE LOOP
-		PROC_Sys_Rst    : out std_logic;
-		PROC_Pgf_Int    : out std_logic;
+		PROC_Sys_Rst         : out std_logic;
+		PROC_Pgf_Int         : out std_logic;
 
 		-- MMU related ports
-		MMU_Pgf         : in  std_logic;
-		MMU_Fault_Addr  : in  std_logic_vector(31 downto 0);
-		MMU_Retry       : out std_logic;
-		MMU_Pgd         : out std_logic_vector(31 downto 0);
-		MMU_Tlb_Hits    : in  std_logic_vector(31 downto 0);
-		MMU_Tlb_Misses  : in  std_logic_vector(31 downto 0);
+		MMU_Pgf              : in  std_logic;
+		MMU_Fault_Addr       : in  std_logic_vector(31 downto 0);
+		MMU_Retry            : out std_logic;
+		MMU_Pgd              : out std_logic_vector(31 downto 0);
+		MMU_Tlb_Hits         : in  std_logic_vector(31 downto 0);
+		MMU_Tlb_Misses       : in  std_logic_vector(31 downto 0);
 
 		-- Bus protocol ports, do not add to or delete
-		S_AXI_ACLK      : in  std_logic;
-		S_AXI_ARESETN   : in  std_logic;
-		S_AXI_AWADDR    : in  std_logic_vector(C_S_AXI_ADDR_WIDTH-1 downto 0);
-		S_AXI_AWVALID   : in  std_logic;
-		S_AXI_WDATA     : in  std_logic_vector(C_S_AXI_DATA_WIDTH-1 downto 0);
-		S_AXI_WSTRB     : in  std_logic_vector((C_S_AXI_DATA_WIDTH/8)-1 downto 0);
-		S_AXI_WVALID    : in  std_logic;
-		S_AXI_BREADY    : in  std_logic;
-		S_AXI_ARADDR    : in  std_logic_vector(C_S_AXI_ADDR_WIDTH-1 downto 0);
-		S_AXI_ARVALID   : in  std_logic;
-		S_AXI_RREADY    : in  std_logic;
-		S_AXI_ARREADY   : out std_logic;
-		S_AXI_RDATA     : out std_logic_vector(C_S_AXI_DATA_WIDTH-1 downto 0);
-		S_AXI_RRESP     : out std_logic_vector(1 downto 0);
-		S_AXI_RVALID    : out std_logic;
-		S_AXI_WREADY    : out std_logic;
-		S_AXI_BRESP     : out std_logic_vector(1 downto 0);
-		S_AXI_BVALID    : out std_logic;
-		S_AXI_AWREADY   : out std_logic
+		S_AXI_ACLK           : in  std_logic;
+		S_AXI_ARESETN        : in  std_logic;
+		S_AXI_AWADDR         : in  std_logic_vector(C_S_AXI_ADDR_WIDTH-1 downto 0);
+		S_AXI_AWVALID        : in  std_logic;
+		S_AXI_WDATA          : in  std_logic_vector(C_S_AXI_DATA_WIDTH-1 downto 0);
+		S_AXI_WSTRB          : in  std_logic_vector((C_S_AXI_DATA_WIDTH/8)-1 downto 0);
+		S_AXI_WVALID         : in  std_logic;
+		S_AXI_BREADY         : in  std_logic;
+		S_AXI_ARADDR         : in  std_logic_vector(C_S_AXI_ADDR_WIDTH-1 downto 0);
+		S_AXI_ARVALID        : in  std_logic;
+		S_AXI_RREADY         : in  std_logic;
+		S_AXI_ARREADY        : out std_logic;
+		S_AXI_RDATA          : out std_logic_vector(C_S_AXI_DATA_WIDTH-1 downto 0);
+		S_AXI_RRESP          : out std_logic_vector(1 downto 0);
+		S_AXI_RVALID         : out std_logic;
+		S_AXI_WREADY         : out std_logic;
+		S_AXI_BRESP          : out std_logic_vector(1 downto 0);
+		S_AXI_BVALID         : out std_logic;
+		S_AXI_AWREADY        : out std_logic
 	);
 
 	attribute MAX_FANOUT   : string;
@@ -148,7 +151,8 @@ architecture implementation of reconos_proc_control is
 			ZERO_ADDR_PAD & USER_SLV_HIGHADDR   -- user logic slave space high address
 		);
 
-	constant USER_SLV_NUM_REG   : integer   := C_NUM_HWTS / C_SLV_DWIDTH + 7;
+	constant NUM_HWT_REGS : integer := ((C_NUM_HWTS - 1) / C_SLV_DWIDTH) + 1;
+	constant USER_SLV_NUM_REG   : integer   := NUM_HWT_REGS * 2 + 6;
 	constant USER_NUM_REG       : integer   := USER_SLV_NUM_REG;
 	constant TOTAL_IPIF_CE      : integer   := USER_NUM_REG;
 
@@ -184,7 +188,8 @@ architecture implementation of reconos_proc_control is
 	signal user_IP2Bus_WrAck    : std_logic;
 	signal user_IP2Bus_Error    : std_logic;
 
-	signal hwt_rst : std_logic_vector(C_NUM_HWTS - 1 downto 0);
+	signal hwt_rst     : std_logic_vector(C_NUM_HWTS - 1 downto 0);
+	signal hwt_signal  : std_logic_vector(C_NUM_HWTS - 1 downto 0);
 
 begin
 
@@ -245,32 +250,33 @@ begin
 		)
 		port map (
 			-- Proc Control ports
-			PROC_Clk     => PROC_Clk,
-			PROC_Rst     => not PROC_Rst,
-			PROC_Hwt_Rst => hwt_rst,
-			PROC_Sys_Rst => PROC_Sys_Rst,
-			PROC_Pgf_Int => PROC_Pgf_Int,
+			PROC_Clk         => PROC_Clk,
+			PROC_Rst         => not PROC_Rst,
+			PROC_Hwt_Rst     => hwt_rst,
+			PROC_Hwt_Signal => hwt_signal,
+			PROC_Sys_Rst     => PROC_Sys_Rst,
+			PROC_Pgf_Int     => PROC_Pgf_Int,
 
 			-- MMU related ports
-			MMU_Pgf        => MMU_Pgf,
-			MMU_Fault_Addr => MMU_Fault_Addr,
-			MMU_Retry      => MMU_Retry,
-			MMU_Pgd        => MMU_Pgd,
-			MMU_Tlb_Hits   => MMU_Tlb_Hits,
-			MMU_Tlb_Misses => MMU_Tlb_Misses,
+			MMU_Pgf          => MMU_Pgf,
+			MMU_Fault_Addr   => MMU_Fault_Addr,
+			MMU_Retry        => MMU_Retry,
+			MMU_Pgd          => MMU_Pgd,
+			MMU_Tlb_Hits     => MMU_Tlb_Hits,
+			MMU_Tlb_Misses   => MMU_Tlb_Misses,
 
 		
 			-- Bus protocol ports
-			Bus2IP_Clk      => ipif_Bus2IP_Clk,
-			Bus2IP_Resetn   => ipif_Bus2IP_Resetn,
-			Bus2IP_Data     => ipif_Bus2IP_Data,
-			Bus2IP_BE       => ipif_Bus2IP_BE,
-			Bus2IP_RdCE     => user_Bus2IP_RdCE,
-			Bus2IP_WrCE     => user_Bus2IP_WrCE,
-			IP2Bus_Data     => user_IP2Bus_Data,
-			IP2Bus_RdAck    => user_IP2Bus_RdAck,
-			IP2Bus_WrAck    => user_IP2Bus_WrAck,
-			IP2Bus_Error    => user_IP2Bus_Error
+			Bus2IP_Clk       => ipif_Bus2IP_Clk,
+			Bus2IP_Resetn    => ipif_Bus2IP_Resetn,
+			Bus2IP_Data      => ipif_Bus2IP_Data,
+			Bus2IP_BE        => ipif_Bus2IP_BE,
+			Bus2IP_RdCE      => user_Bus2IP_RdCE,
+			Bus2IP_WrCE      => user_Bus2IP_WrCE,
+			IP2Bus_Data      => user_IP2Bus_Data,
+			IP2Bus_RdAck     => user_IP2Bus_RdAck,
+			IP2Bus_WrAck     => user_IP2Bus_WrAck,
+			IP2Bus_Error     => user_IP2Bus_Error
 		);
 
 	-- connect internal signals
@@ -284,6 +290,7 @@ begin
 
 	-- BEGIN GENERATE LOOP
 	PROC_Hwt_Rst_#i# <= hwt_rst(#i#);
+	PROC_Hwt_Signal_#i# <= hwt_signal(#i#);
 	-- END GENERATE LOOP
 
 end implementation;

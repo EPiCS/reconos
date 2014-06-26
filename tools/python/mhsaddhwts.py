@@ -41,6 +41,7 @@ def hwt_reconf(name, num, version, use_mem):
 		instance.addEntry("BUS_INTERFACE", "MEMIF_FIFO_Mem2Hwt", "reconos_memif_fifo_%d_mem2hwt_FIFO_S" % num)
 	instance.addEntry("PORT", "HWT_Clk", DEFAULT_CLK)
 	instance.addEntry("PORT", "HWT_Rst", "reconos_proc_control_0_PROC_Hwt_Rst_%d" % num)
+	instance.addEntry("PORT", "HWT_Signal", "reconos_proc_control_0_PROC_Hwt_Signal_%d" % num)
 	return instance
 
 def hwt_static(name, num, version, use_mem):
@@ -54,6 +55,7 @@ def hwt_static(name, num, version, use_mem):
 		instance.addEntry("BUS_INTERFACE", "MEMIF_FIFO_Mem2Hwt", "reconos_memif_fifo_%d_mem2hwt_FIFO_S" % num)
 	instance.addEntry("PORT", "HWT_Clk", DEFAULT_CLK)
 	instance.addEntry("PORT", "HWT_Rst", "reconos_proc_control_0_PROC_Hwt_Rst_%d" % num)
+	instance.addEntry("PORT", "HWT_Signal", "reconos_proc_control_0_PROC_Hwt_Signal_%d" % num)
 	return instance
 
 def osif_fifo(num, direction):
@@ -129,6 +131,7 @@ def proc_control(num_hwts, use_mmu):
 	instance.addEntry("PORT", "PROC_Rst", DEFAULT_RST)
 	for i in range(num_hwts):
 		instance.addEntry("PORT", "PROC_Hwt_Rst_%d" % i, "reconos_proc_control_0_PROC_Hwt_Rst_%d" % i)
+		instance.addEntry("PORT", "PROC_Hwt_Signal_%d" % i, "reconos_proc_control_0_PROC_Hwt_Signal_%d" % i)
 	instance.addEntry("PORT", "PROC_Sys_Rst", "reconos_proc_control_0_PROC_Sys_Rst")
 	if use_mmu:
 		instance.addEntry("PORT", "PROC_Pgf_Int", "reconos_proc_control_0_PROC_Pgf_Int")

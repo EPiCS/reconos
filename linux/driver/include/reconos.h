@@ -22,8 +22,29 @@
 
 #define RECONOS_IOC_MAGIC       'k'
 
-#define RECONOS_OSIF_INTC_WAIT    _IOW(RECONOS_IOC_MAGIC, 20, unsigned int)
+/*
+ * IOCTL definitions for interrupt controller
+ *
+ *   intc_wait - wait for interrupt on specific osif
+ */
+#define RECONOS_OSIF_INTC_WAIT       _IOW(RECONOS_IOC_MAGIC, 20, unsigned int)
+#define RECONOS_OSIF_INTC_BREAK      _IO(RECONOS_IOC_MAGIC, 21)
 
+/*
+ * IOCTL definitions for proc control
+ *
+ *   get_num_hwts      - returns the number of hardware threads
+ *   get_tlb_hits      - returns the number of tlb hits
+ *   get_tlb_misses    - returns the number of tlb misses
+ *   get_fault_addr    - returns the address caused a page fault (blocks)
+ *   set_pgd_addr      - writes the current PGD address
+ *   sys_reset         - resets the entire system
+ *   set_hwt_reset     - sets the reset of a specific hardware thread
+ *   clear_hwt_reset   - clears the reset
+ *   set_hwt_suspres   - set the suspres of a specific hardware thread
+ *   clear_hwt_suspres - clears the reset
+ *   cache_flush       - flushes the system's cache
+ */
 #define RECONOS_PROC_CONTROL_GET_NUM_HWTS      _IOR(RECONOS_IOC_MAGIC, 1, int)
 #define RECONOS_PROC_CONTROL_GET_TLB_HITS      _IOR(RECONOS_IOC_MAGIC, 2, int)
 #define RECONOS_PROC_CONTROL_GET_TLB_MISSES    _IOR(RECONOS_IOC_MAGIC, 3, int)
@@ -33,5 +54,6 @@
 #define RECONOS_PROC_CONTROL_SYS_RESET         _IO(RECONOS_IOC_MAGIC, 7)
 #define RECONOS_PROC_CONTROL_SET_HWT_RESET     _IOW(RECONOS_IOC_MAGIC, 8, int)
 #define RECONOS_PROC_CONTROL_CLEAR_HWT_RESET   _IOW(RECONOS_IOC_MAGIC, 9, int)
-#define RECONOS_PROC_CONTROL_DO_PTW            _IOW(RECONOS_IOC_MAGIC, 10, void*)
-#define RECONOS_PROC_CONTROL_CACHE_FLUSH       _IO(RECONOS_IOC_MAGIC, 11)
+#define RECONOS_PROC_CONTROL_SET_HWT_SIGNAL    _IOW(RECONOS_IOC_MAGIC, 10, int)
+#define RECONOS_PROC_CONTROL_CLEAR_HWT_SIGNAL  _IOW(RECONOS_IOC_MAGIC, 11, int)
+#define RECONOS_PROC_CONTROL_CACHE_FLUSH       _IO(RECONOS_IOC_MAGIC, 12)

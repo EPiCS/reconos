@@ -21,14 +21,27 @@
 #ifndef RECONOS_DRV_H
 #define RECONOS_DRV_H
 
-//#define __printk(...) printk(__VA_ARGS__)
-#define __printk(...) 
+#define __printk(...) printk(__VA_ARGS__)
+//#define __printk(...) 
 
 #include "include/reconos.h"
 
 #include <linux/module.h>
 
-// global variables available in the entire module
+/*
+ * Global variables
+ *
+ *   num_hwts          - number of hardware threads
+ *   dynamic_reg_count - number of registers in the dynamic section
+ */
 extern int NUM_HWTS;
+extern int DYNAMIC_REG_COUNT;
+
+/*
+ * Global macros
+ *
+ *   hwt_reg_offset    - returns the register in which hwt can be found
+ */
+#define HWT_REG_OFFSET(hwt)    (hwt / 32)
 
 #endif /* RECONOS_DRV_H */

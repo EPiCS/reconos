@@ -52,7 +52,7 @@ void mbox_destroy(struct mbox *mb)
 	pthread_mutex_destroy(&mb->mutex_write);
 }
 
-int mbox_put(struct mbox *mb, uint32_t msg)
+void mbox_put(struct mbox *mb, uint32_t msg)
 {
 	pthread_mutex_lock(&mb->mutex_write);
 	sem_wait(&mb->sem_write);
@@ -62,27 +62,6 @@ int mbox_put(struct mbox *mb, uint32_t msg)
 
 	sem_post(&mb->sem_read);
 	pthread_mutex_unlock(&mb->mutex_write);
-
-	return 0;
-}
-
-int mbox_put_interruptible(struct mbox *mb, uint32_t msg)
-{
-	if (pthread_mutex_lock(&mb->mutex_write) < 0) {
-		return -1;
-	}
-	if (sem_wait(&mb->sem_write) < 0) {
-		pthread_mutex_unlock(&mb->mutex_write);
-		return -1;
-	}
-
-	mb->messages[mb->write_idx] = msg;
-	mb->write_idx = (mb->write_idx + 1)  % mb->size;
-
-	sem_post(&mb->sem_read);
-	pthread_mutex_unlock(&mb->mutex_write);
-
-	return 0;
 }
 
 uint32_t mbox_get(struct mbox *mb)
@@ -99,25 +78,6 @@ uint32_t mbox_get(struct mbox *mb)
 	pthread_mutex_unlock(&mb->mutex_read);
 	
 	return msg;
-}
-
-int mbox_get_interruptible(struct mbox *mb, uint32_t *msg)
-{
-	if (pthread_mutex_lock(&mb->mutex_read) < 0) {
-		return -1;
-	}
-	if (sem_wait(&mb->sem_read) < 0) {
-		pthread_mutex_unlock(&mb->mutex_read);
-		return -1;
-	}
-
-	*msg = mb->messages[mb->read_idx];
-	mb->read_idx = (mb->read_idx + 1) % mb->size;
-
-	sem_post(&mb->sem_write);
-	pthread_mutex_unlock(&mb->mutex_read);
-	
-	return 0;
 }
 
 int mbox_tryget(struct mbox *mb, uint32_t *msg)

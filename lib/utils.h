@@ -27,9 +27,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#define RECONOS_DEBUG
 
-//#define debug(...) printf(__VA_ARGS__)
-#define debug(...) 
+#ifdef RECONOS_DEBUG
+ #define debug(...) printf(__VA_ARGS__)
+#else
+ #define debug(...)
+#endif
 
 static inline void die() {
 	exit(EXIT_FAILURE);

@@ -27,6 +27,8 @@
 --                   Reg5: ReconOS reset (reset everything) - Write only
 --                   Reg6: HWT reset (multiple registers) - Write only
 --                         | x , x-1, ... | x-32 , x-33, ... 0 |
+--                   Reg7: HWT signal - Write only
+--                         | x , x-1, ... | x-32 , x-33, ... 0 |
 --
 --                   Page fault handling works the following:
 --                     1.) MMU raises MMU_Pgf
@@ -61,31 +63,32 @@ entity user_logic is
 	);
   port (
 		-- PROC control ports
-		PROC_Clk        : in  std_logic;
-		PROC_Rst        : in  std_logic;
-		PROC_Hwt_Rst    : out std_logic_vector(C_NUM_HWTS - 1 downto 0);
-		PROC_Sys_Rst    : out std_logic;
-		PROC_Pgf_Int    : out std_logic;
+		PROC_Clk         : in  std_logic;
+		PROC_Rst         : in  std_logic;
+		PROC_Hwt_Rst     : out std_logic_vector(C_NUM_HWTS - 1 downto 0);
+		PROC_Hwt_Signal  : out std_logic_vector(C_NUM_HWTS - 1 downto 0);
+		PROC_Sys_Rst     : out std_logic;
+		PROC_Pgf_Int     : out std_logic;
 
 		-- MMU related ports
-		MMU_Pgf         : in  std_logic;
-		MMU_Fault_Addr  : in  std_logic_vector(31 downto 0);
-		MMU_Retry       : out std_logic;
-		MMU_Pgd         : out std_logic_vector(31 downto 0);
-		MMU_Tlb_Hits    : in  std_logic_vector(31 downto 0);
-		MMU_Tlb_Misses  : in  std_logic_vector(31 downto 0);
+		MMU_Pgf          : in  std_logic;
+		MMU_Fault_Addr   : in  std_logic_vector(31 downto 0);
+		MMU_Retry        : out std_logic;
+		MMU_Pgd          : out std_logic_vector(31 downto 0);
+		MMU_Tlb_Hits     : in  std_logic_vector(31 downto 0);
+		MMU_Tlb_Misses   : in  std_logic_vector(31 downto 0);
 
 		-- Bus protocol ports
-		Bus2IP_Clk      : in  std_logic;
-		Bus2IP_Resetn   : in  std_logic;
-		Bus2IP_Data     : in  std_logic_vector(C_SLV_DWIDTH-1 downto 0);
-		Bus2IP_BE       : in  std_logic_vector(C_SLV_DWIDTH/8-1 downto 0);
-		Bus2IP_RdCE     : in  std_logic_vector(C_NUM_REG-1 downto 0);
-		Bus2IP_WrCE     : in  std_logic_vector(C_NUM_REG-1 downto 0);
-		IP2Bus_Data     : out std_logic_vector(C_SLV_DWIDTH-1 downto 0);
-		IP2Bus_RdAck    : out std_logic;
-		IP2Bus_WrAck    : out std_logic;
-		IP2Bus_Error    : out std_logic
+		Bus2IP_Clk       : in  std_logic;
+		Bus2IP_Resetn    : in  std_logic;
+		Bus2IP_Data      : in  std_logic_vector(C_SLV_DWIDTH-1 downto 0);
+		Bus2IP_BE        : in  std_logic_vector(C_SLV_DWIDTH/8-1 downto 0);
+		Bus2IP_RdCE      : in  std_logic_vector(C_NUM_REG-1 downto 0);
+		Bus2IP_WrCE      : in  std_logic_vector(C_NUM_REG-1 downto 0);
+		IP2Bus_Data      : out std_logic_vector(C_SLV_DWIDTH-1 downto 0);
+		IP2Bus_RdAck     : out std_logic;
+		IP2Bus_WrAck     : out std_logic;
+		IP2Bus_Error     : out std_logic
 	);
 
 	attribute MAX_FANOUT   : string;
@@ -104,15 +107,14 @@ end entity user_logic;
 
 architecture implementation of user_logic is
 
+	constant NUM_HWT_REGS : integer := ((C_NUM_HWTS - 1) / C_SLV_DWIDTH) + 1;
+
 	type PGF_INT_STATE_TYPE is (WAIT_PGF, WAIT_CLEAR, WAIT_READY);
 	signal pgf_int_state : PGF_INT_STATE_TYPE;
 
 	type SYS_RESET_STATE_TYPE is (WAIT_RST, PERF_RST);
 	signal sys_reset_state   : SYS_RESET_STATE_TYPE;
 	signal sys_reset_counter : std_logic_vector(3 downto 0);
-	
-	-- padding to fill unused resets in hwt_reset_reg
-	signal pad   : std_logic_vector(C_SLV_DWIDTH * (C_NUM_REG - 6) - C_NUM_HWTS - 1 downto 0);
 
 	signal pgd                 : std_logic_vector(31 downto 0);
 	signal fault_addr          : std_logic_vector(31 downto 0);
@@ -120,8 +122,10 @@ architecture implementation of user_logic is
 	signal tlb_misses          : std_logic_vector(31 downto 0);
 	signal sys_reset           : std_logic;
 	signal hwt_reset           : std_logic_vector(C_NUM_HWTS - 1 downto 0);
+	signal hwt_signal          : std_logic_vector(C_NUM_HWTS - 1 downto 0);
 
-	signal hwt_reset_reg       : std_logic_vector((C_NUM_REG - 6) * C_SLV_DWIDTH - 1 downto 0);
+	signal hwt_reset_reg       : std_logic_vector(NUM_HWT_REGS * C_SLV_DWIDTH - 1 downto 0);
+	signal hwt_signal_reg      : std_logic_vector(NUM_HWT_REGS * C_SLV_DWIDTH - 1 downto 0);
 
 	-- Signals for user logic slave model s/w accessible register
 	signal slv_reg_write_sel   : std_logic_vector(C_NUM_REG - 1 downto 0);
@@ -137,7 +141,6 @@ begin
 
 	clk <= Bus2IP_Clk;
 	rst <= PROC_Rst or not Bus2IP_Resetn;
-	pad <= (others => '0');
 	
 	-- Dive bus signals
 	IP2Bus_Data  <= slv_ip2bus_data;
@@ -158,9 +161,11 @@ begin
 	tlb_misses   <= MMU_Tlb_Misses;
 
 	PROC_Hwt_Rst <= hwt_reset;
+	PROC_Hwt_Signal <= hwt_signal;
 	PROC_Sys_Rst <= sys_reset;
 
-	hwt_reset <= hwt_reset_reg(C_NUM_HWTS - 1 downto 0);
+	hwt_reset  <= hwt_reset_reg(C_NUM_HWTS - 1 downto 0);
+	hwt_signal <= hwt_signal_reg(C_NUM_HWTS - 1 downto 0);
 
 	MMU_Pgd <= pgd;
 
@@ -206,13 +211,29 @@ begin
 		elsif rising_edge(clk) then
 			-- writing to hwt_reset
 			-- ignoring byte enable
-			for i in 0 to C_NUM_REG - 7 loop
-				if slv_reg_write_sel(C_NUM_REG - 7 - i) = '1' then
+			for i in 0 to NUM_HWT_REGS - 1 loop
+				if slv_reg_write_sel(NUM_HWT_REGS * 2 - i - 1) = '1' then
 					hwt_reset_reg(32 * i + 31 downto 32 * i) <= Bus2IP_Data;
 				end if;
 			end loop;
 		end if;
 	end process hwt_reset_proc;
+
+
+	hwt_signal_proc : process(clk,rst) is
+	begin
+		if rst = '1' or sys_reset = '1' then
+			hwt_signal_reg <= (others => '0');
+		elsif rising_edge(clk) then
+			-- writing to hwt_signal
+			-- ignoring byte enable
+			for i in 0 to NUM_HWT_REGS - 1 loop
+				if slv_reg_write_sel(NUM_HWT_REGS - i - 1) = '1' then
+					hwt_signal_reg(32 * i + 31 downto 32 * i) <= Bus2IP_Data;
+				end if;
+			end loop;
+		end if;
+	end process hwt_signal_proc;
 
 
 	sys_reset_proc : process(clk,rst) is

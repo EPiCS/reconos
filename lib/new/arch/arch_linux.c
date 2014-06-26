@@ -105,13 +105,9 @@ uint32_t reconos_osif_read(int fd) {
 
 		dev->fifo_fill = osif_fifo_hw2sw_fill(dev);
 
-		if (dev->fifo_fill == 0) {
-			ioctl(osif_intc_fd, RECONOS_OSIF_INTC_WAIT, &dev->index);
+		while (dev->fifo_fill == 0) {
+			ioctl(osif_intc_fd, RECONOS_OSIF_INTC_WAIT, &fd);
 			dev->fifo_fill = osif_fifo_hw2sw_fill(dev);
-		}
-
-		if (dev->fifo_fill == 0) {
-			return 0xFFFFFFFF;
 		}
 	}
 
@@ -139,13 +135,8 @@ void reconos_osif_write(int fd, uint32_t data) {
 	dev->ptr[OSIF_FIFO_SEND_REG] = data;
 
 	debug("[reconos-osif-%d] "
-	      "writing finished\n", fd);
-}
+	      "writing finished\n", fd, data);
 
-void reconos_osif_break(int fd) {
-	struct osif_fifo_dev *dev = &osif_fifo_dev[fd];
-
-	ioctl(osif_intc_fd, RECONOS_OSIF_INTC_BREAK, &dev->index);
 }
 
 void reconos_osif_close(int fd) {
@@ -209,13 +200,6 @@ void reconos_proc_control_hwt_reset(int fd, int num, int reset) {
 		ioctl(fd, RECONOS_PROC_CONTROL_SET_HWT_RESET, &num);
 	else
 		ioctl(fd, RECONOS_PROC_CONTROL_CLEAR_HWT_RESET, &num);
-}
-
-void reconos_proc_control_hwt_signal(int fd, int num, int sig) {
-	if (sig)
-		ioctl(fd, RECONOS_PROC_CONTROL_SET_HWT_SIGNAL, &num);
-	else
-		ioctl(fd, RECONOS_PROC_CONTROL_CLEAR_HWT_SIGNAL, &num);
 }
 
 void reconos_proc_control_cache_flush(int fd) {
