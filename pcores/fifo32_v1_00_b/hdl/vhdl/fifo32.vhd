@@ -197,6 +197,43 @@ begin
 	-- This is a subtle bug that can be hard to find and can cost you days of debugging.
 	-- This workaround implements write-first access in a way that works with xst:
 
+-- We implement a FIFO which means we need a Dual port memory: One port for
+-- writing, another for reading. This way, writes and reads can happen to
+-- different addresses. However, the Xilinx Documentation (ug363, p. 17f ) limits accesses from
+-- both ports to the same address at the same time: 
+        
+--Both Ports Asynchronously clocked:
+--When one port performs a write operation,
+--the other port must not read- or write-
+--access the exact same memory location be
+--cause all address bits are identical. The
+--simulation model will produce an error if this condition is violated. If this restriction
+--is ignored, the output read data will be
+--unknown (unpredictable). There is, however,
+--no risk of physical damage to the device. If a read and write operation is performed,
+--then the write will store valid data at the write location. 
+
+
+--Both Ports Synchronously Clocked :        
+--When one port performs a write operation,
+--the write operation succeeds; the other
+--port can reliably read data from the same lo
+--cation if the write port is in READ_FIRST
+--mode. DATA_OUT on both ports will then reflect the previously stored data.
+--If the write port is in either WRITE_FIRST or in NO_CHANGE mode, then the
+--DATA_OUT on the read port would become invalid (unreliable). The mode setting of
+--the read-port does not affect this operation.
+
+-- So clearly the Documentation forbids accesses to the same address at the
+-- same time completely, or limits it to READ_FIRST mode.
+-- Anyhow, is there a need for WRITE_FIRST behaviour?
+-- When read and write address are the same, the fifo is empty. read points to
+-- the first data word to read and write points to the next empty address. When
+-- both addresses are the same, either the fifo is empty, thus the read address
+-- being invalid, or the fifo is full, thus the write address being invalid. A
+-- simultanious read and write in this situation is invalid anyway.
+-- This seems like a minor performance optimization, which incurs alot complexity.
+        
         --readFromRam
         do_workaround <= mem(CONV_INTEGER(rdptr_syn));
 	do <= di when rdptr = wrptr and we = '1' else do_workaround;
