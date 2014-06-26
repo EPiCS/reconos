@@ -136,8 +136,30 @@ begin
 	FIFO32_M_Rem_out  <= pad & remainder;
 	
 	--FIFO32_S_Data <= delay when sel_delay = '1' else do;
-	
-	process(delay,sel_delay,do,fill)
+
+        fillAndRemainder: process(rst,clk)
+        begin
+          if rst='1' then
+            fill <= (others => '0');
+	    remainder <= CONV_STD_LOGIC_VECTOR(C_FIFO32_DEPTH - 1,remainder'length);
+          elsif rising_edge(clk) then
+            -- FIFO empties when read
+            if FIFO32_M_Wr = '0' and FIFO32_S_Rd = '1' then
+	    	fill <= fill - 1;
+                remainder <= remainder + 1;
+            end if;
+
+            -- FIFO fills when written
+	    if FIFO32_M_Wr = '1' and FIFO32_S_Rd = '0' then
+	      fill <= fill + 1;
+	      remainder <= remainder - 1;
+	    end if;
+
+            -- In all other cases FIFO fill level remains the same.
+          end if;
+        end;
+        
+	dataOutputControl: process(delay,sel_delay,do,fill)
 	begin
 		if fill = 0 then
 			FIFO32_S_Data_out <= x"AFFEDEAD";
@@ -150,17 +172,15 @@ begin
 		end if;
 	end process;
 
-	process(clk, rst)
+	write2ram: process(clk, rst)
 	begin
 		if rst = '1' then
 			wrptr <= (others => '0');
-			--do <= (others => '0');
-		elsif rising_edge(clk) then
+       		elsif rising_edge(clk) then
 			if we = '1' then
 				mem(CONV_INTEGER(wrptr)) <= di;
 				wrptr <= incptr(wrptr);
 			end if;
-			rdptr_syn <= rdptr;
 		end if;
 	end process;
 	
@@ -176,32 +196,21 @@ begin
 	-- it will not implement write-first access (which contradicts the plain vhdl specification).
 	-- This is a subtle bug that can be hard to find and can cost you days of debugging.
 	-- This workaround implements write-first access in a way that works with xst:
-	
-	do_workaround <= mem(CONV_INTEGER(rdptr_syn));
+
+        --readFromRam
+        do_workaround <= mem(CONV_INTEGER(rdptr_syn));
 	do <= di when rdptr = wrptr and we = '1' else do_workaround;
 	
-	process(clk, rst)
+	readFromRam: process(clk, rst)
 	begin
 		if rst = '1' then
-			fill <= (others => '0');
-			remainder <= CONV_STD_LOGIC_VECTOR(C_FIFO32_DEPTH - 1,remainder'length);
 			state <= EMPTY;
 			rdptr <= (others => '0');
 			sel_delay <= '1';
 			delay <= (others => '0');
 		elsif rising_edge(clk) then
-		
-			if FIFO32_M_Wr = '0' and FIFO32_S_Rd = '1' then
-				fill <= fill - 1;
-				remainder <= remainder + 1;
-			end if;
-			
-			if FIFO32_M_Wr = '1' and FIFO32_S_Rd = '0' then
-				fill <= fill + 1;
-				remainder <= remainder - 1;
-			end if;
-			
-			we <= '0';
+                        rdptr_syn <= rdptr;
+        		we <= '0';
 		
 			case state is
 				when EMPTY =>
