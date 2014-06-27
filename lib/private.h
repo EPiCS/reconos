@@ -47,9 +47,11 @@
 /*
  * Definition of signals to the delegate thread
  *
- *   stop - stops the delegate if possible
+ *   pause_syscalls - pauses incoming syscalls by not sending result
+ *   suspend        - requested suspend of thread
  */
-#define DELEGATE_SIGNAL_STOP 0x01
+#define DELEGATE_FLAG_PAUSE_SYSCALLS 0x01
+#define DELEGATE_FLAG_SUSPEND 0x02
 
 /*
  * Object representing a hardware slot on the FPGA.
@@ -61,8 +63,8 @@
  *   rt        - pointer to the currently executing threads
  *   dt        - reference to the delegate thread
  *   dt_state  - state of the delegate thread
- *   dt_signal - signal to the delegate thread
- *   dt_sem    - semaphore for synchronizing with the delegate
+ *   dt_flags  - flags to the delegate thread
+ *   dt_exit   - semaphore for synchronizing with the delegate on exit
  */
 struct hwslot {
 	int id;
@@ -72,8 +74,8 @@ struct hwslot {
 	struct reconos_thread *rt;
 	pthread_t dt;
 	int dt_state;
-	int dt_signal;
-	sem_t dt_wait;
+	int dt_flags;
+	sem_t dt_exit;
 };
 
 /*
@@ -140,23 +142,17 @@ void hwslot_suspendthread(struct hwslot *slot);
 void hwslot_resumethread(struct hwslot *slot,
                          struct reconos_thread *rt);
 
-/*
- * Kills the active thread.
- *
- *   slot - pointer to the ReconOS slot
- */
-void hwslot_killthread(struct hwslot *slot);
-
 
 /* == ReconOS delegate ================================================= */
 
 /*
- * Definition of the delegate states
+ * Definition of the osif commands
  *
  *   self-describing
  *
  */
 #define OSIF_CMD_THREAD_GET_INIT_DATA  0x000000A0
+#define OSIF_CMD_THREAD_GET_STATE_ADDR 0x000000A1
 #define OSIF_CMD_THREAD_EXIT           0x000000A2
 #define OSIF_CMD_SEM_POST              0x000000B0
 #define OSIF_CMD_SEM_WAIT              0x000000B1
@@ -173,8 +169,10 @@ void hwslot_killthread(struct hwslot *slot);
 #define OSIF_CMD_MASK                  0x000000FF
 #define OSIF_CMD_YIELD_MASK            0x80000000
 
-#define OSIF_CMD_THREAD_START          0x01000000
-#define OSIF_CMD_THREAD_RESUME         0x01000001
+#define OSIF_SIGNAL_THREAD_START       0x01000000
+#define OSIF_SIGNAL_THREAD_RESUME      0x01000001
+
+#define OSIF_INTERRUPTED               0x000000FF
 
 /*
  * Global method of the delegate thread

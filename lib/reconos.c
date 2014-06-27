@@ -185,18 +185,6 @@ void reconos_thread_resume(struct reconos_thread *rt, int slot) {
 	rt->state = RECONOS_THREAD_STATE_RUNNING_HW;
 }
 
-/*
- * @see header
- */
-void reconos_thread_kill(struct reconos_thread *rt) {
-	if (rt->state != RECONOS_THREAD_STATE_RUNNING_HW) {
-		panic("[reconos-core] cannot kill not running thread\n");
-	}
-
-	hwslot_killthread(rt->hwslot);
-	rt->state = RECONOS_THREAD_STATE_INIT;
-}
-
 
 /* == General functions ================================================ */
 
@@ -280,8 +268,8 @@ void hwslot_init(struct hwslot *slot, int id, int osif) {
 
 	slot->dt = 0;
 	slot->dt_state = DELEGATE_STATE_STOPPED;
-	slot->dt_signal = 0;
-	sem_init(&slot->dt_wait, 0, 0);
+	slot->dt_flags = 0;
+	sem_init(&slot->dt_exit, 0, 0);
 }
 
 /*
@@ -310,40 +298,9 @@ void hwslot_createdelegate(struct hwslot *slot) {
 	}
 
 	slot->dt_state = DELEGATE_STATE_INIT;
-	slot->dt_signal = 0;
+	slot->dt_flags = 0;
 
 	pthread_create(&slot->dt, NULL, dt_delegate, slot);
-}
-
-/*
- * @see header
- */
-void hwslot_stopdelegate(struct hwslot *slot) {
-	struct timespec t = {
-		.tv_sec = 1,
-		.tv_nsec = 1000000
-	};
-
-	printf("[reconos-core] stopping delegate in state 0x%x\n", slot->dt_state);
-
-	//do {
-		slot->dt_signal = DELEGATE_SIGNAL_STOP;
-
-		switch (slot->dt_state) {
-			case DELEGATE_STATE_BLOCKED_OSIF:
-				reconos_osif_break(slot->osif);
-				break;
-
-			case DELEGATE_STATE_BLOCKED_SYSCALL:
-				pthread_kill(slot->dt, SIGUSR1);
-				break;
-		}
-	//} while (sem_timedwait(&slot->dt_wait, &t));
-
-	sem_wait(&slot->dt_wait);
-	slot->dt_state = DELEGATE_STATE_STOPPED;
-
-	slot->dt = 0;
 }
 
 /*
@@ -361,7 +318,7 @@ void hwslot_createthread(struct hwslot *slot,
 	reconos_proc_control_hwt_signal(_proc_control, slot->id, 0);
 	reconos_proc_control_hwt_reset(_proc_control, slot->id, 0);
 
-	reconos_osif_write(slot->osif, (uint32_t)OSIF_CMD_THREAD_START);
+	reconos_osif_write(slot->osif, (uint32_t)OSIF_SIGNAL_THREAD_START);
 
 	hwslot_createdelegate(slot);
 }
@@ -374,13 +331,20 @@ void hwslot_suspendthread(struct hwslot *slot) {
 		panic("[reconos-core] no thread running\n");
 	}
 
-	hwslot_stopdelegate(slot);
+	slot->dt_flags |= DELEGATE_FLAG_PAUSE_SYSCALLS;
+	slot->dt_flags |= DELEGATE_FLAG_SUSPEND;
 
-	reconos_proc_control_hwt_signal(_proc_control, slot->id, 1);
+	switch (slot->dt_state) {
+		case DELEGATE_STATE_BLOCKED_OSIF:
+			reconos_osif_break(slot->osif);
+			break;
 
-	reconos_osif_write(slot->osif, (uint32_t)slot->rt->state_data);
+		case DELEGATE_STATE_BLOCKED_SYSCALL:
+			pthread_kill(slot->dt, SIGUSR1);
+			break;
+	}
 
-	reconos_osif_read(slot->osif);
+	sem_wait(&slot->dt_exit);
 
 	reconos_proc_control_hwt_reset(_proc_control, slot->id, 1);
 	reconos_proc_control_hwt_signal(_proc_control, slot->id, 0);
@@ -396,29 +360,13 @@ void hwslot_resumethread(struct hwslot *slot,
 		panic("[reconos-core] a thread is already running\n");
 	}
 
-	reconos_proc_control_hwt_signal(_proc_control, slot->id, 1);
 	reconos_proc_control_hwt_reset(_proc_control, slot->id, 1);
 	reconos_proc_control_hwt_signal(_proc_control, slot->id, 0);
 	reconos_proc_control_hwt_reset(_proc_control, slot->id, 0);
 
-	reconos_osif_write(slot->osif, (uint32_t)OSIF_CMD_THREAD_RESUME);
-	reconos_osif_write(slot->osif, (uint32_t)rt->state_data);
+	reconos_osif_write(slot->osif, (uint32_t)OSIF_SIGNAL_THREAD_RESUME);
 
 	slot->rt = rt;
-	hwslot_createdelegate(slot);
-}
-
-/*
- * @see header
- */
-void hwslot_killthread(struct hwslot *slot) {
-	if (!slot->rt) {
-		panic("[reconos-core] no thread running\n");
-	}
-
-	hwslot_stopdelegate(slot);
-
-	hwslot_setreset(slot, 1);
 }
 
 
@@ -436,13 +384,13 @@ void hwslot_killthread(struct hwslot *slot) {
 	}
 
 #define SYSCALL_NONBLOCK(p_call)\
-	if (slot->dt_signal & DELEGATE_SIGNAL_STOP) {\
+	if (slot->dt_flags & DELEGATE_FLAG_PAUSE_SYSCALLS) {\
 		goto intr;\
 	}\
 	p_call;
 
 #define SYSCALL_BLOCK(p_call)\
-	if (slot->dt_signal & DELEGATE_SIGNAL_STOP) {\
+	if (slot->dt_flags & DELEGATE_FLAG_PAUSE_SYSCALLS) {\
 		goto intr;\
 	}\
 	if ((p_call) < 0) {\
@@ -812,9 +760,13 @@ void *dt_delegate(void *arg) {
 	slot->dt_state = DELEGATE_STATE_PROCESSING;
 
 	while(1) {
+		if (slot->dt_flags & DELEGATE_FLAG_SUSPEND) {
+			reconos_proc_control_hwt_signal(_proc_control, slot->id, 1);
+		}
+
 		debug("[reconos-dt-%d] waiting for command ...\n", slot->id);
 		slot->dt_state = DELEGATE_STATE_BLOCKED_OSIF;
-		SYSCALL_BLOCK(cmd = reconos_osif_read(slot->osif));
+		cmd = reconos_osif_read(slot->osif);
 		slot->dt_state = DELEGATE_STATE_PROCESSING;
 		debug("[reconos-dt-%d] received command 0x%x\n", slot->id, cmd);
 
@@ -872,8 +824,18 @@ void *dt_delegate(void *arg) {
 				break;
 
 			case OSIF_CMD_THREAD_EXIT:
-				hwslot_setreset(slot, 1);
-				return NULL;
+				reconos_proc_control_hwt_reset(_proc_control, slot->id, 1);
+				reconos_proc_control_hwt_signal(_proc_control, slot->id, 0);
+				slot->dt_flags = 0;
+				sem_post(&slot->dt_exit);
+				break;
+
+			case OSIF_CMD_THREAD_GET_STATE_ADDR:
+				slot->dt_flags &= ~DELEGATE_FLAG_PAUSE_SYSCALLS;
+				reconos_osif_write(slot->osif, (uint32_t)slot->rt->state_data);
+				break;
+
+			case OSIF_INTERRUPTED:
 				break;
 
 			default:
@@ -883,9 +845,4 @@ void *dt_delegate(void *arg) {
 	}
 
 return NULL;
-
-intr:
-	debug("[reconos-dt-%d] delegate inerrupted, exiting\n", slot->id);
-	sem_post(&slot->dt_wait);
-	return NULL;
 }

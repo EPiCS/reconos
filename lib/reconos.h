@@ -191,13 +191,6 @@ void reconos_thread_suspend(struct reconos_thread *rt);
  */
 void reconos_thread_resume(struct reconos_thread *rt, int slot);
 
-/*
- * Kills the ReconOS thread.
- *
- *   rt   - pointer to the ReconOS thread
- */
-void reconos_thread_kill(struct reconos_thread *rt);
-
 
 /* == General functions ================================================ */
 

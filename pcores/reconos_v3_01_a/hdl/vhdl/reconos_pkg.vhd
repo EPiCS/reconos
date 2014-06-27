@@ -41,37 +41,30 @@ package reconos_pkg is
 
 	-- commands
 	constant OSIF_CMD_THREAD_GET_INIT_DATA  : std_logic_vector(C_OSIF_WIDTH - 1 downto 0) := x"000000A0";
-	constant OSIF_CMD_THREAD_DELAY          : std_logic_vector(C_OSIF_WIDTH - 1 downto 0) := x"000000A1"; -- ToDo
+	constant OSIF_CMD_THREAD_GET_STATE_ADDR : std_logic_vector(C_OSIF_WIDTH - 1 downto 0) := x"000000A1";
 	constant OSIF_CMD_THREAD_EXIT           : std_logic_vector(C_OSIF_WIDTH - 1 downto 0) := x"000000A2";
-	constant OSIF_CMD_THREAD_YIELD          : std_logic_vector(C_OSIF_WIDTH - 1 downto 0) := x"000000A3"; -- ToDo
-	constant OSIF_CMD_THREAD_RESUME         : std_logic_vector(C_OSIF_WIDTH - 1 downto 0) := x"000000A4"; -- ToDo
-	constant OSIF_CMD_THREAD_LOAD_STATE     : std_logic_vector(C_OSIF_WIDTH - 1 downto 0) := x"000000A5"; -- ToDo
-	constant OSIF_CMD_THREAD_STORE_STATE    : std_logic_vector(C_OSIF_WIDTH - 1 downto 0) := x"000000A6"; -- ToDo
+	constant OSIF_CMD_THREAD_YIELD          : std_logic_vector(C_OSIF_WIDTH - 1 downto 0) := x"000000A3";
 
 	constant OSIF_CMD_SEM_POST              : std_logic_vector(C_OSIF_WIDTH - 1 downto 0) := x"000000B0";
 	constant OSIF_CMD_SEM_WAIT              : std_logic_vector(C_OSIF_WIDTH - 1 downto 0) := x"000000B1";
 
 	constant OSIF_CMD_MUTEX_LOCK            : std_logic_vector(C_OSIF_WIDTH - 1 downto 0) := x"000000C0";
 	constant OSIF_CMD_MUTEX_UNLOCK          : std_logic_vector(C_OSIF_WIDTH - 1 downto 0) := x"000000C1";
-	constant OSIF_CMD_MUTEX_TRYLOCK         : std_logic_vector(C_OSIF_WIDTH - 1 downto 0) := x"000000C2"; -- Not tested, yet
+	constant OSIF_CMD_MUTEX_TRYLOCK         : std_logic_vector(C_OSIF_WIDTH - 1 downto 0) := x"000000C2";
 
-	constant OSIF_CMD_COND_WAIT             : std_logic_vector(C_OSIF_WIDTH - 1 downto 0) := x"000000D0"; -- Not tested, yet
-	constant OSIF_CMD_COND_SIGNAL           : std_logic_vector(C_OSIF_WIDTH - 1 downto 0) := x"000000D1"; -- Not tested, yet
-	constant OSIF_CMD_COND_BROADCAST        : std_logic_vector(C_OSIF_WIDTH - 1 downto 0) := x"000000D2"; -- Not tested, yet
-
-	constant OSIF_CMD_RQ_RECEIVE            : std_logic_vector(C_OSIF_WIDTH - 1 downto 0) := x"000000E0"; -- ToDo
-	constant OSIF_CMD_RQ_SEND               : std_logic_vector(C_OSIF_WIDTH - 1 downto 0) := x"000000E1"; -- ToDo
+	constant OSIF_CMD_COND_WAIT             : std_logic_vector(C_OSIF_WIDTH - 1 downto 0) := x"000000D0";
+	constant OSIF_CMD_COND_SIGNAL           : std_logic_vector(C_OSIF_WIDTH - 1 downto 0) := x"000000D1";
+	constant OSIF_CMD_COND_BROADCAST        : std_logic_vector(C_OSIF_WIDTH - 1 downto 0) := x"000000D2";
 
 	constant OSIF_CMD_MBOX_GET              : std_logic_vector(C_OSIF_WIDTH - 1 downto 0) := x"000000F0";
 	constant OSIF_CMD_MBOX_PUT              : std_logic_vector(C_OSIF_WIDTH - 1 downto 0) := x"000000F1";
-	constant OSIF_CMD_MBOX_TRYGET           : std_logic_vector(C_OSIF_WIDTH - 1 downto 0) := x"000000F2"; -- ToDo
-	constant OSIF_CMD_MBOX_TRYPUT           : std_logic_vector(C_OSIF_WIDTH - 1 downto 0) := x"000000F3"; -- ToDo
+	constant OSIF_CMD_MBOX_TRYGET           : std_logic_vector(C_OSIF_WIDTH - 1 downto 0) := x"000000F2";
+	constant OSIF_CMD_MBOX_TRYPUT           : std_logic_vector(C_OSIF_WIDTH - 1 downto 0) := x"000000F3";
 
 	constant OSIF_CMD_YIELD_MASK            : std_logic_vector(C_OSIF_WIDTH - 1 downto 0) := x"80000000";
 
-	constant OSIF_CMD_THREAD_START          : std_logic_vector(C_OSIF_WIDTH - 1 downto 0) := x"01000000";
-	constant OSIF_CMD_THREAD_RESUME         : std_logic_vector(C_OSIF_WIDTH - 1 downto 0) := x"01000001";
-
+	constant OSIF_SIGNAL_THREAD_START       : std_logic_vector(C_OSIF_WIDTH - 1 downto 0) := x"01000000";
+	constant OSIF_SIGNAL_THREAD_RESUME      : std_logic_vector(C_OSIF_WIDTH - 1 downto 0) := x"01000001";
 
 	constant MEMIF_CMD_READ                 : std_logic_vector(C_MEMIF_CMD_WIDTH - 1 downto 0) := x"00";
 	constant MEMIF_CMD_WRITE                : std_logic_vector(C_MEMIF_CMD_WIDTH - 1 downto 0) := x"F0";
