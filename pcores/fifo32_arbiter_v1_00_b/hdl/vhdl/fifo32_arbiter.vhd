@@ -611,6 +611,8 @@ begin  -- of architecture ------------------------------------------------------
       clk   => clk,
       rst   => hwif_subsystem_rst);
 
+  hwif_subsystem_rst <= rst;
+
   request_p : process (clk, rst, in_fifo32_s_fill)
     is
 
@@ -644,6 +646,7 @@ begin  -- of architecture ------------------------------------------------------
     if rst = '1' then
       state         := MODE_LENGTH;
       selection     := (others => '0');
+      sel2mux       <= (others => '0');
       transfer_mode := READ;
     elsif clk'event and clk = '1' then
       -- for ILA debug
