@@ -116,7 +116,7 @@ begin
   -- Instantiate the Unit Under Test (UUT)
   master_fifo : fifo32
     generic map (
-      C_FIFO32_DEPTH => 16
+      C_FIFO32_DEPTH => 4
       )
     port map (
       Rst           => Rst,
@@ -316,14 +316,24 @@ begin
             when others => null;
           end case;
         when DATA_WRITE =>
-          transfer_size := transfer_size - 4;
+           if f2a_memif_in.s_fill > X"0001" then
+            f2a_memif_out.s_rd   <= '1';
+            transfer_size        := transfer_size - 4;
+          else
+            f2a_memif_out.s_rd   <= '0';
+          end if;
           if transfer_size = 0 then
             state              := IDLE;
             f2a_memif_out.s_rd <= '0';
           end if;
         when DATA_READ =>
+          if f2a_memif_in.m_remainder > X"0001" then
+            f2a_memif_out.m_wr   <= '1';
+            transfer_size        := transfer_size - 4;
+          else
+            f2a_memif_out.m_wr   <= '0';
+          end if;
           f2a_memif_out.m_data <= transfer_address;
-          transfer_size        := transfer_size - 4;
           if transfer_size = 0 then
             state                := IDLE;
             f2a_memif_out.m_wr   <= '0';
