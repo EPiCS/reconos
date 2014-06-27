@@ -6,8 +6,8 @@ use ieee.math_real.all;  --! for UNIFORM, TRUNC: pseudo-random number generation
 library proc_common_v3_00_a;
 use proc_common_v3_00_a.proc_common_pkg.all;
 
-library reconos_v3_00_a;
-use reconos_v3_00_a.reconos_pkg.all;
+library reconos_v3_00_b;
+use reconos_v3_00_b.reconos_pkg.all;
 
 entity tb_fifo32_arbiter is
 end entity;
@@ -256,7 +256,7 @@ architecture testbench of tb_fifo32_arbiter is
   signal Rst           : std_logic;
   signal clk           : std_logic;
 
-
+  signal test_desc : string(1 to 16) := "None            ";
 
 begin  -- of architecture -------------------------------------------------------
 
@@ -649,11 +649,42 @@ begin  -- of architecture ------------------------------------------------------
   end process;
 
   hwif_proc : process is
-  begin
-    HWIF2DEC_Data <= (others => '0');
+    procedure hwif_write(addr, data: std_logic_vector(31 downto 0))
+    is
+
+    begin
+    HWIF2DEC_Addr <= addr;
+    HWIF2DEC_Data <= data;
+    HWIF2DEC_WrCE <= '1';
+    wait for full_cycle;
     HWIF2DEC_Addr <= (others => '0');
+    HWIF2DEC_Data <= (others => '0');
     HWIF2DEC_WrCE <= '0';
+    wait for full_cycle;
+    end procedure;
+  begin
+        -- set Defaults
+    HWIF2DEC_Addr <= (others=>'0');
+    HWIF2DEC_Data <= (others=>'0');
     HWIF2DEC_RdCE <= '0';
+    HWIF2DEC_WrCE <= '0';
+    wait for 200 ns;
+
+    test_desc      <= "enable chksum rd";
+    hwif_write(X"00000070",X"FFFFFFFF");
+    
+    test_desc      <= "enable chksum wr";
+    hwif_write(X"000000F0",X"FFFFFFFF");
+    wait for 50*full_cycle;
+    
+    test_desc      <= "reset  chksum   ";
+    hwif_write(X"000000EC",X"FFFFFFFF");
+    wait for 10*full_cycle;
+
+    test_desc      <= "enable chksum   ";
+    hwif_write(X"000000F0",X"FFFFFFFF");
+    wait for 50*full_cycle;
+     test_desc <= "end of testbench";
     wait;
   end process;
 
