@@ -75,7 +75,7 @@ architecture Behavioral of hwif_perfmon is
   signal debugged_HWT2IP_WrAck: std_logic;
 
 begin
-  debug(109 downto 102) <= increments;
+  debug(102+increments'length-1 downto 102) <= increments;
   debug(101)          <= clk;
   debug(100)          <= rst;
   debug(99 downto 68) <=  IP2HWT_Addr;
