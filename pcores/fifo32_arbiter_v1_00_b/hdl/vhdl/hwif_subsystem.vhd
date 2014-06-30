@@ -65,7 +65,7 @@ architecture structural of hwif_subsystem is
   -----------------------------------------------------------------------------
   -- Constants
   -----------------------------------------------------------------------------
-  constant C_ADDR_RANGE_ARRAY_A : SLV32_ARRAY_TYPE :=
+  constant C_ADDR_RANGE_ARRAY : SLV32_ARRAY_TYPE :=
     (X"00000000", X"0000001F",          -- Identification Module, 5 Register
      X"00000020", X"0000005F",          -- Performance monitor, 3 + 8 Register
      X"00000060", X"000000DF",          -- Read  checksum generator, 5 + 16
@@ -74,39 +74,11 @@ architecture structural of hwif_subsystem is
   -----------------------------------------------------------------------------
   -- connections between the address decoder and the sub-modules
   -----------------------------------------------------------------------------
-  signal A_DEC2SUB_A_Addr  : std_logic_vector(0 to 31);
-  signal A_DEC2SUB_A_Data  : std_logic_vector(C_SLV_DWIDTH-1 downto 0);
-  signal A_DEC2SUB_A_RdCE  : std_logic;
-  signal A_DEC2SUB_A_WrCE  : std_logic;
-  signal A_SUB2DEC_A_Data  : std_logic_vector(C_SLV_DWIDTH-1 downto 0);
-  signal A_SUB2DEC_A_RdAck : std_logic;
-  signal A_SUB2DEC_A_WrAck : std_logic;
 
-  signal A_DEC2SUB_B_Addr  : std_logic_vector(0 to 31);
-  signal A_DEC2SUB_B_Data  : std_logic_vector(C_SLV_DWIDTH-1 downto 0);
-  signal A_DEC2SUB_B_RdCE  : std_logic;
-  signal A_DEC2SUB_B_WrCE  : std_logic;
-  signal A_SUB2DEC_B_Data  : std_logic_vector(C_SLV_DWIDTH-1 downto 0);
-  signal A_SUB2DEC_B_RdAck : std_logic;
-  signal A_SUB2DEC_B_WrAck : std_logic;
-
-  signal A_DEC2SUB_C_Addr  : std_logic_vector(0 to 31);
-  signal A_DEC2SUB_C_Data  : std_logic_vector(C_SLV_DWIDTH-1 downto 0);
-  signal A_DEC2SUB_C_RdCE  : std_logic;
-  signal A_DEC2SUB_C_WrCE  : std_logic;
-  signal A_SUB2DEC_C_Data  : std_logic_vector(C_SLV_DWIDTH-1 downto 0);
-  signal A_SUB2DEC_C_RdAck : std_logic;
-  signal A_SUB2DEC_C_WrAck : std_logic;
-
-  signal A_DEC2SUB_D_Addr  : std_logic_vector(0 to 31);
-  signal A_DEC2SUB_D_Data  : std_logic_vector(C_SLV_DWIDTH-1 downto 0);
-  signal A_DEC2SUB_D_RdCE  : std_logic;
-  signal A_DEC2SUB_D_WrCE  : std_logic;
-  signal A_SUB2DEC_D_Data  : std_logic_vector(C_SLV_DWIDTH-1 downto 0);
-  signal A_SUB2DEC_D_RdAck : std_logic;
-  signal A_SUB2DEC_D_WrAck : std_logic;
+  signal DEC2SUB: master2slave_array_t(0 to (C_ADDR_RANGE_ARRAY'length/2)-1);
+  signal SUB2DEC: slave2master_array_t(0 to (C_ADDR_RANGE_ARRAY'length/2)-1);
   
-begin  -- architecture structural
+ begin  -- architecture structural
 
   assert C_Perf_Counters_Num = 8
     report "Changed Number of Performance Counters. Update Address Mapping!" severity failure;
@@ -115,7 +87,7 @@ begin  -- architecture structural
   
   ad : entity hwif_address_decoder
     generic map (
-      C_ADDR_RANGE_ARRAY => C_ADDR_RANGE_ARRAY_A,
+      C_ADDR_RANGE_ARRAY => C_ADDR_RANGE_ARRAY,
       C_SLV_DWIDTH       => C_SLV_DWIDTH
       )
     port map(
@@ -129,37 +101,8 @@ begin  -- architecture structural
       DEC2HWIF_WrAck => DEC2HWIF_WrAck,
 
       -- sub-module interfaces
-      DEC2SUB_A_Addr  => A_DEC2SUB_A_Addr,
-      DEC2SUB_A_Data  => A_DEC2SUB_A_Data,
-      DEC2SUB_A_RdCE  => A_DEC2SUB_A_RdCE,
-      DEC2SUB_A_WrCE  => A_DEC2SUB_A_WrCE,
-      SUB2DEC_A_Data  => A_SUB2DEC_A_Data,
-      SUB2DEC_A_RdAck => A_SUB2DEC_A_RdAck,
-      SUB2DEC_A_WrAck => A_SUB2DEC_A_WrAck,
-
-      DEC2SUB_B_Addr  => A_DEC2SUB_B_Addr,
-      DEC2SUB_B_Data  => A_DEC2SUB_B_Data,
-      DEC2SUB_B_RdCE  => A_DEC2SUB_B_RdCE,
-      DEC2SUB_B_WrCE  => A_DEC2SUB_B_WrCE,
-      SUB2DEC_B_Data  => A_SUB2DEC_B_Data,
-      SUB2DEC_B_RdAck => A_SUB2DEC_B_RdAck,
-      SUB2DEC_B_WrAck => A_SUB2DEC_B_WrAck,
-
-      DEC2SUB_C_Addr  => A_DEC2SUB_C_Addr,
-      DEC2SUB_C_Data  => A_DEC2SUB_C_Data,
-      DEC2SUB_C_RdCE  => A_DEC2SUB_C_RdCE,
-      DEC2SUB_C_WrCE  => A_DEC2SUB_C_WrCE,
-      SUB2DEC_C_Data  => A_SUB2DEC_C_Data,
-      SUB2DEC_C_RdAck => A_SUB2DEC_C_RdAck,
-      SUB2DEC_C_WrAck => A_SUB2DEC_C_WrAck,
-
-      DEC2SUB_D_Addr  => A_DEC2SUB_D_Addr,
-      DEC2SUB_D_Data  => A_DEC2SUB_D_Data,
-      DEC2SUB_D_RdCE  => A_DEC2SUB_D_RdCE,
-      DEC2SUB_D_WrCE  => A_DEC2SUB_D_WrCE,
-      SUB2DEC_D_Data  => A_SUB2DEC_D_Data,
-      SUB2DEC_D_RdAck => A_SUB2DEC_D_RdAck,
-      SUB2DEC_D_WrAck => A_SUB2DEC_D_WrAck
+      DEC2SUB => DEC2SUB,
+      SUB2DEC => SUB2DEC 
       );
 
 -- ID_register_0
@@ -172,13 +115,13 @@ begin  -- architecture structural
       C_SLV_DWIDTH => C_SLV_DWIDTH
       )
     port map (
-      IP2HWT_Addr  => A_DEC2SUB_A_Addr,
-      IP2HWT_Data  => A_DEC2SUB_A_Data,
-      IP2HWT_RdCE  => A_DEC2SUB_A_RdCE,
-      IP2HWT_WrCE  => A_DEC2SUB_A_WrCE,
-      HWT2IP_Data  => A_SUB2DEC_A_Data,
-      HWT2IP_RdAck => A_SUB2DEC_A_RdAck,
-      HWT2IP_WrAck => A_SUB2DEC_A_WrAck,
+      IP2HWT_Addr  => DEC2SUB(0).address,
+      IP2HWT_Data  => DEC2SUB(0).Data_in,
+      IP2HWT_RdCE  => DEC2SUB(0).Read_CE,
+      IP2HWT_WrCE  => DEC2SUB(0).Write_CE,
+      HWT2IP_Data  => SUB2DEC(0).Data_out,
+      HWT2IP_RdAck => SUB2DEC(0).Read_Ack,
+      HWT2IP_WrAck => SUB2DEC(0).Write_Ack,
       debug        => open,
       clk          => clk,
       rst          => rst
@@ -191,13 +134,13 @@ begin  -- architecture structural
       C_SLV_DWIDTH   => C_SLV_DWIDTH
       )
     port map (
-      IP2HWT_Addr  => A_DEC2SUB_B_Addr,
-      IP2HWT_Data  => A_DEC2SUB_B_Data,
-      IP2HWT_RdCE  => A_DEC2SUB_B_RdCE,
-      IP2HWT_WrCE  => A_DEC2SUB_B_WrCE,
-      HWT2IP_Data  => A_SUB2DEC_B_Data,
-      HWT2IP_RdAck => A_SUB2DEC_B_RdAck,
-      HWT2IP_WrAck => A_SUB2DEC_B_WrAck,
+      IP2HWT_Addr  => DEC2SUB(1).address,
+      IP2HWT_Data  => DEC2SUB(1).Data_in,
+      IP2HWT_RdCE  => DEC2SUB(1).Read_CE,
+      IP2HWT_WrCE  => DEC2SUB(1).Write_CE,
+      HWT2IP_Data  => SUB2DEC(1).Data_out,
+      HWT2IP_RdAck => SUB2DEC(1).Read_Ack,
+      HWT2IP_WrAck => SUB2DEC(1).Write_Ack,
       increments   => increments,
       debug        => debug,
       clk          => clk,
@@ -211,13 +154,13 @@ begin  -- architecture structural
       C_NUM_CHANNELS  => C_CHECKSUM_NUM_CHANNELS,
       C_SLV_DWIDTH    => C_SLV_DWIDTH)
     port map (
-      IP2HWT_Addr  => A_DEC2SUB_C_Addr,
-      IP2HWT_Data  => A_DEC2SUB_C_Data,
-      IP2HWT_RdCE  => A_DEC2SUB_C_RdCE,
-      IP2HWT_WrCE  => A_DEC2SUB_C_WrCE,
-      HWT2IP_Data  => A_SUB2DEC_C_Data,
-      HWT2IP_RdAck => A_SUB2DEC_C_RdAck,
-      HWT2IP_WrAck => A_SUB2DEC_C_WrAck,
+      IP2HWT_Addr  => DEC2SUB(2).address,
+      IP2HWT_Data  => DEC2SUB(2).Data_in,
+      IP2HWT_RdCE  => DEC2SUB(2).Read_CE,
+      IP2HWT_WrCE  => DEC2SUB(2).Write_CE,
+      HWT2IP_Data  => SUB2DEC(2).Data_out,
+      HWT2IP_RdAck => SUB2DEC(2).Read_Ack,
+      HWT2IP_WrAck => SUB2DEC(2).Write_Ack,
 
       data       => read_data,
       data_valid => read_data_valid,
@@ -234,13 +177,13 @@ begin  -- architecture structural
       C_NUM_CHANNELS  => C_CHECKSUM_NUM_CHANNELS,
       C_SLV_DWIDTH    => C_SLV_DWIDTH)
     port map (
-      IP2HWT_Addr  => A_DEC2SUB_D_Addr,
-      IP2HWT_Data  => A_DEC2SUB_D_Data,
-      IP2HWT_RdCE  => A_DEC2SUB_D_RdCE,
-      IP2HWT_WrCE  => A_DEC2SUB_D_WrCE,
-      HWT2IP_Data  => A_SUB2DEC_D_Data,
-      HWT2IP_RdAck => A_SUB2DEC_D_RdAck,
-      HWT2IP_WrAck => A_SUB2DEC_D_WrAck,
+      IP2HWT_Addr  => DEC2SUB(3).address,
+      IP2HWT_Data  => DEC2SUB(3).Data_in,
+      IP2HWT_RdCE  => DEC2SUB(3).Read_CE,
+      IP2HWT_WrCE  => DEC2SUB(3).Write_CE,
+      HWT2IP_Data  => SUB2DEC(3).Data_out,
+      HWT2IP_RdAck => SUB2DEC(3).Read_Ack,
+      HWT2IP_WrAck => SUB2DEC(3).Write_Ack,
 
       data       => write_data,
       data_valid => write_data_valid,

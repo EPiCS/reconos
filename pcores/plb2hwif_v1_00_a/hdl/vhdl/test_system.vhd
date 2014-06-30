@@ -32,11 +32,10 @@ library plb2hwif_v1_00_a;
 use plb2hwif_v1_00_a.hwif_pck.all;
 
 library work;
---use work.hwif_pck.all;
-use work.hwif_address_decoder;
-use work.user_logic;
-use work.perfmon;
-use work.identification;
+use plb2hwif_v1_00_a.hwif_address_decoder;
+use plb2hwif_v1_00_a.hwif_perfmon;
+use plb2hwif_v1_00_a.hwif_identification;
+use plb2hwif_v1_00_a.user_logic;
 
 -- Uncomment the following library declaration if using
 -- arithmetic functions with Signed or Unsigned values
@@ -111,38 +110,13 @@ architecture Behavioral of test_system is
   -----------------------------------------------------------------------------
   -- connections between the address decoder and the sub-modules
   -----------------------------------------------------------------------------
-  signal A_DEC2SUB_A_Addr  : std_logic_vector(0 to C_SLV_AWIDTH-1);
-  signal A_DEC2SUB_A_Data  : std_logic_vector(C_SLV_DWIDTH-1 downto 0);
-  signal A_DEC2SUB_A_RdCE  : std_logic;
-  signal A_DEC2SUB_A_WrCE  : std_logic;
-  signal A_SUB2DEC_A_Data  : std_logic_vector(C_SLV_DWIDTH-1 downto 0);
-  signal A_SUB2DEC_A_RdAck : std_logic;
-  signal A_SUB2DEC_A_WrAck : std_logic;
 
-  signal A_DEC2SUB_B_Addr  : std_logic_vector(0 to C_SLV_AWIDTH-1);
-  signal A_DEC2SUB_B_Data  : std_logic_vector(C_SLV_DWIDTH-1 downto 0);
-  signal A_DEC2SUB_B_RdCE  : std_logic;
-  signal A_DEC2SUB_B_WrCE  : std_logic;
-  signal A_SUB2DEC_B_Data  : std_logic_vector(C_SLV_DWIDTH-1 downto 0);
-  signal A_SUB2DEC_B_RdAck : std_logic;
-  signal A_SUB2DEC_B_WrAck : std_logic;
+  signal A_DEC2SUB: master2slave_array_t(0 to (C_ADDR_RANGE_ARRAY_A'length/2)-1);
+  signal A_SUB2DEC: slave2master_array_t(0 to (C_ADDR_RANGE_ARRAY_A'length/2)-1);
 
-  signal B_DEC2SUB_A_Addr  : std_logic_vector(0 to C_SLV_AWIDTH-1);
-  signal B_DEC2SUB_A_Data  : std_logic_vector(C_SLV_DWIDTH-1 downto 0);
-  signal B_DEC2SUB_A_RdCE  : std_logic;
-  signal B_DEC2SUB_A_WrCE  : std_logic;
-  signal B_SUB2DEC_A_Data  : std_logic_vector(C_SLV_DWIDTH-1 downto 0);
-  signal B_SUB2DEC_A_RdAck : std_logic;
-  signal B_SUB2DEC_A_WrAck : std_logic;
-
-  signal B_DEC2SUB_B_Addr  : std_logic_vector(0 to C_SLV_AWIDTH-1);
-  signal B_DEC2SUB_B_Data  : std_logic_vector(C_SLV_DWIDTH-1 downto 0);
-  signal B_DEC2SUB_B_RdCE  : std_logic;
-  signal B_DEC2SUB_B_WrCE  : std_logic;
-  signal B_SUB2DEC_B_Data  : std_logic_vector(C_SLV_DWIDTH-1 downto 0);
-  signal B_SUB2DEC_B_RdAck : std_logic;
-  signal B_SUB2DEC_B_WrAck : std_logic;
-
+  signal B_DEC2SUB: master2slave_array_t(0 to (C_ADDR_RANGE_ARRAY_B'length/2)-1);
+  signal B_SUB2DEC: slave2master_array_t(0 to (C_ADDR_RANGE_ARRAY_B'length/2)-1);
+  
 begin
 
   BUS_ADAPTER : entity user_logic
@@ -300,37 +274,8 @@ begin
       DEC2HWIF_WrAck => HWT2IP_WrAck_A,
 
       -- sub-module interfaces
-      DEC2SUB_A_Addr  => A_DEC2SUB_A_Addr,
-      DEC2SUB_A_Data  => A_DEC2SUB_A_Data,
-      DEC2SUB_A_RdCE  => A_DEC2SUB_A_RdCE,
-      DEC2SUB_A_WrCE  => A_DEC2SUB_A_WrCE,
-      SUB2DEC_A_Data  => A_SUB2DEC_A_Data,
-      SUB2DEC_A_RdAck => A_SUB2DEC_A_RdAck,
-      SUB2DEC_A_WrAck => A_SUB2DEC_A_WrAck,
-
-      DEC2SUB_B_Addr  => A_DEC2SUB_B_Addr,
-      DEC2SUB_B_Data  => A_DEC2SUB_B_Data,
-      DEC2SUB_B_RdCE  => A_DEC2SUB_B_RdCE,
-      DEC2SUB_B_WrCE  => A_DEC2SUB_B_WrCE,
-      SUB2DEC_B_Data  => A_SUB2DEC_B_Data,
-      SUB2DEC_B_RdAck => A_SUB2DEC_B_RdAck,
-      SUB2DEC_B_WrAck => A_SUB2DEC_B_WrAck,
-
-      DEC2SUB_C_Addr  => open,
-      DEC2SUB_C_Data  => open,
-      DEC2SUB_C_RdCE  => open,
-      DEC2SUB_C_WrCE  => open,
-      SUB2DEC_C_Data  => (others => '0'),
-      SUB2DEC_C_RdAck => '0',
-      SUB2DEC_C_WrAck => '0',
-
-      DEC2SUB_D_Addr  => open,
-      DEC2SUB_D_Data  => open,
-      DEC2SUB_D_RdCE  => open,
-      DEC2SUB_D_WrCE  => open,
-      SUB2DEC_D_Data  => (others => '0'),
-      SUB2DEC_D_RdAck => '0',
-      SUB2DEC_D_WrAck => '0'
+      DEC2SUB => A_DEC2SUB,
+      SUB2DEC => A_SUB2DEC 
       );
 
 -- hwif_address_decoder_1
@@ -350,42 +295,13 @@ begin
       DEC2HWIF_WrAck => HWT2IP_WrAck_B,
 
       -- sub-module interfaces
-      DEC2SUB_A_Addr  => B_DEC2SUB_A_Addr,
-      DEC2SUB_A_Data  => B_DEC2SUB_A_Data,
-      DEC2SUB_A_RdCE  => B_DEC2SUB_A_RdCE,
-      DEC2SUB_A_WrCE  => B_DEC2SUB_A_WrCE,
-      SUB2DEC_A_Data  => B_SUB2DEC_A_Data,
-      SUB2DEC_A_RdAck => B_SUB2DEC_A_RdAck,
-      SUB2DEC_A_WrAck => B_SUB2DEC_A_WrAck,
-
-      DEC2SUB_B_Addr  => B_DEC2SUB_B_Addr,
-      DEC2SUB_B_Data  => B_DEC2SUB_B_Data,
-      DEC2SUB_B_RdCE  => B_DEC2SUB_B_RdCE,
-      DEC2SUB_B_WrCE  => B_DEC2SUB_B_WrCE,
-      SUB2DEC_B_Data  => B_SUB2DEC_B_Data,
-      SUB2DEC_B_RdAck => B_SUB2DEC_B_RdAck,
-      SUB2DEC_B_WrAck => B_SUB2DEC_B_WrAck,
-
-      DEC2SUB_C_Addr  => open,
-      DEC2SUB_C_Data  => open,
-      DEC2SUB_C_RdCE  => open,
-      DEC2SUB_C_WrCE  => open,
-      SUB2DEC_C_Data  => (others => '0'),
-      SUB2DEC_C_RdAck => '0',
-      SUB2DEC_C_WrAck => '0',
-
-      DEC2SUB_D_Addr  => open,
-      DEC2SUB_D_Data  => open,
-      DEC2SUB_D_RdCE  => open,
-      DEC2SUB_D_WrCE  => open,
-      SUB2DEC_D_Data  => (others => '0'),
-      SUB2DEC_D_RdAck => '0',
-      SUB2DEC_D_WrAck => '0'
+      DEC2SUB => B_DEC2SUB,
+      SUB2DEC => B_SUB2DEC 
       );
 
 
 -- ID_register_0
-  id_0 : entity identification
+  id_0 : entity hwif_identification
     generic map (
       C_HWT_ID       => X"AAAAAAAA",    -- Unique ID number of this module
       C_VERSION      => X"00000001",    -- Version Identifier
@@ -394,37 +310,37 @@ begin
       C_SLV_DWIDTH => 32
       )
     port map (
-      IP2HWT_Addr  => A_DEC2SUB_A_Addr,
-      IP2HWT_Data  => A_DEC2SUB_A_Data,
-      IP2HWT_RdCE  => A_DEC2SUB_A_RdCE,
-      IP2HWT_WrCE  => A_DEC2SUB_A_WrCE,
-      HWT2IP_Data  => A_SUB2DEC_A_Data,
-      HWT2IP_RdAck => A_SUB2DEC_A_RdAck,
-      HWT2IP_WrAck => A_SUB2DEC_A_WrAck,
+      IP2HWT_Addr  => A_DEC2SUB(0).address,
+      IP2HWT_Data  => A_DEC2SUB(0).Data_in,
+      IP2HWT_RdCE  => A_DEC2SUB(0).Read_CE,
+      IP2HWT_WrCE  => A_DEC2SUB(0).Write_CE,
+      HWT2IP_Data  => A_SUB2DEC(0).Data_out,
+      HWT2IP_RdAck => A_SUB2DEC(0).Read_Ack,
+      HWT2IP_WrAck => A_SUB2DEC(0).Write_Ack,
       clk          => Bus2IP_Clk,
       rst          => Bus2IP_Reset
       );
 
 -- Performance monitor 0
-  perfmon_0 : entity perfmon
+  perfmon_0 : entity hwif_perfmon
     generic map(
       C_Counters_Num => C_Counters_Num
       )
     port map (
-      IP2HWT_Addr  => A_DEC2SUB_B_Addr,
-      IP2HWT_Data  => A_DEC2SUB_B_Data,
-      IP2HWT_RdCE  => A_DEC2SUB_B_RdCE,
-      IP2HWT_WrCE  => A_DEC2SUB_B_WrCE,
-      HWT2IP_Data  => A_SUB2DEC_B_Data,
-      HWT2IP_RdAck => A_SUB2DEC_B_RdAck,
-      HWT2IP_WrAck => A_SUB2DEC_B_WrAck,
+      IP2HWT_Addr  => A_DEC2SUB(1).address,
+      IP2HWT_Data  => A_DEC2SUB(1).Data_in,
+      IP2HWT_RdCE  => A_DEC2SUB(1).Read_CE,
+      IP2HWT_WrCE  => A_DEC2SUB(1).Write_CE,
+      HWT2IP_Data  => A_SUB2DEC(1).Data_out,
+      HWT2IP_RdAck => A_SUB2DEC(1).Read_Ack,
+      HWT2IP_WrAck => A_SUB2DEC(1).Write_Ack,
       increments   => increments_A,
       clk          => Bus2IP_Clk,
       rst          => Bus2IP_Reset
       );
 
 -- ID register_1
-  id_1 : entity identification
+  id_1 : entity hwif_identification
     generic map (
       C_HWT_ID       => X"BBBBBBBB",    -- Unique ID number of this module
       C_VERSION      => X"00000002",    -- Version Identifier
@@ -433,29 +349,29 @@ begin
       C_SLV_DWIDTH => 32
       )
     port map (
-      IP2HWT_Addr  => B_DEC2SUB_A_Addr,
-      IP2HWT_Data  => B_DEC2SUB_A_Data,
-      IP2HWT_RdCE  => B_DEC2SUB_A_RdCE,
-      IP2HWT_WrCE  => B_DEC2SUB_A_WrCE,
-      HWT2IP_Data  => B_SUB2DEC_A_Data,
-      HWT2IP_RdAck => B_SUB2DEC_A_RdAck,
-      HWT2IP_WrAck => B_SUB2DEC_A_WrAck,
+      IP2HWT_Addr  => B_DEC2SUB(0).address,
+      IP2HWT_Data  => B_DEC2SUB(0).Data_in,
+      IP2HWT_RdCE  => B_DEC2SUB(0).Read_CE,
+      IP2HWT_WrCE  => B_DEC2SUB(0).Write_CE,
+      HWT2IP_Data  => B_SUB2DEC(0).Data_out,
+      HWT2IP_RdAck => B_SUB2DEC(0).Read_Ack,
+      HWT2IP_WrAck => B_SUB2DEC(0).Write_Ack,
       clk          => Bus2IP_Clk,
       rst          => Bus2IP_Reset
       );
 -- Performance monitor 1
-  perfmon_1 : entity perfmon
+  perfmon_1 : entity hwif_perfmon
     generic map(
       C_Counters_Num => C_Counters_Num
       )
     port map (
-      IP2HWT_Addr  => B_DEC2SUB_B_Addr,
-      IP2HWT_Data  => B_DEC2SUB_B_Data,
-      IP2HWT_RdCE  => B_DEC2SUB_B_RdCE,
-      IP2HWT_WrCE  => B_DEC2SUB_B_WrCE,
-      HWT2IP_Data  => B_SUB2DEC_B_Data,
-      HWT2IP_RdAck => B_SUB2DEC_B_RdAck,
-      HWT2IP_WrAck => B_SUB2DEC_B_WrAck,
+      IP2HWT_Addr  => B_DEC2SUB(1).address,
+      IP2HWT_Data  => B_DEC2SUB(1).Data_in,
+      IP2HWT_RdCE  => B_DEC2SUB(1).Read_CE,
+      IP2HWT_WrCE  => B_DEC2SUB(1).Write_CE,
+      HWT2IP_Data  => B_SUB2DEC(1).Data_out,
+      HWT2IP_RdAck => B_SUB2DEC(1).Read_Ack,
+      HWT2IP_WrAck => B_SUB2DEC(1).Write_Ack,
       increments   => increments_B,
       clk          => Bus2IP_Clk,
       rst          => Bus2IP_Reset

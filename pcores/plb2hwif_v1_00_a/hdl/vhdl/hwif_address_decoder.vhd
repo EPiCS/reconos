@@ -53,37 +53,8 @@ entity hwif_address_decoder is
     DEC2HWIF_WrAck : out std_logic;
     
     -- sub-module interfaces
-    DEC2SUB_A_Addr  : out  std_logic_vector(0 to 31);
-    DEC2SUB_A_Data  : out  std_logic_vector(C_SLV_DWIDTH-1 downto 0);
-    DEC2SUB_A_RdCE  : out  std_logic;
-    DEC2SUB_A_WrCE  : out  std_logic;
-    SUB2DEC_A_Data  : in   std_logic_vector(C_SLV_DWIDTH-1 downto 0);
-    SUB2DEC_A_RdAck : in   std_logic;
-    SUB2DEC_A_WrAck : in   std_logic;
-    
-    DEC2SUB_B_Addr  : out  std_logic_vector(0 to 31);
-    DEC2SUB_B_Data  : out  std_logic_vector(C_SLV_DWIDTH-1 downto 0);
-    DEC2SUB_B_RdCE  : out  std_logic;
-    DEC2SUB_B_WrCE  : out  std_logic;
-    SUB2DEC_B_Data  : in   std_logic_vector(C_SLV_DWIDTH-1 downto 0);
-    SUB2DEC_B_RdAck : in   std_logic;
-    SUB2DEC_B_WrAck : in   std_logic;
-    
-    DEC2SUB_C_Addr  : out  std_logic_vector(0 to 31);
-    DEC2SUB_C_Data  : out  std_logic_vector(C_SLV_DWIDTH-1 downto 0);
-    DEC2SUB_C_RdCE  : out  std_logic;
-    DEC2SUB_C_WrCE  : out  std_logic;
-    SUB2DEC_C_Data  : in   std_logic_vector(C_SLV_DWIDTH-1 downto 0);
-    SUB2DEC_C_RdAck : in   std_logic;
-    SUB2DEC_C_WrAck : in   std_logic;
-
-    DEC2SUB_D_Addr  : out  std_logic_vector(0 to 31);
-    DEC2SUB_D_Data  : out  std_logic_vector(C_SLV_DWIDTH-1 downto 0);
-    DEC2SUB_D_RdCE  : out  std_logic;
-    DEC2SUB_D_WrCE  : out  std_logic;
-    SUB2DEC_D_Data  : in   std_logic_vector(C_SLV_DWIDTH-1 downto 0);
-    SUB2DEC_D_RdAck : in   std_logic;
-    SUB2DEC_D_WrAck : in   std_logic
+    DEC2SUB : out master2slave_array_t(0 to (C_ADDR_RANGE_ARRAY'length/2)-1);
+    SUB2DEC : in  slave2master_array_t(0 to (C_ADDR_RANGE_ARRAY'length/2)-1)
     );
 end hwif_address_decoder;
 
@@ -92,9 +63,9 @@ architecture Behavioral of hwif_address_decoder is
   signal mux_in: std_logic_vector(0 to (C_ADDR_RANGE_ARRAY'length/2)-1);
 
   signal HWIF2DEC  : master2slave_t;
-  signal DEC2SUB   : master2slave_array_t(0 to (C_ADDR_RANGE_ARRAY'length/2)-1);
+  --signal DEC2SUB   : master2slave_array_t(0 to (C_ADDR_RANGE_ARRAY'length/2)-1);
 
-  signal SUB2DEC  : slave2master_array_t(0 to (C_ADDR_RANGE_ARRAY'length/2)-1);
+  --signal SUB2DEC  : slave2master_array_t(0 to (C_ADDR_RANGE_ARRAY'length/2)-1);
   signal DEC2HWIF : slave2master_t;
       
 begin
@@ -107,45 +78,45 @@ DEC2HWIF_Data  <= DEC2HWIF.data_out;
 DEC2HWIF_RdAck <= DEC2HWIF.read_ack;
 DEC2HWIF_WrAck <= DEC2HWIF.write_ack;
 
-A: if (C_ADDR_RANGE_ARRAY'length/2) > 0 generate
-DEC2SUB_A_Addr <= DEC2SUB(0).address;
-DEC2SUB_A_Data <= DEC2SUB(0).data_in;
-DEC2SUB_A_RdCE <= DEC2SUB(0).read_ce;
-DEC2SUB_A_WrCE <= DEC2SUB(0).write_ce;
-SUB2DEC(0).data_out <= SUB2DEC_A_Data;
-SUB2DEC(0).read_ack <= SUB2DEC_A_RdAck;
-SUB2DEC(0).write_ack <= SUB2DEC_A_WrAck;
-end generate;
+--A: if (C_ADDR_RANGE_ARRAY'length/2) > 0 generate
+--DEC2SUB_A_Addr <= DEC2SUB(0).address;
+--DEC2SUB_A_Data <= DEC2SUB(0).data_in;
+--DEC2SUB_A_RdCE <= DEC2SUB(0).read_ce;
+--DEC2SUB_A_WrCE <= DEC2SUB(0).write_ce;
+--SUB2DEC(0).data_out <= SUB2DEC_A_Data;
+--SUB2DEC(0).read_ack <= SUB2DEC_A_RdAck;
+--SUB2DEC(0).write_ack <= SUB2DEC_A_WrAck;
+--end generate;
 
-B: if (C_ADDR_RANGE_ARRAY'length/2) > 1 generate
-DEC2SUB_B_Addr <= DEC2SUB(1).address;
-DEC2SUB_B_Data <= DEC2SUB(1).data_in;
-DEC2SUB_B_RdCE <= DEC2SUB(1).read_ce;
-DEC2SUB_B_WrCE <= DEC2SUB(1).write_ce;
-SUB2DEC(1).data_out <= SUB2DEC_B_Data;
-SUB2DEC(1).read_ack <= SUB2DEC_B_RdAck;
-SUB2DEC(1).write_ack <= SUB2DEC_B_WrAck;
-end generate;
+--B: if (C_ADDR_RANGE_ARRAY'length/2) > 1 generate
+--DEC2SUB_B_Addr <= DEC2SUB(1).address;
+--DEC2SUB_B_Data <= DEC2SUB(1).data_in;
+--DEC2SUB_B_RdCE <= DEC2SUB(1).read_ce;
+--DEC2SUB_B_WrCE <= DEC2SUB(1).write_ce;
+--SUB2DEC(1).data_out <= SUB2DEC_B_Data;
+--SUB2DEC(1).read_ack <= SUB2DEC_B_RdAck;
+--SUB2DEC(1).write_ack <= SUB2DEC_B_WrAck;
+--end generate;
 
-C: if (C_ADDR_RANGE_ARRAY'length/2) > 2 generate
-DEC2SUB_C_Addr <= DEC2SUB(2).address;
-DEC2SUB_C_Data <= DEC2SUB(2).data_in;
-DEC2SUB_C_RdCE <= DEC2SUB(2).read_ce;
-DEC2SUB_C_WrCE <= DEC2SUB(2).write_ce;
-SUB2DEC(2).data_out <= SUB2DEC_C_Data;
-SUB2DEC(2).read_ack <= SUB2DEC_C_RdAck;
-SUB2DEC(2).write_ack <= SUB2DEC_C_WrAck;
-end generate;
+--C: if (C_ADDR_RANGE_ARRAY'length/2) > 2 generate
+--DEC2SUB_C_Addr <= DEC2SUB(2).address;
+--DEC2SUB_C_Data <= DEC2SUB(2).data_in;
+--DEC2SUB_C_RdCE <= DEC2SUB(2).read_ce;
+--DEC2SUB_C_WrCE <= DEC2SUB(2).write_ce;
+--SUB2DEC(2).data_out <= SUB2DEC_C_Data;
+--SUB2DEC(2).read_ack <= SUB2DEC_C_RdAck;
+--SUB2DEC(2).write_ack <= SUB2DEC_C_WrAck;
+--end generate;
 
-D: if (C_ADDR_RANGE_ARRAY'length/2) > 3 generate
-DEC2SUB_D_Addr <= DEC2SUB(3).address;
-DEC2SUB_D_Data <= DEC2SUB(3).data_in;
-DEC2SUB_D_RdCE <= DEC2SUB(3).read_ce;
-DEC2SUB_D_WrCE <= DEC2SUB(3).write_ce;
-SUB2DEC(3).data_out <= SUB2DEC_D_Data;
-SUB2DEC(3).read_ack <= SUB2DEC_D_RdAck;
-SUB2DEC(3).write_ack <= SUB2DEC_D_WrAck;
-end generate;
+--D: if (C_ADDR_RANGE_ARRAY'length/2) > 3 generate
+--DEC2SUB_D_Addr <= DEC2SUB(3).address;
+--DEC2SUB_D_Data <= DEC2SUB(3).data_in;
+--DEC2SUB_D_RdCE <= DEC2SUB(3).read_ce;
+--DEC2SUB_D_WrCE <= DEC2SUB(3).write_ce;
+--SUB2DEC(3).data_out <= SUB2DEC_D_Data;
+--SUB2DEC(3).read_ack <= SUB2DEC_D_RdAck;
+--SUB2DEC(3).write_ack <= SUB2DEC_D_WrAck;
+--end generate;
 
 -- analyze address according to address map
 -- mux_in is one-hot coded
