@@ -793,7 +793,7 @@ package reconos_pkg is
 	--   o_memif  - o_memif_t record
 	--   src_addr - start address to read from the local ram
 	--   dst_addr - start address to write into the main memory
-	--   len      - number of writes to transmit
+	--   len      - number of bytes to transmit (only bits 23 downto 0)
 	--   done     - indicates that the call finished
 	--
 	procedure memif_write (
@@ -803,7 +803,7 @@ package reconos_pkg is
 		signal o_memif  : out o_memif_t;
 		src_addr        : in  std_logic_vector(31 downto 0);
 		dst_addr        : in  std_logic_vector(31 downto 0);
-		len             : in  std_logic_vector(C_MEMIF_LENGTH_WIDTH - 1 downto 0);
+		len             : in  std_logic_vector(31 downto 0);
 		variable done   : out boolean
 	);
 	
@@ -815,7 +815,7 @@ package reconos_pkg is
 	--   o_memif  - o_memif_t record
 	--   src_addr - start address to read from the main memory
 	--   dst_addr - start address to write into the local ram
-	--   len      - number of writes to transmit
+	--   len      - number of bytes to transmit (only bits 23 downto 0)
 	--   done     - indicates that the call finished
 	--
 	procedure memif_read (
@@ -825,7 +825,7 @@ package reconos_pkg is
 		signal o_memif  : out o_memif_t;
 		src_addr        : in  std_logic_vector(31 downto 0);
 		dst_addr        : in  std_logic_vector(31 downto 0);
-		len             : in  std_logic_vector(C_MEMIF_LENGTH_WIDTH - 1 downto 0);
+		len             : in  std_logic_vector(31 downto 0);
 		variable done   : out boolean
 	);
 	
@@ -1527,7 +1527,7 @@ package body reconos_pkg is
 		signal o_memif  : out o_memif_t;
 		src_addr        : in  std_logic_vector(31 downto 0);
 		dst_addr        : in  std_logic_vector(31 downto 0);
-		len             : in  std_logic_vector(C_MEMIF_LENGTH_WIDTH - 1 downto 0);
+		len             : in  std_logic_vector(31 downto 0);
 		variable done   : out boolean
 	) is begin
 		-- set done to false, so the user does not have to care about it
@@ -1583,7 +1583,7 @@ package body reconos_pkg is
 		signal o_memif  : out o_memif_t;
 		src_addr        : in  std_logic_vector(31 downto 0);
 		dst_addr        : in  std_logic_vector(31 downto 0);
-		len             : in  std_logic_vector(C_MEMIF_LENGTH_WIDTH - 1 downto 0);
+		len             : in  std_logic_vector(31 downto 0);
 		variable done   : out boolean
 	) is begin
 		-- set done to false, so the user does not have to care about it
