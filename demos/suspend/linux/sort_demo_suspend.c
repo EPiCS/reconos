@@ -191,7 +191,7 @@ int main(int argc, char **argv) {
 
 	clock_gettime(CLOCK_MONOTONIC, &end);
 
-#if 0
+#ifdef DEBUG
 	debug("DEBUG: sorted data\n");
 	for (i = 0; i < RECONOS_NUM_HWTS; i++) {
 		debug("-- data[%d] -----------------------\n", i);
@@ -206,6 +206,21 @@ int main(int argc, char **argv) {
 		}
 	}
 #endif
+
+	debug("DEBUG: Checking hardware solution ");
+	for (i = 0; i < RECONOS_NUM_HWTS; i++) {
+		d = data[i];
+		d_ref = data_ref[i];
+
+		for (j = 0; j < SORT_LEN_WORDS; j++) {
+			if (d[j] != d_ref[j]) {
+				printf("ERROR: Hardware is wrong\n");
+				return -1;
+			}
+		}
+		debug(".");
+	}
+	debug("\n");
 
 	debug("DEBUG: cleaning up\n");
 	debug("        ... reconos_cleanup() ");
