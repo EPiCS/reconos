@@ -120,12 +120,18 @@ int main(int argc, char **argv) {
 	}
 	debug("\n");
 
+	clock_gettime(CLOCK_MONOTONIC, &start);
+
 	debug("DEBUG: sorting reference data ");
 	for (i = 0; i < RECONOS_NUM_HWTS; i++) {
 		bubblesort(data_ref[i], SORT_LEN_WORDS);
 		debug(".");
 	}
 	debug("\n");
+
+	clock_gettime(CLOCK_MONOTONIC, &end);
+
+	printf("Sorting in software took %dµs\n", diff_us(&start, &end));
 
 	debug("DEBUG: initializing ReconOS resources\n");
 	debug("        ... reconos_resource_init() ");
@@ -206,7 +212,7 @@ int main(int argc, char **argv) {
 	reconos_cleanup();
 	debug("\n");
 
-	printf("Sorting took %dµs\n", diff_us(&start, &end));
+	printf("Sorting in hardware took %dµs\n", diff_us(&start, &end));
 
 	return 0;
 }
