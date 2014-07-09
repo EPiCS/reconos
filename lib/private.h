@@ -152,6 +152,14 @@ void hwslot_suspendthread(struct hwslot *slot);
 void hwslot_resumethread(struct hwslot *slot,
                          struct reconos_thread *rt);
 
+/*
+ * Waits for the termination of the running thread and resets the thread
+ * afterwards.
+ *
+ *   slot - pointer to the ReconOS slot
+ */
+void hwslot_jointhread(struct hwslot *slot);
+
 
 /* == ReconOS delegate ================================================= */
 

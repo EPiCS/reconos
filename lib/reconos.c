@@ -179,6 +179,20 @@ void reconos_thread_suspend(struct reconos_thread *rt) {
 /*
  * @see header
  */
+void reconos_thread_suspend_block(struct reconos_thread *rt) {
+	if (rt->state != RECONOS_THREAD_STATE_RUNNING_HW) {
+		panic("[reconos-core] ERROR: cannot suspend not running thread\n");
+	}
+
+	rt->state = RECONOS_THREAD_STATE_SUSPENDING;
+	hwslot_suspendthread(rt->hwslot);
+	hwslot_jointhread(rt->hwslot);
+	rt->state = RECONOS_THREAD_STATE_SUSPENDED;
+}
+
+/*
+ * @see header
+ */
 void reconos_thread_resume(struct reconos_thread *rt, int slot) {
 	if (slot < 0 || slot >= RECONOS_NUM_HWTS) {
 		panic("[reconos-core] ERROR: slot id out of range\n");
@@ -186,6 +200,13 @@ void reconos_thread_resume(struct reconos_thread *rt, int slot) {
 
 	hwslot_resumethread(rt->hwslot, rt);
 	rt->state = RECONOS_THREAD_STATE_RUNNING_HW;
+}
+
+/*
+ * @see header
+ */
+void reconos_thread_join(struct reconos_thread *rt) {
+	hwslot_jointhread(rt->hwslot);
 }
 
 
@@ -370,12 +391,6 @@ void hwslot_suspendthread(struct hwslot *slot) {
 			pthread_kill(slot->dt, SIGUSR1);
 			break;
 	}
-
-	sem_wait(&slot->dt_exit);
-
-	reconos_proc_control_hwt_reset(_proc_control, slot->id, 1);
-	reconos_proc_control_hwt_signal(_proc_control, slot->id, 0);
-	slot->rt = NULL;
 }
 
 /*
@@ -394,6 +409,21 @@ void hwslot_resumethread(struct hwslot *slot,
 	reconos_osif_write(slot->osif, (uint32_t)OSIF_SIGNAL_THREAD_RESUME);
 
 	slot->rt = rt;
+}
+
+/*
+ * @see header
+ */
+void hwslot_jointhread(struct hwslot *slot) {
+	if (!slot->rt) {
+		panic("[reconos-core] ERROR: no thread running\n");
+	}
+
+	sem_wait(&slot->dt_exit);
+
+	reconos_proc_control_hwt_reset(_proc_control, slot->id, 1);
+	reconos_proc_control_hwt_signal(_proc_control, slot->id, 0);
+	slot->rt = NULL;
 }
 
 

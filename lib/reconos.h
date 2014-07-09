@@ -177,10 +177,18 @@ void reconos_thread_create(struct reconos_thread *rt, int slot);
 
 /*
  * Suspends the ReconOS thread by saving its state and pausing execution.
+ * This method does not block until the thread is suspended, use
+ * reconos_thread_join(...) to wait for termination of thread.
  *
  *   rt   - pointer to the ReconOS thread
  */
 void reconos_thread_suspend(struct reconos_thread *rt);
+
+/*
+ * Suspends the ReconOS thread by saving its state and pausing execution.
+ * This method blocks unit the thread is suspended.
+ */
+void reconos_thread_suspend_block(struct reconos_thread *rt);
 
 /*
  * Resumes the ReconOS thread in the given slot by restoring its state
@@ -191,6 +199,12 @@ void reconos_thread_suspend(struct reconos_thread *rt);
  */
 void reconos_thread_resume(struct reconos_thread *rt, int slot);
 
+/*
+ * Waits for the termination of the hardware thread.
+ *
+ *   rt - pointer to the ReconOS thread
+ */
+void reconos_thread_join(struct reconos_thread *rt);
 
 /* == General functions ================================================ */
 
