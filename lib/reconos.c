@@ -28,11 +28,13 @@
 #include <unistd.h>
 #include <signal.h>
 #include <pthread.h>
+#include <string.h>
 
 int RECONOS_NUM_HWTS = 0;
 
 static struct hwslot *_hwslots;
 static int _proc_control;
+static pthread_t _pgf_handler;
 static struct sigaction _dt_signal;
 
 
@@ -41,11 +43,11 @@ static struct sigaction _dt_signal;
 /*
  * @see header
  */
- void reconos_resource_init(struct reconos_resource *rr,
+void reconos_resource_init(struct reconos_resource *rr,
                            int type, void *ptr) {
- 	rr->type = type;
- 	rr->ptr = ptr;
- }
+	rr->type = type;
+	rr->ptr = ptr;
+}
 
 
 /* == ReconOS thread =================================================== */
@@ -65,8 +67,9 @@ void reconos_thread_init(struct reconos_thread *rt,
 	rt->state = RECONOS_THREAD_STATE_INIT;
 	rt->state_data = malloc(state_size);
 	if (!rt->state_data) {
-		panic("[reconos-core] failed to allocate memory for state\n");
+		panic("[reconos-core] ERROR: failed to allocate memory for state\n");
 	}
+	//memset(rt->state_data, 0, state_size);
 
 	rt->hwslot = NULL;
 
@@ -113,18 +116,18 @@ void reconos_thread_loadbitstream(struct reconos_thread *rt,
 
 	rt->bitstream_lengths = (int *)malloc(RECONOS_NUM_HWTS * sizeof(int));
 	if (!rt->bitstream_lengths) {
-		panic("[reconos-core] failed to allocate memory for bitstream");
+		panic("[reconos-core] ERROR: failed to allocate memory for bitstream");
 	}
 
 	rt->bitstreams = (char **)malloc(RECONOS_NUM_HWTS * sizeof(char *));
 	if (!rt->bitstreams) {
-		panic("[reconos-core] failed to allocate memory for bitstream");
+		panic("[reconos-core] ERROR: failed to allocate memory for bitstream");
 	}
 
 	for (i = 0; i < RECONOS_NUM_HWTS; i++) {
 		file = fopen(path, "rb");
 		if (!file) {
-			panic("[reconos-core] failed to open bitstream\n");
+			panic("[reconos-core] ERROR: failed to open bitstream\n");
 		}
 
 		fseek(file, 0L, SEEK_END);
@@ -134,7 +137,7 @@ void reconos_thread_loadbitstream(struct reconos_thread *rt,
 		rt->bitstream_lengths[i] = size;
 		rt->bitstreams[i] = (char *)malloc(size * sizeof(char));
 		if (!rt->bitstreams[i]) {
-			panic("[reconos-core] failed to allocate memory for bitstream\n");
+			panic("[reconos-core] ERROR: failed to allocate memory for bitstream\n");
 		}
 
 		fread(rt->bitstreams[i], sizeof(char), size, file);
@@ -148,11 +151,11 @@ void reconos_thread_loadbitstream(struct reconos_thread *rt,
  */
 void reconos_thread_create(struct reconos_thread *rt, int slot) {
 	if (slot < 0 || slot >= RECONOS_NUM_HWTS) {
-		panic("[reconos-core] slot id out of range\n");
+		panic("[reconos-core] ERROR: slot id out of range\n");
 	}
 
 	if (rt->state == RECONOS_THREAD_STATE_RUNNING_HW) {
-		panic("[reconos-core] thread is already running\n");
+		panic("[reconos-core] ERROR: thread is already running\n");
 	}
 
 	rt->hwslot = &_hwslots[slot];
@@ -165,7 +168,7 @@ void reconos_thread_create(struct reconos_thread *rt, int slot) {
  */
 void reconos_thread_suspend(struct reconos_thread *rt) {
 	if (rt->state != RECONOS_THREAD_STATE_RUNNING_HW) {
-		panic("[reconos-core] cannot suspend not running thread\n");
+		panic("[reconos-core] ERROR: cannot suspend not running thread\n");
 	}
 
 	rt->state = RECONOS_THREAD_STATE_SUSPENDING;
@@ -178,7 +181,7 @@ void reconos_thread_suspend(struct reconos_thread *rt) {
  */
 void reconos_thread_resume(struct reconos_thread *rt, int slot) {
 	if (slot < 0 || slot >= RECONOS_NUM_HWTS) {
-		panic("[reconos-core] slot id out of range\n");
+		panic("[reconos-core] ERROR: slot id out of range\n");
 	}
 
 	hwslot_resumethread(rt->hwslot, rt);
@@ -224,20 +227,20 @@ void reconos_init() {
 
 	_proc_control = reconos_proc_control_open();
 	if (_proc_control < 0) {
-		panic("[reconos-core] unable to open proc control\n");
+		panic("[reconos-core] ERROR: unable to open proc control\n");
 	}
 
 	RECONOS_NUM_HWTS = reconos_proc_control_get_num_hwts(_proc_control);
 
 	_hwslots = (struct hwslot *)malloc(RECONOS_NUM_HWTS * sizeof(struct hwslot));
 	if (!_hwslots) {
-		panic("[reconos-core] unable to allocate memory for slots\n");
+		panic("[reconos-core] ERROR: unable to allocate memory for slots\n");
 	}
 
 	for (i = 0; i < RECONOS_NUM_HWTS; i++) {
 		osif = reconos_osif_open(i);
 		if (osif < 0)
-			panic("[reconos-core] unable to open osif %d\n", i);
+			panic("[reconos-core] ERROR: unable to open osif %d\n", i);
 
 		hwslot_init(&_hwslots[i], i, osif);
 	}
@@ -248,12 +251,36 @@ void reconos_init() {
 	reconos_proc_control_sys_reset(_proc_control);
 
 	reconos_proc_control_set_pgd(_proc_control);
+
+#ifdef RECONOS_MMU_true
+	pthread_create(&_pgf_handler, NULL, proc_pgfhandler, NULL);
+#endif
 }
 
 void reconos_cleanup() {
 	reconos_proc_control_sys_reset(_proc_control);
 }
 
+
+/* == ReconOS proc control============================================== */
+
+/*
+ * @see header
+ */
+void *proc_pgfhandler(void *arg) {
+	while (1) {
+		uint32_t *addr;
+
+		addr = (uint32_t *)reconos_proc_control_get_fault_addr(_proc_control);
+
+		printf("[reconos_core] "
+		       "page fault occured at address %x\n", (unsigned int)addr);
+
+		*addr = 0;
+
+		reconos_proc_control_clear_page_fault(_proc_control);
+	}
+}
 
 /* == ReconOS hwslot =================================================== */
 
@@ -294,7 +321,7 @@ void hwslot_setreset(struct hwslot *slot, int reset) {
  */
 void hwslot_createdelegate(struct hwslot *slot) {
 	if (slot->dt) {
-		panic("[reconos-core] delegate thread already running\n");
+		panic("[reconos-core] ERROR: delegate thread already running\n");
 	}
 
 	slot->dt_state = DELEGATE_STATE_INIT;
@@ -309,7 +336,7 @@ void hwslot_createdelegate(struct hwslot *slot) {
 void hwslot_createthread(struct hwslot *slot,
                          struct reconos_thread *rt) {
 	if (slot->rt) {
-		panic("[reconos-core] a thread is already running\n");
+		panic("[reconos-core] ERROR: a thread is already running\n");
 	}
 
 	slot->rt = rt;
@@ -328,7 +355,7 @@ void hwslot_createthread(struct hwslot *slot,
  */
 void hwslot_suspendthread(struct hwslot *slot) {
 	if (!slot->rt) {
-		panic("[reconos-core] no thread running\n");
+		panic("[reconos-core] ERROR: no thread running\n");
 	}
 
 	slot->dt_flags |= DELEGATE_FLAG_PAUSE_SYSCALLS;
@@ -357,7 +384,7 @@ void hwslot_suspendthread(struct hwslot *slot) {
 void hwslot_resumethread(struct hwslot *slot,
                          struct reconos_thread *rt) {
 	if (slot->rt) {
-		panic("[reconos-core] a thread is already running\n");
+		panic("[reconos-core] ERROR: a thread is already running\n");
 	}
 
 	reconos_proc_control_hwt_reset(_proc_control, slot->id, 1);
@@ -376,21 +403,25 @@ void hwslot_resumethread(struct hwslot *slot,
 #define RESOURCE_CHECK_TYPE(p_handle, p_type) \
 	if ((p_handle) >= slot->rt->resource_count) {\
 		panic("[reconos-dt-%d] "\
-		      "resource count out of range\n",slot->id);\
+		      "ERROR: resource count out of range\n",slot->id);\
 	}\
 	if (slot->rt->resources[(p_handle)].type != (p_type)) {\
 		panic("[reconos-dt-%d] "\
-		      "wrong resource type\n", slot->id);\
+		      "ERROR: wrong resource type\n", slot->id);\
 	}
 
 #define SYSCALL_NONBLOCK(p_call)\
 	if (slot->dt_flags & DELEGATE_FLAG_PAUSE_SYSCALLS) {\
+		debug("[reconos-dt-%d] "\
+		      "interrupted in nonblocking syscall\n", slot->id);\
 		goto intr;\
 	}\
 	p_call;
 
 #define SYSCALL_BLOCK(p_call)\
 	if (slot->dt_flags & DELEGATE_FLAG_PAUSE_SYSCALLS) {\
+		debug("[reconos-dt-%d] "\
+		      "interrupted in blocking syscall\n", slot->id);\
 		goto intr;\
 	}\
 	if ((p_call) < 0) {\
@@ -565,7 +596,7 @@ static int dt_cond_wait(struct hwslot *slot) {
 
 	return 0;
 #else
-	panic("[reconos-dt-%d] (cond_wait on %d) not supported\n", slot->id, handle);
+	panic("[reconos-dt-%d] ERROR: (cond_wait on %d) not supported\n", slot->id, handle);
 
 	return 0;
 #endif
@@ -596,7 +627,7 @@ static int dt_cond_signal(struct hwslot *slot) {
 
 	return 0;
 #else
-	panic("[reconos-dt-%d] (cond_signal on %d) not supported\n", slot->id, handle);
+	panic("[reconos-dt-%d] ERROR: (cond_signal on %d) not supported\n", slot->id, handle);
 
 	return 0;
 #endif
@@ -627,7 +658,7 @@ static uint32_t dt_cond_broadcast(struct hwslot *slot) {
 
 	return 0;
 #else
-	panic("[reconos-dt-%d] (cond_broadcast on %d) not supported\n", slot->id, handle);
+	panic("[reconos-dt-%d] ERROR: (cond_broadcast on %d) not supported\n", slot->id, handle);
 
 	return 0;
 #endif
@@ -761,6 +792,7 @@ void *dt_delegate(void *arg) {
 
 	while(1) {
 		if (slot->dt_flags & DELEGATE_FLAG_SUSPEND) {
+			slot->dt_flags &= ~DELEGATE_FLAG_SUSPEND;
 			reconos_proc_control_hwt_signal(_proc_control, slot->id, 1);
 		}
 
@@ -839,7 +871,7 @@ void *dt_delegate(void *arg) {
 				break;
 
 			default:
-				panic("[reconos-dt-%d] received unknown command\n", slot->id);
+				panic("[reconos-dt-%d] ERROR received unknown command\n", slot->id);
 				break;
 		}
 	}

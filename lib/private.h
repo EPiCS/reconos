@@ -27,10 +27,20 @@
 #include <semaphore.h>
 
 
+/* == ReconOS proc control============================================== */
+
+/*
+ * Handles page faults from the memory subsystem
+ *
+ *   arg - null
+ */
+void *proc_pgfhandler(void *arg);
+
+
 /* == ReconOS hwslot =================================================== */
 
 /*
- * Definition of the delegate states
+ * Definition of the delegate states.
  *
  *   stoped          - delegate not running
  *   init            - initializing
@@ -45,7 +55,7 @@
 #define DELEGATE_STATE_PROCESSING       0x10
 
 /*
- * Definition of signals to the delegate thread
+ * Definition of signals to the delegate thread.
  *
  *   pause_syscalls - pauses incoming syscalls by not sending result
  *   suspend        - requested suspend of thread
