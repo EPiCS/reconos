@@ -27,7 +27,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define RECONOS_DEBUG
+#define RECONOS_NODEBUG
 
 #ifdef RECONOS_DEBUG
  #define debug(...) printf(__VA_ARGS__)

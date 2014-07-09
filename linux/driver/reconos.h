@@ -21,8 +21,8 @@
 #ifndef RECONOS_DRV_H
 #define RECONOS_DRV_H
 
-#define __printk(...) printk(__VA_ARGS__)
-//#define __printk(...) 
+//#define __printk(...) printk(__VA_ARGS__)
+#define __printk(...) 
 
 #include "include/reconos.h"
 
