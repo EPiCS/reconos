@@ -221,9 +221,6 @@ begin
 				--
 				-- Starting end exiting the hardware thread
 				--
-				--   init - deciding whether to resume or not
-				--   exit - exit thread
-				--
 				when STATE_INIT =>
 					osif_read(i_osif, o_osif, ret, done);
 					if done then
@@ -238,12 +235,7 @@ begin
 					osif_thread_exit(i_osif, o_osif);
 
 				--
-				-- Normal execution of Sort-Demo
-				--
-				--   get_addr   - getting address of unsorted data
-				--   read_data  - reading unsorted data from system-memory
-				--   write_data - writing sorted data back to system-memory
-				--   put_ack    - acknowledging successful sorting
+				-- Execution of Sort-Demo
 				--
 				when STATE_GET_ADDR =>
 					if sig = '1' then
@@ -353,10 +345,6 @@ begin
 				-- 
 				-- Suspending the hardware thread and saving its state
 				--
-				--   suspend      - getting address for state data
-				--   suspend_addr - writing addres of data (addr)
-				--   suspend_data - writing data from local RAM
-				--
 				when STATE_SUSPEND =>
 					osif_call_0(i_osif, o_osif, OSIF_CMD_THREAD_GET_STATE_ADDR, state_addr, done);
 					if done then
@@ -408,10 +396,6 @@ begin
 
 				-- 
 				-- Resuming the hardware thread and restoring its state
-				--
-				--   resume      - getting address for state data
-				--   resume_addr - reading addres of data (addr)
-				--   resume_data - reading data from local RAM
 				--
 				when STATE_RESUME =>
 					osif_call_0(i_osif, o_osif, OSIF_CMD_THREAD_GET_STATE_ADDR, state_addr, done);
