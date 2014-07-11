@@ -53,6 +53,8 @@ void timer_init() {
 	}
 
 	close(fd);
+
+	timer_reset();
 }
 
 /*
