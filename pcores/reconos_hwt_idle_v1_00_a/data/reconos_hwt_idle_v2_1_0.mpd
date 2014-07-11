@@ -4,6 +4,8 @@ BEGIN reconos_hwt_idle
 OPTION IPTYPE      = PERIPHERAL
 OPTION IMP_NETLIST = TRUE
 OPTION HDL         = VHDL
+OPTION IP_GROUP    = ReconOS
+OPTION DESC        = ReconOS - Empty hardware thread
 
 ## Bus Interfaces
 BUS_INTERFACE BUS=OSIF_FIFO_Sw2Hw, BUS_STD=S_FIFO, BUS_TYPE=INITIATOR

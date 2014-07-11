@@ -12,7 +12,7 @@ BEGIN reconos_osif_fifo
 OPTION IPTYPE = PERIPHERAL
 OPTION IMP_NETLIST = TRUE
 OPTION HDL = VHDL
-OPTION IP_GROUP = MICROBLAZE:USER
+OPTION IP_GROUP = ReconOS
 OPTION DESC = ReconOS - OSIF FIFO
 OPTION LONG_DESC = A simple bidirectional FIFO accessible form the AXI-Bus and from other hardware. Thes FIFO is used to connect the hwts to the AXI-Bus and therefore to the processing system.
 #OPTION ARCH_SUPPORT_MAP = (others=DEVELOPMENT)

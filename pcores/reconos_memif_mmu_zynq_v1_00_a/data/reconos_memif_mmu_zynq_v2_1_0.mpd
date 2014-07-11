@@ -12,7 +12,7 @@ BEGIN reconos_memif_mmu_zynq
 OPTION IPTYPE = PERIPHERAL
 OPTION IMP_NETLIST = TRUE
 OPTION HDL = VHDL
-OPTION IP_GROUP = MICROBLAZE:USER
+OPTION IP_GROUP = ReconOS
 OPTION DESC = ReconOS - MEMIF Memory Management Unit
 OPTION LONG_DESC = The MMU enables support for virtual address translation.
 #OPTION ARCH_SUPPORT_MAP = (others=DEVELOPMENT)

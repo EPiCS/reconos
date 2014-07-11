@@ -12,7 +12,7 @@ BEGIN reconos_memif_burst_converter
 OPTION IPTYPE = PERIPHERAL
 OPTION IMP_NETLIST = TRUE
 OPTION HDL = VHDL
-OPTION IP_GROUP = MICROBLAZE:USER
+OPTION IP_GROUP = ReconOS
 OPTION DESC = ReconOS - MEMIF Burst converter
 OPTION LONG_DESC = The burst converter splits burst transfers into smaller requests which do not go over a page border.
 #OPTION ARCH_SUPPORT_MAP = (others=DEVELOPMENT)
