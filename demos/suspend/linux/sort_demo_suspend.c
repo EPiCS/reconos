@@ -169,6 +169,7 @@ int main(int argc, char **argv) {
 	debug("        ... reconos_thread_suspend() ");
 	for (i = 0; i < RECONOS_NUM_HWTS; i++) {
 		reconos_thread_suspend(&rt[i]);
+		reconos_thread_join(&rt[i]);
 		debug(".");
 	}
 	debug("\n");
