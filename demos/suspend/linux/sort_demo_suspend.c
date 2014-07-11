@@ -8,6 +8,7 @@
 
 #include "reconos.h"
 #include "mbox.h"
+#include "timer.h"
 
 #define MAX_NUM_HWTS 2
 #define SORT_LEN_BYTES 0x2000
@@ -30,18 +31,10 @@ uint32_t **data_ref;
  #define debug(...)
 #endif
 
-int diff_us (struct timespec *start, struct timespec *end) {
-	struct timespec temp;
+inline void print_time_diff(unsigned int start, unsigned int end) {
+	unsigned int diff = end - start;
 
-	if ((end->tv_nsec - start->tv_nsec) < 0) {
-		temp.tv_sec = end->tv_sec - start->tv_sec - 1;
-		temp.tv_nsec = 1000000000 + end->tv_nsec - start->tv_nsec;
-	} else {
-		temp.tv_sec = end->tv_sec - start->tv_sec;
-		temp.tv_nsec = end->tv_nsec - start->tv_nsec;
-	}
-
-	return temp.tv_sec * 1000000 + temp.tv_nsec / 1000;
+	printf("%d cc = %d µs = %d ms", diff, diff / 100, diff / 100000);
 }
 
 void bubblesort(uint32_t *data, int len_words) {
@@ -68,12 +61,13 @@ void bubblesort(uint32_t *data, int len_words) {
 int main(int argc, char **argv) {
 	int i, j;
 	uint32_t *d, *d_ref;
-	struct timespec start, end;
+	unsigned int start, end;
 
 	debug("DEBUG: initializing ReconOS\n");
-	debug("        ... reconos_init() ");
+	debug("        ... reconos_init()\n");
+	debug("        ... timer_init()\n");
 	reconos_init();
-	debug("\n");
+	timer_init();
 	debug("        ... %d hardware threads detected\n", RECONOS_NUM_HWTS);
 	
 	debug("DEBUG: initializing mboxes ");
@@ -120,7 +114,7 @@ int main(int argc, char **argv) {
 	}
 	debug("\n");
 
-	clock_gettime(CLOCK_MONOTONIC, &start);
+	start = timer_get();
 
 	debug("DEBUG: sorting reference data ");
 	for (i = 0; i < RECONOS_NUM_HWTS; i++) {
@@ -129,9 +123,11 @@ int main(int argc, char **argv) {
 	}
 	debug("\n");
 
-	clock_gettime(CLOCK_MONOTONIC, &end);
+	end = timer_get();
 
-	printf("Sorting in software took %dµs\n", diff_us(&start, &end));
+	printf("Sorting in software took ");
+	print_time_diff(start, end);
+	printf("\n");
 
 	debug("DEBUG: initializing ReconOS resources\n");
 	debug("        ... reconos_resource_init() ");
@@ -154,7 +150,7 @@ int main(int argc, char **argv) {
 	}
 	debug("\n");
 
-	clock_gettime(CLOCK_MONOTONIC, &start);
+	start = timer_get();
 
 	debug("DEBUG: starting ReconOS thread\n");
 	debug("        ... reconos_thread_create() ");
@@ -190,9 +186,9 @@ int main(int argc, char **argv) {
 	}
 	debug("\n");
 
-	clock_gettime(CLOCK_MONOTONIC, &end);
+	end = timer_get();
 
-#ifdef DEBUG
+#if 0
 	debug("DEBUG: sorted data\n");
 	for (i = 0; i < RECONOS_NUM_HWTS; i++) {
 		debug("-- data[%d] -----------------------\n", i);
@@ -228,7 +224,9 @@ int main(int argc, char **argv) {
 	reconos_cleanup();
 	debug("\n");
 
-	printf("Sorting in hardware took %dµs\n", diff_us(&start, &end));
+	printf("Sorting in hardware took ");
+	print_time_diff(start, end);
+	printf("\n");
 
 	return 0;
 }

@@ -3,12 +3,14 @@
 # CROSS_COMPILE
 CC = $(CROSS_COMPILE)gcc
 
-CFLAGS += -Wall -static -L $(RECONOS)/linux/lib -I $(RECONOS)/linux/lib/include
+CFLAGS += -Wall -static
+CFLAGS += -L $(RECONOS)/linux/lib -I $(RECONOS)/linux/lib/include
+CFLAGS += -L $(RECONOS)/linux/tools/timer -I $(RECONOS)/linux/tools/timer
 
 all: sort_demo_suspend
 
 sort_demo_suspend: sort_demo_suspend.c
-	$(CC) $(APP_OBJS) $(CFLAGS) sort_demo_suspend.c -o sort_demo_suspend -lreconos -lpthread
+	$(CC) $(APP_OBJS) $(CFLAGS) sort_demo_suspend.c -o sort_demo_suspend -lreconos -lpthread -ltimer
 
 clean:
 	rm -f *.o sort_demo_suspend
