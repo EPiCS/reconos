@@ -27,7 +27,7 @@
 #include <semaphore.h>
 
 
-/* == ReconOS proc control============================================== */
+/* == ReconOS proc control ============================================= */
 
 /*
  * Handles page faults from the memory subsystem
