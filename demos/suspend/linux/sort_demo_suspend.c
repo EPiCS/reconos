@@ -34,7 +34,7 @@ uint32_t **data_ref;
 inline void print_time_diff(unsigned int start, unsigned int end) {
 	unsigned int diff = end - start;
 
-	printf("%d cc = %d µs = %d ms", diff, diff / 100, diff / 100000);
+	printf("%u cc = %u µs = %u ms", diff, diff / 100, diff / 100000);
 }
 
 void bubblesort(uint32_t *data, int len_words) {
