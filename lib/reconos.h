@@ -99,6 +99,7 @@ void reconos_resource_init(struct reconos_resource *rr,
  */
 struct reconos_thread {
 	char *name;
+	int id;
 
 	void *init_data;
 	struct reconos_resource *resources;

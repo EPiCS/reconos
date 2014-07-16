@@ -36,6 +36,7 @@ static struct hwslot *_hwslots;
 static int _proc_control;
 static pthread_t _pgf_handler;
 static struct sigaction _dt_signal;
+static int _thread_id;
 
 
 /* == ReconOS resource ================================================= */
@@ -59,6 +60,7 @@ void reconos_thread_init(struct reconos_thread *rt,
                          char* name,
                          int state_size) {
 	rt->name = name;
+	rt->id = _thread_id++;
 
 	rt->init_data = NULL;
 	rt->resources = NULL;
@@ -243,6 +245,8 @@ void reconos_init() {
 	signal(SIGINT, exit_signal);
 	signal(SIGTERM, exit_signal);
 	signal(SIGABRT, exit_signal);
+
+	_thread_id = 0;
 
 	reconos_drv_init();
 
