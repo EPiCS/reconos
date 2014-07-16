@@ -463,7 +463,6 @@ void hwslot_jointhread(struct hwslot *slot) {
 		      "interrupted before blocking syscall\n", slot->id);\
 		goto intr;\
 	}\
-	sleep(10);\
 	if ((p_call) < 0) {\
 		debug("[reconos-dt-%d] "\
 		      "interrupted in blocking syscall\n", slot->id);\
