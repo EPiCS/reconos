@@ -71,7 +71,7 @@ void reconos_thread_init(struct reconos_thread *rt,
 	if (!rt->state_data) {
 		panic("[reconos-core] ERROR: failed to allocate memory for state\n");
 	}
-	//memset(rt->state_data, 0, state_size);
+	memset((void *)rt->state_data, 0, state_size);
 
 	rt->hwslot = NULL;
 
