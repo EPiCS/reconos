@@ -463,11 +463,13 @@ void hwslot_jointhread(struct hwslot *slot) {
 		      "interrupted before blocking syscall\n", slot->id);\
 		goto intr;\
 	}\
+	slot->dt_state = DELEGATE_STATE_BLOCKED_SYSCALL;\
 	if ((p_call) < 0) {\
 		debug("[reconos-dt-%d] "\
 		      "interrupted in blocking syscall\n", slot->id);\
 		goto intr;\
-	}
+	}\
+	slot->dt_state = DELEGATE_STATE_PROCESSING;
 
 /*
  * Delegate function: Get initialization data
@@ -520,9 +522,7 @@ static inline int dt_sem_wait(struct hwslot *slot) {
 	RESOURCE_CHECK_TYPE(handle, RECONOS_RESOURCE_TYPE_SEM);
 
 	debug("[reconos-dt-%d] (sem_wait on %d) ...\n", slot->id, handle);
-	slot->dt_state = DELEGATE_STATE_BLOCKED_SYSCALL;
 	SYSCALL_BLOCK(ret = sem_wait(slot->rt->resources[handle].ptr));
-	slot->dt_state = DELEGATE_STATE_PROCESSING;
 	debug("[reconos-dt-%d] (sem_wait on %d) done\n", slot->id, handle);
 
 	reconos_osif_write(slot->osif, (uint32_t)ret);
@@ -547,9 +547,7 @@ static inline int dt_mutex_lock(struct hwslot *slot) {
 	RESOURCE_CHECK_TYPE(handle, RECONOS_RESOURCE_TYPE_MUTEX);
 
 	debug("[reconos-dt-%d] (mutex_lock on %d) ...\n", slot->id, handle);
-	slot->dt_state = DELEGATE_STATE_BLOCKED_SYSCALL;
 	SYSCALL_BLOCK(ret = pthread_mutex_lock(slot->rt->resources[handle].ptr));
-	slot->dt_state = DELEGATE_STATE_PROCESSING;
 	debug("[reconos-dt-%d] (mutex_lock on %d) done\n", slot->id, handle);
 
 	reconos_osif_write(slot->osif, (uint32_t)ret);
@@ -627,10 +625,8 @@ static inline int dt_cond_wait(struct hwslot *slot) {
 	RESOURCE_CHECK_TYPE(handle2, RECONOS_RESOURCE_TYPE_MUTEX);
 
 	debug("[reconos-dt-%d] (cond_wait on %d) ...\n", slot->id, handle);
-	slot->dt_state = DELEGATE_STATE_BLOCKED_SYSCALL;
 	SYSCALL_BLOCK(ret = pthread_cond_wait(slot->rt->resources[handle].ptr,
 	                                      slot->rt->resources[handle2].ptr));
-	slot->dt_state = DELEGATE_STATE_PROCESSING;
 	debug("[reconos-dt-%d] (cond_wait on %d) done\n", slot->id, handle);
 
 	reconos_osif_write(slot->osif, (uint32_t)ret);
@@ -723,9 +719,7 @@ static inline int dt_mbox_get(struct hwslot *slot) {
 	RESOURCE_CHECK_TYPE(handle, RECONOS_RESOURCE_TYPE_MBOX);
 
 	debug("[reconos-dt-%d] (mbox_get on %d) ...\n", slot->id, handle);
-	slot->dt_state = DELEGATE_STATE_BLOCKED_SYSCALL;
 	SYSCALL_BLOCK(ret = mbox_get_interruptible(slot->rt->resources[handle].ptr, &msg));
-	slot->dt_state = DELEGATE_STATE_PROCESSING;
 	debug("[reconos-dt-%d] (mbox_get on %d) done\n", slot->id, handle);
 
 	reconos_osif_write(slot->osif, msg);
