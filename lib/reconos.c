@@ -468,7 +468,7 @@ void hwslot_jointhread(struct hwslot *slot) {
  *
  *   slot - pointer to the hardware slot
  */
-static int dt_get_init_data(struct hwslot *slot) {
+static inline int dt_get_init_data(struct hwslot *slot) {
 	reconos_osif_write(slot->osif, (uint32_t)slot->rt->init_data);
 
 	return 0;
@@ -481,7 +481,7 @@ static int dt_get_init_data(struct hwslot *slot) {
  *
  *   slot - pointer to the hardware slot
  */
-static int dt_sem_post(struct hwslot *slot) {
+static inline int dt_sem_post(struct hwslot *slot) {
 	int handle, ret;
 
 	handle = reconos_osif_read(slot->osif);
@@ -506,7 +506,7 @@ intr:
  *
  *   slot - pointer to the hardware slot
  */
-static int dt_sem_wait(struct hwslot *slot) {
+static inline int dt_sem_wait(struct hwslot *slot) {
 	int handle, ret;
 
 	handle = reconos_osif_read(slot->osif);
@@ -533,7 +533,7 @@ intr:
  *
  *   slot - pointer to the hardware slot
  */
-static int dt_mutex_lock(struct hwslot *slot) {
+static inline int dt_mutex_lock(struct hwslot *slot) {
 	int handle, ret;
 
 	handle = reconos_osif_read(slot->osif);
@@ -560,7 +560,7 @@ intr:
  *
  *   slot - pointer to the hardware slot
  */
-static int dt_mutex_unlock(struct hwslot *slot) {
+static inline int dt_mutex_unlock(struct hwslot *slot) {
 	int handle, ret;
 
 	handle = reconos_osif_read(slot->osif);
@@ -585,7 +585,7 @@ intr:
  *
  *   slot - pointer to the hardware slot
  */
-static uint32_t dt_mutex_trylock(struct hwslot *slot) {
+static inline uint32_t dt_mutex_trylock(struct hwslot *slot) {
 	int handle, ret;
 
 	handle = reconos_osif_read(slot->osif);
@@ -610,7 +610,7 @@ intr:
  *
  *   slot - pointer to the hardware slot
  */
-static int dt_cond_wait(struct hwslot *slot) {
+static inline int dt_cond_wait(struct hwslot *slot) {
 #ifndef RECONOS_MINIMAL
 	int handle, handle2, ret;
 
@@ -646,7 +646,7 @@ intr:
  *
  *   slot - pointer to the hardware slot
  */
-static int dt_cond_signal(struct hwslot *slot) {
+static inline int dt_cond_signal(struct hwslot *slot) {
 #ifndef RECONOS_MINIMAL
 	int handle, ret;
 
@@ -677,7 +677,7 @@ intr:
  *
  *   slot - pointer to the hardware slot
  */
-static uint32_t dt_cond_broadcast(struct hwslot *slot) {
+static inline uint32_t dt_cond_broadcast(struct hwslot *slot) {
 #ifndef RECONOS_MINIMAL
 	int handle, ret;
 
@@ -708,7 +708,7 @@ intr:
  *
  *   slot - pointer to the hardware slot
  */
-static int dt_mbox_get(struct hwslot *slot) {
+static inline int dt_mbox_get(struct hwslot *slot) {
 	int handle, ret;
 	uint32_t msg;
 
@@ -736,7 +736,7 @@ intr:
  *
  *   slot - pointer to the hardware slot
  */
-static int dt_mbox_put(struct hwslot *slot) {
+static inline int dt_mbox_put(struct hwslot *slot) {
 	int handle, ret;
 	uint32_t arg0;
 
@@ -764,7 +764,7 @@ intr:
  *
  *   slot - pointer to the hardware slot
  */
-static int dt_mbox_tryget(struct hwslot *slot) {
+static inline int dt_mbox_tryget(struct hwslot *slot) {
 	int handle, ret;
 	uint32_t data;
 
@@ -791,7 +791,7 @@ intr:
  *
  *   slot - pointer to the hardware slot
  */
-static int dt_mbox_tryput(struct hwslot *slot) {
+static inline int dt_mbox_tryput(struct hwslot *slot) {
 	int handle, ret;
 	uint32_t arg0;
 
