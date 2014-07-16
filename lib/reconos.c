@@ -28,6 +28,7 @@
 #include <unistd.h>
 #include <signal.h>
 #include <pthread.h>
+#include <sched.h>
 #include <string.h>
 
 int RECONOS_NUM_HWTS = 0;
@@ -386,15 +387,19 @@ void hwslot_suspendthread(struct hwslot *slot) {
 	slot->dt_flags |= DELEGATE_FLAG_PAUSE_SYSCALLS;
 	slot->dt_flags |= DELEGATE_FLAG_SUSPEND;
 
-	switch (slot->dt_state) {
-		case DELEGATE_STATE_BLOCKED_OSIF:
-			reconos_osif_break(slot->osif);
-			break;
+	do {
+		switch (slot->dt_state) {
+			case DELEGATE_STATE_BLOCKED_OSIF:
+				reconos_osif_break(slot->osif);
+				break;
 
-		case DELEGATE_STATE_BLOCKED_SYSCALL:
-			pthread_kill(slot->dt, SIGUSR1);
-			break;
-	}
+			case DELEGATE_STATE_BLOCKED_SYSCALL:
+				pthread_kill(slot->dt, SIGUSR1);
+				break;
+		}
+
+		sched_yield();
+	} while (slot->dt_flags & DELEGATE_FLAG_SUSPEND);
 }
 
 /*
@@ -455,10 +460,13 @@ void hwslot_jointhread(struct hwslot *slot) {
 #define SYSCALL_BLOCK(p_call)\
 	if (slot->dt_flags & DELEGATE_FLAG_PAUSE_SYSCALLS) {\
 		debug("[reconos-dt-%d] "\
-		      "interrupted in blocking syscall\n", slot->id);\
+		      "interrupted before blocking syscall\n", slot->id);\
 		goto intr;\
 	}\
+	sleep(10);\
 	if ((p_call) < 0) {\
+		debug("[reconos-dt-%d] "\
+		      "interrupted in blocking syscall\n", slot->id);\
 		goto intr;\
 	}
 
