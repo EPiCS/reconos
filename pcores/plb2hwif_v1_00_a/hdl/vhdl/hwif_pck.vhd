@@ -27,7 +27,8 @@ package hwif_pck is
   -- Submodule IDs
   constant C_ID_PERFMON  : std_logic_vector(31 downto 0) := X"DEADAFFE";
   constant C_ID_IDENTITY : std_logic_vector(31 downto 0) := X"DEADBEEF";
-
+  constant C_ID_GPIO     : std_logic_vector(31 downto 0) := X"DEADCA1F";
+  
   -- Hardware thread IDs
   constant C_ID_SORT_DEMO_RQ : std_logic_vector(31 downto 0) := X"DEADDEAD";
   constant C_ID_ARBITER : std_logic_vector(31 downto 0) := X"BA5EB055";
