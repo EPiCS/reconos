@@ -34,9 +34,8 @@ entity fifo32_peek is
     FIFO32_S_OUT_Fill : out std_logic_vector(15 downto 0);
     FIFO32_S_IN_Rd    : in  std_logic;
 
-
-
-    FIFO32_PEEK_DATA : out std_logic_vector((C_FIFO32_PEEK_DEPTH*32)-1 downto 0)
+    FIFO32_PEEK_DATA : out std_logic_vector((C_FIFO32_PEEK_DEPTH*32)-1 downto 0);
+    FIFO32_PEEK_DATA_FILL : out std_logic_vector(15 downto 0)
     );
 end entity;
 
@@ -83,8 +82,8 @@ architecture implementation of fifo32_peek is
 
   signal wrptr     : std_logic_vector(clog2(C_FIFO32_PEEK_DEPTH)-1 downto 0);
   signal rdptr     : std_logic_vector(clog2(C_FIFO32_PEEK_DEPTH)-1 downto 0);
-  signal remainder : std_logic_vector(clog2(C_FIFO32_PEEK_DEPTH)   downto 0);
-  signal fill      : std_logic_vector(clog2(C_FIFO32_PEEK_DEPTH)   downto 0);
+  signal remainder : std_logic_vector(clog2(C_FIFO32_PEEK_DEPTH) downto 0);
+  signal fill      : std_logic_vector(clog2(C_FIFO32_PEEK_DEPTH) downto 0);
   signal pad       : std_logic_vector(14 - clog2(C_FIFO32_PEEK_DEPTH) downto 0);
   signal clk       : std_logic;
 
@@ -102,7 +101,10 @@ begin
 
   FIFO32_S_OUT_Rd   <= INT_FIFO32_S_OUT_Rd;
   FIFO32_S_OUT_Data <= INT_FIFO32_S_OUT_DATA;
-  FIFO32_S_OUT_Fill <= sat_add(INT_FIFO32_S_OUT_Fill, FIFO32_S_IN_Fill);
+  FIFO32_S_OUT_Fill <= sat_add(INT_FIFO32_S_OUT_Fill, FIFO32_S_IN_Fill) when
+                         fill >  CONV_STD_LOGIC_VECTOR(0, fill'length) else
+                       (others => '0');
+  FIFO32_PEEK_DATA_FILL <= INT_FIFO32_S_OUT_Fill;
 
   clk <= FIFO32_M_Clk;
 
@@ -111,47 +113,63 @@ begin
   INT_FIFO32_S_OUT_Fill <= pad & fill;
 
 
-  fillAndRemainder : process(rst, clk)
-  begin
-    if rst = '1' then
-      fill      <= (others => '0');
-      remainder <= CONV_STD_LOGIC_VECTOR(C_FIFO32_PEEK_DEPTH, remainder'length);
-    elsif rising_edge(clk) then
-      -- FIFO empties when read
-      if INT_FIFO32_S_OUT_Rd = '0' and FIFO32_S_IN_Rd = '1' then
-        fill      <= fill - 1;
-        remainder <= remainder + 1;
-      end if;
+  --fillAndRemainder : process(rst, clk)
+  --begin
+  --  if rst = '1' then
+  --    fill      <= (others => '0');
+  --    remainder <= CONV_STD_LOGIC_VECTOR(C_FIFO32_PEEK_DEPTH, remainder'length);
+  --  elsif rising_edge(clk) then
+  --    -- FIFO empties when read
+  --    if INT_FIFO32_S_OUT_Rd = '0' and FIFO32_S_IN_Rd = '1' then
+  --      fill      <= fill - 1;
+  --      remainder <= remainder + 1;
+  --    end if;
 
-      -- FIFO fills when written
-      if INT_FIFO32_S_OUT_Rd = '1' and FIFO32_S_IN_Rd = '0' then
-        fill      <= fill + 1;
-        remainder <= remainder - 1;
-      end if;
+  --    -- FIFO fills when written
+  --    if INT_FIFO32_S_OUT_Rd = '1' and FIFO32_S_IN_Rd = '0' then
+  --      fill      <= fill + 1;
+  --      remainder <= remainder - 1;
+  --    end if;
 
-    -- In all other cases FIFO fill level remains the same.
-    end if;
-  end process;
+  --  -- In all other cases FIFO fill level remains the same.
+  --  end if;
+  --end process;
 
+  
+  -- Read signal is asynchronous to be able to directly react 
+  INT_FIFO32_S_OUT_Rd      <= '0' when rst = '1' else
+                              '1' when  FIFO32_S_IN_Fill /= X"0000" and
+                                        remainder > CONV_STD_LOGIC_VECTOR(0, remainder'length) else
+                              '0';
   -- fetches autonomously data into internal fifo until it is full
   write2ram : process(clk, rst)
   begin
     if rst = '1' then
-      wrptr <= (others => '0');
-      INT_FIFO32_S_OUT_Rd <= '0';
+      wrptr               <= (others => '0');
+
+      fill      <= (others => '0');
+      remainder <= CONV_STD_LOGIC_VECTOR(C_FIFO32_PEEK_DEPTH, remainder'length);
+
     elsif rising_edge(clk) then
-      if FIFO32_S_IN_Fill /= X"0000" and
-        ( (remainder >  CONV_STD_LOGIC_VECTOR(1, remainder'length) and FIFO32_S_IN_Rd = '0')
-          or
-          (remainder >  CONV_STD_LOGIC_VECTOR(0, remainder'length) and FIFO32_S_IN_Rd = '1')
-        )
+      if FIFO32_S_IN_Fill /= X"0000" and remainder > CONV_STD_LOGIC_VECTOR(0, remainder'length)
+ 
       then
-      -- C_FIFO32_PEEK_DEPTH
+        -- Read in data
         mem(CONV_INTEGER(wrptr)) <= FIFO32_S_IN_Data;
         wrptr                    <= incptr(wrptr);
-        INT_FIFO32_S_OUT_Rd <= '1';
+
+        -- FIFO fills when written
+        if FIFO32_S_IN_Rd = '0' then
+          fill      <= fill + 1;
+          remainder <= remainder - 1;
+        end if;
       else
-        INT_FIFO32_S_OUT_Rd <= '0';
+
+        -- FIFO empties when read
+        if FIFO32_S_IN_Rd = '1' then
+          fill      <= fill - 1;
+          remainder <= remainder + 1;
+        end if;
       end if;
     end if;
   end process;
@@ -162,6 +180,7 @@ begin
   begin
     if rst = '1' then
       rdptr <= (others => '0');
+      
     elsif rising_edge(clk) then
 
       if FIFO32_S_IN_Rd = '1' then
