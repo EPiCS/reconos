@@ -188,6 +188,23 @@ architecture behavioural of fifo32_arbiter is
 --------------------------------------------------------------------------------
 -- Components
 --------------------------------------------------------------------------------
+  component fifo32_peek is
+    generic (
+      C_FIFO32_PEEK_DEPTH : integer := 64
+      );
+    port (
+      Rst              : in  std_logic;
+      FIFO32_S_Clk     : in  std_logic;
+      FIFO32_M_Clk     : in  std_logic;
+      FIFO32_S_Data    : out std_logic_vector(31 downto 0);
+      FIFO32_M_Data    : in  std_logic_vector(31 downto 0);
+      FIFO32_S_Fill    : out std_logic_vector(15 downto 0);
+      FIFO32_M_Rem     : out std_logic_vector(15 downto 0);
+      FIFO32_S_Rd      : in  std_logic;
+      FIFO32_M_Wr      : in  std_logic;
+      FIFO32_PEEK_DATA : out std_logic_vector((C_FIFO32_PEEK_DEPTH*32)-1 downto 0)
+      );
+  end component;
 
   component rr_arbiter
     generic(
@@ -286,6 +303,15 @@ architecture behavioural of fifo32_arbiter is
   signal IN_FIFO32_M_Rem  : std_logic_vector((16*FIFO32_PORTS)-1 downto 0);
   signal IN_FIFO32_M_Wr   : std_logic_vector(FIFO32_PORTS-1 downto 0);
 
+  -- Outputs of fifo32_peek stage:
+  signal IN_PEEK_FIFO32_S_Data          : std_logic_vector((32*FIFO32_PORTS)-1 downto 0);
+  signal IN_PEEK_FIFO32_S_Fill          : std_logic_vector((16*FIFO32_PORTS)-1 downto 0);
+  signal IN_PEEK_FIFO32_S_Rd            : std_logic_vector(FIFO32_PORTS-1 downto 0);
+
+  signal IN_PEEK_FIFO32_M_Data : std_logic_vector((32*FIFO32_PORTS)-1 downto 0);
+  signal IN_PEEK_FIFO32_M_Rem  : std_logic_vector((16*FIFO32_PORTS)-1 downto 0);
+  signal IN_PEEK_FIFO32_M_Wr   : std_logic_vector(FIFO32_PORTS-1 downto 0);
+  
   --! Select signal from arbiter to the fsm.
   signal sel2mux : std_logic_vector(clog2(FIFO32_PORTS)-1 downto 0);
 
@@ -489,13 +515,33 @@ begin  -- of architecture ------------------------------------------------------
   OUT_FIFO32_S_Fill <= INT_OUT_FIFO32_S_Fill;
   OUT_FIFO32_M_Rem  <= INT_OUT_FIFO32_M_Rem;
 
+  -- In receiving direction, install fifo32_peeks, to be able to look at
+  -- complete header.
+  -- In sending direction, just pass the signals.
+  fifo32_peeks: for i in 0 to FIFO32_PORTS generate
+    fifo32_peek_i: fifo32_peek
+      port map (
+      Rst              => rst, 
+      FIFO32_S_Clk     => clk,
+      FIFO32_M_Clk     => clk,
+      FIFO32_S_Data    => 
+      FIFO32_M_Data    => 
+      FIFO32_S_Fill    => 
+      FIFO32_M_Rem     => 
+      FIFO32_S_Rd      => 
+      FIFO32_M_Wr      => 
+      FIFO32_PEEK_DATA => 
+         );
+      
+  end generate fifo32_peeks;
+  
   mux_S_DATA : mux
     generic map (
       element_width => 32,
       element_count => FIFO32_PORTS
       )
     port map (
-      input  => IN_FIFO32_S_Data,
+      input  => IN_PEEK_FIFO32_S_Data,
       sel    => sel2mux,
       output => INT_OUT_FIFO32_S_DATA
       );   
@@ -506,7 +552,7 @@ begin  -- of architecture ------------------------------------------------------
       element_count => FIFO32_PORTS
       )
     port map (
-      input  => IN_FIFO32_S_FILL,
+      input  => IN_PEEK_FIFO32_S_FILL,
       sel    => sel2mux,
       output => INT_OUT_FIFO32_S_Fill
       );   
@@ -519,7 +565,7 @@ begin  -- of architecture ------------------------------------------------------
     port map (
       input(0) => OUT_FIFO32_S_Rd,
       sel      => sel2mux,
-      output   => IN_FIFO32_S_Rd
+      output   => IN_PEEK_FIFO32_S_Rd
       );   
 
   -- Master part of fifo link
@@ -532,7 +578,7 @@ begin  -- of architecture ------------------------------------------------------
     port map (
       input  => OUT_FIFO32_M_Data,
       sel    => sel2mux,
-      output => IN_FIFO32_M_Data
+      output => IN_PEEK_FIFO32_M_Data
       );   
 
   mux_M_Rem : mux
@@ -541,7 +587,7 @@ begin  -- of architecture ------------------------------------------------------
       element_count => FIFO32_PORTS
       )
     port map (
-      input  => IN_FIFO32_M_Rem,
+      input  => IN_PEEK_FIFO32_M_Rem,
       sel    => sel2mux,
       output => INT_OUT_FIFO32_M_Rem
       );   
@@ -554,7 +600,7 @@ begin  -- of architecture ------------------------------------------------------
     port map (
       input(0) => OUT_FIFO32_M_Wr,
       sel      => sel2mux,
-      output   => IN_FIFO32_M_Wr
+      output   => IN_PEEK_FIFO32_M_Wr
       );   
 
   -- Arbiter controls sel signal
@@ -621,7 +667,7 @@ begin  -- of architecture ------------------------------------------------------
     --    requests <= (others => '0');
     --else --if clk'event and clk = '1' then
     for i in 0 to FIFO32_PORTS-1 loop
-      if to_integer(unsigned(IN_FIFO32_S_Fill((16*(i+1))-1 downto 16*i))) > 1 then
+      if to_integer(unsigned(IN_PEEK_FIFO32_S_Fill((16*(i+1))-1 downto 16*i))) > 1 then
         requests(i) <= '1';
       else
         requests(i) <= '0';
@@ -731,16 +777,16 @@ begin  -- of architecture ------------------------------------------------------
   end process;
 
   checksum : process(clk, rst)
-  is
+    is
     
   begin
-      read_data       <= OUT_FIFO32_M_Data;
-      read_data_valid <= OUT_FIFO32_M_Wr;
-      read_channel    <= sel2mux;
+    read_data       <= OUT_FIFO32_M_Data;
+    read_data_valid <= OUT_FIFO32_M_Wr;
+    read_channel    <= sel2mux;
 
-      write_data       <= INT_OUT_FIFO32_S_Data;
-      write_data_valid <= OUT_FIFO32_S_Rd;
-      write_channel    <= sel2mux;
+    write_data       <= INT_OUT_FIFO32_S_Data;
+    write_data_valid <= OUT_FIFO32_S_Rd;
+    write_channel    <= sel2mux;
   end process;
   
 end architecture;
