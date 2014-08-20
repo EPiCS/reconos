@@ -111,6 +111,14 @@ void hwslot_reset(struct hwslot *slot);
 void hwslot_setreset(struct hwslot *slot, int reset);
 
 /*
+ * Sets the signal of the slot.
+ *
+ *   slot  - pointer to the ReconOS slot
+ *   reset - zero or one to set the signal
+ */
+void hwslot_setsignal(struct hwslot *slot, int sig);
+
+/*
  * Creates a new delegate thread if not present.
  *
  *   slot - pointer to the ReconOS slot
@@ -172,6 +180,7 @@ void hwslot_jointhread(struct hwslot *slot);
 #define OSIF_CMD_THREAD_GET_INIT_DATA  0x000000A0
 #define OSIF_CMD_THREAD_GET_STATE_ADDR 0x000000A1
 #define OSIF_CMD_THREAD_EXIT           0x000000A2
+#define OSIF_CMD_THREAD_CLEAR_SIGNAL   0x000000A3
 #define OSIF_CMD_SEM_POST              0x000000B0
 #define OSIF_CMD_SEM_WAIT              0x000000B1
 #define OSIF_CMD_MUTEX_LOCK            0x000000C0

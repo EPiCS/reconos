@@ -207,6 +207,14 @@ void reconos_thread_resume(struct reconos_thread *rt, int slot);
  */
 void reconos_thread_join(struct reconos_thread *rt);
 
+/*
+ * Sets a signal to the hardware thread. The signal must be cleared
+ * by the hardware using the right system call.
+ *
+ *   rt - pointer to the ReconOS thread
+ */
+void reconos_thread_signal(struct reconos_thread *rt);
+
 /* == General functions ================================================ */
 
 /*

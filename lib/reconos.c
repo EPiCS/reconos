@@ -212,6 +212,13 @@ void reconos_thread_join(struct reconos_thread *rt) {
 	hwslot_jointhread(rt->hwslot);
 }
 
+/*
+ * @see header
+ */
+void reconos_thread_signal(struct reconos_thread *rt) {
+	hwslot_setsignal(rt->hwslot, 1);
+}
+
 
 /* == General functions ================================================ */
 
@@ -340,6 +347,13 @@ void hwslot_reset(struct hwslot *slot) {
  */
 void hwslot_setreset(struct hwslot *slot, int reset) {
 	reconos_proc_control_hwt_reset(_proc_control, slot->id, reset);
+}
+
+/*
+ * @see header
+ */
+void hwslot_setsignal(struct hwslot *slot, int sig) {
+	reconos_proc_control_hwt_signal(_proc_control, slot->id, sig);
 }
 
 /*
@@ -900,6 +914,10 @@ void *dt_delegate(void *arg) {
 			case OSIF_CMD_THREAD_GET_STATE_ADDR:
 				slot->dt_flags &= ~DELEGATE_FLAG_PAUSE_SYSCALLS;
 				reconos_osif_write(slot->osif, (uint32_t)slot->rt->state_data);
+				break;
+
+			case OSIF_CMD_THREAD_CLEAR_SIGNAL:
+				reconos_proc_control_hwt_signal(_proc_control, slot->id, 0);
 				break;
 
 			case OSIF_INTERRUPTED:
