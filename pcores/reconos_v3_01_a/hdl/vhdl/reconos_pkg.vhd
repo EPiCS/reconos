@@ -44,6 +44,7 @@ package reconos_pkg is
 	constant OSIF_CMD_THREAD_GET_STATE_ADDR : std_logic_vector(C_OSIF_WIDTH - 1 downto 0) := x"000000A1";
 	constant OSIF_CMD_THREAD_EXIT           : std_logic_vector(C_OSIF_WIDTH - 1 downto 0) := x"000000A2";
 	constant OSIF_CMD_THREAD_YIELD          : std_logic_vector(C_OSIF_WIDTH - 1 downto 0) := x"000000A3";
+	constant OSIF_CMD_THREAD_CLEAR_SIGNAL   : std_logic_vector(C_OSIF_WIDTH - 1 downto 0) := x"000000A4";
 
 	constant OSIF_CMD_SEM_POST              : std_logic_vector(C_OSIF_WIDTH - 1 downto 0) := x"000000B0";
 	constant OSIF_CMD_SEM_WAIT              : std_logic_vector(C_OSIF_WIDTH - 1 downto 0) := x"000000B1";
