@@ -61,22 +61,34 @@ entity user_logic is
 end entity user_logic;
 
 architecture implementation of user_logic is
-	signal counter                        : std_logic_vector(C_SLV_DWIDTH-1 downto 0);
+	signal counter : std_logic_vector(C_SLV_DWIDTH-1 downto 0) := x"00000000";
+	signal step_counter : std_logic_vector(C_SLV_DWIDTH-1 downto 0) := x"00000000";
+	signal step : std_logic_vector(C_SLV_DWIDTH-1 downto 0) := x"00000000";
 begin
-	IP2Bus_WrAck   <= Bus2IP_WrCE(0);
-	IP2Bus_RdAck   <= Bus2IP_RdCE(0);
+	IP2Bus_WrAck   <= Bus2IP_WrCE(0) or Bus2IP_WrCE(1);
+	IP2Bus_RdAck   <= Bus2IP_RdCE(0) or Bus2IP_WrCE(1);
 	IP2Bus_Error   <= '0';
 
-	IP2Bus_Data    <= counter;
-	T_COUNTER <= counter;
+	IP2Bus_Data  <= counter;
+	T_COUNTER    <= counter;
 
 	counter_proc : process(Bus2IP_Clk) is
 	begin
 		if rising_edge(Bus2IP_Clk) then
-			counter <= counter + 1;
+			step_counter <= step_counter + 1;
 
-			if (Bus2IP_WrCE = "1" or T_RST = '1') then
+			if step_counter = step then
+				counter <= counter + 1;
+				step_counter <= x"00000000";
+			end if;
+
+			if Bus2IP_WrCE = "10" or T_RST = '1' then
 				counter <= (others => '0');
+				step_counter <= (others => '0');
+			end if;
+
+			if Bus2IP_WrCE = "01" then
+				step <= Bus2IP_Data;
 			end if;
 		end if;
 	end process counter_proc;

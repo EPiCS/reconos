@@ -38,6 +38,12 @@ void timer_init();
 void timer_reset();
 
 /*
+ * Sets the step of the counter, i.e. the number of clock cycles to wait
+ * between incrementing the counter. Therefore 0 means to count every clock cycle.
+ */
+void timer_setstep(unsigned int step);
+
+/*
  * Gets the current timestamp.
  *
  *   no parameters

@@ -55,13 +55,21 @@ void timer_init() {
 	close(fd);
 
 	timer_reset();
+	timer_setstep(0);
 }
 
 /*
  * @see header
  */
 void timer_reset() {
-	*ptr = 0;
+	ptr[0] = 0;
+}
+
+/*
+ * @see header
+ */
+void timer_setstep(unsigned int step) {
+	ptr[1] = step;
 }
 
 /*

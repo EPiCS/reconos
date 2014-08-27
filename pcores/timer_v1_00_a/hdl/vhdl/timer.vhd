@@ -44,7 +44,7 @@ entity timer is
 		C_BASEADDR           : std_logic_vector   := X"FFFFFFFF";
 		C_HIGHADDR           : std_logic_vector   := X"00000000";
 		C_FAMILY             : string             := "virtex6";
-		C_NUM_REG            : integer            := 1;
+		C_NUM_REG            : integer            := 2;
 		C_NUM_MEM            : integer            := 1;
 		C_SLV_AWIDTH         : integer            := 32;
 		C_SLV_DWIDTH         : integer            := 32
@@ -102,7 +102,7 @@ architecture implementation of timer is
 			ZERO_ADDR_PAD & USER_SLV_HIGHADDR   -- user logic slave space high address
 		);
 
-	constant USER_SLV_NUM_REG   : integer   := 1;
+	constant USER_SLV_NUM_REG   : integer   := 2;
 	constant USER_NUM_REG       : integer   := USER_SLV_NUM_REG;
 	constant TOTAL_IPIF_CE      : integer   := USER_NUM_REG;
 
