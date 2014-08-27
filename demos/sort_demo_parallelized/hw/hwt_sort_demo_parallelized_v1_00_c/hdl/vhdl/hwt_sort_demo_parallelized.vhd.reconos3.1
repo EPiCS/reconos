@@ -6,8 +6,8 @@ use ieee.std_logic_unsigned.all;
 library proc_common_v3_00_a;
 use proc_common_v3_00_a.proc_common_pkg.all;
 
-library reconos_v3_00_b;
-use reconos_v3_00_b.reconos_pkg.all;
+library reconos_v3_01_a;
+use reconos_v3_01_a.reconos_pkg.all;
 
 -- Available Slice LUTs: 150720
 -- C_NUM_ENGINES  Max MHz Slice LUTs
@@ -26,34 +26,46 @@ entity hwt_sort_demo_parallelized is
                                         -- on (in words).
     );
   port (
-    -- OSIF FSL
-    OSFSL_S_Read    : out std_logic;  -- Read signal, requiring next available input to be read
-    OSFSL_S_Data    : in  std_logic_vector(0 to 31);  -- Input data
-    OSFSL_S_Control : in  std_logic;  -- Control Bit, indicating the input data are control word
-    OSFSL_S_Exists  : in  std_logic;  -- Data Exist Bit, indicating data exist in the input FSL bus
+    -- OSIF FIFO ports
+    OSIF_FIFO_Sw2Hw_Data  : in  std_logic_vector(31 downto 0);
+    OSIF_FIFO_Sw2Hw_Fill  : in  std_logic_vector(15 downto 0);
+    OSIF_FIFO_Sw2Hw_Empty : in  std_logic;
+    OSIF_FIFO_Sw2Hw_RE    : out std_logic;
 
-    OSFSL_M_Write   : out std_logic;  -- Write signal, enabling writing to output FSL bus
-    OSFSL_M_Data    : out std_logic_vector(0 to 31);  -- Output data
-    OSFSL_M_Control : out std_logic;  -- Control Bit, indicating the output data are contol word
-    OSFSL_M_Full    : in  std_logic;  -- Full Bit, indicating output FSL bus is full
+    OSIF_FIFO_Hw2Sw_Data : out std_logic_vector(31 downto 0);
+    OSIF_FIFO_Hw2Sw_Rem  : in  std_logic_vector(15 downto 0);
+    OSIF_FIFO_Hw2Sw_Full : in  std_logic;
+    OSIF_FIFO_Hw2Sw_WE   : out std_logic;
 
-    -- FIFO Interface
-    FIFO32_S_Data : in  std_logic_vector(31 downto 0);
-    FIFO32_M_Data : out std_logic_vector(31 downto 0);
-    FIFO32_S_Fill : in  std_logic_vector(15 downto 0);
-    FIFO32_M_Rem  : in  std_logic_vector(15 downto 0);
-    FIFO32_S_Rd   : out std_logic;
-    FIFO32_M_Wr   : out std_logic;
+    -- MEMIF FIFO ports
+    MEMIF_FIFO_Hwt2Mem_Data : out std_logic_vector(31 downto 0);
+    MEMIF_FIFO_Hwt2Mem_Rem  : in  std_logic_vector(15 downto 0);
+    MEMIF_FIFO_Hwt2Mem_Full : in  std_logic;
+    MEMIF_FIFO_Hwt2Mem_WE   : out std_logic;
 
-    Clk : in std_logic;
-    Rst : in std_logic;
+    MEMIF_FIFO_Mem2Hwt_Data  : in  std_logic_vector(31 downto 0);
+    MEMIF_FIFO_Mem2Hwt_Fill  : in  std_logic_vector(15 downto 0);
+    MEMIF_FIFO_Mem2Hwt_Empty : in  std_logic;
+    MEMIF_FIFO_Mem2Hwt_RE    : out std_logic;
+
+    HWT_Clk : in std_logic;
+    HWT_Rst : in std_logic;
 
     DEBUG_DATA : out std_logic_vector(5 downto 0)
     );
 
+  attribute SIGIS : string;
+
+  attribute SIGIS of HWT_Clk : signal is "Clk";
+  attribute SIGIS of HWT_Rst : signal is "Rst";
+
 end entity hwt_sort_demo_parallelized;
 
 architecture implementation of hwt_sort_demo_parallelized is
+  -- just for simpler use
+  signal clk : std_logic;
+  signal rst : std_logic;
+
   type STATE_TYPE is (
     STATE_GET_ADDR, STATE_READ, STATE_SORTING,
     STATE_WRITE, STATE_ACK, STATE_THREAD_EXIT);
@@ -137,7 +149,10 @@ begin
   DEBUG_DATA(2) <= '1' when state = STATE_WRITE       else '0';
   DEBUG_DATA(1) <= '1' when state = STATE_ACK         else '0';
   DEBUG_DATA(0) <= '1' when state = STATE_THREAD_EXIT else '0';
-  
+
+  clk <= HWT_Clk;
+  rst <= HWT_Rst;
+
   memories : for i in 0 to C_NUM_ENGINES-1 generate
 
     -- local dual-port RAM
@@ -186,36 +201,39 @@ begin
       i_ram(i),
       o_ram(i),
       o_RAMAddr_reconos_2(i),
+      o_RAMWE_reconos(i),
       o_RAMData_reconos(i),
-      i_RAMData_reconos(i),
-      o_RAMWE_reconos(i)
+      i_RAMData_reconos(i)
       );
 
     o_RAMAddr_reconos(i)(0 to C_LOCAL_RAM_ADDRESS_WIDTH-1) <= o_RAMAddr_reconos_2(i)((32-C_LOCAL_RAM_ADDRESS_WIDTH) to 31);
   end generate memories;
 
   -- ReconOS initilization
-    fsl_setup(
+  osif_setup (
     i_osif,
     o_osif,
-    OSFSL_S_Data,
-    OSFSL_S_Exists,
-    OSFSL_M_Full,
-    OSFSL_M_Data,
-    OSFSL_S_Read,
-    OSFSL_M_Write,
-    OSFSL_M_Control
+    OSIF_FIFO_Sw2Hw_Data,
+    OSIF_FIFO_Sw2Hw_Fill,
+    OSIF_FIFO_Sw2Hw_Empty,
+    OSIF_FIFO_Hw2Sw_Rem,
+    OSIF_FIFO_Hw2Sw_Full,
+    OSIF_FIFO_Sw2Hw_RE,
+    OSIF_FIFO_Hw2Sw_Data,
+    OSIF_FIFO_Hw2Sw_WE
     );
 
-  memif_setup(
+  memif_setup (
     i_memif,
     o_memif,
-    FIFO32_S_Data,
-    FIFO32_S_Fill,
-    FIFO32_S_Rd,
-    FIFO32_M_Data,
-    FIFO32_M_Rem,
-    FIFO32_M_Wr
+    MEMIF_FIFO_Mem2Hwt_Data,
+    MEMIF_FIFO_Mem2Hwt_Fill,
+    MEMIF_FIFO_Mem2Hwt_Empty,
+    MEMIF_FIFO_Hwt2Mem_Rem,
+    MEMIF_FIFO_Hwt2Mem_Full,
+    MEMIF_FIFO_Mem2Hwt_RE,
+    MEMIF_FIFO_Hwt2Mem_Data,
+    MEMIF_FIFO_Hwt2Mem_WE
     );
 
   -- os and memory synchronisation state machine
@@ -283,7 +301,6 @@ begin
           end if;
           if engine >= C_NUM_ENGINES then
             state <= STATE_ACK;
-            engine := 0;
           end if;
 
         -- send mbox that signals that the sorting is finished
