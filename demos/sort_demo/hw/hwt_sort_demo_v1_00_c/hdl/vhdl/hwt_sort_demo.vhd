@@ -51,6 +51,7 @@ architecture implementation of hwt_sort_demo is
 	signal rst   : std_logic;
 
 	type STATE_TYPE is (
+					STATE_INIT,
 					STATE_GET_ADDR,STATE_READ,STATE_SORTING,
 					STATE_WRITE,STATE_ACK,STATE_THREAD_EXIT);
 
@@ -208,13 +209,18 @@ begin
 			osif_reset(o_osif);
 			memif_reset(o_memif);
 			ram_reset(o_ram);
-			state <= STATE_GET_ADDR;
+			state <= STATE_INIT;
 			done  := False;
 			addr <= (others => '0');
 			len <= (others => '0');
 			sort_start <= '0';
 		elsif rising_edge(clk) then
 			case state is
+				when STATE_INIT =>
+					osif_read(i_osif, o_osif, ignore, done);
+					if done then
+						state <= STATE_GET_ADDR;
+					end if;
 
 				-- get address via mbox: the data will be copied from this address to the local ram in the next states
 				when STATE_GET_ADDR =>
