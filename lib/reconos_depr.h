@@ -55,9 +55,9 @@ inline void __attribute__((deprecated))
 inline void __attribute__((deprecated))
             reconos_mmu_stats(int *tlb_hits, int *tlb_misses,
                               int *page_faults) {
-	tlb_hits = 0;
-	tlb_misses = 0;
-	page_faults = 0;
+	*tlb_hits = 0;
+	*tlb_misses = 0;
+	*page_faults = 0;
 }
 
 #endif /* RECONOS_DEPR_H */
