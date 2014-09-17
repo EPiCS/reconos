@@ -68,11 +68,15 @@ void reconos_thread_init(struct reconos_thread *rt,
 	rt->resource_count = 0;
 
 	rt->state = RECONOS_THREAD_STATE_INIT;
-	rt->state_data = malloc(state_size);
-	if (!rt->state_data) {
-		panic("[reconos-core] ERROR: failed to allocate memory for state\n");
+	rt->state_data = NULL;
+
+	if (state_size != 0) {
+		rt->state_data = malloc(state_size);
+		if (!rt->state_data) {
+			panic("[reconos-core] ERROR: failed to allocate memory for state\n");
+		}
+		memset((void *)rt->state_data, 0, state_size);
 	}
-	memset((void *)rt->state_data, 0, state_size);
 
 	rt->hwslot = NULL;
 
@@ -290,8 +294,18 @@ void reconos_init() {
 #endif
 }
 
+/*
+ * @see header
+ */
 void reconos_cleanup() {
 	reconos_proc_control_sys_reset(_proc_control);
+}
+
+/*
+ * @see header
+ */
+void reconos_cache_flush() {
+	reconos_proc_control_cache_flush(_proc_control);
 }
 
 

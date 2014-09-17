@@ -232,4 +232,9 @@ void reconos_init();
  */
 void reconos_cleanup();
 
+/*
+ * Flushes the cache if needed.
+ */
+void reconos_cache_flush();
+
 #endif /* RECONOS_H */
