@@ -1,4 +1,4 @@
-#include "reconos.h"
+#include "reconos_depr.h"
 #include "mbox.h"
 
 #include <stdio.h>
@@ -293,17 +293,6 @@ int main(int argc, char ** argv)
 	}
 	printf("\n");
 
-	printf("Waiting for termination...\n");
-	for (i=0; i<hw_threads; i++)
-	{
-	  pthread_join(hwt[i].delegate,NULL);
-	}
-	for (i=0; i<sw_threads; i++)
-	{
-	  pthread_join(swt[i],NULL);
-	}
-
-	printf("\n");
 	print_mmu_stats();
 	printf( "Running times (size: %d words, %d hw-threads, %d sw-threads):\n"
             "\tGenerate data: %lu ms\n"
