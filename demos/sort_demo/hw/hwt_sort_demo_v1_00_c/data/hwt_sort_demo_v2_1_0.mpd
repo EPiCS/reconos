@@ -35,7 +35,6 @@ PORT MEMIF_FIFO_Mem2Hwt_RE = "S_FIFO_RE", DIR = O, BUS = MEMIF_FIFO_Mem2Hwt
 
 PORT HWT_Clk = "", DIR = I, SIGIS = Clk
 PORT HWT_Rst = "", DIR = I, SIGIS = Rst
-
-PORT DEBUG_DATA = "", DIR = O, VEC = [5:0]
+PORT HWT_Signal = "", DIR = I
 
 END

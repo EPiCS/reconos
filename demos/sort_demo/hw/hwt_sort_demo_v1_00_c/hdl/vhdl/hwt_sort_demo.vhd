@@ -33,10 +33,9 @@ entity hwt_sort_demo is
 		MEMIF_FIFO_Mem2Hwt_Empty   : in  std_logic;
 		MEMIF_FIFO_Mem2Hwt_RE      : out std_logic;
 
-		HWT_Clk   : in  std_logic;
-		HWT_Rst   : in  std_logic;
-
-		DEBUG_DATA : out std_logic_vector(5 downto 0)
+		HWT_Clk    : in  std_logic;
+		HWT_Rst    : in  std_logic;
+		HWT_Signal : in  std_logic
 	);
 
 	attribute SIGIS   : string;
@@ -89,7 +88,7 @@ architecture implementation of hwt_sort_demo is
 	constant MBOX_SEND  : std_logic_vector(31 downto 0) := x"00000001";
 
 	signal addr     : std_logic_vector(31 downto 0);
-	signal len      : std_logic_vector(23 downto 0);
+	signal len      : std_logic_vector(31 downto 0);
 	signal state    : STATE_TYPE;
 	signal i_osif   : i_osif_t;
 	signal o_osif   : o_osif_t;
@@ -118,14 +117,6 @@ architecture implementation of hwt_sort_demo is
 	signal sort_start : std_logic := '0';
 	signal sort_done  : std_logic := '0';
 begin
-
-	DEBUG_DATA(5) <= '1' when state = STATE_GET_ADDR else '0';
-	DEBUG_DATA(4) <= '1' when state = STATE_READ else '0';
-	DEBUG_DATA(3) <= '1' when state = STATE_SORTING else '0';
-	DEBUG_DATA(2) <= '1' when state = STATE_WRITE else '0';
-	DEBUG_DATA(1) <= '1' when state = STATE_ACK else '0';
-	DEBUG_DATA(0) <= '1' when state = STATE_THREAD_EXIT else '0';
-
 	clk <= HWT_Clk;
 	rst <= HWT_Rst;
 	
@@ -232,7 +223,7 @@ begin
 						if (addr = X"FFFFFFFF") then
 							state <= STATE_THREAD_EXIT;
 						else
-							len               <= conv_std_logic_vector(C_LOCAL_RAM_SIZE_IN_BYTES,24);
+							len               <= conv_std_logic_vector(C_LOCAL_RAM_SIZE_IN_BYTES,32);
 							addr              <= addr(31 downto 2) & "00";
 							state             <= STATE_READ;
 						end if;
@@ -251,7 +242,7 @@ begin
 					sort_start <= '0';
 					--o_ram.addr <= (others => '0');
 					if sort_done = '1' then
-						len    <= conv_std_logic_vector(C_LOCAL_RAM_SIZE_IN_BYTES,24);
+						len    <= conv_std_logic_vector(C_LOCAL_RAM_SIZE_IN_BYTES,32);
 						--state  <= STATE_WRITE_REQ;
 						state  <= STATE_WRITE;
 					end if;
