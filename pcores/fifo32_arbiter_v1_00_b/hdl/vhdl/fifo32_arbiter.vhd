@@ -518,22 +518,22 @@ begin  -- of architecture ------------------------------------------------------
   -- In receiving direction, install fifo32_peeks, to be able to look at
   -- complete header.
   -- In sending direction, just pass the signals.
-  fifo32_peeks: for i in 0 to FIFO32_PORTS generate
-    fifo32_peek_i: fifo32_peek
-      port map (
-      Rst              => rst, 
-      FIFO32_S_Clk     => clk,
-      FIFO32_M_Clk     => clk,
-      FIFO32_S_Data    => 
-      FIFO32_M_Data    => 
-      FIFO32_S_Fill    => 
-      FIFO32_M_Rem     => 
-      FIFO32_S_Rd      => 
-      FIFO32_M_Wr      => 
-      FIFO32_PEEK_DATA => 
-         );
+  --fifo32_peeks: for i in 0 to FIFO32_PORTS generate
+  --  fifo32_peek_i: fifo32_peek
+  --    port map (
+  --    Rst              => rst, 
+  --    FIFO32_S_Clk     => clk,
+  --    FIFO32_M_Clk     => clk,
+  --    FIFO32_S_Data    => 
+  --    FIFO32_M_Data    => 
+  --    FIFO32_S_Fill    => 
+  --    FIFO32_M_Rem     => 
+  --    FIFO32_S_Rd      => 
+  --    FIFO32_M_Wr      => 
+  --    FIFO32_PEEK_DATA => 
+  --       );
       
-  end generate fifo32_peeks;
+  --end generate fifo32_peeks;
   
   mux_S_DATA : mux
     generic map (
