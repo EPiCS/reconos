@@ -16,7 +16,7 @@ use proc_common_v3_00_a.proc_common_pkg.all;
 library plb2hwif_v1_00_a;
 use plb2hwif_v1_00_a.hwif_pck.all;
 
-entity fifo32_arbiter is
+entity fifo32_arbiter_sh_rel is
   generic (
     C_SLV_DWIDTH     : integer := 32;
     FIFO32_PORTS     : integer := 16;   --! 1 to 16 allowed
@@ -170,6 +170,12 @@ entity fifo32_arbiter is
     DEC2HWIF_RdAck : out std_logic;
     DEC2HWIF_WrAck : out std_logic;
 
+    -- Error reporting
+    ERROR_REQ : out std_logic;
+    ERROR_ACK : in  std_logic;
+    ERROR_TYP : out std_logic_vector(7 downto 0);
+    ERROR_ADR : out std_logic_vector(31 downto 0);
+
     -- Misc
     Rst : in std_logic;
     clk : in std_logic;                 -- separate clock for control logic
@@ -183,49 +189,11 @@ end entity;
 --! This Multiplexer may only switch to another input stream, when a complete
 --! packet was transmitted. As we don't have any signals telling us the end or
 --! start of a packet, we have to track the protocol to decide when to switch.
-architecture behavioural of fifo32_arbiter is
+architecture behavioural of fifo32_arbiter_sh_rel is
 
 --------------------------------------------------------------------------------
 -- Components
 --------------------------------------------------------------------------------
-
-  component rr_arbiter
-    generic(
-      request_width : positive := 6  --! How many request inputs do you want?
-      );
-    port (
-      clk      : in  std_logic;         --! Clock signal
-      reset    : in  std_logic;         --! Reset signal
-      requests : in  std_logic_vector (request_width-1 downto 0);  --! Input lines from the requestors.
-      sel      : out std_logic_vector (clog2(request_width)-1 downto 0));  --! Who of the requesters will be served?
-  end component;
-
-  component mux
-    generic (
-      element_width : positive := 32;  --! Width in bits of the input and output ports
-      element_count : positive := 16    --! Demux how many ports?
-      );
-    port (
-      input  : in  std_logic_vector(element_width*element_count-1 downto 0);  --! An array of input vectors
-      sel    : in  std_logic_vector(clog2(element_count)-1 downto 0);  --! The select signals to choose the input to be forwarded
-      output : out std_logic_vector(element_width-1 downto 0)  --! The output of the multiplexer
-      );
-  end component;
-
-  component demux
-    generic (
-      element_width : positive := 32;  --! The width in bits of the input and output ports
-      element_count : positive := 16    --! Demux to how many ports?
-      );
-
-    port (
-      sel    : in  std_logic_vector(clog2(element_count)-1 downto 0);  --! Select signal: which output register shall be updated?
-      input  : in  std_logic_vector(element_width-1 downto 0);  --! Data input
-      output : out std_logic_vector(element_width*element_count-1 downto 0)  --! Data output
-      );
-  end component;
-
-
   component hwif_subsystem is
     generic(
       C_HWT_ID                : std_logic_vector(31 downto 0) := X"DEADDEAD";  -- Unique ID number of this module
@@ -274,30 +242,44 @@ architecture behavioural of fifo32_arbiter is
 --------------------------------------------------------------------------------
 
   constant C_CHECKSUM_NUM_CHANNELS : integer := FIFO32_PORTS;
+
+  constant ERROR_TYP_NONE    : std_logic_vector(7 downto 0) := X"00";
+  constant ERROR_TYP_HEADER1 : std_logic_vector(7 downto 0) := X"01";
+  constant ERROR_TYP_HEADER2 : std_logic_vector(7 downto 0) := X"02";
+  constant ERROR_TYP_DATA    : std_logic_vector(7 downto 0) := X"03";
+
 --------------------------------------------------------------------------------
 -- Signals
 --------------------------------------------------------------------------------
+  --! Registers for storing error information 
+  signal error_typ_reg : std_logic_vector(7 downto 0);
+  signal error_adr_reg : std_logic_vector(31 downto 0);
+
   -- These state definition belongs to process fsm_p. Because ISE Simulator
   -- can't access process local variables, the state signal is defined here.
-  type FSM_STATE_T is (MODE_LENGTH, ADDRESS, DATA_READ, DATA_WRITE);
+  type FSM_STATE_T is (
+    -- Synchronization
+    WAIT_THREADS,
+    -- Packet handling
+    READ_MODE_LENGTH, READ_ADDRESS, WRITE_MODE_LENGTH, WRITE_ADDRESS, DATA_READ, DATA_WRITE,
+    -- Error Handling:
+    DELETE_REQUEST, COMPLETE_WRITE, REPORT_ERROR, WAIT_ERROR_ACK);
   signal state : FSM_STATE_T;
-  
-  -- Internal signal vectors to unify all 16 FIFO32 ports
-  signal IN_FIFO32_S_Data          : std_logic_vector((32*FIFO32_PORTS)-1 downto 0);
-  signal IN_FIFO32_S_Fill          : std_logic_vector((16*FIFO32_PORTS)-1 downto 0);
-  signal IN_FIFO32_S_Rd            : std_logic_vector(FIFO32_PORTS-1 downto 0);
+
+  --! For storing the first packet word
+  signal mode_length_reg : std_logic_vector(C_SLV_DWIDTH-1 downto 0);
+  signal address_reg     : std_logic_vector(C_SLV_DWIDTH-1 downto 0);
+
+  --! Internal signal vectors to unify all 16 FIFO32 ports
+  signal IN_FIFO32_S_Data : std_logic_vector((32*FIFO32_PORTS)-1 downto 0);
+  signal IN_FIFO32_S_Fill : std_logic_vector((16*FIFO32_PORTS)-1 downto 0);
+  signal IN_FIFO32_S_Rd   : std_logic_vector(FIFO32_PORTS-1 downto 0);
 
   signal IN_FIFO32_M_Data : std_logic_vector((32*FIFO32_PORTS)-1 downto 0);
   signal IN_FIFO32_M_Rem  : std_logic_vector((16*FIFO32_PORTS)-1 downto 0);
   signal IN_FIFO32_M_Wr   : std_logic_vector(FIFO32_PORTS-1 downto 0);
 
-  --! Select signal from arbiter to the fsm.
-  signal sel2mux : std_logic_vector(clog2(FIFO32_PORTS)-1 downto 0);
-
-  --! Select signal from fsm to the (de-)multiplexers.
-  signal sel2fsm : std_logic_vector(clog2(FIFO32_PORTS)-1 downto 0);
-
-  --! 
+  --! Translates FIFO fill levels into a single bit request per port.
   signal requests : std_logic_vector(FIFO32_PORTS-1 downto 0);
 
   --! Tap slave data output to memory controller
@@ -310,7 +292,6 @@ architecture behavioural of fifo32_arbiter is
   signal increments            : std_logic_vector (C_Perf_Counters_Num-1 downto 0);
   signal hwif_subsystem_rst    : std_logic := '0';  -- decouple hwif reset from hw
                                                     -- thread reset
-
 
   signal read_data       : std_logic_vector(31 downto 0);
   signal read_data_valid : std_logic;
@@ -494,85 +475,7 @@ begin  -- of architecture ------------------------------------------------------
   OUT_FIFO32_S_Fill <= INT_OUT_FIFO32_S_Fill;
   OUT_FIFO32_M_Rem  <= INT_OUT_FIFO32_M_Rem;
 
-  mux_S_DATA : mux
-    generic map (
-      element_width => 32,
-      element_count => FIFO32_PORTS
-      )
-    port map (
-      input  => IN_FIFO32_S_Data,
-      sel    => sel2mux,
-      output => INT_OUT_FIFO32_S_DATA
-      );   
 
-  mux_S_FILL : mux
-    generic map (
-      element_width => 16,
-      element_count => FIFO32_PORTS
-      )
-    port map (
-      input  => IN_FIFO32_S_FILL,
-      sel    => sel2mux,
-      output => INT_OUT_FIFO32_S_Fill
-      );   
-
-  demux_S_Rd : demux
-    generic map (
-      element_width => 1,
-      element_count => FIFO32_PORTS
-      )
-    port map (
-      input(0) => OUT_FIFO32_S_Rd,
-      sel      => sel2mux,
-      output   => IN_FIFO32_S_Rd
-      );   
-
-  -- Master part of fifo link
-
-  demux_M_Data : demux
-    generic map (
-      element_width => 32,
-      element_count => FIFO32_PORTS
-      )
-    port map (
-      input  => OUT_FIFO32_M_Data,
-      sel    => sel2mux,
-      output => IN_FIFO32_M_Data
-      );   
-
-  mux_M_Rem : mux
-    generic map (
-      element_width => 16,
-      element_count => FIFO32_PORTS
-      )
-    port map (
-      input  => IN_FIFO32_M_Rem,
-      sel    => sel2mux,
-      output => INT_OUT_FIFO32_M_Rem
-      );   
-
-  demux_M_Wr : demux
-    generic map (
-      element_width => 1,
-      element_count => FIFO32_PORTS
-      )
-    port map (
-      input(0) => OUT_FIFO32_M_Wr,
-      sel      => sel2mux,
-      output   => IN_FIFO32_M_Wr
-      );   
-
-  -- Arbiter controls sel signal
-  rr_arbiter_i : rr_arbiter
-    generic map(
-      request_width => FIFO32_PORTS
-      )
-    port map(
-      clk      => clk,
-      reset    => Rst,
-      requests => requests,
-      sel      => sel2fsm
-      );
 
 
   hwif : hwif_subsystem
@@ -618,13 +521,10 @@ begin  -- of architecture ------------------------------------------------------
 
   hwif_subsystem_rst <= rst;
 
-  request_p : process (clk, rst, in_fifo32_s_fill)
-    is
 
+  -- Analyzes all fill levels of input FIFOS and sets the request vector accordingly.
+  request_p : process (clk, rst, in_fifo32_s_fill) is
   begin
-    --if Rst = '1' then
-    --    requests <= (others => '0');
-    --else --if clk'event and clk = '1' then
     for i in 0 to FIFO32_PORTS-1 loop
       if to_integer(unsigned(IN_FIFO32_S_Fill((16*(i+1))-1 downto 16*i))) > 1 then
         requests(i) <= '1';
@@ -632,117 +532,307 @@ begin  -- of architecture ------------------------------------------------------
         requests(i) <= '0';
       end if;
     end loop;
-    --end if;
-
   end process;
 
-  fsm_p : process (clk, rst, sel2fsm)
-    is
-    variable selection : std_logic_vector(clog2(FIFO32_PORTS)-1 downto 0);
+  fsm_outputs_p: process ()is
 
+  begin
+
+    case state is
+      ------------------
+      -- Synchronization
+      ------------------
+      when WAIT_THREADS => -- does nothing
+      ------------------
+      -- Packet handling
+      ------------------
+      when READ_MODE_LENGTH =>
+        
+      when READ_ADDRESS =>
+      when WRITE_MODE_LENGTH =>
+      when WRITE_ADDRESS =>
+
+      when DATA_READ =>
+      when DATA_WRITE =>
+      -----------------
+      -- Error handling
+      -----------------
+      when DELETE_REQUEST =>
+      when COMPLETE_WRITE =>
+      when REPORT_ERROR =>
+      when WAIT_ERROR_ACK =>
+  end process;
+  
+  -- State machine for request selection, packet tracking and shadowing
+  fsm_states_p : process (clk, rst) is
     type TRANSFER_MODE_T is (READ, WRITE);
     variable transfer_mode : TRANSFER_MODE_T;
     variable transfer_size : natural range 0 to 2**24;
 
+    function minimum (a : unsigned; b : unsigned)
+      return unsigned is
+    begin
+      if a > b then return a;
+      else return b;
+      end if;
+    end function;
+    
   begin
     if rst = '1' then
-      state         <= MODE_LENGTH;
-      selection     := (others => '0');
-      sel2mux       <= (others => '0');
-      transfer_mode := READ;
+      state           <= WAIT_THREADS;
+      mode_length_reg <= (others => '0');
+      address_reg     <= (others => '0');
+      transfer_mode   := READ;
+      transfer_size   := 0;
+
+      IN_FIFO32_S_Rd        <= (others => '0');
+      IN_FIFO32_M_Wr        <= (others => '0');
+      IN_FIFO32_M_Data      <= (others => '0');
+      INT_OUT_FIFO32_M_Rem  <= (others => '0');
+      INT_OUT_FIFO32_S_Data <= (others => '0');
+      INT_OUT_FIFO32_S_Fill <= (others => '0');
+
+      ERROR_REQ <= '0';
+      ERROR_TYP <= (others => '0');
+      ERROR_ADR <= (others => '0');
     elsif clk'event and clk = '1' then
-      -- for ILA debug
-
-      case state is
-        when MODE_LENGTH => ila_signals(3 downto 2) <= "00";
-        when ADDRESS     => ila_signals(3 downto 2) <= "01";
-        when DATA_READ   => ila_signals(3 downto 2) <= "10";
-        when DATA_WRITE  => ila_signals(3 downto 2) <= "11";
-        when others      => null;
-      end case;
-
-      -- ila signals 0 to 7 are always present, but only available sel2fsm
-      -- signals are connected. ila_signals(7) is a buffer to prevent an
-      -- illegal assignment.
-      ila_signals(clog2(FIFO32_PORTS)-1 downto 0) <= sel2fsm;
-      ila_signals(7 downto clog2(FIFO32_PORTS))   <= (others => '0');
-
-      -- ila signals 8 to 15 are always present, but only available sel2mux
-      -- signals are connected. ila_signals(15) is a buffer to prevent an
-      -- illegal assignment.
-      ila_signals(clog2(FIFO32_PORTS)-1+8 downto 8) <= sel2mux;
-      ila_signals(15 downto clog2(FIFO32_PORTS)+8)  <= (others => '0');
-
-      ila_signals(FIFO32_PORTS-1+16 downto 16) <= requests;
-      ila_signals(32 downto FIFO32_PORTS+16)   <= (others => '0');
-
-      ila_signals(64 downto 33) <= INT_OUT_FIFO32_S_Data;
-      ila_signals(80 downto 65) <= INT_OUT_FIFO32_S_Fill;
-      ila_signals(81)           <= OUT_FIFO32_S_Rd;
-
-      ila_signals(113 downto 82)  <= OUT_FIFO32_M_Data;
-      ila_signals(129 downto 114) <= INT_OUT_FIFO32_M_Rem;
-      ila_signals(130)            <= OUT_FIFO32_M_Wr;
 
       -- default is to hold all outputs.
       state         <= state;
-      selection     := selection;
-      sel2mux       <= sel2mux;
       transfer_mode := transfer_mode;
       transfer_size := transfer_size;
+
+      IN_FIFO32_S_Rd        <= (others => '0');
+      IN_FIFO32_M_Wr        <= (others => '0');
+      IN_FIFO32_M_Data      <= (others => '0');
+      INT_OUT_FIFO32_M_Rem  <= (others => '0');
+      INT_OUT_FIFO32_S_Data <= (others => '0');
+      INT_OUT_FIFO32_S_Fill <= (others => '0');
+
+      -----------------------------------------------------------------------
+      -- INFO: We expect TUO to be connected to port 0 and ST to be connected
+      -- to port 1. No other ports are served.
+      -----------------------------------------------------------------------
       case state is
-        when MODE_LENGTH =>
-          if OUT_FIFO32_S_Rd = '1' then
-            state <= ADDRESS;
+        ------------------
+        -- Synchronization
+        ------------------
+        when WAIT_THREADS =>
+          -- TODO: fill_level handling!
+          -- when both TUO and ST are ready we start lock stepped request processing
+          if requests(1 downto 0) = "11" then
+            state                      <= READ_MODE_LENGTH;
+            IN_FIFO32_S_Rd(1 downto 0) <= "11";
           end if;
-          selection := sel2fsm;
-          sel2mux   <= selection;
-          case INT_OUT_FIFO32_S_DATA(31) is
+
+        ------------------
+        -- Packet handling
+        ------------------
+        when READ_MODE_LENGTH =>
+          -- TODO: fill_level handling!
+          -- compare first words of request of TUO and ST...
+          if IN_FIFO32_S_Data(31 downto 0) = IN_FIFO32_S_Data(63 downto 32) then
+            -- ... if equal, read from fifo and save it into a register;
+            mode_length_reg            <= IN_FIFO32_S_Data(31 downto 0);
+            state                      <= READ_ADDRESS;
+            IN_FIFO32_S_Rd(1 downto 0) <= "11";
+          else
+            -- if not, go to error handling
+            state         <= DELETE_REQUEST;
+            error_typ_reg <= ERROR_TYP_HEADER1;
+            error_adr_reg <= (others => '0');
+          end if;
+
+          -- Take information from TUO
+          case IN_FIFO32_S_DATA(31) is
             when '0'    => transfer_mode := READ;
             when others => transfer_mode := WRITE;
-                           
           end case;
           -- lower 24 bits of first word are defined to be the length
           -- of the transfer.
-          transfer_size := to_integer(unsigned(INT_OUT_FIFO32_S_DATA(23 downto 0)));
-        when ADDRESS =>
-          case transfer_mode is
-            when READ  => state <= DATA_READ;
-            when WRITE => state <= DATA_WRITE;
-          end case;
+          transfer_size := to_integer(unsigned(IN_FIFO32_S_DATA(23 downto 0)));
+
+          
+        when READ_ADDRESS =>
+          -- TODO: fill_level handling!
+          -- compare first words of request of TUO and ST...
+          if IN_FIFO32_S_Data(31 downto 0) = IN_FIFO32_S_Data(63 downto 32) then
+            -- ... if equal go to next state, which will write first word
+            address_reg <= IN_FIFO32_S_Data(31 downto 0);
+            state       <= WRITE_MODE_LENGTH;
+          else
+            -- if not, got to error handling
+            state         <= DELETE_REQUEST;
+            error_typ_reg <= ERROR_TYP_HEADER2;
+            error_adr_reg <= (others => '0');
+            if minimum(
+              unsigned(IN_FIFO32_S_Fill((16 * (1 + 0))-1 downto 16 * 0)),
+              unsigned(IN_FIFO32_S_Fill((16 * (1 + 1))-1 downto 16 * 1)))
+              > 1
+            then
+              IN_FIFO32_S_Rd(1 downto 0) <= "11";
+              transfer_size              := transfer_size-4;
+            end if;
+          end if;
+          
+          
+        when WRITE_MODE_LENGTH =>
+          -- fill_level handling: +2 for unwritten mode_length and address word
+          INT_OUT_FIFO32_S_Fill <= std_logic_vector(minimum(
+            unsigned(IN_FIFO32_M_Rem((16 * (1 + 0))-1 downto 16 * 0)),
+            unsigned(IN_FIFO32_M_Rem((16 * (1 + 1))-1 downto 16 * 1)))
+                                                    +2);
+          
+          INT_OUT_FIFO32_S_Data <= mode_length_reg;
+          if OUT_FIFO32_S_Rd = '1' then
+            state                 <= WRITE_ADDRESS;
+            INT_OUT_FIFO32_S_Data <= address_reg;
+          end if;
+          
+        when WRITE_ADDRESS =>
+          -- fill_level handling: +1 for unwritten address word
+          INT_OUT_FIFO32_S_Fill <= std_logic_vector(minimum(
+            unsigned(IN_FIFO32_M_Rem((16 * (1 + 0))-1 downto 16 * 0)),
+            unsigned(IN_FIFO32_M_Rem((16 * (1 + 1))-1 downto 16 * 1)))
+                                                    +1);
+          
+          INT_OUT_FIFO32_S_Data <= address_reg;
+          if OUT_FIFO32_S_Rd = '1' then
+            case transfer_mode is
+              when READ =>
+                state <= DATA_READ;
+              when WRITE =>
+                state <= DATA_WRITE;
+                if IN_FIFO32_S_Data(31 downto 0) /= IN_FIFO32_S_Data(63 downto 32) then
+                  state         <= COMPLETE_WRITE;
+                  error_typ_reg <= ERROR_TYP_DATA;
+                  error_adr_reg <= std_logic_vector(unsigned(mode_length_reg) - transfer_size);
+                end if;
+
+                IN_FIFO32_S_Rd(0)     <= OUT_FIFO32_S_Rd;
+                IN_FIFO32_S_Rd(1)     <= OUT_FIFO32_S_Rd;
+                INT_OUT_FIFO32_S_DATA <= IN_FIFO32_S_Data(31 downto 0);
+                INT_OUT_FIFO32_S_Fill <= std_logic_vector(minimum(
+                  unsigned(IN_FIFO32_S_Fill((16 * (1 + 0))-1 downto 16 * 0)),
+                  unsigned(IN_FIFO32_S_Fill((16 * (1 + 1))-1 downto 16 * 1))));
+                transfer_size := transfer_size-4;
+            end case;
+          end if;
+          
+
         when DATA_READ =>
+          -- synchronize mem port with thread ports
+          IN_FIFO32_M_Data((32 * (1 + 0))-1 downto 32 * 0) <= OUT_FIFO32_M_Data;
+          IN_FIFO32_M_Data((32 * (1 + 1))-1 downto 32 * 1) <= OUT_FIFO32_M_Data;
+          IN_FIFO32_M_Wr(0)                                <= OUT_FIFO32_M_Wr;
+          IN_FIFO32_M_Wr(1)                                <= OUT_FIFO32_M_Wr;
+
+          -- fill_level handling
+          INT_OUT_FIFO32_M_Rem <= std_logic_vector(minimum(
+            unsigned(IN_FIFO32_M_Rem((16 * (1 + 0))-1 downto 16 * 0)),
+            unsigned(IN_FIFO32_M_Rem((16 * (1 + 1))-1 downto 16 * 1))));
+
           if OUT_FIFO32_M_Wr = '1' then
             transfer_size := transfer_size-4;
           end if;
           if transfer_size = 0 then
-            state <= MODE_LENGTH;
+            state <= WAIT_THREADS;
           end if;
+          
         when DATA_WRITE =>
+          -- TODO: What data do we write on error? TUO Data? ST Data? All
+          -- zeros? Special Marker?
+          -- TODO: What about forever stalling thread?
+          if IN_FIFO32_S_Data(31 downto 0) /= IN_FIFO32_S_Data(63 downto 32) then
+            state         <= COMPLETE_WRITE;
+            error_typ_reg <= ERROR_TYP_DATA;
+            error_adr_reg <= std_logic_vector(unsigned(mode_length_reg) - transfer_size);
+          end if;
+
+          IN_FIFO32_S_Rd(0)     <= OUT_FIFO32_S_Rd;
+          IN_FIFO32_S_Rd(1)     <= OUT_FIFO32_S_Rd;
+          INT_OUT_FIFO32_S_DATA <= IN_FIFO32_S_Data(31 downto 0);
+          INT_OUT_FIFO32_S_Fill <= std_logic_vector(minimum(
+            unsigned(IN_FIFO32_S_Fill((16 * (1 + 0))-1 downto 16 * 0)),
+            unsigned(IN_FIFO32_S_Fill((16 * (1 + 1))-1 downto 16 * 1))));
+
           if OUT_FIFO32_S_Rd = '1' then
             transfer_size := transfer_size-4;
           end if;
           if transfer_size = 0 then
-            state <= MODE_LENGTH;
+            state <= WAIT_THREADS;
           end if;
+
+        -----------------
+        -- Error handling
+        -----------------
+        when DELETE_REQUEST =>
+          -- TODO: What about forever stalling thread?
+          if minimum(
+            unsigned(IN_FIFO32_S_Fill((16 * (1 + 0))-1 downto 16 * 0)),
+            unsigned(IN_FIFO32_S_Fill((16 * (1 + 1))-1 downto 16 * 1)))
+            > 1
+          then
+            IN_FIFO32_S_Rd(1 downto 0) <= "11";
+            transfer_size              := transfer_size-4;
+          else
+            IN_FIFO32_S_Rd(1 downto 0) <= "00";
+          end if;
+
+          if transfer_size = 0 then
+            state <= REPORT_ERROR;
+          end if;
+          
+        when COMPLETE_WRITE =>
+          -- TODO: What data do we write on error? TUO Data? ST Data? All
+          -- zeros? Special Marker?
+          -- TODO: What about forever stalling thread?
+          IN_FIFO32_S_Rd(0)     <= OUT_FIFO32_S_Rd;
+          IN_FIFO32_S_Rd(1)     <= OUT_FIFO32_S_Rd;
+          INT_OUT_FIFO32_S_DATA <= IN_FIFO32_S_Data(31 downto 0);
+          INT_OUT_FIFO32_S_Fill <= std_logic_vector(minimum(
+            unsigned(IN_FIFO32_S_Fill((16 * (1 + 0))-1 downto 16 * 0)),
+            unsigned(IN_FIFO32_S_Fill((16 * (1 + 1))-1 downto 16 * 1))));
+
+          if OUT_FIFO32_S_Rd = '1' then
+            transfer_size := transfer_size-4;
+          end if;
+          if transfer_size = 0 then
+            state <= REPORT_ERROR;
+          end if;
+
+        when REPORT_ERROR =>
+          ERROR_REQ <= '1';
+          ERROR_TYP <= error_typ_reg;
+          ERROR_ADR <= error_adr_reg;
+
+          state <= WAIT_ERROR_ACK;
+          
+        when WAIT_ERROR_ACK =>
+          if ERROR_ACK = '1' then
+            state <= WAIT_THREADS;
+
+            -- reset error interface
+            ERROR_REQ <= '0';
+            ERROR_TYP <= ERROR_TYP_NONE;
+            ERROR_ADR <= (others => '0');
+          end if;
+          
         when others =>
-          state     <= MODE_LENGTH;
-          selection := selection;
-          sel2mux   <= sel2mux;
+          state <= WAIT_THREADS;
       end case;
     end if;
   end process;
 
-  checksum : process(clk, rst)
-    is
-    
-  begin
-    read_data       <= OUT_FIFO32_M_Data;
-    read_data_valid <= OUT_FIFO32_M_Wr;
-    read_channel    <= sel2mux;
+--  checksum : process(clk, rst) is
+--  begin
+  read_data       <= OUT_FIFO32_M_Data;
+  read_data_valid <= OUT_FIFO32_M_Wr;
+  read_channel    <= (others => '0');
 
-    write_data       <= INT_OUT_FIFO32_S_Data;
-    write_data_valid <= OUT_FIFO32_S_Rd;
-    write_channel    <= sel2mux;
-  end process;
+  write_data       <= INT_OUT_FIFO32_S_Data;
+  write_data_valid <= OUT_FIFO32_S_Rd;
+  write_channel    <= (others => '0');
+--  end process;
   
 end architecture;

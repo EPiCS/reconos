@@ -9,10 +9,10 @@ use proc_common_v3_00_a.proc_common_pkg.all;
 library reconos_v3_00_b;
 use reconos_v3_00_b.reconos_pkg.all;
 
-entity tb_fifo32_arbiter is
+entity tb_fifo32_arbiter_sh_rel is
 end entity;
 
-architecture testbench of tb_fifo32_arbiter is
+architecture testbench of tb_fifo32_arbiter_sh_rel is
 --------------------------------------------------------------------------------
 -- Components
 --------------------------------------------------------------------------------
@@ -33,7 +33,7 @@ architecture testbench of tb_fifo32_arbiter is
       );
   end component;
 
-  component fifo32_arbiter
+  component fifo32_arbiter_sh_rel
     generic (
       C_SLV_DWIDTH     : integer := 32;
       FIFO32_PORTS     : integer := 16;  --! 1 to 16 allowed
@@ -187,6 +187,12 @@ architecture testbench of tb_fifo32_arbiter is
       DEC2HWIF_RdAck : out std_logic;
       DEC2HWIF_WrAck : out std_logic;
 
+      -- Error reporting
+      ERROR_REQ : out std_logic;
+      ERROR_ACK : in  std_logic;
+      ERROR_TYP : out std_logic_vector(7  downto 0);
+      ERROR_ADR : out std_logic_vector(31 downto 0);
+      
       -- Misc
       Rst : in std_logic;
       clk : in std_logic;               -- separate clock for control logic
@@ -245,6 +251,12 @@ architecture testbench of tb_fifo32_arbiter is
   signal DEC2HWIF_RdAck : std_logic;
   signal DEC2HWIF_WrAck : std_logic;
 
+  -- Error reporting
+  signal ERROR_REQ : std_logic;
+  signal ERROR_ACK : std_logic;
+  signal ERROR_TYP : std_logic_vector(7  downto 0);
+  signal ERROR_ADR : std_logic_vector(31 downto 0);
+  
   -- memif interface signals
   type memif_out_array_t is array(natural range <>) of o_memif_t;
   type memif_in_array_t is array(natural range <>) of i_memif_t;
@@ -345,67 +357,97 @@ begin  -- of architecture ------------------------------------------------------
         return to_unsigned(rand_int, bitwidth);
       end function;
 
-      type state_t is (GEN_DATA, WRITE_DATA, READ_DATA, COMP_ADDRESS, ERROR_STATE);
+      type state_t is ( SET_PAUSE, PAUSE, WRITE_HEADER, WRITE_DATA, READ_DATA, END_STATE);
       variable state : state_t;
+
+      type MODE is (READ, WRITE);
+      type MODE_VECTOR is array (natural range<>) of MODE;
+      type LENGTH_VECTOR is array (natural range<>) of natural range 1 to 2**16-1;
+      type ADDRESS_VECTOR is array (natural range<> ) of std_logic_vector(31 downto 0);
+
+      constant MAX_PACKETS : natural := 4;
+      variable PAUSE_LIST: LENGTH_VECTOR(1 to MAX_PACKETS) := (20, 20, 20, 20);
+      variable MODE_LIST : MODE_VECTOR(1 to MAX_PACKETS) := (READ, WRITE, READ, WRITE);
+      variable LENGTH_LIST: LENGTH_VECTOR(1 to MAX_PACKETS) := (4,4,128,128);
+      variable ADDRESS_LIST: ADDRESS_VECTOR(1 to MAX_PACKETS) := (X"DEADDEAD",X"DEADDEAD",X"AFFEAFFE", X"AFFEAFFE");
+
+      variable packet_nr : natural:= 0;
+      variable pause_counter : natural := 0;
       variable done  : boolean := false;
-      variable rnd   : unsigned(31 downto 0);
-      
+           
     begin
       if rst = '1' then
-        state := GEN_DATA;
+        state := SET_PAUSE;
         -- init interface 
         memif_reset(H2F_MEMIF_OUT(i));
         done  := false;
+        data <= std_logic_vector(get_rand_unsigned(0, 2**16-1, 32 ));
       elsif rising_edge(clk) then
         case state is
-          when GEN_DATA =>
-            rnd   := get_rand_unsigned(0, 2**30, 32);
-            state := WRITE_DATA;
+          when SET_PAUSE =>
+            packet_nr := packet_nr + 1 ;
+            if packet_nr > MAX_PACKETS then
+              state := END_STATE;
+            else
+              pause_counter := PAUSE_LIST(packet_nr);
+              state := PAUSE;
+            end if;
+          when PAUSE =>
+            pause_counter := pause_counter - 1;
+            if pause_counter <= 0 then
+              state := WRITE_HEADER;
+            end if; 
+            
+          when WRITE_HEADER =>
+            case MODE_LIST(packet_nr) is
+              when READ =>
+                memif_read_request(
+                  H2F_MEMIF_IN(i),
+                  H2F_MEMIF_OUT(i),
+                  ADDRESS_LIST(packet_nr),  -- address
+                  std_logic_vector(to_unsigned(LENGTH_LIST(packet_nr), 24)), -- length
+                  done
+                );
+                if done then state := READ_DATA; end if;
+              when WRITE =>
+                memif_write_request(
+                  H2F_MEMIF_IN(i),
+                  H2F_MEMIF_OUT(i),
+                  ADDRESS_LIST(packet_nr),  -- address
+                  std_logic_vector(to_unsigned(LENGTH_LIST(packet_nr), 24)), -- length
+                  done
+                );
+                if done then state := WRITE_DATA; end if;
+             end case;
+
           when WRITE_DATA =>
-            memif_write_word (
+            data <= std_logic_vector(get_rand_unsigned(0, 2**16-1, 32 ));
+            memif_fifo_push (
               H2F_MEMIF_IN(i),
               H2F_MEMIF_OUT(i),
-              std_logic_vector(to_unsigned(i, 32)),  -- address
-              std_logic_vector(rnd),                 -- data
+              data,                 -- data
               done
               );
-            if done then state := READ_DATA; end if;
+            if done then state := SET_PAUSE; end if;
+            
           when READ_DATA =>
-            memif_read_word (
+            memif_fifo_pull (
               H2F_MEMIF_IN(i),
               H2F_MEMIF_OUT(i),
-              std_logic_vector(rnd),                 -- address
               data,                                  -- data
               done
               );
-            if done then state := COMP_ADDRESS; end if;
-          when COMP_ADDRESS =>
-            -- we expect to read back the address in the data word, we asked for.
-            if data = std_logic_vector(rnd) then
-              state := GEN_DATA;
-              report "Write/read succeded!" severity note;
-            else
-              state := ERROR_STATE;
-              report "Found write/read error!" severity error;
-            end if;
-          when ERROR_STATE =>
-            null;                                    -- should not happen
-          when others => null;
-        end case;
+            if done then state := SET_PAUSE; end if;
 
-        case rnd(0) is
-          when '0' =>
-
-          when '1' =>
-
-          when others => null;
-        end case;
+          when END_STATE =>
+            report "Packet generation done!" severity note;
+         end case;
       end if;
     end process;
 
   end generate;
 
-  fifo32_arbiter_i : fifo32_arbiter
+  fifo32_arbiter_sh_rel_i : fifo32_arbiter_sh_rel
     generic map(
       FIFO32_PORTS     => ARB_PORT_COUNT, -- setting it to something else than
                                           -- 16 breaks it at the moment:
@@ -561,6 +603,12 @@ begin  -- of architecture ------------------------------------------------------
       DEC2HWIF_RdAck => DEC2HWIF_RdAck,
       DEC2HWIF_WrAck => DEC2HWIF_WrAck,
 
+      -- Error reporting
+      ERROR_REQ => ERROR_REQ,
+      ERROR_ACK => ERROR_ACK,
+      ERROR_TYP => ERROR_TYP,
+      ERROR_ADR => ERROR_ADR,
+
       -- Misc
       Rst => rst,
       clk => clk,
@@ -639,6 +687,7 @@ begin  -- of architecture ------------------------------------------------------
             a2m_memif_out.s_rd <= '0';
           end if;
         when DATA_READ =>
+          -- following line determines read data
           a2m_memif_out.m_data <= transfer_address;
           transfer_size        := transfer_size - 4;
           if transfer_size = 0 then
@@ -652,6 +701,18 @@ begin  -- of architecture ------------------------------------------------------
     end if;
   end process;
 
+  error_proc: process(clk, rst) is
+  begin
+    if clk'event and clk='1' then
+      if ERROR_REQ='1' then
+        report "arbiter detected error!" severity error;
+        ERROR_ACK <= '1';
+      else
+        ERROR_ACK <= '0';
+      end if;
+    end if;
+  end process;
+  
   hwif_proc : process is
     procedure hwif_write(addr, data: std_logic_vector(31 downto 0))
     is
