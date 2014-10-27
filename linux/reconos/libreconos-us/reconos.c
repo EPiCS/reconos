@@ -107,14 +107,29 @@ void reconos_cache_flush(void)
 	write(reconos_proc.fd_cache, &one, sizeof(one));
 }
 
+
+void sh_mem_error_handler(uint8_t hwt, uint32_t err_type, uint32_t err_addr){
+  whine("Shadowing system memory error handler. Currently a stub; please complete me!\n");
+  // reset the corresponding threads
+
+  // update statistics about errors, so we know if they are permanent or transient
+
+  // notify application if an error handler was specified, else abort programm
+
+}
+
+#define C_RETURN_ADDR      0x00000001
+#define C_RETURN_SELFTEST  0x00000002
+#define C_RETURN_ERROR     0x00000003
 static void *reconos_control_thread_entry(void *arg)
 {
 	while (1) {
 		uint32_t cmd, ret, *addr;
+		uint32_t err_type, err_addr;
 
 		/* Receive page fault address */
 		cmd = fsl_read(reconos_proc.proc_control_fsl_a);
-		if (cmd == 0x00000001) {	
+		if (cmd == C_RETURN_ADDR) {	
 			addr = (uint32_t *) fsl_read(reconos_proc.proc_control_fsl_a);
 			reconos_proc.page_faults++;
 
@@ -130,8 +145,16 @@ static void *reconos_control_thread_entry(void *arg)
 			/* Note: the lower 24 bits of ret are ignored by the HW. */
 			fsl_write(reconos_proc.proc_control_fsl_a, ret);
 		}
-		if (cmd == 0x00000002)
+		if (cmd == C_RETURN_EROR)
 			whine("proc_control selftest part 2 success\n");
+		if (cmd == C_RETURN_ERROR){
+		  // What do we actually do here?
+		  // Maybe call the shadowing error handler?
+		  err_type =  fsl_read(reconos_proc.proc_control_fsl_a);
+		  err_addr =  fsl_read(reconos_proc.proc_control_fsl_a);
+		 
+		  sh_mem_error_handler(uint8_t hwt, uint32_t err_type, uint32_t err_addr);		  
+		}
 	}
 	return NULL;
 }

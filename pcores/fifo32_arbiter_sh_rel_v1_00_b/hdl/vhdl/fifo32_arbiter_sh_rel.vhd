@@ -261,14 +261,17 @@ architecture behavioural of fifo32_arbiter_sh_rel is
     -- Synchronization
     WAIT_THREADS,
     -- Packet handling
-    READ_MODE_LENGTH, READ_ADDRESS, WRITE_MODE_LENGTH, WRITE_ADDRESS, DATA_READ, DATA_WRITE,
+    READ_MODE_LENGTH, READ_ADDRESS, WRITE_MODE_LENGTH, COMP_REQ,
+    WRITE_ADDRESS, DATA_READ, DATA_WRITE,
     -- Error Handling:
-    DELETE_REQUEST, COMPLETE_WRITE, REPORT_ERROR, WAIT_ERROR_ACK);
+    DELETE_REQUEST_TUO, DELETE_REQUEST_ST,  COMPLETE_WRITE,
+    REPORT_ERROR, WAIT_ERROR_ACK);
   signal state : FSM_STATE_T;
 
   --! For storing the first packet word
-  signal mode_length_reg : std_logic_vector(C_SLV_DWIDTH-1 downto 0);
-  signal address_reg     : std_logic_vector(C_SLV_DWIDTH-1 downto 0);
+  type reg_vector_t is array (natural range<>) of std_logic_vector(C_SLV_DWIDTH-1 downto 0);
+  signal mode_length_reg : reg_vector_t(0 to 1);
+  signal address_reg     : reg_vector_t(0 to 1);
 
   --! Internal signal vectors to unify all 16 FIFO32 ports
   signal IN_FIFO32_S_Data : std_logic_vector((32*FIFO32_PORTS)-1 downto 0);
@@ -292,7 +295,6 @@ architecture behavioural of fifo32_arbiter_sh_rel is
   signal increments            : std_logic_vector (C_Perf_Counters_Num-1 downto 0);
   signal hwif_subsystem_rst    : std_logic := '0';  -- decouple hwif reset from hw
                                                     -- thread reset
-
   signal read_data       : std_logic_vector(31 downto 0);
   signal read_data_valid : std_logic;
   signal read_channel    : std_logic_vector(clog2(C_CHECKSUM_NUM_CHANNELS)-1 downto 0);
@@ -303,6 +305,16 @@ architecture behavioural of fifo32_arbiter_sh_rel is
 
   -- GPIO 
   signal write_inhibit : std_logic_vector(31 downto 0);
+
+  -- Functions
+  function minimum (a : unsigned; b : unsigned)
+    return unsigned is
+  begin
+    if a > b then return b;
+    else return a;
+    end if;
+  end function;
+    
   
 begin  -- of architecture -------------------------------------------------------
 
@@ -534,10 +546,22 @@ begin  -- of architecture ------------------------------------------------------
     end loop;
   end process;
 
-  fsm_outputs_p: process ()is
+  -- This process controll non registered state machine outputs.
+  -- If we don't register all outputs, the state machine reacts faster to
+  -- changing inputs and state machine design is easier.
+  fsm_outputs_p: process (state, IN_FIFO32_M_Rem, mode_length_reg, address_reg,
+                          OUT_FIFO32_M_Data, OUT_FIFO32_M_Wr, OUT_FIFO32_S_Rd,
+                          IN_FIFO32_S_Data, IN_FIFO32_S_Fill)
+  is
 
   begin
-
+    -- defaults
+    IN_FIFO32_S_Rd        <= (others => '0');
+    IN_FIFO32_M_Wr        <= (others => '0');
+    IN_FIFO32_M_Data      <= (others => '0');
+    INT_OUT_FIFO32_M_Rem  <= (others => '0');
+    INT_OUT_FIFO32_S_Data <= (others => '0');
+    INT_OUT_FIFO32_S_Fill <= (others => '0');
     case state is
       ------------------
       -- Synchronization
@@ -547,20 +571,107 @@ begin  -- of architecture ------------------------------------------------------
       -- Packet handling
       ------------------
       when READ_MODE_LENGTH =>
-        
+        IN_FIFO32_S_Rd(1 downto 0) <= "11";
       when READ_ADDRESS =>
+        IN_FIFO32_S_Rd(1 downto 0) <= "11";
       when WRITE_MODE_LENGTH =>
-      when WRITE_ADDRESS =>
+        -- fill_level handling: +2 for unwritten mode_length and address word        
+        INT_OUT_FIFO32_S_Fill <= std_logic_vector(minimum(
+            unsigned(IN_FIFO32_S_Fill((16 * (1 + 0))-1 downto 16 * 0)),
+            unsigned(IN_FIFO32_S_Fill((16 * (1 + 1))-1 downto 16 * 1)))
+            +2);
+         INT_OUT_FIFO32_S_Data <= mode_length_reg(0);
 
+      when COMP_REQ =>
+        
+      when WRITE_ADDRESS =>
+        -- fill_level handling: +1 for unwritten address word
+          INT_OUT_FIFO32_S_Fill <= std_logic_vector(minimum(
+            unsigned(IN_FIFO32_S_Fill((16 * (1 + 0))-1 downto 16 * 0)),
+            unsigned(IN_FIFO32_S_Fill((16 * (1 + 1))-1 downto 16 * 1)))
+            +1);
+        INT_OUT_FIFO32_S_Data <= address_reg(0);
+          
       when DATA_READ =>
+        -- synchronize mem port with thread ports
+        IN_FIFO32_M_Data((32 * (1 + 0))-1 downto 32 * 0) <= OUT_FIFO32_M_Data;
+        IN_FIFO32_M_Data((32 * (1 + 1))-1 downto 32 * 1) <= OUT_FIFO32_M_Data;
+        IN_FIFO32_M_Wr(0)                                <= OUT_FIFO32_M_Wr;
+        IN_FIFO32_M_Wr(1)                                <= OUT_FIFO32_M_Wr;
+
+        -- fill_level handling
+        INT_OUT_FIFO32_M_Rem <= std_logic_vector(minimum(
+            unsigned(IN_FIFO32_M_Rem((16 * (1 + 0))-1 downto 16 * 0)),
+            unsigned(IN_FIFO32_M_Rem((16 * (1 + 1))-1 downto 16 * 1))));
+
+        
       when DATA_WRITE =>
+        IN_FIFO32_S_Rd(0)     <= OUT_FIFO32_S_Rd;
+        IN_FIFO32_S_Rd(1)     <= OUT_FIFO32_S_Rd;
+        INT_OUT_FIFO32_S_DATA <= IN_FIFO32_S_Data(31 downto 0);
+        INT_OUT_FIFO32_S_Fill <= std_logic_vector(minimum(
+          unsigned(IN_FIFO32_S_Fill((16 * (1 + 0))-1 downto 16 * 0)),
+          unsigned(IN_FIFO32_S_Fill((16 * (1 + 1))-1 downto 16 * 1))));
+               
       -----------------
       -- Error handling
       -----------------
-      when DELETE_REQUEST =>
+      when DELETE_REQUEST_TUO =>
+        case mode_length_reg(0)(31) is
+          when '0' =>
+            -- thread reads
+            if unsigned(IN_FIFO32_M_Rem((16 * (1 + 0))-1 downto 16 * 0)) > 0 then
+              IN_FIFO32_M_Wr(0) <= '1';
+            else
+              IN_FIFO32_M_Wr(0) <= '0';              
+            end if;
+            
+          when '1' =>
+            -- thread writes
+            if unsigned(IN_FIFO32_S_Fill((16 * (1 + 0))-1 downto 16 * 0)) > 0 then
+              IN_FIFO32_S_Rd(0) <= '1';
+            else
+              IN_FIFO32_S_Rd(0) <= '0';
+            end if;
+            
+          when others =>
+            report "Request mode undefined!" severity ERROR;
+        end case;
+
+      when DELETE_REQUEST_ST =>
+        case mode_length_reg(1)(31) is
+          when '0' =>
+            -- thread reads
+            if unsigned(IN_FIFO32_M_Rem((16 * (1 + 1))-1 downto 16 * 1)) > 0 then
+              IN_FIFO32_M_Wr(1) <= '1';
+            else
+              IN_FIFO32_M_Wr(1) <= '0';              
+            end if;
+            
+          when '1' =>
+            -- thread writes
+            if unsigned(IN_FIFO32_S_Fill((16 * (1 + 1))-1 downto 16 * 1)) > 0 then
+              IN_FIFO32_S_Rd(1) <= '1';
+            else
+              IN_FIFO32_S_Rd(1) <= '0';
+            end if;
+
+          when others =>
+            report "Request mode undefined!" severity ERROR;
+        end case;
+        
       when COMPLETE_WRITE =>
+        IN_FIFO32_S_Rd(0)     <= OUT_FIFO32_S_Rd;
+        IN_FIFO32_S_Rd(1)     <= OUT_FIFO32_S_Rd;
+        INT_OUT_FIFO32_S_DATA <= IN_FIFO32_S_Data(31 downto 0);
+        INT_OUT_FIFO32_S_Fill <= std_logic_vector(minimum(
+          unsigned(IN_FIFO32_S_Fill((16 * (1 + 0))-1 downto 16 * 0)),
+          unsigned(IN_FIFO32_S_Fill((16 * (1 + 1))-1 downto 16 * 1))));
+        
       when REPORT_ERROR =>
+        
       when WAIT_ERROR_ACK =>
+    end case;
   end process;
   
   -- State machine for request selection, packet tracking and shadowing
@@ -568,29 +679,14 @@ begin  -- of architecture ------------------------------------------------------
     type TRANSFER_MODE_T is (READ, WRITE);
     variable transfer_mode : TRANSFER_MODE_T;
     variable transfer_size : natural range 0 to 2**24;
-
-    function minimum (a : unsigned; b : unsigned)
-      return unsigned is
-    begin
-      if a > b then return a;
-      else return b;
-      end if;
-    end function;
     
   begin
     if rst = '1' then
       state           <= WAIT_THREADS;
-      mode_length_reg <= (others => '0');
-      address_reg     <= (others => '0');
+      mode_length_reg <= (others=>(others => '0'));
+      address_reg     <= (others=>(others => '0'));
       transfer_mode   := READ;
       transfer_size   := 0;
-
-      IN_FIFO32_S_Rd        <= (others => '0');
-      IN_FIFO32_M_Wr        <= (others => '0');
-      IN_FIFO32_M_Data      <= (others => '0');
-      INT_OUT_FIFO32_M_Rem  <= (others => '0');
-      INT_OUT_FIFO32_S_Data <= (others => '0');
-      INT_OUT_FIFO32_S_Fill <= (others => '0');
 
       ERROR_REQ <= '0';
       ERROR_TYP <= (others => '0');
@@ -601,13 +697,6 @@ begin  -- of architecture ------------------------------------------------------
       state         <= state;
       transfer_mode := transfer_mode;
       transfer_size := transfer_size;
-
-      IN_FIFO32_S_Rd        <= (others => '0');
-      IN_FIFO32_M_Wr        <= (others => '0');
-      IN_FIFO32_M_Data      <= (others => '0');
-      INT_OUT_FIFO32_M_Rem  <= (others => '0');
-      INT_OUT_FIFO32_S_Data <= (others => '0');
-      INT_OUT_FIFO32_S_Fill <= (others => '0');
 
       -----------------------------------------------------------------------
       -- INFO: We expect TUO to be connected to port 0 and ST to be connected
@@ -622,7 +711,6 @@ begin  -- of architecture ------------------------------------------------------
           -- when both TUO and ST are ready we start lock stepped request processing
           if requests(1 downto 0) = "11" then
             state                      <= READ_MODE_LENGTH;
-            IN_FIFO32_S_Rd(1 downto 0) <= "11";
           end if;
 
         ------------------
@@ -630,18 +718,10 @@ begin  -- of architecture ------------------------------------------------------
         ------------------
         when READ_MODE_LENGTH =>
           -- TODO: fill_level handling!
-          -- compare first words of request of TUO and ST...
-          if IN_FIFO32_S_Data(31 downto 0) = IN_FIFO32_S_Data(63 downto 32) then
-            -- ... if equal, read from fifo and save it into a register;
-            mode_length_reg            <= IN_FIFO32_S_Data(31 downto 0);
+          -- Read in first word of header from both threads
+            mode_length_reg(0)            <= IN_FIFO32_S_Data(31 downto 0);
+            mode_length_reg(1)            <= IN_FIFO32_S_Data(63 downto 32);
             state                      <= READ_ADDRESS;
-            IN_FIFO32_S_Rd(1 downto 0) <= "11";
-          else
-            -- if not, go to error handling
-            state         <= DELETE_REQUEST;
-            error_typ_reg <= ERROR_TYP_HEADER1;
-            error_adr_reg <= (others => '0');
-          end if;
 
           -- Take information from TUO
           case IN_FIFO32_S_DATA(31) is
@@ -655,83 +735,51 @@ begin  -- of architecture ------------------------------------------------------
           
         when READ_ADDRESS =>
           -- TODO: fill_level handling!
-          -- compare first words of request of TUO and ST...
-          if IN_FIFO32_S_Data(31 downto 0) = IN_FIFO32_S_Data(63 downto 32) then
-            -- ... if equal go to next state, which will write first word
-            address_reg <= IN_FIFO32_S_Data(31 downto 0);
+          -- Read in second  word of header from both threads 
+            address_reg(0) <= IN_FIFO32_S_Data(31 downto 0);
+            address_reg(1) <= IN_FIFO32_S_Data(63 downto 32);            
+            state       <= COMP_REQ;
+
+        when COMP_REQ =>
+          -- TODO: fill_level handling!
+          -- Compare both headers. If same continue normally, if not, go to
+          -- error handling.
+          if
+            (mode_length_reg(0) = mode_length_reg(1))AND
+            (address_reg(0)     = address_reg(1))            
+          then
             state       <= WRITE_MODE_LENGTH;
-          else
-            -- if not, got to error handling
-            state         <= DELETE_REQUEST;
+
+          --
+          -- ERROR HANDLING
+          --
+          elsif mode_length_reg(0) /= mode_length_reg(1) then
+            state         <= DELETE_REQUEST_TUO;
+            error_typ_reg <= ERROR_TYP_HEADER1;
+            error_adr_reg <= (others => '0');
+          elsif address_reg(0) /= address_reg(1)then
+            state         <= DELETE_REQUEST_TUO;
             error_typ_reg <= ERROR_TYP_HEADER2;
             error_adr_reg <= (others => '0');
-            if minimum(
-              unsigned(IN_FIFO32_S_Fill((16 * (1 + 0))-1 downto 16 * 0)),
-              unsigned(IN_FIFO32_S_Fill((16 * (1 + 1))-1 downto 16 * 1)))
-              > 1
-            then
-              IN_FIFO32_S_Rd(1 downto 0) <= "11";
-              transfer_size              := transfer_size-4;
-            end if;
           end if;
-          
-          
+            
         when WRITE_MODE_LENGTH =>
-          -- fill_level handling: +2 for unwritten mode_length and address word
-          INT_OUT_FIFO32_S_Fill <= std_logic_vector(minimum(
-            unsigned(IN_FIFO32_M_Rem((16 * (1 + 0))-1 downto 16 * 0)),
-            unsigned(IN_FIFO32_M_Rem((16 * (1 + 1))-1 downto 16 * 1)))
-                                                    +2);
-          
-          INT_OUT_FIFO32_S_Data <= mode_length_reg;
           if OUT_FIFO32_S_Rd = '1' then
             state                 <= WRITE_ADDRESS;
-            INT_OUT_FIFO32_S_Data <= address_reg;
           end if;
           
         when WRITE_ADDRESS =>
-          -- fill_level handling: +1 for unwritten address word
-          INT_OUT_FIFO32_S_Fill <= std_logic_vector(minimum(
-            unsigned(IN_FIFO32_M_Rem((16 * (1 + 0))-1 downto 16 * 0)),
-            unsigned(IN_FIFO32_M_Rem((16 * (1 + 1))-1 downto 16 * 1)))
-                                                    +1);
-          
-          INT_OUT_FIFO32_S_Data <= address_reg;
           if OUT_FIFO32_S_Rd = '1' then
             case transfer_mode is
               when READ =>
                 state <= DATA_READ;
               when WRITE =>
-                state <= DATA_WRITE;
-                if IN_FIFO32_S_Data(31 downto 0) /= IN_FIFO32_S_Data(63 downto 32) then
-                  state         <= COMPLETE_WRITE;
-                  error_typ_reg <= ERROR_TYP_DATA;
-                  error_adr_reg <= std_logic_vector(unsigned(mode_length_reg) - transfer_size);
-                end if;
-
-                IN_FIFO32_S_Rd(0)     <= OUT_FIFO32_S_Rd;
-                IN_FIFO32_S_Rd(1)     <= OUT_FIFO32_S_Rd;
-                INT_OUT_FIFO32_S_DATA <= IN_FIFO32_S_Data(31 downto 0);
-                INT_OUT_FIFO32_S_Fill <= std_logic_vector(minimum(
-                  unsigned(IN_FIFO32_S_Fill((16 * (1 + 0))-1 downto 16 * 0)),
-                  unsigned(IN_FIFO32_S_Fill((16 * (1 + 1))-1 downto 16 * 1))));
-                transfer_size := transfer_size-4;
+                state <= DATA_WRITE;              
             end case;
           end if;
           
 
         when DATA_READ =>
-          -- synchronize mem port with thread ports
-          IN_FIFO32_M_Data((32 * (1 + 0))-1 downto 32 * 0) <= OUT_FIFO32_M_Data;
-          IN_FIFO32_M_Data((32 * (1 + 1))-1 downto 32 * 1) <= OUT_FIFO32_M_Data;
-          IN_FIFO32_M_Wr(0)                                <= OUT_FIFO32_M_Wr;
-          IN_FIFO32_M_Wr(1)                                <= OUT_FIFO32_M_Wr;
-
-          -- fill_level handling
-          INT_OUT_FIFO32_M_Rem <= std_logic_vector(minimum(
-            unsigned(IN_FIFO32_M_Rem((16 * (1 + 0))-1 downto 16 * 0)),
-            unsigned(IN_FIFO32_M_Rem((16 * (1 + 1))-1 downto 16 * 1))));
-
           if OUT_FIFO32_M_Wr = '1' then
             transfer_size := transfer_size-4;
           end if;
@@ -743,19 +791,6 @@ begin  -- of architecture ------------------------------------------------------
           -- TODO: What data do we write on error? TUO Data? ST Data? All
           -- zeros? Special Marker?
           -- TODO: What about forever stalling thread?
-          if IN_FIFO32_S_Data(31 downto 0) /= IN_FIFO32_S_Data(63 downto 32) then
-            state         <= COMPLETE_WRITE;
-            error_typ_reg <= ERROR_TYP_DATA;
-            error_adr_reg <= std_logic_vector(unsigned(mode_length_reg) - transfer_size);
-          end if;
-
-          IN_FIFO32_S_Rd(0)     <= OUT_FIFO32_S_Rd;
-          IN_FIFO32_S_Rd(1)     <= OUT_FIFO32_S_Rd;
-          INT_OUT_FIFO32_S_DATA <= IN_FIFO32_S_Data(31 downto 0);
-          INT_OUT_FIFO32_S_Fill <= std_logic_vector(minimum(
-            unsigned(IN_FIFO32_S_Fill((16 * (1 + 0))-1 downto 16 * 0)),
-            unsigned(IN_FIFO32_S_Fill((16 * (1 + 1))-1 downto 16 * 1))));
-
           if OUT_FIFO32_S_Rd = '1' then
             transfer_size := transfer_size-4;
           end if;
@@ -763,20 +798,37 @@ begin  -- of architecture ------------------------------------------------------
             state <= WAIT_THREADS;
           end if;
 
+          -- Lesson learned: error handling has to outvote everything else, so we
+          -- have to put error handling last in the VHDL code.
+          if IN_FIFO32_S_Data(31 downto 0) /= IN_FIFO32_S_Data(63 downto 32) then
+            state         <= COMPLETE_WRITE;
+            error_typ_reg <= ERROR_TYP_DATA;
+            error_adr_reg <= std_logic_vector(unsigned(mode_length_reg(0)(23 downto 0)) - transfer_size+ unsigned(address_reg(0))-4);
+          end if;
         -----------------
         -- Error handling
         -----------------
-        when DELETE_REQUEST =>
+        when DELETE_REQUEST_TUO =>
           -- TODO: What about forever stalling thread?
-          if minimum(
-            unsigned(IN_FIFO32_S_Fill((16 * (1 + 0))-1 downto 16 * 0)),
-            unsigned(IN_FIFO32_S_Fill((16 * (1 + 1))-1 downto 16 * 1)))
-            > 1
+          -- Handle threads seperately: they might have different request types and
+          -- lengths, so we have to delete the request individually
+
+          if (unsigned(IN_FIFO32_S_Fill((16 * (1 + 0))-1 downto 16 * 0)) > 0 and mode_length_reg(0)(31) = '1') or
+             (unsigned(IN_FIFO32_M_Rem((16 * (1 + 0))-1 downto 16 * 0)) > 0 and mode_length_reg(0)(31) = '0')
           then
-            IN_FIFO32_S_Rd(1 downto 0) <= "11";
-            transfer_size              := transfer_size-4;
-          else
-            IN_FIFO32_S_Rd(1 downto 0) <= "00";
+            transfer_size              := transfer_size-4;          
+          end if;
+
+          if transfer_size = 0 then
+            state <= DELETE_REQUEST_ST;
+            transfer_size := to_integer(unsigned(mode_length_reg(1)(23 downto 0)));
+          end if;
+
+        when DELETE_REQUEST_ST =>
+          if (unsigned(IN_FIFO32_S_Fill((16 * (1 + 1))-1 downto 16 * 1)) > 0 and mode_length_reg(1)(31) = '1') or
+             (unsigned(IN_FIFO32_M_Rem((16 * (1 + 1))-1 downto 16 * 1)) > 0 and mode_length_reg(1)(31) = '0')
+          then
+            transfer_size              := transfer_size-4;          
           end if;
 
           if transfer_size = 0 then
@@ -787,13 +839,6 @@ begin  -- of architecture ------------------------------------------------------
           -- TODO: What data do we write on error? TUO Data? ST Data? All
           -- zeros? Special Marker?
           -- TODO: What about forever stalling thread?
-          IN_FIFO32_S_Rd(0)     <= OUT_FIFO32_S_Rd;
-          IN_FIFO32_S_Rd(1)     <= OUT_FIFO32_S_Rd;
-          INT_OUT_FIFO32_S_DATA <= IN_FIFO32_S_Data(31 downto 0);
-          INT_OUT_FIFO32_S_Fill <= std_logic_vector(minimum(
-            unsigned(IN_FIFO32_S_Fill((16 * (1 + 0))-1 downto 16 * 0)),
-            unsigned(IN_FIFO32_S_Fill((16 * (1 + 1))-1 downto 16 * 1))));
-
           if OUT_FIFO32_S_Rd = '1' then
             transfer_size := transfer_size-4;
           end if;
@@ -805,7 +850,6 @@ begin  -- of architecture ------------------------------------------------------
           ERROR_REQ <= '1';
           ERROR_TYP <= error_typ_reg;
           ERROR_ADR <= error_adr_reg;
-
           state <= WAIT_ERROR_ACK;
           
         when WAIT_ERROR_ACK =>

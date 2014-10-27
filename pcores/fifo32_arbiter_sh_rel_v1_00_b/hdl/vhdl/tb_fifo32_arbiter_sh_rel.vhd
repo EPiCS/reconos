@@ -33,6 +33,79 @@ architecture testbench of tb_fifo32_arbiter_sh_rel is
       );
   end component;
 
+component proc_control is
+  generic (
+    C_ENABLE_ILA          : integer := 0;
+    C_FAULT_CHANNEL_WIDTH : natural := 0  -- 2^2 = 4 channels
+    );
+  port (
+    clk : in std_logic;
+    rst : in std_logic;
+
+    -- Request FSL
+    FSLA_Rst       : in  std_logic;
+    FSLA_S_Read    : out std_logic;  -- Read signal, requiring next available input to be read
+    FSLA_S_Data    : in  std_logic_vector(0 to 31);  -- Input data
+    FSLA_S_Control : in  std_logic;  -- Control Bit, indicating the input data are control word
+    FSLA_S_Exists  : in  std_logic;  -- Data Exist Bit, indicating data exist in the input FSL bus
+    FSLA_M_Write   : out std_logic;  -- Write signal, enabling writing to output FSL bus
+    FSLA_M_Data    : out std_logic_vector(0 to 31);  -- Output data
+    FSLA_M_Control : out std_logic;  -- Control Bit, indicating the output data are contol word
+    FSLA_M_Full    : in  std_logic;  -- Full Bit, indicating output FSL bus is full
+
+    -- Reply FSL
+    FSLB_Rst       : in  std_logic;
+    FSLB_S_Read    : out std_logic;  -- Read signal, requiring next available input to be read
+    FSLB_S_Data    : in  std_logic_vector(0 to 31);  -- Input data
+    FSLB_S_Control : in  std_logic;  -- Control Bit, indicating the input data are control word
+    FSLB_S_Exists  : in  std_logic;  -- Data Exist Bit, indicating data exist in the input FSL bus
+    FSLB_M_Write   : out std_logic;  -- Write signal, enabling writing to output FSL bus
+    FSLB_M_Data    : out std_logic_vector(0 to 31);  -- Output data
+    FSLB_M_Control : out std_logic;  -- Control Bit, indicating the output data are contol word
+    FSLB_M_Full    : in  std_logic;  -- Full Bit, indicating output FSL bus is full
+
+
+    -- 16 individual reset outputs (mhs does not support vector indexing)
+    reset0 : out std_logic;
+    reset1 : out std_logic;
+    reset2 : out std_logic;
+    reset3 : out std_logic;
+    reset4 : out std_logic;
+    reset5 : out std_logic;
+    reset6 : out std_logic;
+    reset7 : out std_logic;
+    reset8 : out std_logic;
+    reset9 : out std_logic;
+    resetA : out std_logic;
+    resetB : out std_logic;
+    resetC : out std_logic;
+    resetD : out std_logic;
+    resetE : out std_logic;
+    resetF : out std_logic;
+
+    -- MMU related ports
+    page_fault : in  std_logic;
+    fault_addr : in  std_logic_vector(31 downto 0);
+    retry      : out std_logic;
+    pgd        : out std_logic_vector(31 downto 0);
+    tlb_hits   : in  std_logic_vector(31 downto 0);
+    tlb_misses : in  std_logic_vector(31 downto 0);
+
+    -- Fault injection related ports
+    fault_sa0 : out std_logic_vector(32*(2**C_FAULT_CHANNEL_WIDTH)-1 downto 0);
+    fault_sa1 : out std_logic_vector(32*(2**C_FAULT_CHANNEL_WIDTH)-1 downto 0);
+
+    -- Error signals from arbiter
+    ERROR_REQ : in  std_logic;
+    ERROR_ACK : out std_logic;
+    ERROR_TYP : in  std_logic_vector(7 downto 0);
+    ERROR_ADR : in  std_logic_vector(31 downto 0);
+
+    -- ReconOS reset
+    reconos_reset : out std_logic
+    );
+end component;
+  
   component fifo32_arbiter_sh_rel
     generic (
       C_SLV_DWIDTH     : integer := 32;
@@ -190,9 +263,9 @@ architecture testbench of tb_fifo32_arbiter_sh_rel is
       -- Error reporting
       ERROR_REQ : out std_logic;
       ERROR_ACK : in  std_logic;
-      ERROR_TYP : out std_logic_vector(7  downto 0);
+      ERROR_TYP : out std_logic_vector(7 downto 0);
       ERROR_ADR : out std_logic_vector(31 downto 0);
-      
+
       -- Misc
       Rst : in std_logic;
       clk : in std_logic;               -- separate clock for control logic
@@ -208,7 +281,7 @@ architecture testbench of tb_fifo32_arbiter_sh_rel is
   constant half_cycle : time := 5 ns;
   constant full_cycle : time := 2 * half_cycle;
 
-  constant ARB_PORT_COUNT : integer                           := 16;  
+  constant ARB_PORT_COUNT : integer                           := 16;
   constant HWT_COUNT      : integer range 1 to ARB_PORT_COUNT := 2;
   constant C_SLV_DWIDTH   : integer                           := 32;
 --------------------------------------------------------------------------------
@@ -242,6 +315,29 @@ architecture testbench of tb_fifo32_arbiter_sh_rel is
   signal A2M_FIFO32_M_Rem  : std_logic_vector(15 downto 0);
   signal A2M_FIFO32_M_Wr   : std_logic;
 
+  -- FIFO32 interface to proc_control
+  signal FSLA_Rst       : std_logic;   
+  signal FSLA_S_Read    : std_logic;
+  signal FSLA_S_Data    : std_logic_vector(31 downto 0);
+  signal FSLA_S_Control : std_logic;
+  signal FSLA_S_Exists  : std_logic;
+  signal FSLA_M_Write   : std_logic;
+  signal FSLA_M_Data    : std_logic_vector(31 downto 0);
+  signal FSLA_M_Control : std_logic;
+  signal FSLA_M_Full    : std_logic;
+                       
+  signal FSLB_Rst       : std_logic;
+  signal FSLB_S_Read    : std_logic;
+  signal FSLB_S_Data    : std_logic_vector(31 downto 0);
+  signal FSLB_S_Control : std_logic;
+  signal FSLB_S_Exists  : std_logic;
+  signal FSLB_M_Write   : std_logic;
+  signal FSLB_M_Data    : std_logic_vector(31 downto 0);
+  signal FSLB_M_Control : std_logic;
+  signal FSLB_M_Full    : std_logic;
+
+
+  
   -- Hardware Interface HWIF
   signal HWIF2DEC_Addr  : std_logic_vector(0 to 31);
   signal HWIF2DEC_Data  : std_logic_vector(C_SLV_DWIDTH-1 downto 0);
@@ -254,9 +350,9 @@ architecture testbench of tb_fifo32_arbiter_sh_rel is
   -- Error reporting
   signal ERROR_REQ : std_logic;
   signal ERROR_ACK : std_logic;
-  signal ERROR_TYP : std_logic_vector(7  downto 0);
+  signal ERROR_TYP : std_logic_vector(7 downto 0);
   signal ERROR_ADR : std_logic_vector(31 downto 0);
-  
+
   -- memif interface signals
   type memif_out_array_t is array(natural range <>) of o_memif_t;
   type memif_in_array_t is array(natural range <>) of i_memif_t;
@@ -270,6 +366,13 @@ architecture testbench of tb_fifo32_arbiter_sh_rel is
   signal clk           : std_logic;
 
   signal test_desc : string(1 to 16) := "None            ";
+
+  -- This signal gives a human readable description of what the testbench is
+  -- currently testing. Implemented as a signal, because Xilinx ISim can't
+  -- track variables. 
+  type tb_phase_t is (READ1, WRITE1, READ128, WRITE128, REQUEST_ERROR, LENGTH_ERROR, DATA_ERROR, DONE);
+  type tb_phase_vector_t is array  (natural range<>) of tb_phase_t;
+  signal tb_phase : tb_phase_vector_t(0 to HWT_COUNT-1);
 
 begin  -- of architecture -------------------------------------------------------
 
@@ -329,10 +432,10 @@ begin  -- of architecture ------------------------------------------------------
       is
       --! @brief First of two global variables needed for random number functions,
       --!        e.g. get_rand_unsigned      
-      variable seed1 : positive := i+1;
+      variable seed1 : positive := 1; --i+1;
       --! @brief Second of two global variables needed for random number functions,
       --!        e.g. get_rand_unsigned
-      variable seed2 : positive := i+i+1;
+      variable seed2 : positive := 2; --i+i+1;
 
 
       --! @brief This function generates a random unsigned number
@@ -357,102 +460,214 @@ begin  -- of architecture ------------------------------------------------------
         return to_unsigned(rand_int, bitwidth);
       end function;
 
-      type state_t is ( SET_PAUSE, PAUSE, WRITE_HEADER, WRITE_DATA, READ_DATA, END_STATE);
+      type state_t is (SET_PAUSE, PAUSE, WRITE_HEADER, WRITE_DATA, READ_DATA, END_STATE);
       variable state : state_t;
 
       type MODE is (READ, WRITE);
       type MODE_VECTOR is array (natural range<>) of MODE;
       type LENGTH_VECTOR is array (natural range<>) of natural range 1 to 2**16-1;
-      type ADDRESS_VECTOR is array (natural range<> ) of std_logic_vector(31 downto 0);
+      type ADDRESS_VECTOR is array (natural range<>) of std_logic_vector(31 downto 0);
+      
+      constant MAX_PACKETS  : natural                          := 7;
+     
+      variable PAUSE_LIST   : LENGTH_VECTOR(1 to MAX_PACKETS*2)  := (
+        20, 20, 20, 20,  -- TUO pauses
+        20, 20, 20,  
+        20, 20, 20, 20,  -- ST  pauses
+        20, 20, 20 );
+      
+      variable MODE_LIST    : MODE_VECTOR(1 to MAX_PACKETS*2)    := (
+         READ, WRITE, READ, WRITE, -- TUO, all good
+         WRITE,READ, WRITE,                     -- TUO, intentional discrepancy to ST
+         READ, WRITE, READ, WRITE, -- ST, equal to TUO
+         READ, READ, WRITE);                    -- ST,  intentional discrepancy to ST
+         
+      variable LENGTH_LIST  : LENGTH_VECTOR(1 to MAX_PACKETS*2)  := (
+        4, 4, 128, 128, -- TUO lengths
+        128, 128, 128,
+        4, 4, 128, 128, -- ST  lengths
+        128, 124, 128);
+      
+      variable ADDRESS_LIST : ADDRESS_VECTOR(1 to MAX_PACKETS*2) := (
+        X"DEADDEAD", X"DEADDEAD", X"AFFEAFFE", X"AFFEAFFE", -- TUO addresses
+        X"BEEFBEEF",X"BEEFBEEF", X"BEEFBEEF",
+        X"DEADDEAD", X"DEADDEAD", X"AFFEAFFE", X"AFFEAFFE", -- ST  addresses
+        X"BEEFBEEF", X"BEEFBEEF", X"BEEFBEEF");
 
-      constant MAX_PACKETS : natural := 4;
-      variable PAUSE_LIST: LENGTH_VECTOR(1 to MAX_PACKETS) := (20, 20, 20, 20);
-      variable MODE_LIST : MODE_VECTOR(1 to MAX_PACKETS) := (READ, WRITE, READ, WRITE);
-      variable LENGTH_LIST: LENGTH_VECTOR(1 to MAX_PACKETS) := (4,4,128,128);
-      variable ADDRESS_LIST: ADDRESS_VECTOR(1 to MAX_PACKETS) := (X"DEADDEAD",X"DEADDEAD",X"AFFEAFFE", X"AFFEAFFE");
-
-      variable packet_nr : natural:= 0;
+      variable packet_nr     : natural := 0;
       variable pause_counter : natural := 0;
-      variable done  : boolean := false;
-           
+      variable length_counter: natural := 0;
+      variable done          : boolean := false;
+      
     begin
       if rst = '1' then
         state := SET_PAUSE;
         -- init interface 
         memif_reset(H2F_MEMIF_OUT(i));
         done  := false;
-        data <= std_logic_vector(get_rand_unsigned(0, 2**16-1, 32 ));
+        data  <= std_logic_vector(get_rand_unsigned(0, 2**16-1, 32));
       elsif rising_edge(clk) then
         case state is
           when SET_PAUSE =>
-            packet_nr := packet_nr + 1 ;
+            packet_nr := packet_nr + 1;
+            tb_phase(i) <= tb_phase_t'val(packet_nr-1);
             if packet_nr > MAX_PACKETS then
               state := END_STATE;
             else
-              pause_counter := PAUSE_LIST(packet_nr);
-              state := PAUSE;
+              pause_counter := PAUSE_LIST((MAX_PACKETS*i)+packet_nr);
+              state         := PAUSE;
             end if;
+            
           when PAUSE =>
-            pause_counter := pause_counter - 1;
+            pause_counter    := pause_counter - 1;
             if pause_counter <= 0 then
               state := WRITE_HEADER;
-            end if; 
+            end if;
             
           when WRITE_HEADER =>
-            case MODE_LIST(packet_nr) is
+            case MODE_LIST((MAX_PACKETS*i)+packet_nr) is
               when READ =>
                 memif_read_request(
                   H2F_MEMIF_IN(i),
                   H2F_MEMIF_OUT(i),
-                  ADDRESS_LIST(packet_nr),  -- address
-                  std_logic_vector(to_unsigned(LENGTH_LIST(packet_nr), 24)), -- length
+                  ADDRESS_LIST((MAX_PACKETS*i)+packet_nr),  -- address
+                  std_logic_vector(to_unsigned(LENGTH_LIST((MAX_PACKETS*i)+packet_nr), 24)),  -- length
                   done
-                );
-                if done then state := READ_DATA; end if;
+                  );
+                if done then
+                  length_counter := LENGTH_LIST((MAX_PACKETS*i)+packet_nr);
+                  state := READ_DATA;
+                end if;
               when WRITE =>
                 memif_write_request(
                   H2F_MEMIF_IN(i),
                   H2F_MEMIF_OUT(i),
-                  ADDRESS_LIST(packet_nr),  -- address
-                  std_logic_vector(to_unsigned(LENGTH_LIST(packet_nr), 24)), -- length
+                  ADDRESS_LIST((MAX_PACKETS*i)+packet_nr),  -- address
+                  std_logic_vector(to_unsigned(LENGTH_LIST((MAX_PACKETS*i)+packet_nr), 24)),  -- length
                   done
-                );
-                if done then state := WRITE_DATA; end if;
-             end case;
+                  );
+                if done then
+                  length_counter := LENGTH_LIST((MAX_PACKETS*i)+packet_nr);
+                  state := WRITE_DATA;
+                end if;
+            end case;
 
           when WRITE_DATA =>
-            data <= std_logic_vector(get_rand_unsigned(0, 2**16-1, 32 ));
+            data <= std_logic_vector(get_rand_unsigned(0, 2**16-1, 32));
+            if i = 0 and length_counter = 8 and packet_nr = 7 then
+              data <= X"DEADBEEF";
+            end if;
             memif_fifo_push (
               H2F_MEMIF_IN(i),
               H2F_MEMIF_OUT(i),
-              data,                 -- data
+              data,                     -- data
               done
               );
-            if done then state := SET_PAUSE; end if;
+            if done then
+              length_counter := length_counter -4;
+            end if;
+            if length_counter = 0 then
+              state := SET_PAUSE;
+            end if;
             
           when READ_DATA =>
             memif_fifo_pull (
               H2F_MEMIF_IN(i),
               H2F_MEMIF_OUT(i),
-              data,                                  -- data
+              data,                     -- data
               done
               );
-            if done then state := SET_PAUSE; end if;
-
+            if done then
+              length_counter := length_counter -4;
+            end if;
+            if length_counter = 0 then
+              state := SET_PAUSE;
+            end if;
+            
           when END_STATE =>
             report "Packet generation done!" severity note;
-         end case;
+        end case;
       end if;
     end process;
 
   end generate;
 
+-- Instantiate proc_control, which communicates error data to the main system
+  FSLA_M_Full <= '0'; -- let proc_control think we always accept incoming data
+proc_control_i: proc_control 
+  port map(
+    clk => clk,
+    rst => rst,
+
+    -- Request FSL
+    FSLA_Rst       => FSLA_Rst,      
+    FSLA_S_Read    => FSLA_S_Read,   
+    FSLA_S_Data    => FSLA_S_Data,   
+    FSLA_S_Control => FSLA_S_Control,
+    FSLA_S_Exists  => FSLA_S_Exists, 
+    FSLA_M_Write   => FSLA_M_Write,  
+    FSLA_M_Data    => FSLA_M_Data,   
+    FSLA_M_Control => FSLA_M_Control,
+    FSLA_M_Full    => FSLA_M_Full,   
+                                     
+    -- Reply FSL                     
+    FSLB_Rst       => FSLB_Rst,      
+    FSLB_S_Read    => FSLB_S_Read,   
+    FSLB_S_Data    => FSLB_S_Data,   
+    FSLB_S_Control => FSLB_S_Control,
+    FSLB_S_Exists  => FSLB_S_Exists, 
+    FSLB_M_Write   => FSLB_M_Write,  
+    FSLB_M_Data    => FSLB_M_Data,   
+    FSLB_M_Control => FSLB_M_Control,
+    FSLB_M_Full    => FSLB_M_Full,   
+
+
+    -- 16 individual reset outputs (mhs does not support vector indexing)
+    reset0 => open,
+    reset1 => open,
+    reset2 => open,
+    reset3 => open,
+    reset4 => open,
+    reset5 => open,
+    reset6 => open,
+    reset7 => open,
+    reset8 => open,
+    reset9 => open,
+    resetA => open,
+    resetB => open,
+    resetC => open,
+    resetD => open,
+    resetE => open,
+    resetF => open,
+
+    -- MMU related ports
+    page_fault => '0',
+    fault_addr => (others =>'0'),
+    retry      => open,
+    pgd        => open,
+    tlb_hits   => (others =>'0'),
+    tlb_misses => (others =>'0'),
+
+    -- Fault injection related ports
+    fault_sa0 => open,
+    fault_sa1 => open,
+
+    -- Error signals from arbiter
+    ERROR_REQ  => ERROR_REQ,
+    ERROR_ACK  => ERROR_ACK,
+    ERROR_TYP  => ERROR_TYP,
+    ERROR_ADR  => ERROR_ADR,
+
+    -- ReconOS reset
+    reconos_reset => open
+    );
+  
   fifo32_arbiter_sh_rel_i : fifo32_arbiter_sh_rel
     generic map(
-      FIFO32_PORTS     => ARB_PORT_COUNT, -- setting it to something else than
-                                          -- 16 breaks it at the moment:
-                                          -- automate address map generation
-                                          -- for HWIF!
+      FIFO32_PORTS     => ARB_PORT_COUNT,  -- setting it to something else than
+                                           -- 16 breaks it at the moment:
+                                           -- automate address map generation
+                                           -- for HWIF!
       ARBITRATION_ALGO => 0
       )
     port map(
@@ -652,6 +867,7 @@ begin  -- of architecture ------------------------------------------------------
       transfer_mode      := transfer_mode;
       transfer_size      := transfer_size;
       case state is
+        
         when IDLE =>
           a2m_memif_out.s_rd <= '0';
           a2m_memif_out.m_wr <= '0';
@@ -668,88 +884,94 @@ begin  -- of architecture ------------------------------------------------------
             when others => transfer_mode := WRITE;
           end case;
           transfer_size := to_integer(unsigned(a2m_memif_in.s_data(23 downto 0)));
+          
         when ADDRESS =>
           transfer_address := a2m_memif_in.s_data;
           case transfer_mode is
             when READ =>
-              state                := DATA_READ;
-              a2m_memif_out.s_rd   <= '0';
-              a2m_memif_out.m_wr   <= '1';
+              state              := DATA_READ;
+              a2m_memif_out.s_rd <= '0';
+              a2m_memif_out.m_wr <= '1';
               a2m_memif_out.m_data <= transfer_address;
             when WRITE =>
               state := DATA_WRITE;
             when others => null;
           end case;
+          
         when DATA_WRITE =>
-          transfer_size := transfer_size - 4;
+          if (a2m_memif_in.s_fill /= X"0001" or transfer_size = 4)and
+             a2m_memif_in.s_fill /= X"0000" then
+            a2m_memif_out.s_rd <= '1';
+            transfer_size := transfer_size - 4;
+          else
+            a2m_memif_out.s_rd <= '0';
+          end if;
+          
           if transfer_size = 0 then
             state              := IDLE;
             a2m_memif_out.s_rd <= '0';
           end if;
+          
         when DATA_READ =>
           -- following line determines read data
           a2m_memif_out.m_data <= transfer_address;
-          transfer_size        := transfer_size - 4;
+          if a2m_memif_in.m_remainder /= X"0001" and
+             a2m_memif_in.m_remainder /= X"0000" then
+            a2m_memif_out.m_wr <= '1';
+            transfer_size      := transfer_size - 4;
+          else
+            a2m_memif_out.m_wr <= '0';
+          end if;
+
           if transfer_size = 0 then
             state                := IDLE;
             a2m_memif_out.m_wr   <= '0';
             a2m_memif_out.m_data <= X"00000000";
           end if;
+          
         when others =>
           state := IDLE;
       end case;
     end if;
   end process;
 
-  error_proc: process(clk, rst) is
-  begin
-    if clk'event and clk='1' then
-      if ERROR_REQ='1' then
-        report "arbiter detected error!" severity error;
-        ERROR_ACK <= '1';
-      else
-        ERROR_ACK <= '0';
-      end if;
-    end if;
-  end process;
-  
   hwif_proc : process is
-    procedure hwif_write(addr, data: std_logic_vector(31 downto 0))
+    procedure hwif_write(addr, data : std_logic_vector(31 downto 0))
     is
 
     begin
-    HWIF2DEC_Addr <= addr;
-    HWIF2DEC_Data <= data;
-    HWIF2DEC_WrCE <= '1';
-    wait for full_cycle;
-    HWIF2DEC_Addr <= (others => '0');
-    HWIF2DEC_Data <= (others => '0');
-    HWIF2DEC_WrCE <= '0';
-    wait for full_cycle;
+      HWIF2DEC_Addr <= addr;
+      HWIF2DEC_Data <= data;
+      HWIF2DEC_WrCE <= '1';
+      wait for full_cycle;
+      HWIF2DEC_Addr <= (others => '0');
+      HWIF2DEC_Data <= (others => '0');
+      HWIF2DEC_WrCE <= '0';
+      wait for full_cycle;
     end procedure;
   begin
-        -- set Defaults
-    HWIF2DEC_Addr <= (others=>'0');
-    HWIF2DEC_Data <= (others=>'0');
+    -- set Defaults
+    HWIF2DEC_Addr <= (others => '0');
+    HWIF2DEC_Data <= (others => '0');
     HWIF2DEC_RdCE <= '0';
     HWIF2DEC_WrCE <= '0';
     wait for 200 ns;
 
-    test_desc      <= "enable chksum rd";
-    hwif_write(X"00000070",X"FFFFFFFF");
-    
-    test_desc      <= "enable chksum wr";
-    hwif_write(X"000000F0",X"FFFFFFFF");
+    test_desc <= "enable chksum rd";
+    hwif_write(X"00000070", X"FFFFFFFF");
+
+    test_desc <= "enable chksum wr";
+    hwif_write(X"000000F0", X"FFFFFFFF");
     wait for 50*full_cycle;
-    
-    test_desc      <= "reset  chksum   ";
-    hwif_write(X"000000EC",X"FFFFFFFF");
+
+    test_desc <= "reset  chksum   ";
+    hwif_write(X"000000EC", X"FFFFFFFF");
     wait for 10*full_cycle;
 
-    test_desc      <= "enable chksum   ";
-    hwif_write(X"000000F0",X"FFFFFFFF");
+    test_desc <= "enable chksum   ";
+    hwif_write(X"000000F0", X"FFFFFFFF");
     wait for 50*full_cycle;
-     test_desc <= "end of testbench";
+    test_desc <= "end of testbench";
     wait;
   end process;
 
