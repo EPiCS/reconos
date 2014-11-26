@@ -15,7 +15,7 @@
 #define SORT_LEN_WORDS (SORT_LEN_BYTES / 4)
 #define STATE_SIZE ((SORT_LEN_WORDS + 4) * sizeof(uint32_t))
 
-#define NODEBUG
+#define DEBUG
 #define SUSPEND
 
 struct reconos_resource res[2];
@@ -69,7 +69,7 @@ int main(int argc, char **argv) {
 	reconos_init();
 	timer_init();
 	debug("        ... %d hardware threads detected\n", RECONOS_NUM_HWTS);
-	
+
 	debug("DEBUG: initializing mboxes ");
 	mbox_init(&mbox_send, MAX_NUM_HWTS);
 	debug(".");

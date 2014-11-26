@@ -23,7 +23,7 @@ void generate_data( unsigned int *array, unsigned int size )
 
     //srandom( time( 0 ) );
     for ( i = 0; i < size; i++ ) {
-        array[i] = 1000+(size-i-1); //( unsigned int ) random(  );
+        array[i] = (size-i-1); //( unsigned int ) random(  );
     }
 }
 

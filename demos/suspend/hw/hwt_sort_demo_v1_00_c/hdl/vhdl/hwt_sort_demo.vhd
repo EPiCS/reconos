@@ -1,37 +1,56 @@
+--                                                        ____  _____
+--                            ________  _________  ____  / __ \/ ___/
+--                           / ___/ _ \/ ___/ __ \/ __ \/ / / /\__ \
+--                          / /  /  __/ /__/ /_/ / / / / /_/ /___/ /
+--                         /_/   \___/\___/\____/_/ /_/\____//____/
+-- 
+-- ======================================================================
+--
+--   title:        Sort Demo Suspendable
+--
+--   project:      ReconOS
+--   author:       Christoph Rüthing, University of Paderborn
+--   description:  Sort thread implementing a bubblesorter which can be
+--                 interrupted and saves its state.
+--
+-- ======================================================================
+
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.std_logic_arith.all;
 use ieee.std_logic_unsigned.all;
 
-library proc_common_v3_00_a;
-use proc_common_v3_00_a.proc_common_pkg.all;
-
 library reconos_v3_01_a;
 use reconos_v3_01_a.reconos_pkg.all;
 
 entity hwt_sort_demo is
+	--
+	-- Port defintions
+	--
+	--   OSIF_Sw2Hw_/OSIF_Hw2Sw - fifo signals for osif
+	--
+	--   MEMIF_Hwt2Mem_/MEMIF_Mem2Hwt_ - fifo signals for memif
+	--   
+	--   HWT_Clk    - hardware thread clock
+	--   HWT_Rst    - hardware thread reset
+	--   HWT_Signal - hardware thread interrupt
+	--
 	port (
-		-- OSIF FIFO ports
-		OSIF_FIFO_Sw2Hw_Data    : in  std_logic_vector(31 downto 0);
-		OSIF_FIFO_Sw2Hw_Fill    : in  std_logic_vector(15 downto 0);
-		OSIF_FIFO_Sw2Hw_Empty   : in  std_logic;
-		OSIF_FIFO_Sw2Hw_RE      : out std_logic;
+		OSIF_Sw2Hw_Data    : in  std_logic_vector(31 downto 0);
+		OSIF_Sw2Hw_Empty   : in  std_logic;
+		OSIF_Sw2Hw_RE      : out std_logic;
 
-		OSIF_FIFO_Hw2Sw_Data    : out std_logic_vector(31 downto 0);
-		OSIF_FIFO_Hw2Sw_Rem     : in  std_logic_vector(15 downto 0);
-		OSIF_FIFO_Hw2Sw_Full    : in  std_logic;
-		OSIF_FIFO_Hw2Sw_WE      : out std_logic;
+		OSIF_Hw2Sw_Data    : out std_logic_vector(31 downto 0);
+		OSIF_Hw2Sw_Full    : in  std_logic;
+		OSIF_Hw2Sw_WE      : out std_logic;
 
-		-- MEMIF FIFO ports
-		MEMIF_FIFO_Hwt2Mem_Data    : out std_logic_vector(31 downto 0);
-		MEMIF_FIFO_Hwt2Mem_Rem     : in  std_logic_vector(15 downto 0);
-		MEMIF_FIFO_Hwt2Mem_Full    : in  std_logic;
-		MEMIF_FIFO_Hwt2Mem_WE      : out std_logic;
+		MEMIF_Hwt2Mem_Data    : out std_logic_vector(31 downto 0);
+		MEMIF_Hwt2Mem_Full    : in  std_logic;
+		MEMIF_Hwt2Mem_WE      : out std_logic;
 
-		MEMIF_FIFO_Mem2Hwt_Data    : in  std_logic_vector(31 downto 0);
-		MEMIF_FIFO_Mem2Hwt_Fill    : in  std_logic_vector(15 downto 0);
-		MEMIF_FIFO_Mem2Hwt_Empty   : in  std_logic;
-		MEMIF_FIFO_Mem2Hwt_RE      : out std_logic;
+		MEMIF_Mem2Hwt_Data    : in  std_logic_vector(31 downto 0);
+		MEMIF_Mem2Hwt_Empty   : in  std_logic;
+		MEMIF_Mem2Hwt_RE      : out std_logic;
 
 		HWT_Clk     : in  std_logic;
 		HWT_Rst     : in  std_logic;
@@ -41,22 +60,11 @@ end entity hwt_sort_demo;
 
 architecture implementation of hwt_sort_demo is
 	--
-	-- Definition of signals for simpler user.
-	--
-	--   clk - clock signal (HWT_Clk)
-	--   rst - asynchronous reset signal (HWT_Rst)
-	--   sig - interrupt signal for suspending (HWT_Signal)
-	--
-	signal clk : std_logic;
-	signal rst : std_logic;
-	signal sig : std_logic;
-	
-	--
 	-- Definition of ReconOS signals.
 	--
-	--   i/o_osif  - signals from OSIF
-	--   i/o_memif - signals from MEMIF
-	--   i/o_ram   - signals from local RAM
+	--   i/o_osif  - signals from osif
+	--   i/o_memif - signals from memif
+	--   i/o_ram   - signals from local ram
 	--
 	signal i_osif  : i_osif_t;
 	signal o_osif  : o_osif_t;
@@ -131,19 +139,15 @@ architecture implementation of hwt_sort_demo is
 	constant SORT_LEN_BYTES : std_logic_vector(31 downto 0) := x"00002000";
 	constant SORT_LEN_WORDS : std_logic_vector(31 downto 0) := x"00000800";
 begin
-	clk <= HWT_Clk;
-	rst <= HWT_Rst;
-	sig <= HWT_Signal;
-
 	--
 	-- Description of local RAM. This pattern will be recognized by XST to
 	-- implement a block-RAM.
 	--
 	--   @see Xilinx XST User Guide (UG687)
 	--
-	local_ram_0 : process (clk) is
+	local_ram_0 : process (HWT_Clk) is
 	begin
-		if (rising_edge(clk)) then
+		if (rising_edge(HWT_Clk)) then
 			if (ram_we_0 = '1') then
 				ram(CONV_INTEGER(ram_addr_0)) := ram_idata_0;
 			else
@@ -152,9 +156,9 @@ begin
 		end if;
 	end process local_ram_0;
 
-	local_ram_1 : process (clk) is
+	local_ram_1 : process (HWT_Clk) is
 	begin
-		if (rising_edge(clk)) then
+		if (rising_edge(HWT_Clk)) then
 			if (ram_we_1 = '1') then
 				ram(CONV_INTEGER(ram_addr_1)) := ram_idata_1;
 			else
@@ -169,52 +173,48 @@ begin
 	osif_setup (
 		i_osif,
 		o_osif,
-		OSIF_FIFO_Sw2Hw_Data,
-		OSIF_FIFO_Sw2Hw_Fill,
-		OSIF_FIFO_Sw2Hw_Empty,
-		OSIF_FIFO_Hw2Sw_Rem,
-		OSIF_FIFO_Hw2Sw_Full,
-		OSIF_FIFO_Sw2Hw_RE,
-		OSIF_FIFO_Hw2Sw_Data,
-		OSIF_FIFO_Hw2Sw_WE
+		OSIF_Sw2Hw_Data,
+		OSIF_Sw2Hw_Empty,
+		OSIF_Sw2Hw_RE,
+		OSIF_Hw2Sw_Data,
+		OSIF_Hw2Sw_Full,
+		OSIF_Hw2Sw_WE
 	);
 
 	memif_setup (
 		i_memif,
 		o_memif,
-		MEMIF_FIFO_Mem2Hwt_Data,
-		MEMIF_FIFO_Mem2Hwt_Fill,
-		MEMIF_FIFO_Mem2Hwt_Empty,
-		MEMIF_FIFO_Hwt2Mem_Rem,
-		MEMIF_FIFO_Hwt2Mem_Full,
-		MEMIF_FIFO_Mem2Hwt_RE,
-		MEMIF_FIFO_Hwt2Mem_Data,
-		MEMIF_FIFO_Hwt2Mem_WE
+		MEMIF_Mem2Hwt_Data,
+		MEMIF_Mem2Hwt_Empty,
+		MEMIF_Mem2Hwt_RE,
+		MEMIF_Hwt2Mem_Data,
+		MEMIF_Hwt2Mem_Full,
+		MEMIF_Hwt2Mem_WE
 	);
 
 	ram_setup (
 		i_ram,
 		o_ram,
 		ram_addr_0,
-		ram_we_0,
 		ram_idata_0,
-		ram_odata_0
+		ram_odata_0,
+		ram_we_0
 	);
 
 	--
 	-- ReconOS-FSM doing all synchronization with other threads by using
 	-- the ReconOS-package functions.
 	--
-	reconos_fsm: process (clk,rst,o_osif,o_memif,o_ram) is
+	reconos_fsm: process (HWT_Clk,HWT_Rst,o_osif,o_memif,o_ram) is
 		variable done  : boolean;
 	begin
-		if rst = '1' then
+		if HWT_Rst = '1' then
 			osif_reset(o_osif);
 			memif_reset(o_memif);
 			ram_reset(o_ram);
 
 			state <= STATE_INIT;
-		elsif rising_edge(clk) then
+		elsif rising_edge(HWT_Clk) then
 			ram_we_1 <= '0';
 
 			case state is
@@ -238,7 +238,7 @@ begin
 				-- Execution of Sort-Demo
 				--
 				when STATE_GET_ADDR =>
-					if sig = '1' then
+					if HWT_Signal = '1' then
 						osif_reset(o_osif);
 						memif_reset(o_memif);
 						state_tmp <= STATE_GET_ADDR;
@@ -262,7 +262,7 @@ begin
 					state <= STATE_SORT_START_OVER;
 
 				when STATE_SORT_START_OVER =>
-					if sig = '1' then
+					if HWT_Signal = '1' then
 						osif_reset(o_osif);
 						memif_reset(o_memif);
 						state_tmp <= STATE_SORT_START_OVER;
@@ -330,7 +330,7 @@ begin
 					end if;
 
 				when STATE_PUT_ACK =>
-					if sig = '1' then
+					if HWT_Signal = '1' then
 						osif_reset(o_osif);
 						memif_reset(o_memif);
 						state_tmp <= STATE_PUT_ACK;
@@ -346,7 +346,7 @@ begin
 				-- Suspending the hardware thread and saving its state
 				--
 				when STATE_SUSPEND =>
-					osif_call_0(i_osif, o_osif, OSIF_CMD_THREAD_GET_STATE_ADDR, state_addr, done);
+					osif_call_0_1(i_osif, o_osif, OSIF_CMD_THREAD_GET_STATE_ADDR, state_addr, done);
 					if done then
 						state <= STATE_SUSPEND_STATE;
 					end if;
@@ -398,7 +398,7 @@ begin
 				-- Resuming the hardware thread and restoring its state
 				--
 				when STATE_RESUME =>
-					osif_call_0(i_osif, o_osif, OSIF_CMD_THREAD_GET_STATE_ADDR, state_addr, done);
+					osif_call_0_1(i_osif, o_osif, OSIF_CMD_THREAD_GET_STATE_ADDR, state_addr, done);
 					if done then
 						state <= STATE_RESUME_STATE;
 					end if;

@@ -122,6 +122,10 @@ PAGE_SIZE*PAGES_PER_THREAD
 );
 }
 
+extern int reconos_clock_open(int num);
+extern void reconos_clock_set_divider(int fd, int clk, int divd);
+extern void reconos_clock_close(int fd);
+
 int main(int argc, char ** argv)
 {
 	int i;
@@ -156,14 +160,21 @@ int main(int argc, char ** argv)
 
 	// init mailboxes
 	mbox_init(&mb_start,TO_BLOCKS(buffer_size));
-        mbox_init(&mb_stop ,TO_BLOCKS(buffer_size));
+	mbox_init(&mb_stop ,TO_BLOCKS(buffer_size));
 
 	// init reconos and communication resources
 	reconos_init();
 
+#if 0
+	// setting clock
+	int fd = reconos_clock_open(0);
+	reconos_clock_set_divider(fd, 0, 9);
+	reconos_clock_close(fd);
+#endif
+
 	res[0].type = RECONOS_TYPE_MBOX;
 	res[0].ptr  = &mb_start;	  	
-        res[1].type = RECONOS_TYPE_MBOX;
+	res[1].type = RECONOS_TYPE_MBOX;
 	res[1].ptr  = &mb_stop;
 
 	printf("Creating %i hw-threads: ", hw_threads);
@@ -269,7 +280,7 @@ int main(int argc, char ** argv)
 	    printf("failure at word index %i\n", ret);
 	    printf("expected 0x%08X    found 0x%08X\n",copy[ret],data[ret]);
             printf("dumping the first 2048 words:\n");
-            for(i = 0; i < 2048; i++){
+            for(i = 0; i < TO_WORDS(buffer_size); i++){
               printf("%08X ",data[i]);
               if((i % 8) == 7) printf("\n");
             }

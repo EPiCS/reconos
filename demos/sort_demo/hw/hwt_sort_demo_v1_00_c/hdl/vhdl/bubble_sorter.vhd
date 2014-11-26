@@ -85,6 +85,7 @@ begin
       swapped   <= false;
       a         <= (others => '0');
       b         <= (others => '0');
+		state     <= STATE_IDLE;
     elsif rising_edge(clk) then
 
       o_RAMWE   <= '0';

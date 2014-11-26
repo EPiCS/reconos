@@ -12,37 +12,29 @@ use reconos_v3_01_a.reconos_pkg.all;
 entity hwt_sort_demo is
 	port (
 		-- OSIF FIFO ports
-		OSIF_FIFO_Sw2Hw_Data    : in  std_logic_vector(31 downto 0);
-		OSIF_FIFO_Sw2Hw_Fill    : in  std_logic_vector(15 downto 0);
-		OSIF_FIFO_Sw2Hw_Empty   : in  std_logic;
-		OSIF_FIFO_Sw2Hw_RE      : out std_logic;
+		OSIF_Sw2Hw_Data    : in  std_logic_vector(31 downto 0);
+		OSIF_Sw2Hw_Empty   : in  std_logic;
+		OSIF_Sw2Hw_RE      : out std_logic;
 
-		OSIF_FIFO_Hw2Sw_Data    : out std_logic_vector(31 downto 0);
-		OSIF_FIFO_Hw2Sw_Rem     : in  std_logic_vector(15 downto 0);
-		OSIF_FIFO_Hw2Sw_Full    : in  std_logic;
-		OSIF_FIFO_Hw2Sw_WE      : out std_logic;
+		OSIF_Hw2Sw_Data    : out std_logic_vector(31 downto 0);
+		OSIF_Hw2Sw_Full    : in  std_logic;
+		OSIF_Hw2Sw_WE      : out std_logic;
 
 		-- MEMIF FIFO ports
-		MEMIF_FIFO_Hwt2Mem_Data    : out std_logic_vector(31 downto 0);
-		MEMIF_FIFO_Hwt2Mem_Rem     : in  std_logic_vector(15 downto 0);
-		MEMIF_FIFO_Hwt2Mem_Full    : in  std_logic;
-		MEMIF_FIFO_Hwt2Mem_WE      : out std_logic;
+		MEMIF_Hwt2Mem_Data    : out std_logic_vector(31 downto 0);
+		MEMIF_Hwt2Mem_Full    : in  std_logic;
+		MEMIF_Hwt2Mem_WE      : out std_logic;
 
-		MEMIF_FIFO_Mem2Hwt_Data    : in  std_logic_vector(31 downto 0);
-		MEMIF_FIFO_Mem2Hwt_Fill    : in  std_logic_vector(15 downto 0);
-		MEMIF_FIFO_Mem2Hwt_Empty   : in  std_logic;
-		MEMIF_FIFO_Mem2Hwt_RE      : out std_logic;
+		MEMIF_Mem2Hwt_Data    : in  std_logic_vector(31 downto 0);
+		MEMIF_Mem2Hwt_Empty   : in  std_logic;
+		MEMIF_Mem2Hwt_RE      : out std_logic;
 
 		HWT_Clk    : in  std_logic;
 		HWT_Rst    : in  std_logic;
-		HWT_Signal : in  std_logic
+		HWT_Signal : in  std_logic;
+		
+		DEBUG : out std_logic_vector(110 downto 0)
 	);
-
-	attribute SIGIS   : string;
-
-	attribute SIGIS of HWT_Clk   : signal is "Clk";
-	attribute SIGIS of HWT_Rst   : signal is "Rst";
-
 end entity hwt_sort_demo;
 
 architecture implementation of hwt_sort_demo is
@@ -118,6 +110,22 @@ architecture implementation of hwt_sort_demo is
 	signal sort_start : std_logic := '0';
 	signal sort_done  : std_logic := '0';
 begin
+	DEBUG(0) <= '1' when state = STATE_INIT else '0';
+	DEBUG(1) <= '1' when state = STATE_GET_ADDR else '0';
+	DEBUG(2) <= '1' when state = STATE_READ else '0';
+	DEBUG(3) <= '1' when state = STATE_SORTING else '0';
+	DEBUG(4) <= '1' when state = STATE_WRITE else '0';
+	DEBUG(5) <= '1' when state = STATE_ACK else '0';
+	DEBUG(6) <= '1' when state = STATE_THREAD_EXIT else '0';
+	DEBUG(38 downto 7) <= OSIF_Sw2Hw_Data;
+	DEBUG(39) <= OSIF_Sw2Hw_Empty;
+	DEBUG(71 downto 40) <= MEMIF_Mem2Hwt_Data;
+	DEBUG(72) <= MEMIF_Mem2Hwt_Empty;
+	DEBUG(104 downto 73) <= o_memif.hwt2mem_data;
+	DEBUG(105) <= o_memif.hwt2mem_we;
+	DEBUG(106) <= i_memif.hwt2mem_full;
+	DEBUG(110 downto 107) <= conv_std_logic_vector(i_memif.step, 4);
+
 	clk <= HWT_Clk;
 	rst <= HWT_Rst;
 	
@@ -167,36 +175,32 @@ begin
 	osif_setup (
 		i_osif,
 		o_osif,
-		OSIF_FIFO_Sw2Hw_Data,
-		OSIF_FIFO_Sw2Hw_Fill,
-		OSIF_FIFO_Sw2Hw_Empty,
-		OSIF_FIFO_Hw2Sw_Rem,
-		OSIF_FIFO_Hw2Sw_Full,
-		OSIF_FIFO_Sw2Hw_RE,
-		OSIF_FIFO_Hw2Sw_Data,
-		OSIF_FIFO_Hw2Sw_WE
+		OSIF_Sw2Hw_Data,
+		OSIF_Sw2Hw_Empty,
+		OSIF_Sw2Hw_RE,
+		OSIF_Hw2Sw_Data,
+		OSIF_Hw2Sw_Full,
+		OSIF_Hw2Sw_WE
 	);
 
 	memif_setup (
 		i_memif,
 		o_memif,
-		MEMIF_FIFO_Mem2Hwt_Data,
-		MEMIF_FIFO_Mem2Hwt_Fill,
-		MEMIF_FIFO_Mem2Hwt_Empty,
-		MEMIF_FIFO_Hwt2Mem_Rem,
-		MEMIF_FIFO_Hwt2Mem_Full,
-		MEMIF_FIFO_Mem2Hwt_RE,
-		MEMIF_FIFO_Hwt2Mem_Data,
-		MEMIF_FIFO_Hwt2Mem_WE
+		MEMIF_Mem2Hwt_Data,
+		MEMIF_Mem2Hwt_Empty,
+		MEMIF_Mem2Hwt_RE,
+		MEMIF_Hwt2Mem_Data,
+		MEMIF_Hwt2Mem_Full,
+		MEMIF_Hwt2Mem_WE
 	);
 	
 	ram_setup (
 		i_ram,
 		o_ram,
 		o_RAMAddr_reconos_2,
-		o_RAMWE_reconos,
 		o_RAMData_reconos,
-		i_RAMData_reconos
+		i_RAMData_reconos,
+		o_RAMWE_reconos
 	);
 	
 	o_RAMAddr_reconos(0 to C_LOCAL_RAM_ADDRESS_WIDTH-1) <= o_RAMAddr_reconos_2((32-C_LOCAL_RAM_ADDRESS_WIDTH) to 31);
@@ -230,14 +234,13 @@ begin
 							state <= STATE_THREAD_EXIT;
 						else
 							len               <= conv_std_logic_vector(C_LOCAL_RAM_SIZE_IN_BYTES,32);
-							addr              <= addr(31 downto 2) & "00";
 							state             <= STATE_READ;
 						end if;
 					end if;
 				
 				-- copy data from main memory to local memory
 				when STATE_READ =>
-					memif_read(i_ram,o_ram,i_memif,o_memif,addr,X"00000000",len,done);
+					memif_read(i_ram,o_ram,i_memif,o_memif,addr(31 downto 2) & "00",X"00000000",len,done);
 					if done then
 						sort_start <= '1';
 						state <= STATE_SORTING;

@@ -29,35 +29,27 @@ use reconos_v3_01_a.reconos_pkg.all;
 entity hwt_matrixmul is
 	port (
 		-- OSIF FIFO ports
-		OSIF_FIFO_Sw2Hw_Data    : in  std_logic_vector(31 downto 0);
-		OSIF_FIFO_Sw2Hw_Fill    : in  std_logic_vector(15 downto 0);
-		OSIF_FIFO_Sw2Hw_Empty   : in  std_logic;
-		OSIF_FIFO_Sw2Hw_RE      : out std_logic;
+		OSIF_Sw2Hw_Data    : in  std_logic_vector(31 downto 0);
+		OSIF_Sw2Hw_Empty   : in  std_logic;
+		OSIF_Sw2Hw_RE      : out std_logic;
 
-		OSIF_FIFO_Hw2Sw_Data    : out std_logic_vector(31 downto 0);
-		OSIF_FIFO_Hw2Sw_Rem     : in  std_logic_vector(15 downto 0);
-		OSIF_FIFO_Hw2Sw_Full    : in  std_logic;
-		OSIF_FIFO_Hw2Sw_WE      : out std_logic;
+		OSIF_Hw2Sw_Data    : out std_logic_vector(31 downto 0);
+		OSIF_Hw2Sw_Full    : in  std_logic;
+		OSIF_Hw2Sw_WE      : out std_logic;
 
 		-- MEMIF FIFO ports
-		MEMIF_FIFO_Hwt2Mem_Data    : out std_logic_vector(31 downto 0);
-		MEMIF_FIFO_Hwt2Mem_Rem     : in  std_logic_vector(15 downto 0);
-		MEMIF_FIFO_Hwt2Mem_Full    : in  std_logic;
-		MEMIF_FIFO_Hwt2Mem_WE      : out std_logic;
+		MEMIF_Hwt2Mem_Data    : out std_logic_vector(31 downto 0);
+		MEMIF_Hwt2Mem_Full    : in  std_logic;
+		MEMIF_Hwt2Mem_WE      : out std_logic;
 
-		MEMIF_FIFO_Mem2Hwt_Data    : in  std_logic_vector(31 downto 0);
-		MEMIF_FIFO_Mem2Hwt_Fill    : in  std_logic_vector(15 downto 0);
-		MEMIF_FIFO_Mem2Hwt_Empty   : in  std_logic;
-		MEMIF_FIFO_Mem2Hwt_RE      : out std_logic;
+		MEMIF_Mem2Hwt_Data    : in  std_logic_vector(31 downto 0);
+		MEMIF_Mem2Hwt_Empty   : in  std_logic;
+		MEMIF_Mem2Hwt_RE      : out std_logic;
 
-		HWT_Clk   : in  std_logic;
-		HWT_Rst   : in  std_logic
+		HWT_Clk    : in  std_logic;
+		HWT_Rst    : in  std_logic;
+		HWT_Signal : in  std_logic
 	);
-
-	attribute SIGIS   : string;
-
-	attribute SIGIS of HWT_Clk   : signal is "Clk";
-	attribute SIGIS of HWT_Rst   : signal is "Rst";
 
 end hwt_matrixmul;
 
@@ -195,18 +187,12 @@ architecture implementation of hwt_matrixmul is
 	
 	signal multiplier_start	: std_logic;
 	signal multiplier_done	: std_logic;
-
-	signal clk, rst : std_logic;
 	
 begin
-
-	clk <= HWT_Clk;
-	rst <= HWT_Rst;
-	
 	-- local BRAM read and write access
-	local_ram_ctrl_1 : process (clk) is
+	local_ram_ctrl_1 : process (HWT_Clk) is
 	begin
-		if (clk'event and clk = '1') then
+		if (rising_edge(HWT_Clk)) then
 			if (o_RAM_A_WE_reconos = '1') then
 				local_ram_A(conv_integer(unsigned(o_RAM_A_Addr_reconos))) := o_RAM_A_Data_reconos;
 			end if;
@@ -219,9 +205,9 @@ begin
 		end if;
 	end process;
 	
-	local_ram_ctrl_2 : process (clk) is
+	local_ram_ctrl_2 : process (HWT_Clk) is
 	begin
-		if (rising_edge(clk)) then		
+		if (rising_edge(HWT_Clk)) then		
 			if (o_RAM_C_WE_mul = '1') then
 				local_ram_C(conv_integer(unsigned(o_RAM_C_Addr_mul))) := o_RAM_C_Data_mul;
 			else
@@ -244,8 +230,8 @@ begin
 			G_RAM_ADDR_WIDTH_MATRIX_B		=> C_LOCAL_RAM_ADDR_WIDTH_MATRIX_B
 		)
 		port map(
-			clk	=> clk,
-			reset	=> rst,
+			clk	=> HWT_Clk,
+			reset	=> HWT_Rst,
 			start	=> multiplier_start,
 			done	=> multiplier_done,
 			
@@ -265,26 +251,22 @@ begin
 	osif_setup (
 		i_osif,
 		o_osif,
-		OSIF_FIFO_Sw2Hw_Data,
-		OSIF_FIFO_Sw2Hw_Fill,
-		OSIF_FIFO_Sw2Hw_Empty,
-		OSIF_FIFO_Hw2Sw_Rem,
-		OSIF_FIFO_Hw2Sw_Full,
-		OSIF_FIFO_Sw2Hw_RE,
-		OSIF_FIFO_Hw2Sw_Data,
-		OSIF_FIFO_Hw2Sw_WE
+		OSIF_Sw2Hw_Data,
+		OSIF_Sw2Hw_Empty,
+		OSIF_Sw2Hw_RE,
+		OSIF_Hw2Sw_Data,
+		OSIF_Hw2Sw_Full,
+		OSIF_Hw2Sw_WE
 	);
 
 	memif_setup (
 		i_memif,
 		o_memif,
 		MEMIF_FIFO_Mem2Hwt_Data,
-		MEMIF_FIFO_Mem2Hwt_Fill,
 		MEMIF_FIFO_Mem2Hwt_Empty,
-		MEMIF_FIFO_Hwt2Mem_Rem,
-		MEMIF_FIFO_Hwt2Mem_Full,
 		MEMIF_FIFO_Mem2Hwt_RE,
 		MEMIF_FIFO_Hwt2Mem_Data,
+		MEMIF_FIFO_Hwt2Mem_Full,
 		MEMIF_FIFO_Hwt2Mem_WE
 	);
 	
@@ -292,39 +274,39 @@ begin
 		i_ram_A,
 		o_ram_A,
 		o_RAM_A_Addr_reconos_2,
-		o_RAM_A_WE_reconos,
 		o_RAM_A_Data_reconos,
-		i_RAM_A_Data_reconos
+		i_RAM_A_Data_reconos,
+		o_RAM_A_WE_reconos
 	);
 	
 	ram_setup (
 		i_ram_B,
 		o_ram_B,
 		o_RAM_B_Addr_reconos_2,
-		o_RAM_B_WE_reconos,
 		o_RAM_B_Data_reconos,
-		i_RAM_B_Data_reconos
+		i_RAM_B_Data_reconos,
+		o_RAM_B_WE_reconos
 	);
 	
 	ram_setup (
 		i_ram_C,
 		o_ram_C,
 		o_RAM_C_Addr_reconos_2,
-		o_RAM_C_WE_reconos,
 		o_RAM_C_Data_reconos,
-		i_RAM_C_Data_reconos
+		i_RAM_C_Data_reconos,
+		o_RAM_C_WE_reconos
 	);
 	
 	o_RAM_A_Addr_reconos(0 to C_LOCAL_RAM_ADDR_WIDTH_MATRIX_A_C - 1) <= o_RAM_A_Addr_reconos_2((32-C_LOCAL_RAM_ADDR_WIDTH_MATRIX_A_C) to 31);
 	o_RAM_B_Addr_reconos(0 to C_LOCAL_RAM_ADDR_WIDTH_MATRIX_B   - 1) <= o_RAM_B_Addr_reconos_2((32-C_LOCAL_RAM_ADDR_WIDTH_MATRIX_B  ) to 31);
 	o_RAM_C_Addr_reconos(0 to C_LOCAL_RAM_ADDR_WIDTH_MATRIX_A_C - 1) <= o_RAM_C_Addr_reconos_2((32-C_LOCAL_RAM_ADDR_WIDTH_MATRIX_A_C) to 31);
 	
-	reconos_fsm	: process(clk, rst, o_osif, o_memif, o_ram_a, o_ram_b, o_ram_c) is
+	reconos_fsm	: process(HWT_Clk, HWT_Rst, o_osif, o_memif, o_ram_a, o_ram_b, o_ram_c) is
 		variable done					: boolean;
 		variable addr_pos				: integer;
 		variable calculated_rows	: integer;
 	begin
-		if (rst = '1') then
+		if (HWT_Rst = '1') then
 			osif_reset(o_osif);
 			memif_reset(o_memif);
 			ram_reset(o_ram_A);
@@ -351,7 +333,7 @@ begin
 			
 			state					<= STATE_GET_ADDR2MADDRS;
 			
-		elsif (clk'event and clk = '1') then
+		elsif (rising_edge(HWT_Clk)) then
 			case state is
 				-- Get address pointing to the addresses pointing to the 3 matrixes via FSL.
 				when STATE_GET_ADDR2MADDRS =>
