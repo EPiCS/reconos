@@ -1,8 +1,0 @@
-base_design=zedboard_c_minimal_14.7
-#num_static_hwts=14
-#static_hwts="hwt_sort_demo_v1_00_c#14"
-
-num_reconf_regions=8
-num_reconf_hwts=2
-reconf_hwts="hwt_led_on_v1_00_a hwt_led_off_v1_00_a"
-
