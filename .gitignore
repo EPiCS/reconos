@@ -54,3 +54,8 @@ modules.builtin
 *.swo
 *~
 \#*#
+
+#
+# some specific files
+#
+*.dtb
