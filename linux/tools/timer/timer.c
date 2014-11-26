@@ -27,7 +27,7 @@
 
 #define TIMER_BASE_ADDR 0x64a00000
 
-volatile uint32_t *ptr;
+volatile uint32_t *ptr = 0;
 
 
 /* == Timer functions ================================================== */
@@ -62,21 +62,29 @@ void timer_init() {
  * @see header
  */
 void timer_reset() {
-	ptr[0] = 0;
+	if (ptr) {
+		ptr[0] = 0;
+	}
 }
 
 /*
  * @see header
  */
 void timer_setstep(unsigned int step) {
-	ptr[1] = step;
+	if (ptr) {
+		ptr[1] = step;
+	}
 }
 
 /*
  * @see header
  */
 unsigned int timer_get() {
-	return *ptr;
+	if (ptr) {
+		return *ptr;
+	} else {
+		return 0;
+	}
 }
 
 /*
@@ -84,4 +92,5 @@ unsigned int timer_get() {
  */
 void timer_cleanup() {
 	munmap((void *)ptr, 0x10000);
+	ptr = 0;
 }

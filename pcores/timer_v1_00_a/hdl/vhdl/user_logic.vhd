@@ -49,15 +49,6 @@ entity user_logic is
 		IP2Bus_WrAck    : out std_logic;
 		IP2Bus_Error    : out std_logic
 	);
-
-	attribute MAX_FANOUT : string;
-	attribute SIGIS : string;
-
-	attribute SIGIS of Bus2IP_Clk    : signal is "CLK";
-	attribute SIGIS of Bus2IP_Resetn : signal is "RST";
-
-	attribute SIGIS of T_RST         : signal is "RST";
-
 end entity user_logic;
 
 architecture implementation of user_logic is
@@ -79,7 +70,7 @@ begin
 
 			if step_counter = step then
 				counter <= counter + 1;
-				step_counter <= x"00000000";
+				step_counter <= (others => '0');
 			end if;
 
 			if Bus2IP_WrCE = "10" or T_RST = '1' then

@@ -75,15 +75,6 @@ entity timer is
 		S_AXI_BVALID    : out std_logic;
 		S_AXI_AWREADY   : out std_logic
 	);
-
-	attribute MAX_FANOUT   : string;
-	attribute SIGIS        : string;
-
-	attribute MAX_FANOUT of S_AXI_ACLK       : signal is "10000";
-	attribute MAX_FANOUT of S_AXI_ARESETN    : signal is "10000";
-
-	attribute SIGIS of S_AXI_ACLK            : signal is "Clk";
-	attribute SIGIS of S_AXI_ARESETN         : signal is "Rst";
 end entity timer;
 
 
