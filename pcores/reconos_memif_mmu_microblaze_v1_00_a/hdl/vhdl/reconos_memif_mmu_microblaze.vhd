@@ -75,12 +75,6 @@ entity reconos_memif_mmu_microblaze is
 
 		DEBUG_DATA : out std_logic_vector(203 downto 0)
 	);
-	
-	attribute SIGIS   : string;
-
-	attribute SIGIS of MMU_Clk   : signal is "Clk";
-	attribute SIGIS of MMU_Rst   : signal is "Rst";
-
 end entity reconos_memif_mmu_microblaze;
 
 architecture implementation of reconos_memif_mmu_microblaze is

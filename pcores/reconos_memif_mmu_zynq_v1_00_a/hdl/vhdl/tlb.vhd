@@ -42,18 +42,9 @@ entity tlb is
 		TLB_Clk : in std_logic;
 		TLB_Rst : in std_logic
 	);
-	
-	attribute SIGIS   : string;
-
-	attribute SIGIS of TLB_Clk   : signal is "Clk";
-	attribute SIGIS of TLB_Rst   : signal is "Rst";
-
 end entity tlb;
 
 architecture implementation of tlb is
-
-	signal clk : std_logic;
-	signal rst : std_logic;
 	
 	signal do  : std_logic_vector(C_DATA_SIZE - 1 downto 0);
 	signal hit : std_logic;
@@ -69,19 +60,16 @@ architecture implementation of tlb is
 
 begin
 
-	clk <= TLB_Clk;
-	rst <= TLB_Rst;
-
 	TLB_DO  <= do;
 	TLB_Hit <= hit;
 
 
-	write_proc : process(clk,rst) is
+	write_proc : process(TLB_Clk,TLB_Rst) is
 	begin
-		if rst = '1' then
+		if TLB_Rst = '1' then
 			wrptr <= (others => '0');
 			valid <= (others => '0');
-		elsif rising_edge(clk) then
+		elsif rising_edge(TLB_Clk) then
 			if TLB_WE = '1' then
 				tag_mem(CONV_INTEGER(wrptr)) <= TLB_Tag;
 				data_mem(CONV_INTEGER(wrptr)) <= TLB_DI;

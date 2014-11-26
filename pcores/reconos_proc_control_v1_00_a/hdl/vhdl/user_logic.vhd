@@ -90,22 +90,10 @@ entity user_logic is
 		IP2Bus_WrAck     : out std_logic;
 		IP2Bus_Error     : out std_logic
 	);
-
-	attribute MAX_FANOUT   : string;
-	attribute SIGIS        : string;
-
-	attribute SIGIS of Bus2IP_Clk      : signal is "Clk";
-	attribute SIGIS of PROC_Clk        : signal is "Clk";
-	attribute SIGIS of Bus2IP_Resetn   : signal is "Rst";
-	attribute SIGIS of PROC_Rst        : signal is "Rst";
-	attribute SIGIS of PROC_Hwt_Rst    : signal is "Rst";
-	attribute SIGIS of PROC_Sys_Rst    : signal is "Rst";
-	attribute SIGIS of PROC_Pgf_Int    : signal is "Intr_Level_High";
-
 end entity user_logic;
 
 
-architecture implementation of user_logic is
+architecture imp of user_logic is
 
 	constant NUM_HWT_REGS : integer := ((C_NUM_HWTS - 1) / C_SLV_DWIDTH) + 1;
 
@@ -270,8 +258,10 @@ begin
 		if rst = '1' or sys_reset = '1' then
 			pgd <= (others => '0');
 		else
-			if slv_reg_write_sel(C_NUM_REG - 2) = '1' then
-				pgd <= Bus2IP_Data;
+			if rising_edge(clk) then
+				if slv_reg_write_sel(C_NUM_REG - 2) = '1' then
+					pgd <= Bus2IP_Data;
+				end if;
 			end if;
 		end if;
 	end process pgd_proc;
@@ -289,4 +279,4 @@ begin
 		end case;
 	end process bus_reg_read_proc;
 
-end implementation;
+end imp;

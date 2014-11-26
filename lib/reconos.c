@@ -938,7 +938,7 @@ void *dt_delegate(void *arg) {
 				break;
 
 			default:
-				panic("[reconos-dt-%d] ERROR received unknown command\n", slot->id);
+				panic("[reconos-dt-%d] ERROR received unknown command 0x%08x\n", slot->id, cmd);
 				break;
 		}
 	}

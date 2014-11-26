@@ -38,7 +38,6 @@ extern int RECONOS_NUM_HWTS;
 #define RECONOS_RESOURCE_TYPE_SEM      0x00000002
 #define RECONOS_RESOURCE_TYPE_MUTEX    0x00000004
 #define RECONOS_RESOURCE_TYPE_COND     0x00000008
-//#define RECONOS_RESOURCE_TYPE_RQ       0x00000010
 
 /*
  * Object representing a single resource.

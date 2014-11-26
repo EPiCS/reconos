@@ -11,343 +11,298 @@
 --   project:      ReconOS
 --   author:       Christoph Rüthing, University of Paderborn
 --   description:  The memory management unit enables virtual address
---                 support. Therefore it performs page table walks,
+--                 support. Therefore, it performs page table walks,
 --                 manages a TLB for faster translation and handles
---                 page fault via the proc control unit. 
+--                 page fault via the proc control unit.
 --
 -- ======================================================================
 
-
 library ieee;
 use ieee.std_logic_1164.all;
-use ieee.std_logic_arith.all;
-use ieee.std_logic_unsigned.all;
-use ieee.std_logic_misc.all;
+use ieee.numeric_std.all;
 
-library proc_common_v3_00_a;
-use proc_common_v3_00_a.proc_common_pkg.all;
+library reconos_v3_01_a;
+use reconos_v3_01_a.reconos_pkg.all;
 
 library reconos_memif_mmu_zynq_v1_00_a;
 use reconos_memif_mmu_zynq_v1_00_a.tlb;
 
 entity reconos_memif_mmu_zynq is
+	--
+	-- Generic definitions
+	--
+	--   C_TLB_SIZE - size of the tlb
+	--
+	--   C_MEMIF_DATA_WIDTH - width of the memif
+	--
 	generic (
-		C_CTRL_FIFO_WIDTH    : integer := 32;
-		
-		C_MEMIF_LENGTH_WIDTH : integer := 24;
-		
-		C_TLB_SIZE           : integer := 128
+		C_TLB_SIZE : integer := 128;
+
+		C_MEMIF_DATA_WIDTH : integer := 32
 	);
+
+	--
+	-- Port definitions
+	--
+	--   MEMIF_Hwt2Mem_In_/MEMIF_Mem2Hwt_In_ - fifo signal inputs
+	--   MEMIF_Hwt2Mem_Out_/MEMIF_Mem2Hwt_Out_ - fifo signal outputs
+	--
+	--   MMU_Pgf        - interrupt output if page fault happend
+	--   MMU_Fault_Addr - fault address of page fault
+	--   MMU_Retry      - retry signal after page fault processed
+	--   MMU_Pgd        - base address of l1 page table
+	--
+	--   SYS_Clk - system clock
+	--   SYS_Rst - system reset
+	--
 	port (
-		-- Input FIFO ports from the HWTs (via burst converter and transaction control)
-		CTRL_FIFO_In_Data    : in  std_logic_vector(C_CTRL_FIFO_WIDTH - 1 downto 0);
-		CTRL_FIFO_In_Fill    : in  std_logic_vector(15 downto 0);
-		CTRL_FIFO_In_Empty   : in  std_logic;
-		CTRL_FIFO_In_RE      : out std_logic;
-		
-		-- Output FIFO ports to memory controller
-		CTRL_FIFO_Out_Data    : out std_logic_vector(C_CTRL_FIFO_WIDTH - 1 downto 0);
-		CTRL_FIFO_Out_Fill    : out std_logic_vector(15 downto 0);
-		CTRL_FIFO_Out_Empty   : out std_logic;
-		CTRL_FIFO_Out_RE      : in  std_logic;
+		MEMIF_Hwt2Mem_In_Data  : in  std_logic_vector(C_MEMIF_DATA_WIDTH - 1 downto 0);
+		MEMIF_Hwt2Mem_In_Empty : in  std_logic;
+		MEMIF_Hwt2Mem_In_RE    : out std_logic;
 
-		-- Seperate control and data FIFOs (emulated) for page table walks
-		CTRL_FIFO_Mmu_Data    : out std_logic_vector(C_CTRL_FIFO_WIDTH - 1 downto 0);
-		CTRL_FIFO_Mmu_Fill    : out std_logic_vector(15 downto 0);
-		CTRL_FIFO_Mmu_Empty   : out std_logic;
-		CTRL_FIFO_Mmu_RE      : in  std_logic;
+		MEMIF_Mem2Hwt_In_Data  : out std_logic_vector(C_MEMIF_DATA_WIDTH - 1 downto 0);
+		MEMIF_Mem2Hwt_In_Full  : in  std_logic;
+		MEMIF_Mem2Hwt_In_WE    : out std_logic;
 
-		MEMIF_FIFO_Mmu_Data    : in  std_logic_vector(C_CTRL_FIFO_WIDTH - 1 downto 0);
-		MEMIF_FIFO_Mmu_Rem     : out std_logic_vector(15 downto 0);
-		MEMIF_FIFO_Mmu_Full    : out std_logic;
-		MEMIF_FIFO_Mmu_WE      : in  std_logic;		
- 
-		-- MMU ports
-		MMU_Pgf         : out std_logic;
-		MMU_Fault_addr  : out std_logic_vector(31 downto 0);
-		MMU_Retry       : in  std_logic;
-		MMU_Pgd         : in  std_logic_vector(31 downto 0);
-		MMU_Tlb_Hits    : out std_logic_vector(31 downto 0);
-		MMU_Tlb_Misses  : out std_logic_vector(31 downto 0);
-		
-		MMU_Clk : in std_logic;
-		MMU_Rst : in std_logic;
+		MEMIF_Hwt2Mem_Out_Data  : out std_logic_vector(C_MEMIF_DATA_WIDTH - 1 downto 0);
+		MEMIF_Hwt2Mem_Out_Empty : out std_logic;
+		MEMIF_Hwt2Mem_Out_RE    : in  std_logic;
 
-		DEBUG_DATA : out std_logic_vector(203 downto 0)
+		MEMIF_Mem2Hwt_Out_Data  : in  std_logic_vector(C_MEMIF_DATA_WIDTH - 1 downto 0);
+		MEMIF_Mem2Hwt_Out_Full  : out std_logic;
+		MEMIF_Mem2Hwt_Out_WE    : in  std_logic;
+
+		MMU_Pgf        : out std_logic;
+		MMU_Fault_Addr : out std_logic_vector(31 downto 0);
+		MMU_Retry      : in  std_logic;
+		MMU_Pgd        : in  std_logic_vector(31 downto 0);
+
+		SYS_Clk : in std_logic;
+		SYS_Rst : in std_logic
 	);
-	
-	attribute SIGIS   : string;
-
-	attribute SIGIS of MMU_Clk   : signal is "Clk";
-	attribute SIGIS of MMU_Rst   : signal is "Rst";
-
 end entity reconos_memif_mmu_zynq;
 
-architecture implementation of reconos_memif_mmu_zynq is
+architecture imp of reconos_memif_mmu_zynq is
+	--
+	-- Internal state machine
+	--
+	--   state_type - vhdl type of the states
+	--   state      - instatntiation of the state
+	--
+	type state_type is (STATE_READ_CMD,STATE_READ_ADDR,
+	                    STATE_WRITE_CMD,STATE_WRITE_ADDR,
+	                    STATE_READ_L1_0,STATE_READ_L1_1,STATE_READ_L1_2,
+	                    STATE_READ_L2_0,STATE_READ_L2_1,STATE_READ_L2_2,
+	                    STATE_TLB_READ,STATE_TLB_WRITE,STATE_PAGE_FAULT,STATE_PROCESS);
+	signal state : state_type := STATE_READ_CMD;
 
-	constant C_MEMIF_CMD_WIDTH : integer := C_CTRL_FIFO_WIDTH - C_MEMIF_LENGTH_WIDTH;
+	--
+	-- Internal signals
+	--
+	--   mem_cmd, mem_addr - received command and address from hwt
+	--
+	--   mem_count - counter of transferred bytes
+	--
+	signal mem_cmd, mem_addr : std_logic_vector(C_MEMIF_DATA_WIDTH - 1 downto 0) := (others => '0');
 
-	signal ctrl_in_re      : std_logic;
+	signal mem_count : unsigned(C_MEMIF_LENGTH_WIDTH - 1 downto 0) := (others => '0');
 
-	signal ctrl_out_data    : std_logic_vector(C_CTRL_FIFO_WIDTH - 1 downto 0);
-	signal ctrl_out_fill    : std_logic_vector(15 downto 0);
-	signal ctrl_out_empty   : std_logic;
-	
-	signal ctrl_mmu_data    : std_logic_vector(C_CTRL_FIFO_WIDTH - 1 downto 0);
-	signal ctrl_mmu_fill    : std_logic_vector(15 downto 0);
-	signal ctrl_mmu_empty   : std_logic;
+	--
+	-- Signals used for page table walk
+	--
+	--   l1_table_addr   - base address of l1 page table
+	--   l1_descr_addr   - address of l1 page table entry
+	--   l2_table_addr   - base address of l2 page table
+	--   l2_descr_addr   - address of l2 page table entry
+	--   small_page_addr - address of physical page
+	--   physical_addr   - translated physical address
+	--
+	--   For detailed information of how the different addresses are
+	--   calculated, take a look into the technical reference manual.
+	--
+	signal l1_table_addr   : std_logic_vector(31 downto 14);
+	signal l1_descr_addr   : std_logic_vector(31 downto 0);
+	signal l2_table_addr   : std_logic_vector(31 downto 10);
+	signal l2_descr_addr   : std_logic_vector(31 downto 0);
+	signal small_page_addr : std_logic_vector(31 downto 12);
+	signal physical_addr   : std_logic_vector(31 downto 0);
 
-	-- MMU signals
-	type STATE_TYPE is (WAIT_REQUEST, READ_CMD, READ_ADDR,
-	                    READ_L1_ENTRY_0, READ_L1_ENTRY_1, READ_L1_ENTRY_2,
-	                    READ_L2_ENTRY_0, READ_L2_ENTRY_1, READ_L2_ENTRY_2,
-	                    WRITE_CMD, WRITE_ADDR, PAGE_FAULT);
-	signal state : STATE_TYPE;
-	
-	signal pgf        : std_logic;
-	signal tlb_hits   : std_logic_vector(31 downto 0);
-	signal tlb_misses : std_logic_vector(31 downto 0);
-	
-	-- these signals contain the received request data unchanged
-	signal ctrl_cmd      : std_logic_vector(C_MEMIF_CMD_WIDTH - 1 downto 0);
-	signal ctrl_length   : std_logic_vector(C_MEMIF_LENGTH_WIDTH - 1 downto 0);
-	signal ctrl_addr     : std_logic_vector(C_CTRL_FIFO_WIDTH - 1 downto 0);
-
-	signal l1_table_addr       : std_logic_vector(31 downto 0); -- address of the level 1 page table
-	signal l1_descriptor_addr  : std_logic_vector(31 downto 0); -- address of the level 1 page table entry
-	signal l2_table_addr       : std_logic_vector(31 downto 0); -- address of the level 2 page table
-	signal l2_descriptor_addr  : std_logic_vector(31 downto 0); -- address of the level 2 page table entry
-	signal small_page_addr     : std_logic_vector(31 downto 0); -- page table entry
-	signal physical_addr       : std_logic_vector(31 downto 0); -- physical address
-	
-	signal tlb_hit  : std_logic;
-	signal tlb_tag  : std_logic_vector(19 downto 0);
-	signal tlb_do   : std_logic_vector(19 downto 0);
-	signal tlb_di   : std_logic_vector(19 downto 0);
+	--
+	-- Signals for the tlb
+	--
+	--   tlb_addr - data output of the physical page address
+	--   tlb_we   - write enable for the tlb
+	--   tlb_hit  - result of query
+	--
+	signal tlb_addr : std_logic_vector(19 downto 0);
 	signal tlb_we   : std_logic;
-
-	signal clk : std_logic;
-	signal rst : std_logic;
+	signal tlb_hit  : std_logic;
 
 begin
-	DEBUG_DATA(0) <= '1' when state = WAIT_REQUEST else '0';
-	DEBUG_DATA(1) <= '1' when state = READ_CMD else '0';
-	DEBUG_DATA(2) <= '1' when state = READ_ADDR else '0';
-	DEBUG_DATA(3) <= '1' when state = READ_L1_ENTRY_0 else '0';
-	DEBUG_DATA(4) <= '1' when state = READ_L1_ENTRY_1 else '0';
-	DEBUG_DATA(5) <= '1' when state = READ_L1_ENTRY_2 else '0';
-	DEBUG_DATA(6) <= '1' when state = READ_L2_ENTRY_0 else '0';
-	DEBUG_DATA(7) <= '1' when state = READ_L2_ENTRY_1 else '0';
-	DEBUG_DATA(8) <= '1' when state = READ_L2_ENTRY_2 else '0';
-	DEBUG_DATA(9) <= '1' when state = WRITE_CMD else '0';
-	DEBUG_DATA(10) <= '1' when state = WRITE_ADDR else '0';
-	DEBUG_DATA(11) <= '1' when state = PAGE_FAULT else '0';
-	DEBUG_DATA(203 downto 172) <= l1_table_addr;
-	DEBUG_DATA(171 downto 140) <= l1_descriptor_addr;
-	DEBUG_DATA(139 downto 108) <= l2_table_addr;
-	DEBUG_DATA(107 downto 76) <= l2_descriptor_addr;
-	DEBUG_DATA(75 downto 44) <= small_page_addr;
-	DEBUG_DATA(43 downto 12) <= physical_addr;
 
-	clk <= MMU_Clk;
-	rst <= MMU_Rst;
+	-- == Page table walk addresses========================================
 
-	CTRL_FIFO_In_RE <= ctrl_in_re;
-
-	CTRL_FIFO_Out_Data  <= ctrl_out_data;
-	CTRL_FIFO_Out_Fill  <= ctrl_out_fill;
-	CTRL_FIFO_Out_Empty <= ctrl_out_empty;
-
-	CTRL_FIFO_Mmu_Data  <= ctrl_mmu_data;
-	CTRL_FIFO_Mmu_Fill  <= ctrl_mmu_fill;
-	CTRL_FIFO_Mmu_Empty <= ctrl_mmu_empty;
-
-	MEMIF_FIFO_Mmu_Rem   <= X"1111";
-	MEMIF_FIFO_Mmu_Full  <= '0';
-
-	MMU_Pgf         <= pgf;
-	MMU_Fault_Addr  <= ctrl_addr;
-	MMU_Tlb_Hits    <= tlb_hits;
-	MMU_Tlb_Misses  <= tlb_misses;
+	l1_table_addr <= MMU_Pgd(31 downto 14);
+	l1_descr_addr <= l1_table_addr(31 downto 14) & mem_addr(31 downto 20) & "00";
+	l2_descr_addr <= l2_table_addr(31 downto 10) & mem_addr(19 downto 12) & "00";
+	physical_addr <= small_page_addr(31 downto 12) & mem_addr(11 downto 0);
 
 
-	-- some address calculations based on the page table architecture
-	-- for detailed information look into the TRM on page 80
-	l1_table_addr       <= MMU_Pgd;
-	l1_descriptor_addr  <= l1_table_addr(31 downto 14) & ctrl_addr(31 downto 20) & "00";
-	l2_descriptor_addr  <= l2_table_addr(31 downto 10) & ctrl_addr(19 downto 12) & "00";
-	physical_addr       <= small_page_addr(31 downto 12) & ctrl_addr(11 downto 0);
+	-- == Process definitions =============================================
 
-
-	mmu_proc : process(clk,rst) is
+	--
+	-- Implements an mmu for the zynq platform
+	--
+	--   To translate a virtual address to a physical one, the mmu needs to
+	--   perform a page table walk. See the signal description above.
+	--
+	mmu : process(SYS_Clk,SYS_Rst) is
 	begin
-		if rst = '1' then
-			state <= WAIT_REQUEST;
-
-			ctrl_cmd       <= (others => '0');
-			ctrl_length    <= (others => '0');
-			ctrl_addr      <= (others => '0');
-
-			ctrl_out_empty <= '1';
-			ctrl_out_fill  <= (others => '0');
-			ctrl_out_data  <= (others => '0');
-
-			ctrl_in_re     <= '0';
-			
-			ctrl_mmu_empty <= '1';
-			ctrl_mmu_fill  <= (others => '0');
-			ctrl_mmu_data  <= (others => '0');
-
-			pgf            <= '0';
-			tlb_hits       <= (others => '0');
-			tlb_misses     <= (others => '0');
-		elsif rising_edge(clk) then
-			tlb_we <= '0';
-
+		if SYS_Rst = '1' then
+			state <= STATE_READ_CMD;
+		elsif rising_edge(SYS_Clk) then
 			case state is
-				when WAIT_REQUEST =>
-					-- start reading if there are 2 word in FIFO
-					--if CTRL_FIFO_In_Empty = '0' and CTRL_FIFO_In_Fill >= X"0001" then
-					ctrl_in_re <= '1';
-					state <= READ_CMD;
-					--end if;
-				
-				when READ_CMD =>
-					-- read cmd and length
-					if CTRL_FIFO_In_Empty = '0' then
-						ctrl_cmd <= CTRL_FIFO_In_Data(31 downto C_MEMIF_LENGTH_WIDTH);
-						ctrl_length <= CTRL_FIFO_In_Data(C_MEMIF_LENGTH_WIDTH - 1 downto 0);
+				when STATE_READ_CMD =>
+					if MEMIF_Hwt2Mem_In_Empty = '0' then
+						mem_cmd <= MEMIF_Hwt2Mem_In_Data;
+						mem_count <= unsigned(MEMIF_Hwt2Mem_In_Data(C_MEMIF_LENGTH_RANGE));
 
-						state <= READ_ADDR;
-					end if;
-				
-				when READ_ADDR =>
-					-- read address 
-					if CTRL_FIFO_In_Empty = '0' then
-						ctrl_addr <= CTRL_FIFO_In_Data;
-						ctrl_in_re <= '0';
-
-						state <= READ_L1_ENTRY_0;
+						state <= STATE_READ_ADDR;
 					end if;
 
-				when READ_L1_ENTRY_0 =>
+				when STATE_READ_ADDR =>
+					if MEMIF_Hwt2Mem_In_Empty = '0' then
+						mem_addr <= MEMIF_Hwt2Mem_In_Data;
+
+						state <= STATE_TLB_READ;
+					end if;
+
+				when STATE_TLB_READ =>
 					if tlb_hit = '1' then
-						small_page_addr(31 downto 12) <= tlb_do;
+						small_page_addr <= tlb_addr;
 
-						ctrl_out_empty <= '0';
-						ctrl_out_fill  <= X"0001";
-						ctrl_out_data <= ctrl_cmd & ctrl_length;
-
-						tlb_hits <= tlb_hits + 1;
-
-						state <= WRITE_CMD;
+						state <= STATE_WRITE_CMD;
 					else
-						-- write command to memory controller
-						ctrl_mmu_empty <= '0';
-						ctrl_mmu_fill  <= X"0001";
-						ctrl_mmu_data  <= X"00000004";
-						
-						if CTRL_FIFO_Mmu_RE = '1' and ctrl_mmu_empty = '0' then
-							ctrl_mmu_fill <= X"0000";
-							ctrl_mmu_data <= l1_descriptor_addr;
+						state <= STATE_READ_L1_0;
+					end if;
 
-							tlb_misses <= tlb_misses + 1;
+				when STATE_READ_L1_0 =>
+					if MEMIF_Hwt2Mem_Out_RE = '1' then
+						state <= STATE_READ_L1_1;
+					end if;
 
-							state <= READ_L1_ENTRY_1;
+				when STATE_READ_L1_1 =>
+					if MEMIF_Hwt2Mem_Out_RE = '1' then
+						state <= STATE_READ_L1_2;
+					end if;
+
+				when STATE_READ_L1_2 =>
+					if MEMIF_Mem2Hwt_Out_WE = '1' then
+						l2_table_addr <= MEMIF_Mem2Hwt_Out_Data(31 downto 10);
+
+						if MEMIF_Mem2Hwt_Out_Data(1 downto 0) = "00" then
+							state <= STATE_PAGE_FAULT;
+						else
+							state <= STATE_READ_L2_0;
 						end if;
 					end if;
 
-				when READ_L1_ENTRY_1 =>
-					if CTRL_FIFO_Mmu_RE = '1' and ctrl_mmu_empty = '0' then
-						ctrl_mmu_empty <= '1';
-						ctrl_mmu_fill  <= X"0000";
-						
-						state <= READ_L1_ENTRY_2;
+				when STATE_READ_L2_0 =>
+					if MEMIF_Hwt2Mem_Out_RE = '1' then
+						state <= STATE_READ_L2_1;
 					end if;
 
-				when READ_L1_ENTRY_2 =>
-					if MEMIF_FIFO_Mmu_WE = '1' then
-						l2_table_addr <= MEMIF_FIFO_Mmu_Data;
+				when STATE_READ_L2_1 =>
+					if MEMIF_Hwt2Mem_Out_RE = '1' then
+						state <= STATE_READ_L2_2;
+					end if;
 
-						if MEMIF_FIFO_Mmu_Data(1 downto 0) = "00" then
-							pgf <= '1';
-							state <= PAGE_FAULT;
+				when STATE_READ_L2_2 =>
+					if MEMIF_Mem2Hwt_Out_WE = '1' then
+						small_page_addr <= MEMIF_Mem2Hwt_Out_Data(31 downto 12);
+
+						if MEMIF_Mem2Hwt_Out_Data(1 downto 0) = "00" then
+							state <= STATE_PAGE_FAULT;
 						else
-							state <= READ_L2_ENTRY_0;
-						end if;
-					end if;
-
-				when READ_L2_ENTRY_0 =>
-					ctrl_mmu_empty <= '0';
-					ctrl_mmu_fill  <= X"0001";
-					ctrl_mmu_data  <= X"00000004";
-					
-					if CTRL_FIFO_Mmu_RE = '1' and ctrl_mmu_empty = '0' then
-						ctrl_mmu_fill <= X"0000";
-						ctrl_mmu_data <= l2_descriptor_addr;
-
-						state <= READ_L2_ENTRY_1;
-					end if;
-
-				when READ_L2_ENTRY_1 =>
-					if CTRL_FIFO_Mmu_RE = '1' and ctrl_mmu_empty = '0' then
-						ctrl_mmu_empty <= '1';
-						ctrl_mmu_fill  <= X"0000";
-						
-						state <= READ_L2_ENTRY_2;
-					end if;
-
-				when READ_L2_ENTRY_2 =>
-					if MEMIF_FIFO_Mmu_WE = '1' then
-						small_page_addr <= MEMIF_FIFO_Mmu_Data;
-						
-						if MEMIF_FIFO_Mmu_Data(1 downto 0) = "00" then
-							pgf <= '1';
-							state <= PAGE_FAULT;
-						else
-							ctrl_out_empty <= '0';
-							ctrl_out_fill  <= X"0001";
-							
-							ctrl_out_data <= ctrl_cmd & ctrl_length;
-							
 							tlb_we <= '1';
 
-							state <= WRITE_CMD;
+							state <= STATE_TLB_WRITE;
 						end if;
 					end if;
 
-				when WRITE_CMD =>
-					if CTRL_FIFO_Out_RE = '1' then
-						ctrl_out_fill <= X"0000";
-						
-						ctrl_out_data <= physical_addr;
+				when STATE_TLB_WRITE =>
+					tlb_we <= '0';
 
-						state <= WRITE_ADDR;
-					end if;
-				
-				when WRITE_ADDR =>
-					if CTRL_FIFO_Out_RE = '1' then
-						ctrl_out_empty <= '1';
-						ctrl_out_fill  <= X"0000";
-
-						state <= WAIT_REQUEST;
-					end if;
-
-				when PAGE_FAULT =>
-					pgf <= '0';
+					state <= STATE_WRITE_CMD;
 					
-					if MMU_Retry = '1' then
-						pgf <= '0';
+				when STATE_WRITE_CMD =>
+					if MEMIF_Hwt2Mem_Out_RE = '1' then
+						state <= STATE_WRITE_ADDR;
+					end if;
 
-						state <= READ_L1_ENTRY_0;
-					end if; 
+				when STATE_WRITE_ADDR =>
+					if MEMIF_Hwt2Mem_Out_RE = '1' then
+						state <= STATE_PROCESS;
+					end if;
+
+				when STATE_PROCESS =>
+					if    (MEMIF_Hwt2Mem_Out_RE = '1' and MEMIF_Hwt2Mem_In_Empty = '0')
+					   or (MEMIF_Mem2Hwt_Out_WE = '1' and MEMIF_Mem2Hwt_In_Full = '0') then
+						mem_count <= mem_count - 4;
+
+						if mem_count - 4 = 0 then
+							state <= STATE_READ_CMD;
+						end if;
+					end if;
+
+				when STATE_PAGE_FAULT =>
+					if MMU_Retry = '1' then
+						state <= STATE_READ_L1_0;
+					end if;
+
+				when others =>
 			end case;
 		end if;
-	end process mmu_proc;
+	end process mmu;
 
 
-	tlb_tag <= ctrl_addr(31 downto 12);
-	tlb_di  <= small_page_addr(31 downto 12);
+	-- == Multiplexing signals ============================================
+
+	MEMIF_Hwt2Mem_Out_Data  <= MEMIF_Hwt2Mem_In_Data when state = STATE_PROCESS else
+	                           x"00000004"           when state = STATE_READ_L1_0 else
+	                           l1_descr_addr         when state = STATE_READ_L1_1 else
+	                           x"00000004"           when state = STATE_READ_L2_0 else
+	                           l2_descr_addr         when state = STATE_READ_L2_1 else
+	                           mem_cmd               when state = STATE_WRITE_CMD else
+	                           physical_addr         when state = STATE_WRITE_ADDR else
+	                           x"00000000";
+
+	MEMIF_Hwt2Mem_Out_Empty <= MEMIF_Hwt2Mem_In_Empty when state = STATE_PROCESS else
+	                           '0'                    when state = STATE_READ_L1_0 else
+	                           '0'                    when state = STATE_READ_L1_1 else
+	                           '0'                    when state = STATE_READ_L2_0 else
+	                           '0'                    when state = STATE_READ_L2_1 else
+	                           '0'                    when state = STATE_WRITE_CMD else
+	                           '0'                    when state = STATE_WRITE_ADDR else
+	                           '1';
+
+	MEMIF_Hwt2Mem_In_RE     <= MEMIF_Hwt2Mem_Out_RE when state = STATE_PROCESS else 
+	                           '1'                  when state = STATE_READ_CMD else
+	                           '1'                  when state = STATE_READ_ADDR else
+	                           '0';
+
+	MEMIF_Mem2Hwt_In_Data  <= MEMIF_Mem2Hwt_Out_Data;
+	MEMIF_Mem2Hwt_Out_Full <= MEMIF_Mem2Hwt_In_Full when state = STATE_PROCESS else '0';
+	MEMIF_Mem2Hwt_In_WE    <= MEMIF_Mem2Hwt_Out_WE when state = STATE_PROCESS else '0';
+
+
+	-- == Assigning mmu ports =============================================
+
+	MMU_Pgf <= '1' when state = STATE_PAGE_FAULT else '0';
+	MMU_Fault_Addr <= mem_addr;
+
+
+	-- == TLB =============================================================
 
 	tlb_gen : if C_TLB_SIZE > 0 generate
 		tlb : entity reconos_memif_mmu_zynq_v1_00_a.tlb
@@ -357,14 +312,14 @@ begin
 				C_DATA_SIZE => 20 
 			)
 			port map (
-				TLB_Tag => tlb_tag,
-				TLB_DI  => tlb_di,
-				TLB_DO  => tlb_do,
+				TLB_Tag => mem_addr(31 downto 12),
+				TLB_DI  => small_page_addr(31 downto 12),
+				TLB_DO  => tlb_addr,
 				TLB_WE  => tlb_we,
 				TLB_Hit => tlb_hit,
-				TLB_Clk => clk,
-				TLB_Rst => rst
+				TLB_Clk => SYS_Clk,
+				TLB_Rst => SYS_Rst
 			);
 	end generate;
-		
-end architecture implementation;
+
+end architecture imp;

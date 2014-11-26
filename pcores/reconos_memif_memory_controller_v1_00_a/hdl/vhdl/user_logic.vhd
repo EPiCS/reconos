@@ -6,464 +6,214 @@
 -- 
 -- ======================================================================
 --
---   title:        IP-Core - MEMIF Memory controller - Controller impl
+--   title:        IP-Core - Memory Controller
 --
 --   project:      ReconOS
 --   author:       Christoph Rüthing, University of Paderborn
---   description:  The memory controller connects the memory subsystem of
---                 ReconOS to the memory bus of the system as an AXI
---                 master.
+--   description:  A memory controller connecting the memory fifos with
+--                 the axi bus of the system.
 --
 -- ======================================================================
 
-
 library ieee;
 use ieee.std_logic_1164.all;
-use ieee.std_logic_arith.all;
-use ieee.std_logic_unsigned.all;
-use ieee.std_logic_misc.all;
+use ieee.numeric_std.all;
 
-library proc_common_v3_00_a;
-use proc_common_v3_00_a.proc_common_pkg.all;
-
+library reconos_v3_01_a;
+use reconos_v3_01_a.reconos_pkg.all;
 
 entity user_logic is
-	generic (
-		-- Memory controller parameters
-		C_MEMIF_FIFO_WIDTH     : integer   := 32;
-		C_CTRL_FIFO_WIDTH      : integer   := 32;
-
-		C_MEMIF_LENGTH_WIDTH   : integer   := 24;
-
-		C_USE_MMU_PORT         : boolean   := true;
-
-		-- Bus protocol parameters, do not add to or delete
-		C_MST_NATIVE_DATA_WIDTH   : integer   := 32;
-		C_LENGTH_WIDTH            : integer   := 12;
-		C_MST_AWIDTH              : integer   := 32
-	);
+	--
+	-- Port definitions
+	--
+	--   MEMIF_Hwt2Mem_In_/MEMIF_Mem2Hwt_In_ - fifo signal inputs
+	--
+	--   BUS2IP_/IP2BUS_ - axi ipif signals
+	--
 	port (
-		-- Memory controller ports
-		MEMIF_FIFO_Hwt2Mem_Data    : in  std_logic_vector(C_MEMIF_FIFO_WIDTH - 1 downto 0);
-		MEMIF_FIFO_Hwt2Mem_Fill    : in  std_logic_vector(15 downto 0);
-		MEMIF_FIFO_Hwt2Mem_Empty   : in  std_logic;
-		MEMIF_FIFO_Hwt2Mem_RE      : out std_logic;
+		MEMIF_Hwt2Mem_In_Data  : in  std_logic_vector(C_MEMIF_DATA_WIDTH - 1 downto 0);
+		MEMIF_Hwt2Mem_In_Empty : in  std_logic;
+		MEMIF_Hwt2Mem_In_RE    : out std_logic;
 
-		MEMIF_FIFO_Mem2Hwt_Data    : out  std_logic_vector(C_MEMIF_FIFO_WIDTH - 1 downto 0);
-		MEMIF_FIFO_Mem2Hwt_Rem     : in  std_logic_vector(15 downto 0);
-		MEMIF_FIFO_Mem2Hwt_Full    : in  std_logic;
-		MEMIF_FIFO_Mem2Hwt_WE      : out std_logic;
+		MEMIF_Mem2Hwt_In_Data  : out std_logic_vector(C_MEMIF_DATA_WIDTH - 1 downto 0);
+		MEMIF_Mem2Hwt_In_Full  : in  std_logic;
+		MEMIF_Mem2Hwt_In_WE    : out std_logic;
 
-		CTRL_FIFO_Hwt_Data         : in  std_logic_vector(C_MEMIF_FIFO_WIDTH - 1 downto 0);
-		CTRL_FIFO_Hwt_Fill         : in  std_logic_vector(15 downto 0);
-		CTRL_FIFO_Hwt_Empty        : in  std_logic;
-		CTRL_FIFO_Hwt_RE           : out std_logic;
-
-		MEMIF_FIFO_Mmu_Data        : out std_logic_vector(C_MEMIF_FIFO_WIDTH - 1 downto 0);
-		MEMIF_FIFO_Mmu_Rem         : in  std_logic_vector(15 downto 0);
-		MEMIF_FIFO_Mmu_Full        : in  std_logic;
-		MEMIF_FIFO_Mmu_WE          : out std_logic;
-
-		CTRL_FIFO_Mmu_Data         : in  std_logic_vector(C_MEMIF_FIFO_WIDTH - 1 downto 0);
-		CTRL_FIFO_Mmu_Fill         : in  std_logic_vector(15 downto 0);
-		CTRL_FIFO_Mmu_Empty        : in  std_logic;
-		CTRL_FIFO_Mmu_RE           : out std_logic;
-
-		MEMCTRL_Clk   : in std_logic;
-		MEMCTRL_Rst   : in std_logic;
-
-		-- Bus protocol ports, do not add to or delete
-		Bus2IP_Clk               : in  std_logic;
-		Bus2IP_Resetn            : in  std_logic;
-		ip2bus_mstrd_req         : out std_logic;
-		ip2bus_mstwr_req         : out std_logic;
-		ip2bus_mst_addr          : out std_logic_vector(C_MST_AWIDTH-1 downto 0);
-		ip2bus_mst_be            : out std_logic_vector((C_MST_NATIVE_DATA_WIDTH/8)-1 downto 0);
-		ip2bus_mst_length        : out std_logic_vector(C_LENGTH_WIDTH-1 downto 0);
-		ip2bus_mst_type          : out std_logic;
-		ip2bus_mst_lock          : out std_logic;
-		ip2bus_mst_reset         : out std_logic;
-		bus2ip_mst_cmdack        : in  std_logic;
-		bus2ip_mst_cmplt         : in  std_logic;
-		bus2ip_mst_error         : in  std_logic;
-		bus2ip_mst_rearbitrate   : in  std_logic;
-		bus2ip_mst_cmd_timeout   : in  std_logic;
-		bus2ip_mstrd_d           : in  std_logic_vector(C_MST_NATIVE_DATA_WIDTH-1 downto 0);
-		bus2ip_mstrd_rem         : in  std_logic_vector((C_MST_NATIVE_DATA_WIDTH)/8-1 downto 0);
-		bus2ip_mstrd_sof_n       : in  std_logic;
-		bus2ip_mstrd_eof_n       : in  std_logic;
-		bus2ip_mstrd_src_rdy_n   : in  std_logic;
-		bus2ip_mstrd_src_dsc_n   : in  std_logic;
-		ip2bus_mstrd_dst_rdy_n   : out std_logic;
-		ip2bus_mstrd_dst_dsc_n   : out std_logic;
-		ip2bus_mstwr_d           : out std_logic_vector(C_MST_NATIVE_DATA_WIDTH-1 downto 0);
-		ip2bus_mstwr_rem         : out std_logic_vector((C_MST_NATIVE_DATA_WIDTH)/8-1 downto 0);
-		ip2bus_mstwr_src_rdy_n   : out std_logic;
-		ip2bus_mstwr_src_dsc_n   : out std_logic;
-		ip2bus_mstwr_sof_n       : out std_logic;
-		ip2bus_mstwr_eof_n       : out std_logic;
-		bus2ip_mstwr_dst_rdy_n   : in  std_logic;
-		bus2ip_mstwr_dst_dsc_n   : in  std_logic
+		BUS2IP_Clk             : in  std_logic;
+		BUS2IP_Resetn          : in  std_logic;
+		IP2BUS_Mst_Addr        : out std_logic_vector(31 downto 0);
+		IP2BUS_Mst_BE          : out std_logic_vector(3 downto 0);
+		IP2BUS_Mst_Length      : out std_logic_vector(11 downto 0);
+		IP2BUS_Mst_Type        : out std_logic;
+		IP2BUS_Mst_Lock        : out std_logic;
+		IP2BUS_Mst_Reset       : out std_logic;
+		BUS2IP_Mst_CmdAck      : in  std_logic;
+		BUS2IP_Mst_Cmplt       : in  std_logic;
+		BUS2IP_Mst_Error       : in  std_logic;
+		IP2BUS_MstRd_Req       : out std_logic;
+		BUS2IP_MstRd_D         : in  std_logic_vector(31 downto 0);
+		BUS2IP_MstRd_Rem       : in  std_logic_vector(3 downto 0);
+		BUS2IP_MstRd_Sof_N     : in  std_logic;
+		BUS2IP_MstRd_Eof_N     : in  std_logic;
+		BUS2IP_MstRd_Src_Rdy_N : in  std_logic;
+		BUS2IP_MstRd_Src_Dsc_N : in  std_logic;
+		IP2BUS_MstRd_Dst_Rdy_N : out std_logic;
+		IP2BUS_MstRd_Dst_Dsc_N : out std_logic;
+		IP2BUS_MstWr_Req       : out std_logic;
+		IP2BUS_MstWr_D         : out std_logic_vector(31 downto 0);
+		IP2BUS_MstWr_Rem       : out std_logic_vector(3 downto 0);
+		IP2BUS_MstWr_Sof_N     : out std_logic;
+		IP2BUS_MstWr_Eof_N     : out std_logic;
+		IP2BUS_MstWr_Src_Rdy_N : out std_logic;
+		IP2BUS_MstWr_Src_Dsc_N : out std_logic;
+		BUS2IP_MstWr_Dst_Rdy_N : in  std_logic;
+		BUS2IP_MstWr_Dst_Dsc_N : in  std_logic
 	);
-
-	attribute SIGIS : string;
-
-	attribute SIGIS of Bus2IP_Clk         : signal is "Clk";
-	attribute SIGIS of MEMCTRL_Clk        : signal is "Clk";
-	attribute SIGIS of ip2bus_mst_reset   : signal is "Rst";
-	attribute SIGIS of Bus2IP_Resetn      : signal is "Rst";
-	attribute SIGIS of MEMCTRL_Rst        : signal is "Rst";
-
 end entity user_logic;
 
+architecture imp of user_logic is
+	--
+	-- Internal state machine
+	--
+	--
+	--   state_type - vhdl type of the states
+	--   state      - instantiation of the state
+	--
+	type state_type is (STATE_READ_CMD,STATE_READ_ADDR,
+	                    STATE_PROCESS_WRITE_0,STATE_PROCESS_WRITE_1,
+	                    STATE_PROCESS_READ_0,STATE_PROCESS_READ_1,
+	                    STATE_CMPLT);
+	signal state : state_type := STATE_READ_CMD;
 
-architecture implementation of user_logic is
+	--
+	-- Internal signals
+	--
+	--   mem_addr - received address from hwt
+	--
+	--   mem_op     - operation to perform
+	--   mem_length - number of bytes to transfer
+	--   mem_count  - counter of transferred bytes
+	--
+	signal mem_addr : std_logic_vector(C_MEMIF_DATA_WIDTH - 1 downto 0) := (others => '0');
 
-	constant C_MEMIF_CMD_WIDTH : integer := C_CTRL_FIFO_WIDTH - C_MEMIF_LENGTH_WIDTH;
+	signal mem_op     : std_logic_vector(C_MEMIF_OP_WIDTH - 1 downto 0) := (others => '0');
+	signal mem_length : unsigned(C_MEMIF_LENGTH_WIDTH - 1 downto 0) := (others => '0');
+	signal mem_count  : unsigned(C_MEMIF_LENGTH_WIDTH - 1 downto 0) := (others => '0');
 
-	type STATE_TYPE is (WAIT_REQUEST,READ_CMD,READ_ADDR,WAIT_FILL,WAIT_REM,
-	                    PERF_WRITE_0,PERF_WRITE_1,PERF_WRITE_2,
-	                    PERF_READ_0,PERF_READ_1,PERF_READ_2,
-	                    WAIT_CMPLT);
-	signal state : STATE_TYPE;
-	
-	signal port_select : std_logic;
-	
-	signal count : std_logic_vector(C_MEMIF_LENGTH_WIDTH - 1 downto 0);
-	
-	signal ctrl_fifo_data  : std_logic_vector(C_CTRL_FIFO_WIDTH - 1 downto 0);
-	signal ctrl_fifo_empty : std_logic;
-	signal ctrl_fifo_re    : std_logic;
-	
-	signal memif_fifo_in_data  : std_logic_vector(C_MEMIF_FIFO_WIDTH - 1 downto 0);
-	signal memif_fifo_in_fill  : std_logic_vector(15 downto 0);
-	signal memif_fifo_in_empty : std_logic;
-	signal memif_fifo_in_re    : std_logic;
-	
-	signal memif_fifo_out_data : std_logic_vector(C_MEMIF_FIFO_WIDTH - 1 downto 0);
-	signal memif_fifo_out_rem  : std_logic_vector(15 downto 0);
-	signal memif_fifo_out_full : std_logic;
-	signal memif_fifo_out_we   : std_logic;
-
-	signal ctrl_cmd         : std_logic_vector(C_MEMIF_CMD_WIDTH - 1 downto 0);
-	signal ctrl_length      : std_logic_vector(C_MEMIF_LENGTH_WIDTH - 1 downto 0);
-	signal ctrl_addr        : std_logic_vector(C_CTRL_FIFO_WIDTH - 1 downto 0);
-	signal ctrl_length_fifo : std_logic_vector(15 downto 0);
-
-	signal axi_read_req   : std_logic;
-	signal axi_write_req  : std_logic;
-	signal axi_addr       : std_logic_vector(31 downto 0);
-	signal axi_length     : std_logic_vector(C_LENGTH_WIDTH - 1 downto 0);
-	signal axi_cmdack     : std_logic;
-	signal axi_cmplt      : std_logic;
-
-	signal axi_wr_data    : std_logic_vector(C_MEMIF_FIFO_WIDTH - 1 downto 0);
-	signal axi_wr_sof     : std_logic;
-	signal axi_wr_eof     : std_logic;
-	signal axi_wr_src_rdy : std_logic;
-	signal axi_wr_dst_rdy : std_logic;
-	signal axi_wr_dst_dsc : std_logic;
-
-	signal axi_rd_data    : std_logic_vector(C_MEMIF_FIFO_WIDTH - 1 downto 0);
-	signal axi_rd_sof     : std_logic;
-	signal axi_rd_eof     : std_logic;
-	signal axi_rd_src_rdy : std_logic;
-	signal axi_rd_src_dsc : std_logic;
-	signal axi_rd_dst_rdy : std_logic;
-
-	signal abort : std_logic;
-
-	signal clk          : std_logic;
-	signal rst, rst_bus : std_logic;
+	signal rd_req, wr_req : std_logic;
 
 begin
 
-	clk     <= MEMCTRL_Clk;
-	rst     <= MEMCTRL_Rst;
-	rst_bus <= not Bus2IP_Resetn;
+	-- == Static assignments of signals ===================================
 
-	-- drive constant bus signals
-	ip2bus_mstwr_src_dsc_n <= '1';
-	ip2bus_mstrd_dst_dsc_n <= '1';
-	ip2bus_mstwr_rem       <= (others => '0');
-
-	ip2bus_mst_be    <= (others => '1');
-	ip2bus_mst_type  <= '1'; -- (always burst)
-	ip2bus_mst_lock  <= '0';
-	ip2bus_mst_reset <= '0';
-
-	-- drive output ports and internal signals
-	ip2bus_mstrd_req  <= axi_read_req;
-	ip2bus_mstwr_req  <= axi_write_req;
-	ip2bus_mst_addr   <= axi_addr;
-	ip2bus_mst_length <= axi_length;
-	axi_cmdack        <= bus2ip_mst_cmdack;
-	axi_cmplt         <= bus2ip_mst_cmplt;
-
-	ip2bus_mstwr_d         <= axi_wr_data;
-	ip2bus_mstwr_sof_n     <= not axi_wr_sof;
-	ip2bus_mstwr_eof_n     <= not axi_wr_eof;
-	ip2bus_mstwr_src_rdy_n <= not axi_wr_src_rdy;
-	axi_wr_dst_rdy         <= not bus2ip_mstwr_dst_rdy_n;
-	axi_wr_dst_dsc         <= not bus2ip_mstwr_dst_dsc_n;
-
-	axi_rd_data            <= bus2ip_mstrd_d;
-	axi_rd_sof             <= not bus2ip_mstrd_sof_n;
-	axi_rd_eof             <= not bus2ip_mstrd_eof_n;
-	axi_rd_src_rdy         <= not bus2ip_mstrd_src_rdy_n;
-	axi_rd_src_dsc         <= not bus2ip_mstrd_src_dsc_n;
-	ip2bus_mstrd_dst_rdy_n <= not axi_rd_dst_rdy;
+	IP2BUS_Mst_BE    <= (others => '1');
+	IP2BUS_Mst_Type  <= '1';
+	IP2BUS_Mst_Lock  <= '0';
+	IP2BUS_Mst_Reset <= '0';
+	
+	IP2BUS_MstRd_Dst_Dsc_N <= '0';
+	IP2BUS_MstWr_Src_Dsc_N <= '1';
+	IP2BUS_MstWr_Rem       <= (others => '0');
 
 
-	ctrl_length_fifo <= ctrl_length(17 downto 2) - 1;
+	-- == Process definitions =============================================
 
-	-- driving sof and eof dependent on count
-	axi_wr_sof <= '1' when or_reduce(count) = '0' else '0';
-	axi_wr_eof <= '1' when count = ctrl_length - 4 else '0';
-
-
-	-- multiplex port 1 (MMU) and port 2 (HWT)
-	port_mux_proc : process(port_select,
-	                        CTRL_FIFO_Mmu_Data,CTRL_FIFO_Hwt_Data,
-	                        CTRL_FIFO_Mmu_Empty,CTRL_FIFO_Hwt_Empty,
-	                        ctrl_fifo_re,memif_fifo_in_re,
-	                        memif_fifo_out_data,memif_fifo_out_we,
-	                        MEMIF_FIFO_Mmu_Rem,MEMIF_FIFO_Mmu_Full,
-	                        MEMIF_FIFO_Hwt2Mem_Data,
-	                        MEMIF_FIFO_Hwt2Mem_Fill,MEMIF_FIFO_Hwt2Mem_Empty,
-	                        MEMIF_FIFO_Mem2Hwt_Rem,MEMIF_FIFO_Mem2Hwt_Full) is
+	--
+	-- Process handling reading from and writing to the memory.
+	--
+	--   Reads data from the memory and writes it into the memif fifos or
+	--   writes data form the memif fifo the the memory.
+	--
+	rdwr : process(BUS2IP_Clk,BUS2IP_Resetn) is
 	begin
-		ctrl_fifo_data   <= (others => '0');
-		ctrl_fifo_empty  <= '1';
-		CTRL_FIFO_Mmu_RE <= '0';
-		CTRL_FIFO_Hwt_RE <= '0';
-
-		memif_fifo_in_data    <= (others => '0');
-		memif_fifo_in_fill    <= (others => '0');
-		memif_fifo_in_empty   <= '0';
-		MEMIF_FIFO_Hwt2Mem_RE <= '0';
-
-		memif_fifo_out_rem      <= (others => '0');
-		memif_fifo_out_full     <= '0';
-		MEMIF_FIFO_Mem2Hwt_Data <= (others => '0');
-		MEMIF_FIFO_Mem2Hwt_WE   <= '0';
-		MEMIF_FIFO_Mmu_Data     <= (others => '0');
-		MEMIF_FIFO_Mmu_WE       <= '0';
-
-		if port_select = '0' then
-			ctrl_fifo_data   <= CTRL_FIFO_Mmu_Data;
-			ctrl_fifo_empty  <= CTRL_FIFO_Mmu_Empty;
-			CTRL_FIFO_Mmu_RE <= ctrl_fifo_re;
-
-			memif_fifo_out_rem  <= MEMIF_FIFO_Mmu_Rem;
-			memif_fifo_out_full <= MEMIF_FIFO_Mmu_Full;
-			MEMIF_FIFO_Mmu_Data <= memif_fifo_out_data;
-			MEMIF_FIFO_Mmu_WE   <= memif_fifo_out_we;
-		else
-			ctrl_fifo_data   <= CTRL_FIFO_Hwt_Data;
-			ctrl_fifo_empty  <= CTRL_FIFO_Hwt_Empty;
-			CTRL_FIFO_Hwt_RE <= ctrl_fifo_re;
-
-			memif_fifo_out_rem      <= MEMIF_FIFO_Mem2Hwt_Rem;
-			memif_fifo_out_full     <= MEMIF_FIFO_Mem2Hwt_Full;
-			MEMIF_FIFO_Mem2Hwt_Data <= memif_fifo_out_data;
-			MEMIF_FIFO_Mem2Hwt_WE   <= memif_fifo_out_we;
-
-			memif_fifo_in_data    <= MEMIF_FIFO_Hwt2Mem_Data;
-			memif_fifo_in_fill    <= MEMIF_FIFO_Hwt2Mem_Fill;
-			memif_fifo_in_empty   <= MEMIF_FIFO_Hwt2Mem_Empty;
-			MEMIF_FIFO_Hwt2Mem_RE <= memif_fifo_in_re;
-		end if;	
-	end process port_mux_proc;
-
-
-	-- drive in/out FIFO RE/WE signals
-	fifo_rd_proc : process(state,
-	                       axi_wr_dst_rdy,memif_fifo_in_data,
-	                       axi_rd_src_rdy,axi_rd_data) is
-	begin
-		memif_fifo_in_re <= '0';
-		axi_wr_data      <= (others => '0');
-
-		memif_fifo_out_we   <= '0';
-		memif_fifo_out_data <= (others => '0');
-
-		if state = PERF_WRITE_2 and abort = '0' then
-			memif_fifo_in_re <= axi_wr_dst_rdy;
-			axi_wr_data <= memif_fifo_in_data;
-		end if;
-
-		if state = PERF_READ_2 and abort = '0' then
-			memif_fifo_out_we <= axi_rd_src_rdy;
-			memif_fifo_out_data <= axi_rd_data;
-		end if;
-	end process fifo_rd_proc;
-
-
-	mem_proc : process(clk,rst_bus) is
-	begin
-		if rst_bus = '1' then
-			state <= WAIT_REQUEST;
-
-			axi_read_req  <= '0';
-			axi_write_req <= '0';
-			axi_addr      <= (others => '0');
-			axi_length    <= (others => '0');
-
-			axi_wr_src_rdy <= '0';
-			axi_rd_dst_rdy <= '0';
-
-			ctrl_fifo_re <= '0';
-
-			port_select <= '1';
-
-			count <= (others => '0');
-		elsif rising_edge(clk) then
-			if rst = '1' then
-				abort <= '1';
-			end if;
-		
+		if BUS2IP_Resetn = '0' then
+			state <= STATE_READ_CMD;
+		elsif rising_edge(BUS2IP_Clk) then
 			case state is
-				when WAIT_REQUEST =>				
-					if CTRL_FIFO_Mmu_Empty = '0' AND C_USE_MMU_PORT then
-						port_select <= '0';
+				when STATE_READ_CMD =>
+					if MEMIF_Hwt2Mem_In_Empty = '0' then
+						mem_op <= MEMIF_Hwt2Mem_In_Data(C_MEMIF_OP_RANGE);
+						mem_length <= unsigned(MEMIF_Hwt2Mem_In_Data(C_MEMIF_LENGTH_RANGE));
 
-						ctrl_fifo_re <= '1';
+						mem_count <= unsigned(MEMIF_Hwt2Mem_In_Data(C_MEMIF_LENGTH_RANGE));
 
-						state <= READ_CMD;
-					elsif CTRL_FIFO_Hwt_Empty = '0' then
-						port_select <= '1';
-
-						ctrl_fifo_re <= '1';
-
-						state <= READ_CMD;
+						state <= STATE_READ_ADDR;
 					end if;
 
-					if abort = '1' or rst = '1' then
-						ctrl_fifo_re <= '0';
-						state <= WAIT_REQUEST;
-					end if;
-					abort <= '0';
+				when STATE_READ_ADDR =>
+					if MEMIF_Hwt2Mem_In_Empty = '0' then
+						mem_addr <= MEMIF_Hwt2Mem_In_Data;
 
-				when READ_CMD =>
-					ctrl_cmd <= ctrl_fifo_data(31 downto C_MEMIF_LENGTH_WIDTH);
-					ctrl_length <= ctrl_fifo_data(C_MEMIF_LENGTH_WIDTH - 1 downto 0);
+						case mem_op is
+							when MEMIF_CMD_READ =>
+								state <= STATE_PROCESS_READ_0;
 
-					state <= READ_ADDR;
+							when MEMIF_CMD_WRITE =>
+								state <= STATE_PROCESS_WRITE_0;
 
-					if abort = '1' or rst = '1' then
-						ctrl_fifo_re <= '0';
-						state <= WAIT_REQUEST;
+							when others =>
+						end case;
 					end if;
 
-				when READ_ADDR =>
-					if ctrl_fifo_empty = '0' then
-						ctrl_addr <= ctrl_fifo_data;
+				when STATE_PROCESS_WRITE_0 =>
+					if BUS2IP_Mst_CmdAck = '1' then
+						state <= STATE_PROCESS_WRITE_1;
+					end if;
 
-						ctrl_fifo_re <= '0';
-					
-						if ctrl_cmd(C_MEMIF_CMD_WIDTH - 1) = '1' then
-							state <= WAIT_FILL;
-						else
-							state <= WAIT_REM;
+				when STATE_PROCESS_WRITE_1 =>
+					if BUS2IP_MstWr_Dst_Rdy_N = '0' and MEMIF_Hwt2Mem_In_Empty = '0' then
+						mem_count <= mem_count - 4;
+
+						if mem_count - 4 = 0 then
+							state <= STATE_CMPLT;
 						end if;
 					end if;
 
-					if abort = '1' or rst = '1' then
-						ctrl_fifo_re <= '0';
-						state <= WAIT_REQUEST;
+				when STATE_PROCESS_READ_0 =>
+					if BUS2IP_Mst_CmdAck = '1' then
+						state <= STATE_PROCESS_READ_1;
 					end if;
 
-				when WAIT_FILL =>
-					if memif_fifo_in_empty = '0' and memif_fifo_in_fill >= ctrl_length_fifo then
-						state <= PERF_WRITE_0;
-					end if;
+				when STATE_PROCESS_READ_1 =>
+					if BUS2IP_MstRd_Src_Rdy_N = '0' and MEMIF_Mem2Hwt_In_Full = '0' then
+						mem_count <= mem_count - 4;
 
-					if abort = '1' or rst = '1' then
-						state <= WAIT_REQUEST;
-					end if;
-
-				when WAIT_REM =>
-					if memif_fifo_out_full = '0' and memif_fifo_out_rem >= ctrl_length_fifo then
-						state <= PERF_READ_0;
-					end if;
-
-					if abort = '1' or rst = '1' then
-						ctrl_fifo_re <= '0';
-						state <= WAIT_REQUEST;
-					end if;
-
-				-- preparing for transfer
-				when PERF_WRITE_0 =>
-					axi_addr <= ctrl_addr;
-					axi_length <= ctrl_length(C_LENGTH_WIDTH - 1 downto 2) & "00";
-
-					axi_write_req <= '1';
-
-					count <= (others => '0');
-
-					state <= PERF_WRITE_1;
-
-				-- waiting for cmdack
-				when PERF_WRITE_1 =>
-					if axi_cmdack = '1' then
-						axi_write_req <= '0';
-						axi_wr_src_rdy <= '1';
-
-						state <= PERF_WRITE_2;
-					end if;
-
-				-- performing transfer
-				when PERF_WRITE_2 =>
-					if axi_wr_dst_rdy = '1' then
-						count <= count + 4;
-
-						if count = ctrl_length - 4 then
-							axi_wr_src_rdy <= '0';
-							
-							state <= WAIT_CMPLT;
+						if mem_count - 4 = 0 then
+							state <= STATE_CMPLT;
 						end if;
 					end if;
 
-				-- preparing for transfer
-				when PERF_READ_0 =>
-					axi_addr <= ctrl_addr;
-					axi_length <= ctrl_length(C_LENGTH_WIDTH - 1 downto 2) & "00";
-
-					axi_read_req <= '1';
-
-					count <= (others => '0');
-
-					state <= PERF_READ_1;
-
-				-- waiting for cmdack
-				when PERF_READ_1 =>
-					if axi_cmdack = '1' then
-						axi_read_req <= '0';
-						axi_rd_dst_rdy <= '1';
-
-						state <= PERF_READ_2;
+				when STATE_CMPLT =>
+					if BUS2IP_Mst_Cmplt = '1' then
+						state <= STATE_READ_CMD;
 					end if;
 
-				when PERF_READ_2 =>
-					if axi_rd_src_rdy = '1' then
-						count <= count + 4;
-
-						if count = ctrl_length - 4 then
-							axi_rd_dst_rdy <= '0';
-
-							state <= WAIT_CMPLT;
-						end if;
-					end if;
-
-				-- waiting for completion
-				when WAIT_CMPLT =>
-					if axi_cmplt = '1' then
-						state <= WAIT_REQUEST;
-					end if;
-
+				when others =>
 			end case;
 		end if;
-	end process mem_proc;
+	end process rdwr;
 
-end implementation;
+
+	-- == Multiplexing signals ============================================
+
+	IP2Bus_Mst_Addr   <= mem_addr;
+	IP2BUS_Mst_Length <= std_logic_vector(mem_length(11 downto 0));
+
+	IP2BUS_MstRd_Req       <= '1' when state = STATE_PROCESS_READ_0 else '0';
+	IP2BUS_MstRd_Dst_Rdy_N <= MEMIF_Mem2Hwt_In_Full when state = STATE_PROCESS_READ_1 else '1';
+
+	IP2BUS_MstWr_D         <= MEMIF_Hwt2Mem_In_Data;
+	IP2BUS_MstWr_Req       <= '1' when state = STATE_PROCESS_WRITE_0 else '0';
+	IP2BUS_MstWr_Src_Rdy_N <= MEMIF_Hwt2Mem_In_Empty when state = STATE_PROCESS_WRITE_1 else '1';
+	IP2BUS_MstWr_Sof_N     <= '0' when mem_count = mem_length else '1';
+	IP2BUS_MstWr_Eof_N     <= '0' when mem_count - 4 = 0 else '1';
+
+	MEMIF_Hwt2Mem_In_RE <= not BUS2IP_MstWr_Dst_Rdy_N when state = STATE_PROCESS_WRITE_1 else
+	                       '1'                        when state = STATE_READ_CMD else
+	                       '1'                        when state = STATE_READ_ADDR else
+	                       '0';
+
+	MEMIF_Mem2Hwt_In_Data <= BUS2IP_MstRd_D;
+	MEMIF_Mem2Hwt_In_WE   <= not BUS2IP_MstRd_Src_Rdy_N when state = STATE_PROCESS_READ_1 else '0';
+
+end architecture imp;

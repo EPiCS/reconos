@@ -6,16 +6,21 @@
 -- 
 -- ======================================================================
 --
---   title:        IP-Core - OSIF - Top level entity
+--   title:        IP-Core - Clock - Top level entity
 --
 --   project:      ReconOS
 --   author:       Christoph Rüthing, University of Paderborn
---   description:  A AXI slave which maps the FIFOs of the HWTs to
---                 registers accessible from the AXI-Bus.
---                   Reg0: Read data
---                   Reg1: Write data
---                   Reg2: Fill - number of elements in receive-FIFO
---                   Reg3: Rem - free space in send-FIFO
+--   description:  A clock manager which can be configures via the AXI
+--                 bus. Therefore it provides the following write only
+--                 registers:
+--                   Reg0: Clock 1 and 2 register of clock output 0
+--                   Reg1: Clock 1 and 2 register of clock output 1
+--                   Reg2: Clock 1 and 2 register of clock output 2
+--                   Reg3: Clock 1 and 2 register of clock output 3
+--                   Reg4: Clock 1 and 2 register of clock output 4
+--                   Reg5: Clock 1 and 2 register of clock output 5
+--                   Reg6: Reserved
+--                   Reg7: Reserved
 --
 -- ======================================================================
 
@@ -29,10 +34,10 @@ use proc_common_v3_00_a.ipif_pkg.all;
 library axi_lite_ipif_v1_01_a;
 use axi_lite_ipif_v1_01_a.axi_lite_ipif;
 
-library reconos_osif_v1_00_a;
-use reconos_osif_v1_00_a.user_logic;
+library reconos_clock_v1_00_a;
+use reconos_clock_v1_00_a.user_logic;
 
-entity reconos_osif is
+entity reconos_clock is
 	--
 	-- Generic definitions
 	--
@@ -41,11 +46,9 @@ entity reconos_osif is
 	--   C_BASE_ADDR - lower address of axi slave
 	--   C_HIGH_ADDR - higher address of axi slave
 	--
-	--   C_NUM_HWTS - number of hardware threads
+	--   C_NUM_CLOCKMGS - number of clock managers
 	--
-	--   C_OSIF_DATA_WIDTH   - width of the osif
-	--   C_OSIF_LENGTH_WIDTH - width of the length in command word
-	--   C_OSIF_OP_WIDTH     - width of the operation in command word
+	--   C_PLL#i# - pll generics
 	--
 	generic (
 		C_S_AXI_ADDR_WIDTH : integer := 32;
@@ -54,31 +57,32 @@ entity reconos_osif is
 		C_BASEADDR : std_logic_vector := x"FFFFFFFF";
 		C_HIGHADDR : std_logic_vector := x"00000000";
 
-		C_NUM_HWTS : integer := 1;
+		C_NUM_CLOCKMGS: integer := 1;
 
-		C_OSIF_DATA_WIDTH   : integer := 32;
-		C_OSIF_LENGTH_WIDTH : integer := 24;
-		C_OSIF_OP_WIDTH     : integer := 8
+		-- ## BEGIN GENERATE LOOP ##
+		C_PLL#i#_CLKIN_PERIOD  : real := 10.00;
+		C_PLL#i#_CLKFBOUT_MULT : integer := 16;
+		C_PLL#i#_DIVCLK_DIVIDE : integer := 1#c;#
+		-- ## END GENERATE LOOP ##
 	);
 
 	--
 	-- Port defintions
 	--
-	--   OSIF_Hw2Sw_#i#_In_/OSIF_Sw2Hw_#i#_In_ - fifo signal inputs
+	--   CLK_Ref  - reference clock
+	--   CLK_Out_ - clock outputs
 	--
 	--   S_AXI_ - @see axi bus
 	--
 	port (
+		CLK_Ref       : in std_logic;
 		-- ## BEGIN GENERATE LOOP ##
-		OSIF_Hw2Sw_#i#_In_Data  : in  std_logic_vector(C_OSIF_DATA_WIDTH - 1 downto 0);
-		OSIF_Hw2Sw_#i#_In_Empty : in  std_logic;
-		OSIF_Hw2Sw_#i#_In_RE    : out std_logic;
-		-- ## END GENERATE LOOP ##
-
-		-- ## BEGIN GENERATE LOOP ##
-		OSIF_Sw2Hw_#i#_In_Data  : out std_logic_vector(C_OSIF_DATA_WIDTH - 1 downto 0);
-		OSIF_Sw2Hw_#i#_In_Full  : in  std_logic;
-		OSIF_Sw2Hw_#i#_In_WE    : out std_logic;
+		CLK_#i#_Out_0 : out std_logic;
+		CLK_#i#_Out_1 : out std_logic;
+		CLK_#i#_Out_2 : out std_logic;
+		CLK_#i#_Out_3 : out std_logic;
+		CLK_#i#_Out_4 : out std_logic;
+		CLK_#i#_Out_5 : out std_logic;
 		-- ## END GENERATE LOOP ##
 
 		S_AXI_ACLK    : in  std_logic;
@@ -101,9 +105,9 @@ entity reconos_osif is
 		S_AXI_BVALID  : out std_logic;
 		S_AXI_AWREADY : out std_logic
 	);
-end entity reconos_osif;
+end entity reconos_clock;
 
-architecture imp of reconos_osif is
+architecture imp of reconos_clock is
 	--
 	-- Internal ipif signals
 	--
@@ -112,9 +116,9 @@ architecture imp of reconos_osif is
 	signal bus2ip_clk    : std_logic;
 	signal bus2ip_resetn : std_logic;
 	signal bus2ip_data   : std_logic_vector(31 downto 0);
-	signal bus2ip_cs     : std_logic_vector(C_NUM_HWTS - 1 downto 0);
-	signal bus2ip_rdce   : std_logic_vector(C_NUM_HWTS * 4 - 1 downto 0);
-	signal bus2ip_wrce   : std_logic_vector(C_NUM_HWTS * 4 - 1 downto 0);
+	signal bus2ip_cs     : std_logic_vector(C_NUM_CLOCKMGS - 1 downto 0);
+	signal bus2ip_rdce   : std_logic_vector(C_NUM_CLOCKMGS * 8 - 1 downto 0);
+	signal bus2ip_wrce   : std_logic_vector(C_NUM_CLOCKMGS * 8 - 1 downto 0);
 	signal ip2bus_data   : std_logic_vector(31 downto 0);
 	signal ip2bus_rdack  : std_logic;
 	signal ip2bus_wrack  : std_logic;
@@ -129,14 +133,14 @@ architecture imp of reconos_osif is
 
 	constant C_ARD_ADDR_RANGE_ARRAY : SLV64_ARRAY_TYPE := (
 		-- ## BEGIN GENERATE LOOP ##
-		2 * #i# + 0 => C_ADDR_PAD & std_logic_vector(unsigned(C_BASEADDR) + #i# * 16),
-		2 * #i# + 1 => C_ADDR_PAD & std_logic_vector(unsigned(C_BASEADDR) + #i# * 16 + 15)#c,#
+		2 * #i# + 0 => C_ADDR_PAD & std_logic_vector(unsigned(C_BASEADDR) + #i# * 32),
+		2 * #i# + 1 => C_ADDR_PAD & std_logic_vector(unsigned(C_BASEADDR) + #i# * 32 + 31)#c,#
 		-- ## END GENERATE LOOP ##
 	);
 
 	constant C_ARD_NUM_CE_ARRAY : INTEGER_ARRAY_TYPE := (
 		-- ## BEGIN GENERATE LOOP ##
-		#i# => 4#c,#
+		#i# => 8#c,#
 		-- ## END GENERATE LOOP ##
 	);
 begin
@@ -154,7 +158,8 @@ begin
 			C_S_AXI_DATA_WIDTH => C_S_AXI_DATA_WIDTH,
 
 			C_ARD_ADDR_RANGE_ARRAY => C_ARD_ADDR_RANGE_ARRAY,
-			C_ARD_NUM_CE_ARRAY     => C_ARD_NUM_CE_ARRAY
+			C_ARD_NUM_CE_ARRAY     => C_ARD_NUM_CE_ARRAY,
+			C_DPHASE_TIMEOUT       => 64
 		)
 
 		port map (
@@ -196,26 +201,26 @@ begin
 	--   The user logic includes the actual implementation of the bus
 	--   attachment.
 	--
-	ul : entity reconos_osif_v1_00_a.user_logic
+	ul : entity reconos_clock_v1_00_a.user_logic
 		generic map (
-			C_NUM_HWTS => C_NUM_HWTS,
+			C_NUM_CLOCKMGS => C_NUM_CLOCKMGS,
 
-			C_OSIF_DATA_WIDTH   => C_OSIF_DATA_WIDTH,
-			C_OSIF_LENGTH_WIDTH => C_OSIF_LENGTH_WIDTH,
-			C_OSIF_OP_WIDTH     => C_OSIF_OP_WIDTH
+			-- ## BEGIN GENERATE LOOP ##
+			C_PLL#i#_CLKIN_PERIOD => C_PLL#i#_CLKIN_PERIOD,
+			C_PLL#i#_CLKFBOUT_MULT => C_PLL#i#_CLKFBOUT_MULT,
+			C_PLL#i#_DIVCLK_DIVIDE => C_PLL#i#_DIVCLK_DIVIDE
+			-- ## END GENERATE LOOP ##
 		)
 
 		port map (
+			CLK_Ref       => CLK_Ref,
 			-- ## BEGIN GENERATE LOOP ##
-			OSIF_Hw2Sw_#i#_In_Data  => OSIF_Hw2Sw_#i#_In_Data,
-			OSIF_Hw2Sw_#i#_In_Empty => OSIF_Hw2Sw_#i#_In_Empty,
-			OSIF_Hw2Sw_#i#_In_RE    => OSIF_Hw2Sw_#i#_In_RE,
-			-- ## END GENERATE LOOP ##
-
-			-- ## BEGIN GENERATE LOOP ##
-			OSIF_Sw2Hw_#i#_In_Data  => OSIF_Sw2Hw_#i#_In_Data,
-			OSIF_Sw2Hw_#i#_In_Full  => OSIF_Sw2Hw_#i#_In_Full,
-			OSIF_Sw2Hw_#i#_In_WE    => OSIF_Sw2Hw_#i#_In_WE,
+			CLK_#i#_Out_0 => CLK_#i#_Out_0,
+			CLK_#i#_Out_1 => CLK_#i#_Out_1,
+			CLK_#i#_Out_2 => CLK_#i#_Out_2,
+			CLK_#i#_Out_3 => CLK_#i#_Out_3,
+			CLK_#i#_Out_4 => CLK_#i#_Out_4,
+			CLK_#i#_Out_5 => CLK_#i#_Out_5,
 			-- ## END GENERATE LOOP ##
 
 			BUS2IP_Clk    => bus2ip_clk,

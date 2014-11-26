@@ -18,10 +18,11 @@
 # ======================================================================
 
 import sys
+import math
 import mhstools
 
 DEFAULT_MEMIF_FIFO_DEPTH = 128
-DEFAULT_OSIF_FIFO_DEPTH = 32
+DEFAULT_OSIF_FIFO_DEPTH = 8
 
 OSIF_FIFO_BASE_ADDR = 0x75A00000
 OSIF_FIFO_MEM_SIZE = 0x10000
@@ -34,11 +35,11 @@ def hwt_reconf(name, num, version, use_mem):
 	instance = mhstools.MHSPCore(name)
 	instance.addEntry("PARAMETER", "INSTANCE", "hwt_reconf_%d" % (num - num_static_hwts))
 	instance.addEntry("PARAMETER", "HW_VER", version)
-	instance.addEntry("BUS_INTERFACE", "OSIF_FIFO_Sw2Hw", "reconos_osif_fifo_%d_sw2hw_FIFO_S" % num)
-	instance.addEntry("BUS_INTERFACE", "OSIF_FIFO_Hw2Sw", "reconos_osif_fifo_%d_hw2sw_FIFO_M" % num)
+	instance.addEntry("BUS_INTERFACE", "OSIF_Sw2Hw", "reconos_osif_sw2hw_%d_FIFO_S" % num)
+	instance.addEntry("BUS_INTERFACE", "OSIF_Hw2Sw", "reconos_osif_hw2sw_%d_FIFO_M" % num)
 	if use_mem:
-		instance.addEntry("BUS_INTERFACE", "MEMIF_FIFO_Hwt2Mem", "reconos_memif_fifo_%d_hwt2mem_FIFO_M" % num)
-		instance.addEntry("BUS_INTERFACE", "MEMIF_FIFO_Mem2Hwt", "reconos_memif_fifo_%d_mem2hwt_FIFO_S" % num)
+		instance.addEntry("BUS_INTERFACE", "MEMIF_Hwt2Mem", "reconos_memif_hwt2mem_%d_FIFO_M" % num)
+		instance.addEntry("BUS_INTERFACE", "MEMIF_Mem2Hwt", "reconos_memif_mem2hwt_%d_FIFO_S" % num)
 	instance.addEntry("PORT", "HWT_Clk", DEFAULT_CLK)
 	instance.addEntry("PORT", "HWT_Rst", "reconos_proc_control_0_PROC_Hwt_Rst_%d" % num)
 	instance.addEntry("PORT", "HWT_Signal", "reconos_proc_control_0_PROC_Hwt_Signal_%d" % num)
@@ -48,27 +49,27 @@ def hwt_static(name, num, version, use_mem):
 	instance = mhstools.MHSPCore(name)
 	instance.addEntry("PARAMETER", "INSTANCE", "hwt_static_%d" % num)
 	instance.addEntry("PARAMETER", "HW_VER", version)
-	instance.addEntry("BUS_INTERFACE", "OSIF_FIFO_Sw2Hw", "reconos_osif_fifo_%d_sw2hw_FIFO_S" % num)
-	instance.addEntry("BUS_INTERFACE", "OSIF_FIFO_Hw2Sw", "reconos_osif_fifo_%d_hw2sw_FIFO_M" % num)
+	instance.addEntry("BUS_INTERFACE", "OSIF_Sw2Hw", "reconos_osif_sw2hw_%d_FIFO_S" % num)
+	instance.addEntry("BUS_INTERFACE", "OSIF_Hw2Sw", "reconos_osif_hw2sw_%d_FIFO_M" % num)
 	if use_mem:
-		instance.addEntry("BUS_INTERFACE", "MEMIF_FIFO_Hwt2Mem", "reconos_memif_fifo_%d_hwt2mem_FIFO_M" % num)
-		instance.addEntry("BUS_INTERFACE", "MEMIF_FIFO_Mem2Hwt", "reconos_memif_fifo_%d_mem2hwt_FIFO_S" % num)
+		instance.addEntry("BUS_INTERFACE", "MEMIF_Hwt2Mem", "reconos_memif_hwt2mem_%d_FIFO_M" % num)
+		instance.addEntry("BUS_INTERFACE", "MEMIF_Mem2Hwt", "reconos_memif_mem2hwt_%d_FIFO_S" % num)
 	instance.addEntry("PORT", "HWT_Clk", DEFAULT_CLK)
 	instance.addEntry("PORT", "HWT_Rst", "reconos_proc_control_0_PROC_Hwt_Rst_%d" % num)
 	instance.addEntry("PORT", "HWT_Signal", "reconos_proc_control_0_PROC_Hwt_Signal_%d" % num)
 	return instance
 
 def osif_fifo(num, direction):
-	instance = mhstools.MHSPCore("reconos_fifo")
-        instance.addEntry("PARAMETER", "INSTANCE", "reconos_osif_fifo_%d_" % num + direction)
-        instance.addEntry("PARAMETER", "HW_VER", "1.00.a")
-        instance.addEntry("PARAMETER", "C_FIFO_DEPTH", DEFAULT_OSIF_FIFO_DEPTH)
-        instance.addEntry("BUS_INTERFACE", "FIFO_M", "reconos_osif_fifo_%d_" % num + direction + "_FIFO_M")
-        instance.addEntry("BUS_INTERFACE", "FIFO_S", "reconos_osif_fifo_%d_" % num + direction + "_FIFO_S")
+	instance = mhstools.MHSPCore("sync_fifo")
+	instance.addEntry("PARAMETER", "INSTANCE", "reconos_osif_" + direction + "_%d" % num)
+	instance.addEntry("PARAMETER", "HW_VER", "1.00.a")
+	instance.addEntry("PARAMETER", "C_FIFO_ADDR_WIDTH", int(math.log(DEFAULT_OSIF_FIFO_DEPTH, 2)))
+	instance.addEntry("BUS_INTERFACE", "FIFO_M", "reconos_osif_" + direction + "_%d_FIFO_M" % num)
+	instance.addEntry("BUS_INTERFACE", "FIFO_S", "reconos_osif_" + direction + "_%d_FIFO_S" % num)
 	if direction == "hw2sw":
-		instance.addEntry("PORT", "FIFO_Has_Data", "reconos_osif_fifo_%d_" % num + direction + "_FIFO_Has_Data")
+		instance.addEntry("PORT", "FIFO_Has_Data", "reconos_osif_" + direction + "_%d_FIFO_Has_Data" % num)
+	instance.addEntry("PORT", "FIFO_Clk", DEFAULT_CLK)
 	instance.addEntry("PORT", "FIFO_Rst", "reconos_proc_control_0_PROC_Hwt_Rst_%d" % num)
-	instance.addEntry("PORT", "FIFO_S_Clk", DEFAULT_CLK)
 	return instance
 
 
@@ -78,13 +79,12 @@ def osif(num_hwts):
 	instance = mhstools.MHSPCore("reconos_osif")
 	instance.addEntry("PARAMETER", "INSTANCE", "reconos_osif_0")
 	instance.addEntry("PARAMETER", "HW_VER", "1.00.a")
+	instance.addEntry("PARAMETER", "C_NUM_HWTS", num_hwts)
 	instance.addEntry("PARAMETER", "C_BASEADDR", "0x%x" % OSIF_FIFO_BASE_ADDR)
 	instance.addEntry("PARAMETER", "C_HIGHADDR", "0x%x" % (OSIF_FIFO_BASE_ADDR + OSIF_FIFO_MEM_SIZE - 1))
-	instance.addEntry("PARAMETER", "C_NUM_FIFOS", num_hwts)
-	instance.addEntry("PARAMETER", "C_FIFO_WIDTH", "32")
 	for i in range(num_hwts):
-		instance.addEntry("BUS_INTERFACE", "FIFO_S_%d" % i, "reconos_osif_fifo_%d_hw2sw_FIFO_S" % i)
-		instance.addEntry("BUS_INTERFACE", "FIFO_M_%d" % i, "reconos_osif_fifo_%d_sw2hw_FIFO_M" % i)
+		instance.addEntry("BUS_INTERFACE", "OSIF_Hw2Sw_%d_In" % i, "reconos_osif_hw2sw_%d_FIFO_S" % i)
+		instance.addEntry("BUS_INTERFACE", "OSIF_Sw2Hw_%d_In" % i, "reconos_osif_sw2hw_%d_FIFO_M" % i)
 	instance.addEntry("BUS_INTERFACE", "S_AXI", HWT_BUS)
 	instance.addEntry("PORT", "S_AXI_ACLK", DEFAULT_CLK)
 	return instance
@@ -101,20 +101,20 @@ def osif_intc(num_hwts):
 	instance.addEntry("PORT", "S_AXI_ACLK", DEFAULT_CLK)
 	instance.addEntry("PORT", "OSIF_INTC_Out", "reconos_osif_intc_0_OSIF_INTC_Out")
 	for i in range(num_hwts):
-		instance.addEntry("PORT", "OSIF_INTC_In_%d" % i, "reconos_osif_fifo_%d_hw2sw_FIFO_Has_Data" % i)
+		instance.addEntry("PORT", "OSIF_INTC_In_%d" % i, "reconos_osif_hw2sw_%d_FIFO_Has_Data" % i)
 	instance.addEntry("PORT", "OSIF_INTC_Rst", "reconos_proc_control_0_PROC_Sys_Rst")
 	return instance
 
 # C_FIFO_DEPTH
 def memif_fifo(num, direction):
-	instance = mhstools.MHSPCore("reconos_fifo")
-	instance.addEntry("PARAMETER", "INSTANCE", "reconos_memif_fifo_%d_" % num + direction)
+	instance = mhstools.MHSPCore("sync_fifo")
+	instance.addEntry("PARAMETER", "INSTANCE", "reconos_memif_" + direction + "_%d" % num)
 	instance.addEntry("PARAMETER", "HW_VER", "1.00.a")
-	instance.addEntry("PARAMETER", "C_FIFO_DEPTH", DEFAULT_MEMIF_FIFO_DEPTH)
-	instance.addEntry("BUS_INTERFACE", "FIFO_M", "reconos_memif_fifo_%d_" % num + direction + "_FIFO_M")
-	instance.addEntry("BUS_INTERFACE", "FIFO_S", "reconos_memif_fifo_%d_" % num + direction + "_FIFO_S")
+	instance.addEntry("PARAMETER", "C_FIFO_ADDR_WIDTH", int(math.log(DEFAULT_MEMIF_FIFO_DEPTH, 2)))
+	instance.addEntry("BUS_INTERFACE", "FIFO_M", "reconos_memif_" + direction + "_%d_FIFO_M" % num)
+	instance.addEntry("BUS_INTERFACE", "FIFO_S", "reconos_memif_" + direction + "_%d_FIFO_S" % num)
 	instance.addEntry("PORT", "FIFO_Rst", "reconos_proc_control_0_PROC_Hwt_Rst_%d" % num)
-	instance.addEntry("PORT", "FIFO_S_Clk", DEFAULT_CLK)
+	instance.addEntry("PORT", "FIFO_Clk", DEFAULT_CLK)
 	return instance
 
 # HW_VER, PROC_CONTROL_BASE_ADDR, PROC_CONTROL_MEM_SIZE
@@ -139,8 +139,6 @@ def proc_control(num_hwts, use_mmu):
 		instance.addEntry("PORT", "MMU_Fault_Addr", "reconos_memif_mmu_0_MMU_Fault_Addr")
 		instance.addEntry("PORT", "MMU_Retry", "reconos_proc_control_0_MMU_Retry")
 		instance.addEntry("PORT", "MMU_Pgd", "reconos_proc_control_0_MMU_Pgd")
-		instance.addEntry("PORT", "MMU_Tlb_Hits", "reconos_memif_mmu_0_MMU_Tlb_Hits")
-		instance.addEntry("PORT", "MMU_Tlb_Misses", "reconos_memif_mmu_0_MMU_Tlb_Misses")
 	return instance
 
 # HW_VER
@@ -150,26 +148,12 @@ def arbiter(num_hwts):
 	instance.addEntry("PARAMETER", "HW_VER", "1.00.a")
 	instance.addEntry("PARAMETER", "C_NUM_HWTS", num_hwts)
 	for i in range(num_hwts):
-		instance.addEntry("BUS_INTERFACE", "MEMIF_FIFO_In_Hwt2Mem_%d" % i, "reconos_memif_fifo_%d_hwt2mem_FIFO_S" % i)
-		instance.addEntry("BUS_INTERFACE", "MEMIF_FIFO_In_Mem2Hwt_%d" % i, "reconos_memif_fifo_%d_mem2hwt_FIFO_M" % i)
-	instance.addEntry("BUS_INTERFACE", "MEMIF_FIFO_Out_Mem2Hwt", "reconos_memif_arbiter_0_MEMIF_FIFO_Out_Mem2Hwt")
-	instance.addEntry("BUS_INTERFACE", "MEMIF_FIFO_Out_Hwt2Mem", "reconos_memif_arbiter_0_MEMIF_FIFO_Out_Hwt2Mem")
-	instance.addEntry("BUS_INTERFACE", "CTRL_FIFO_Out", "reconos_memif_arbiter_0_CTRL_FIFO_Out")
-	instance.addEntry("PORT", "TCTRL_Clk", DEFAULT_CLK)
-	instance.addEntry("PORT", "TCTRL_Rst", "reconos_proc_control_0_PROC_Sys_Rst")
-	return instance
-
-# HW_VER, C_PAGE_SIZE, C_MAX_BURST_SIZE
-def burst_converter():
-	instance = mhstools.MHSPCore("reconos_memif_burst_converter")
-	instance.addEntry("PARAMETER", "INSTANCE", "reconos_memif_burst_converter_0")
-	instance.addEntry("PARAMETER", "HW_VER", "1.00.a")
-	instance.addEntry("PARAMETER", "C_PAGE_SIZE", 4096)
-	instance.addEntry("PARAMETER", "C_MAX_BURST_SIZE", 256)
-	instance.addEntry("BUS_INTERFACE", "CTRL_FIFO_In", "reconos_memif_arbiter_0_CTRL_FIFO_Out")
-	instance.addEntry("BUS_INTERFACE", "CTRL_FIFO_Out", "reconos_memif_burst_converter_0_CTRL_FIFO_Out")
-	instance.addEntry("PORT", "BCONV_Clk", DEFAULT_CLK)
-	instance.addEntry("PORT", "BCONV_Rst", "reconos_proc_control_0_PROC_Sys_Rst")
+		instance.addEntry("BUS_INTERFACE", "MEMIF_Hwt2Mem_%d_In" % i, "reconos_memif_hwt2mem_%d_FIFO_S" % i)
+		instance.addEntry("BUS_INTERFACE", "MEMIF_Mem2Hwt_%d_In" % i, "reconos_memif_mem2hwt_%d_FIFO_M" % i)
+	instance.addEntry("BUS_INTERFACE", "MEMIF_Hwt2Mem_Out", "reconos_memif_arbiter_0_MEMIF_Hwt2Mem_Out")
+	instance.addEntry("BUS_INTERFACE", "MEMIF_Mem2Hwt_Out", "reconos_memif_arbiter_0_MEMIF_Mem2Hwt_Out")
+	instance.addEntry("PORT", "SYS_Clk", DEFAULT_CLK)
+	instance.addEntry("PORT", "SYS_Rst", "reconos_proc_control_0_PROC_Sys_Rst")
 	return instance
 
 # HW_VER, C_TLB_SIZE
@@ -178,18 +162,16 @@ def mmu(arch):
 	instance.addEntry("PARAMETER", "INSTANCE", "reconos_memif_mmu_0")
 	instance.addEntry("PARAMETER", "HW_VER", "1.00.a")
 	instance.addEntry("PARAMETER", "C_TLB_SIZE", 16)
-	instance.addEntry("BUS_INTERFACE", "CTRL_FIFO_In", "reconos_memif_burst_converter_0_CTRL_FIFO_Out")
-	instance.addEntry("BUS_INTERFACE", "CTRL_FIFO_Out", "reconos_memif_mmu_0_CTRL_FIFO_Out")
-	instance.addEntry("BUS_INTERFACE", "CTRL_FIFO_Mmu", "reconos_memif_mmu_0_CTRL_FIFO_Mmu")
-	instance.addEntry("BUS_INTERFACE", "MEMIF_FIFO_Mmu", "reconos_memif_memory_controller_0_MEMIF_FIFO_Mmu")
+	instance.addEntry("BUS_INTERFACE", "MEMIF_Hwt2Mem_In", "reconos_memif_arbiter_0_MEMIF_Hwt2Mem_Out")
+	instance.addEntry("BUS_INTERFACE", "MEMIF_Mem2Hwt_In", "reconos_memif_arbiter_0_MEMIF_Mem2Hwt_Out")
+	instance.addEntry("BUS_INTERFACE", "MEMIF_Hwt2Mem_Out", "reconos_memif_mmu_0_MEMIF_Hwt2Mem_Out")
+	instance.addEntry("BUS_INTERFACE", "MEMIF_Mem2Hwt_Out", "reconos_memif_mmu_0_MEMIF_Mem2Hwt_Out")
 	instance.addEntry("PORT", "MMU_Pgf", "reconos_memif_mmu_0_MMU_Pgf")
 	instance.addEntry("PORT", "MMU_Fault_Addr", "reconos_memif_mmu_0_MMU_Fault_Addr")
 	instance.addEntry("PORT", "MMU_Retry", "reconos_proc_control_0_MMU_Retry")
 	instance.addEntry("PORT", "MMU_Pgd", "reconos_proc_control_0_MMU_Pgd")
-	instance.addEntry("PORT", "MMU_Tlb_Hits", "reconos_memif_mmu_0_MMU_Tlb_Hits")
-	instance.addEntry("PORT", "MMU_Tlb_Misses", "reconos_memif_mmu_0_MMU_Tlb_Misses")
-	instance.addEntry("PORT", "MMU_Clk", DEFAULT_CLK)
-	instance.addEntry("PORT", "MMU_Rst", "reconos_proc_control_0_PROC_Sys_Rst")
+	instance.addEntry("PORT", "SYS_Clk", DEFAULT_CLK)
+	instance.addEntry("PORT", "SYS_Rst", "reconos_proc_control_0_PROC_Sys_Rst")
 	return instance
 
 # HW_VER
@@ -198,19 +180,13 @@ def memory_controller(use_mmu):
 	instance.addEntry("PARAMETER", "INSTANCE", "reconos_memif_memory_controller_0")
 	instance.addEntry("PARAMETER", "HW_VER", "1.00.a")
 	if use_mmu:
-		instance.addEntry("PARAMETER", "C_USE_MMU_PORT", "TRUE")
-		instance.addEntry("BUS_INTERFACE", "CTRL_FIFO_Mmu", "reconos_memif_mmu_0_CTRL_FIFO_Mmu")
-		instance.addEntry("BUS_INTERFACE", "MEMIF_FIFO_Mmu", "reconos_memif_memory_controller_0_MEMIF_FIFO_Mmu")
-		instance.addEntry("BUS_INTERFACE", "CTRL_FIFO_Hwt", "reconos_memif_mmu_0_CTRL_FIFO_Out")
+		instance.addEntry("BUS_INTERFACE", "MEMIF_Hwt2Mem_In", "reconos_memif_mmu_0_MEMIF_Hwt2Mem_Out")
+		instance.addEntry("BUS_INTERFACE", "MEMIF_Mem2Hwt_In", "reconos_memif_mmu_0_MEMIF_Mem2Hwt_Out")
 	else:
-		instance.addEntry("PARAMETER", "C_USE_MMU_PORT", "FALSE")
-		instance.addEntry("BUS_INTERFACE", "CTRL_FIFO_Hwt", "reconos_memif_burst_converter_0_CTRL_FIFO_Out")
-	instance.addEntry("BUS_INTERFACE", "MEMIF_FIFO_Mem2Hwt", "reconos_memif_arbiter_0_MEMIF_FIFO_Out_Mem2Hwt")
-	instance.addEntry("BUS_INTERFACE", "MEMIF_FIFO_Hwt2Mem", "reconos_memif_arbiter_0_MEMIF_FIFO_Out_Hwt2Mem")
+		instance.addEntry("BUS_INTERFACE", "MEMIF_Hwt2Mem_In", "reconos_memif_arbiter_0_MEMIF_Hwt2Mem_Out")
+		instance.addEntry("BUS_INTERFACE", "MEMIF_Mem2Hwt_In", "reconos_memif_arbiter_0_MEMIF_Mem2Hwt_Out")
 	instance.addEntry("BUS_INTERFACE", "M_AXI", MEMORY_BUS)
 	instance.addEntry("PORT", "M_AXI_ACLK", DEFAULT_CLK)
-	instance.addEntry("PORT", "MEMCTRL_Clk", DEFAULT_CLK)
-	instance.addEntry("PORT", "MEMCTRL_Rst", "reconos_proc_control_0_PROC_Sys_Rst")
 	return instance
 
 
@@ -391,7 +367,6 @@ mhs.addPCore(proc_control(num_hwts, use_mmu))
 # add memory subsystem
 if use_mem:
 	mhs.addPCore(arbiter(num_hwts))
-	mhs.addPCore(burst_converter())
 	if use_mmu:
 		mhs.addPCore(mmu(arch))
 	mhs.addPCore(memory_controller(use_mmu))

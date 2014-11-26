@@ -35,19 +35,21 @@
 #define OSIF_INTC_DEV "/dev/reconos-osif-intc"
 
 unsigned int NUM_HWTS = 0;
+unsigned int NUM_CLKMGS = 1;
 
 
 /* == OSIF related functions ============================================ */
 
 #define OSIF_FIFO_BASE_ADDR       0x75A00000
+#define OSIF_FIFO_BASE_SIZE       0x10000
 #define OSIF_FIFO_MEM_SIZE        0x10
 #define OSIF_FIFO_RECV_REG        0
 #define OSIF_FIFO_SEND_REG        1
 #define OSIF_FIFO_RECV_STATUS_REG 2
 #define OSIF_FIFO_SEND_STATUS_REG 3
 
-#define OSIF_FIFO_RECV_STATUS_EMPTY_MASK 0x1 << 31
-#define OSIF_FIFO_SEND_STATUS_FULL_MASK  0x1 << 31
+#define OSIF_FIFO_RECV_STATUS_EMPTY_MASK 0x80000000
+#define OSIF_FIFO_SEND_STATUS_FULL_MASK  0x80000000
 
 #define OSIF_FIFO_RECV_STATUS_FILL_MASK 0xFFFF
 #define OSIF_FIFO_SEND_STATUS_REM_MASK  0xFFFF
@@ -61,7 +63,7 @@ struct osif_fifo_dev {
 	unsigned int fifo_rem;
 };
 
-int osif_intc_fd, proc_control_fd;
+int osif_intc_fd;
 struct osif_fifo_dev *osif_fifo_dev;
 
 int reconos_osif_open(int num) {
@@ -81,7 +83,7 @@ static inline unsigned int osif_fifo_hw2sw_fill(struct osif_fifo_dev *dev) {
 	if (reg & OSIF_FIFO_RECV_STATUS_EMPTY_MASK)
 		return 0;
 	else
-		return (reg & OSIF_FIFO_RECV_STATUS_EMPTY_MASK) + 1;
+		return (reg & OSIF_FIFO_RECV_STATUS_FILL_MASK) + 1;
 }
 
 static inline unsigned int osif_fifo_sw2hw_rem(struct osif_fifo_dev *dev) {
@@ -156,6 +158,8 @@ void reconos_osif_close(int fd) {
 
 /* == Proc control related functions ==================================== */
 
+int proc_control_fd;
+
 int reconos_proc_control_open() {
 	return proc_control_fd;
 }
@@ -226,6 +230,73 @@ void reconos_proc_control_cache_flush(int fd) {
 
 void reconos_proc_control_close(int fd) {
 	close(fd);
+}
+
+
+/* == Clock related functions =========================================== */
+
+#define CLOCK_BASE_ADDR    0x69E00000
+#define CLOCK_BASE_SIZE    0x10000
+#define CLOCK_MEM_SIZE     0x20
+
+#define CLOCK_REG_HIGH_BIT(t) (((t) & 0x0000003F) << 6)
+#define CLOCK_REG_LOW_BIT(t)  (((t) & 0x0000003F) << 0)
+#define CLOCK_REG_EDGE_BIT    0x00800000
+#define CLOCK_REG_COUNT_BIT   0x00400000
+
+struct clock_dev {
+	unsigned int index;
+
+	volatile uint32_t *ptr;
+};
+
+struct clock_dev *clock_dev;
+
+static inline void clock_write(struct clock_dev *dev, int clk, uint32_t reg) {
+	dev->ptr[clk] = reg;
+}
+
+int reconos_clock_open(int num) {
+	debug("[reconos-clock-%d] "
+	      "opening ...\n", num);
+
+	if (num < 0 || num >= NUM_CLKMGS)
+		return -1;
+	else
+		return num;
+}
+
+void reconos_clock_set_divider(int fd, int clk, int divd) {
+	struct clock_dev *dev = &clock_dev[fd];
+	uint32_t reg = 0;
+
+	debug("[reconos-clock-%d] "
+	      "writing divider %d of clock %d ...\n", fd, divd, clk);
+
+	if (divd < 1 || divd > 126) {
+		whine("[reconos-clock-%d] "
+		      "divider out of range %d\n", fd, divd);
+		return;
+	}
+
+	if (divd == 1) {
+		reg |= CLOCK_REG_EDGE_BIT;
+		reg |= CLOCK_REG_COUNT_BIT;
+		reg |= CLOCK_REG_LOW_BIT(1);
+
+	} else if (divd % 2 == 0) {
+		reg |= CLOCK_REG_HIGH_BIT(divd / 2) | CLOCK_REG_LOW_BIT(divd / 2);
+	} else {
+		reg |= CLOCK_REG_EDGE_BIT;
+		reg |= CLOCK_REG_HIGH_BIT(divd / 2) | CLOCK_REG_LOW_BIT(divd / 2 + 1);
+	}
+
+	clock_write(dev, clk, reg);
+}
+
+void reconos_clock_close(int fd) {
+	debug("[reconos-clock-%d] "
+	      "closing ...\n", fd);
 }
 
 
@@ -337,10 +408,12 @@ void reconos_drv_init() {
 		panic("[reconos-osif] "
 		      "failed to open /dev/mem\n");
 
-	mem = (char *)mmap(0, 0x10000, PROT_READ | PROT_WRITE, MAP_SHARED, fd, OSIF_FIFO_BASE_ADDR);
+	mem = (char *)mmap(0, OSIF_FIFO_BASE_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fd, OSIF_FIFO_BASE_ADDR);
 	if (mem == MAP_FAILED)
 		panic("[reconos-osif] "
 		      "failed to mmap osif memory\n");
+
+	close(fd);
 
 
 	// allocate and initialize osif devices
@@ -354,6 +427,32 @@ void reconos_drv_init() {
 		osif_fifo_dev[i].ptr = (uint32_t *)(mem + i * OSIF_FIFO_MEM_SIZE);
 		osif_fifo_dev[i].fifo_fill = 0;
 		osif_fifo_dev[i].fifo_rem = 0;
+	}
+
+
+	// create mapping for clock
+	fd = open("/dev/mem", O_RDWR | O_SYNC);
+	if (fd < 0)
+		panic("[reconos-clock] "
+		      "failed to open /dev/mem\n");
+
+	mem = (char *)mmap(0, CLOCK_BASE_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fd, CLOCK_BASE_ADDR);
+	if (mem == MAP_FAILED)
+		panic("[reconos-clock] "
+		      "failed to mmap clock memory\n");
+
+	close(fd);
+
+
+	// allocate and initialize clock devices
+	clock_dev = (struct clock_dev*)malloc(NUM_CLKMGS * sizeof(struct clock_dev));
+	if (!clock_dev)
+		panic("[reconos-clock] "
+		      "failed to allocate memory\n");
+
+	for (i = 0; i < NUM_CLKMGS; i++) {
+		clock_dev[i].index = i;
+		clock_dev[i].ptr = (uint32_t *)(mem + i * CLOCK_MEM_SIZE);
 	}
 }
 

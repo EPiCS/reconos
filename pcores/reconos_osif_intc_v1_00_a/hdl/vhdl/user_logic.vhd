@@ -54,20 +54,10 @@ entity user_logic is
 		IP2Bus_WrAck    : out std_logic;
 		IP2Bus_Error    : out std_logic
 	);
-
-	attribute MAX_FANOUT   : string;
-	attribute SIGIS        : string;
-
-	attribute SIGIS of Bus2IP_Clk      : signal is "Clk";
-	attribute SIGIS of Bus2IP_Resetn   : signal is "Rst";
-	attribute SIGIS of OSIF_INTC_Rst   : signal is "Rst";
-	attribute SIGIS of OSIF_INTC_in    : signal is "Intr_Level_High";
-	attribute SIGIS of OSIF_INTC_out   : signal is "Intr_Level_High";
-
 end entity user_logic;
 
 
-architecture implementation of user_logic is
+architecture imp of user_logic is
 	
 	-- padding to fill unused interrupts in interrupt_reg
 	signal pad   : std_logic_vector(C_SLV_DWIDTH * C_NUM_REG - C_NUM_INTERRUPTS - 1 downto 0);
@@ -141,4 +131,4 @@ begin
 		end loop;
 	end process bus_read_reg_proc;
 
-end implementation;
+end imp;

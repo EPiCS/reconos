@@ -117,22 +117,6 @@ entity reconos_proc_control is
 		S_AXI_BVALID         : out std_logic;
 		S_AXI_AWREADY        : out std_logic
 	);
-
-	attribute MAX_FANOUT   : string;
-	attribute SIGIS        : string;
-
-	attribute MAX_FANOUT of S_AXI_ACLK      : signal is "10000";
-	attribute MAX_FANOUT of S_AXI_ARESETN   : signal is "10000";
-	
-	attribute SIGIS of S_AXI_ACLK      : signal is "Clk";
-	attribute SIGIS of PROC_Clk        : signal is "Clk";
-	attribute SIGIS of S_AXI_ARESETN   : signal is "Rst";
-	attribute SIGIS of PROC_Rst        : signal is "Rst";
-	-- BEGIN GENERATE LOOP
-	attribute SIGIS of PROC_Hwt_Rst_#i#  : signal is "Rst";
-	-- END GENERATE LOOP
-	attribute SIGIS of PROC_Sys_Rst    : signal is "Rst";
-	attribute SIGIS of PROC_Pgf_Int    : signal is "Intr_Level_High";
 end entity reconos_proc_control;
 
 

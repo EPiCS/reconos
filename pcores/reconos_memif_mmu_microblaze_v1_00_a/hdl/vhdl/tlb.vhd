@@ -42,12 +42,6 @@ entity tlb is
 		TLB_Clk : in std_logic;
 		TLB_Rst : in std_logic
 	);
-	
-	attribute SIGIS   : string;
-
-	attribute SIGIS of TLB_Clk   : signal is "Clk";
-	attribute SIGIS of TLB_Rst   : signal is "Rst";
-
 end entity tlb;
 
 architecture implementation of tlb is

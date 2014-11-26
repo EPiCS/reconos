@@ -38,6 +38,12 @@ def generate_loop(filename, num_hwts):
 		else:
 			for i in range(num_hwts):
 				loopline = line.replace("#i#", str(i))
+				if i == num_hwts - 1:
+					loopline = loopline.replace("#c,#", "")
+					loopline = loopline.replace("#c;#", "")
+				else:
+					loopline = loopline.replace("#c,#", ",")
+					loopline = loopline.replace("#c;#", ";")
 				sys.stdout.write(loopline)
 
 		if "BEGIN GENERATE LOOP" in line:

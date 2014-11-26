@@ -12,273 +12,213 @@
 --   author:       Christoph Rüthing, University of Paderborn
 --   description:  The arbiter connects the different HWTs
 --                 to the memory system of ReconOS. It acts as an
---                 arbiter and controls the the memory access. For
---                 further details on how the memory system in ReconOS
---                 works take a look into the documentation (memory.txt)
+--                 arbiter and controls the the memory access.
 --
 -- ======================================================================
 
 
 library ieee;
 use ieee.std_logic_1164.all;
-use ieee.std_logic_arith.all;
-use ieee.std_logic_unsigned.all;
-use ieee.std_logic_misc.all;
+use ieee.numeric_std.all;
 
-library proc_common_v3_00_a;
-use proc_common_v3_00_a.proc_common_pkg.all;
+library reconos_v3_01_a;
+use reconos_v3_01_a.reconos_pkg.all;
 
 entity reconos_memif_arbiter is
+	--
+	-- Generic definitions
+	--
+	--   C_NUM_HWTS - number of hardware threads
+	--
+	--   C_MEMIF_DATA_WIDTH - width of the memif
+	--
 	generic (
-		C_NUM_HWTS           : integer := 1;
-		C_MEMIF_FIFO_WIDTH   : integer := 32;
-		C_CTRL_FIFO_WIDTH    : integer := 32;
-		
-		C_MEMIF_LENGTH_WIDTH : integer := 24
-	);
-	port (
-		-- Input ports from HWTs
-		-- ## BEGIN GENERATE LOOP ##
-		MEMIF_FIFO_In_Hwt2Mem_Data_#i#   : in  std_logic_vector(C_MEMIF_FIFO_WIDTH - 1 downto 0);
-		MEMIF_FIFO_In_Hwt2Mem_Fill_#i#   : in  std_logic_vector(15 downto 0);
-		MEMIF_FIFO_In_Hwt2Mem_Empty_#i#  : in  std_logic;
-		MEMIF_FIFO_In_Hwt2Mem_RE_#i#     : out std_logic;
+		C_NUM_HWTS : integer := 1;
 
-		MEMIF_FIFO_In_Mem2Hwt_Data_#i#   : out std_logic_vector(C_MEMIF_FIFO_WIDTH - 1 downto 0);
-		MEMIF_FIFO_In_Mem2Hwt_Rem_#i#    : in  std_logic_vector(15 downto 0);
-		MEMIF_FIFO_In_Mem2Hwt_Full_#i#   : in  std_logic;
-		MEMIF_FIFO_In_Mem2Hwt_WE_#i#     : out std_logic;
+		C_MEMIF_DATA_WIDTH : integer := 32
+	);
+
+	--
+	-- Port defintions
+	--
+	--   MEMIF_Hwt2Mem_#i#_In_/MEMIF_Mem2Hwt_#i#_In_ - fifo signal inputs
+	--
+	--   MEMIF_Hwt2Mem_Out_/MEMIF_Mem2Hwt_Out_ - fifo signal outputs
+	--   
+	--   SYS_Clk - system clock
+	--   SYS_Rst - system reset
+	--
+	port (
+		-- ## BEGIN GENERATE LOOP ##
+		MEMIF_Hwt2Mem_#i#_In_Data  : in  std_logic_vector(C_MEMIF_DATA_WIDTH - 1 downto 0);
+		MEMIF_Hwt2Mem_#i#_In_Empty : in  std_logic;
+		MEMIF_Hwt2Mem_#i#_In_RE    : out std_logic;
 		-- ## END GENERATE LOOP ##
 
+		-- ## BEGIN GENERATE LOOP ##
+		MEMIF_Mem2Hwt_#i#_In_Data  : out std_logic_vector(C_MEMIF_DATA_WIDTH - 1 downto 0);
+		MEMIF_Mem2Hwt_#i#_In_Full  : in  std_logic;
+		MEMIF_Mem2Hwt_#i#_In_WE    : out std_logic;
+		-- ## END GENERATE LOOP ##
 
-		-- Multiplexed output ports
-		MEMIF_FIFO_Out_Hwt2Mem_Data   : out std_logic_vector(C_MEMIF_FIFO_WIDTH - 1 downto 0);
-		MEMIF_FIFO_Out_Hwt2Mem_Fill   : out std_logic_vector(15 downto 0);
-		MEMIF_FIFO_Out_Hwt2Mem_Empty  : out std_logic;
-		MEMIF_FIFO_Out_Hwt2Mem_RE     : in  std_logic;
+		MEMIF_Hwt2Mem_Out_Data  : out std_logic_vector(C_MEMIF_DATA_WIDTH - 1 downto 0);
+		MEMIF_Hwt2Mem_Out_Empty : out std_logic;
+		MEMIF_Hwt2Mem_Out_RE    : in  std_logic;
 
-		MEMIF_FIFO_Out_Mem2Hwt_Data   : in  std_logic_vector(C_MEMIF_FIFO_WIDTH - 1 downto 0);
-		MEMIF_FIFO_Out_Mem2Hwt_Rem    : out std_logic_vector(15 downto 0);
-		MEMIF_FIFO_Out_Mem2Hwt_Full   : out std_logic;
-		MEMIF_FIFO_Out_Mem2Hwt_WE     : in  std_logic;
-		
-		-- Control FIFO for memory subsystem
-		-- REMARK: This is not a master interface of a FIFO.
-		--         We emulate the FIFO directly to avoid delays.
-		CTRL_FIFO_Out_Data    : out std_logic_vector(C_CTRL_FIFO_WIDTH - 1 downto 0);
-		CTRL_FIFO_Out_Fill    : out std_logic_vector(15 downto 0);
-		CTRL_FIFO_Out_Empty   : out std_logic;
-		CTRL_FIFO_Out_RE      : in  std_logic;
+		MEMIF_Mem2Hwt_Out_Data  : in  std_logic_vector(C_MEMIF_DATA_WIDTH - 1 downto 0);
+		MEMIF_Mem2Hwt_Out_Full  : out std_logic;
+		MEMIF_Mem2Hwt_Out_WE    : in  std_logic;
 
-		-- Transaction control ports
-		TCTRL_Clk : in std_logic;
-		TCTRL_Rst : in std_logic
+		SYS_Clk : in std_logic;
+		SYS_Rst : in std_logic
 	);
-
-	attribute SIGIS   : string;
-
-	attribute SIGIS of TCTRL_Clk   : signal is "Clk";
-	attribute SIGIS of TCTRL_Rst   : signal is "Rst";
-
 end entity reconos_memif_arbiter;
 
-architecture implementation of reconos_memif_arbiter is
 
-	-- Definition of MEMIF datatypes for easier handling of the FIFOs
-	type memif_fifo_t is record
-		hw2mem_data   : std_logic_vector(C_MEMIF_FIFO_WIDTH - 1 downto 0);
-		hw2mem_fill   : std_logic_vector(15 downto 0);
-		hw2mem_empty  : std_logic;
-		hw2mem_re     : std_logic;
-		mem2hw_data   : std_logic_vector(C_MEMIF_FIFO_WIDTH - 1 downto 0);
-		mem2hw_rem    : std_logic_vector(15 downto 0);
-		mem2hw_full   : std_logic;
-		mem2hw_we     : std_logic;
-	end record;
-	
-	-- Signals to control HWT-MEMIF from this control unit
-	signal hw2mem_data   : std_logic_vector(C_MEMIF_FIFO_WIDTH - 1 downto 0);
-	signal hw2mem_fill   : std_logic_vector(15 downto 0);
-	signal hw2mem_empty  : std_logic;
-	signal hw2mem_re     : std_logic;
-	signal mem2hw_data   : std_logic_vector(C_MEMIF_FIFO_WIDTH - 1 downto 0);
-	signal mem2hw_rem    : std_logic_vector(15 downto 0);
-	signal mem2hw_full   : std_logic;
-	signal mem2hw_we     : std_logic;
-	
-	-- Array which contains all connected MEMIFs for easier handling
-	type memif_t is array(0 to C_NUM_HWTS - 1) of memif_fifo_t;
-	signal memif : memif_t;
-	
-	signal memif_select  : integer range 0 to C_NUM_HWTS - 1;
-	signal memif_empty   : std_logic_vector(0 to C_NUM_HWTS - 1);
-	
-	-- Transaction control signals
-	type STATE_TYPE is (WAIT_REQUEST, READ_CMD, READ_ADDR, SERV_REQUEST);
-	signal state : STATE_TYPE;
-	
-	signal ctrl_cmd     : std_logic_vector(C_MEMIF_FIFO_WIDTH - C_MEMIF_LENGTH_WIDTH - 1 downto 0);
-	signal ctrl_length  : std_logic_vector(C_MEMIF_LENGTH_WIDTH - 1 downto 0);
-	signal ctrl_addr    : std_logic_vector(C_MEMIF_FIFO_WIDTH - 1 downto 0);
+architecture imp of reconos_memif_arbiter is
+	--
+	-- Internal state machine
+	--
+	--   state_type - vhdl type of the states
+	--   state      - instantiation of the state
+	--
+	type state_type is (STATE_WAIT,STATE_ARBITRATE,
+	                    STATE_CMD,STATE_ADDR,STATE_PROCESS);
+	signal state : state_type := STATE_WAIT;
 
-	signal tctrl_bytes_rem  : std_logic_vector(C_MEMIF_LENGTH_WIDTH - 1 downto 0);
+	--
+	-- Internal signals for round robin arbiter
+	--
+	--   req  - masked request vector
+	--   msk  - mask to disable previous grants
+	--   msb  - most significant bit of req
+	--   grnt - grant vector to multiplex signals
+	--   orr  - override for full and empty signals
+	--
+	signal req  : std_logic_vector(C_NUM_HWTS - 1 downto 0) := (others => '0');
+	signal msk  : std_logic_vector(C_NUM_HWTS - 1 downto 0) := (others => '1');
+	signal msb  : std_logic_vector(C_NUM_HWTS - 1 downto 0) := (others => '0');
+	signal grnt : std_logic_vector(C_NUM_HWTS - 1 downto 0) := (others => '0');
+	signal orr  : std_logic := '1';
 
+	--
+	-- Internal signals
+	--
+	--   mem_count - counter of transferred bytes
+	--
+	signal mem_count : unsigned(C_MEMIF_LENGTH_WIDTH - 1 downto 0) := (others => '0');
+
+	--
+	-- Signals used for usage of multiplexed signals
+	--
+	--   hwt2mem_/mem2hwt_ - multiplexed fifo signals
+	--
+	signal hwt2mem_data  : std_logic_vector(C_MEMIF_DATA_WIDTH -1 downto 0);
+	signal hwt2mem_empty : std_logic;
+	signal mem2hwt_full  : std_logic;
 begin
 
-	-- This process multiplexes the MEMIFs to the right output
-	-- dependend on the current state
-	mux_proc : process(state,memif,memif_select,
-	                   hw2mem_re,hw2mem_data,
-	                   mem2hw_we,mem2hw_data,
-	                   CTRL_FIFO_Out_RE,
-	                   -- sensitivity list for MEMIF-FIFOs
-	                   -- ## BEGIN GENERATE LOOP ##
-	                   MEMIF_FIFO_In_Hwt2Mem_Data_#i#,MEMIF_FIFO_In_Hwt2Mem_Fill_#i#,MEMIF_FIFO_In_Hwt2Mem_Empty_#i#,
-	                   MEMIF_FIFO_In_Mem2Hwt_Rem_#i#,MEMIF_FIFO_In_Mem2Hwt_Full_#i#,
-	                   -- ## END GENERATE LOOP ##
-	                   MEMIF_FIFO_Out_Hwt2Mem_RE, MEMIF_FIFO_Out_Mem2Hwt_Data, MEMIF_FIFO_Out_Mem2Hwt_WE
-	                   ) is
+	-- == Assignment of input signals =====================================
+
+	-- ## BEGIN GENERATE LOOP ##
+	req(#i#) <= not MEMIF_Hwt2Mem_#i#_In_Empty and msk(#i#);
+	-- ## END GENERATE LOOP ##
+
+	msb <= req and std_logic_vector(unsigned(not(req)) + 1);
+
+
+	-- == Process definitions =============================================
+
+	--
+	-- Arbitrate fifos based on requests and snoop
+	--
+	--   A state machine to implement a round robin arbiter. The arbiter
+	--   snoops on the fifos to figure out the end of a transaction.
+	--
+	arb : process(SYS_Clk,SYS_Rst) is
+		variable i : integer range 1 to C_NUM_HWTS;
 	begin
-		-- Assign MEMIF_FIFOs to array
-		-- this could be done outside this process but because
-		-- of the behaviour of VHDL-record we can not drive different
-		-- components of a record in different processes
-		-- ## BEGIN GENERATE LOOP ##
-		memif(#i#).hw2mem_data        <= MEMIF_FIFO_In_Hwt2Mem_Data_#i#;
-		memif(#i#).hw2mem_fill        <= MEMIF_FIFO_In_Hwt2Mem_Fill_#i#;
-		memif(#i#).hw2mem_empty       <= MEMIF_FIFO_In_Hwt2Mem_Empty_#i#;
-		MEMIF_FIFO_In_Hwt2Mem_RE_#i#  <= memif(#i#).hw2mem_re;
+		if SYS_Rst = '1' then
+			msk <= (others => '1');
+			grnt <= (others => '0');
 
-		MEMIF_FIFO_In_Mem2Hwt_Data_#i#  <= memif(#i#).mem2hw_data;
-		memif(#i#).mem2hw_rem           <= MEMIF_FIFO_In_Mem2Hwt_Rem_#i#;
-		memif(#i#).mem2hw_full          <= MEMIF_FIFO_In_Mem2Hwt_Full_#i#;
-		MEMIF_FIFO_In_Mem2Hwt_WE_#i#    <= memif(#i#).mem2hw_we;
-			
-		memif_empty(#i#) <= not MEMIF_FIFO_In_Hwt2Mem_Empty_#i#;
-		-- ## END GENERATE LOOP ##
-
-			
-		-- default values for not connected ports
-		-- later assignments will override this defaults
-		for i in 0 to C_NUM_HWTS - 1 loop
-			memif(i).hw2mem_re <= '0';
-			memif(i).mem2hw_we <= '0';
-			
-			memif(i).mem2hw_data <= (others => '0');
-		end loop;
-		
-		MEMIF_FIFO_Out_Hwt2Mem_Empty <= '1';
-		MEMIF_FIFO_Out_Hwt2Mem_Fill  <= (others => '0');
-		MEMIF_FIFO_Out_Hwt2Mem_Data  <= (others => '0');
-		
-		MEMIF_FIFO_Out_Mem2Hwt_Full  <= '1';
-		MEMIF_FIFO_Out_Mem2Hwt_Rem   <= (others => '0');
-		
-		CTRL_FIFO_Out_Empty <= '1';
-		CTRL_FIFO_Out_Fill  <= (others => '0');
-		CTRL_FIFO_Out_Data  <= (others => '0');
-		
-		hw2mem_data <= (others => '0');
-
-
-		case state is
-			when WAIT_REQUEST  =>
-				-- Connect MEMIF-FIFO to this control unit
-				hw2mem_data                     <= memif(memif_select).hw2mem_data;
-				hw2mem_fill                     <= memif(memif_select).hw2mem_fill;
-				hw2mem_empty                    <= memif(memif_select).hw2mem_empty; 
-				memif(memif_select).hw2mem_re   <= hw2mem_re;
-
-				memif(memif_select).mem2hw_data <= mem2hw_data;
-				mem2hw_rem                      <= memif(memif_select).mem2hw_rem;
-				mem2hw_full                     <= memif(memif_select).mem2hw_full;
-				memif(memif_select).mem2hw_we   <= mem2hw_we;
-
-			when READ_CMD | READ_ADDR =>
-				-- Connecting hw2mem that the memory subsystem can read the command
-				CTRL_FIFO_Out_Data              <= memif(memif_select).hw2mem_data;
-				CTRL_FIFO_Out_Fill              <= memif(memif_select).hw2mem_fill;
-				CTRL_FIFO_Out_Empty             <= memif(memif_select).hw2mem_empty;
-				memif(memif_select).hw2mem_re   <= CTRL_FIFO_Out_RE;
-				
-				hw2mem_data <= memif(memif_select).hw2mem_data;
-
-			when others =>
-				-- Connecting selected MEMIF-FIFO to output
-				MEMIF_FIFO_Out_Hwt2Mem_Data      <= memif(memif_select).hw2mem_data;
-				MEMIF_FIFO_Out_Hwt2Mem_Fill      <= memif(memif_select).hw2mem_fill;
-				MEMIF_FIFO_Out_Hwt2Mem_Empty     <= memif(memif_select).hw2mem_empty; 
-				memif(memif_select).hw2mem_re    <= MEMIF_FIFO_Out_Hwt2Mem_RE;
-
-				memif(memif_select).mem2hw_data  <= MEMIF_FIFO_Out_Mem2Hwt_Data;
-				MEMIF_FIFO_Out_Mem2Hwt_Rem       <= memif(memif_select).mem2hw_rem;
-				MEMIF_FIFO_Out_Mem2Hwt_Full      <= memif(memif_select).mem2hw_full;
-				memif(memif_select).mem2hw_we    <= MEMIF_FIFO_Out_Mem2Hwt_WE;
-			end case;
-	end process mux_proc;
-
-
-	schedule_proc : process(TCTRL_Clk,TCTRL_Rst) is
-		variable pos : integer;
-	begin
-		if TCTRL_Rst = '1' then
-			state <= WAIT_REQUEST;
-
-			memif_select <= 0;
-			
-			hw2mem_re   <= '0';
-			mem2hw_we   <= '0';
-			mem2hw_data <= (others => '0');
-		elsif rising_edge(TCTRL_Clk) then
+			state <= STATE_WAIT;
+		elsif rising_edge(SYS_Clk) then
 			case state is
-				when WAIT_REQUEST =>
-					hw2mem_re <= '0';
-					mem2hw_we <= '0';
-
-					-- a request is present, if a FIFO is not empty
-					if or_reduce(memif_empty) = '1' then
-						-- find out the next request to server with a simple schedule
-						-- start to look at FIFOs after the last position and find the first
-						-- one which is not empty				
-						for i in 1 to C_NUM_HWTS loop
-							pos := (memif_select + i) mod C_NUM_HWTS;
-
-							if memif_empty(pos) = '1' then
-								memif_select <= pos;
-								exit;
-							end if;
-						end loop;
-
-						state <= READ_CMD;
+				when STATE_WAIT =>
+					if req = (req'Range => '0') then
+						msk <= (others => '1');
+					else
+						state <= STATE_ARBITRATE;
 					end if;
 
-				when READ_CMD =>
-					if CTRL_FIFO_Out_RE = '1' then
-						ctrl_cmd <= hw2mem_data(31 downto C_MEMIF_LENGTH_WIDTH);
-						ctrl_length <= hw2mem_data(C_MEMIF_LENGTH_WIDTH - 1 downto 0);
+				when STATE_ARBITRATE =>
+					grnt <= msb;
+					msk <= msk and (not msb);
 
-						state <= READ_ADDR;
+					state <= STATE_CMD;
+
+				when STATE_CMD =>
+					if MEMIF_Hwt2Mem_Out_RE = '1' and hwt2mem_empty = '0' then
+						mem_count <= unsigned(hwt2mem_data(C_MEMIF_LENGTH_RANGE));
+
+						state <= STATE_ADDR;
 					end if;
 
-				when READ_ADDR =>
-					if CTRL_FIFO_Out_RE = '1' then
-						ctrl_addr <= hw2mem_data;
-
-						tctrl_bytes_rem <= ctrl_length(C_MEMIF_LENGTH_WIDTH - 1 downto 2) & "00";
-						state <= SERV_REQUEST;
+				when STATE_ADDR =>
+					if MEMIF_Hwt2Mem_Out_RE = '1' and hwt2mem_empty = '0' then
+						state <= STATE_PROCESS;
 					end if;
 
-				when SERV_REQUEST =>
-					-- count number of written/read words to find end of transaction
-					if MEMIF_FIFO_Out_Hwt2Mem_RE = '1' or MEMIF_FIFO_Out_Mem2Hwt_WE = '1' then
-						tctrl_bytes_rem <= tctrl_bytes_rem - 4;
+				when STATE_PROCESS =>
+					if    (MEMIF_Hwt2Mem_Out_RE = '1' and hwt2mem_empty = '0')
+					   or (MEMIF_Mem2Hwt_Out_WE = '1' and mem2hwt_full = '0') then
+						mem_count <= mem_count - 4;
 
-						if or_reduce(tctrl_bytes_rem - 4) = '0' then
-							state <= WAIT_REQUEST;
+						if mem_count - 4 = 0 then
+							state <= STATE_WAIT;
+
+							grnt <= (others => '0');
 						end if;
 					end if;
+
+				when others =>
 			end case;
 		end if;
-	end process schedule_proc;
+	end process arb;
 
-end architecture implementation;
+
+	-- == Multiplexing signals ============================================
+
+	orr <= '1' when state = STATE_WAIT else
+	       '1' when state = STATE_ARBITRATE else
+	       '0';
+
+	hwt2mem_data <=
+	  -- ## BEGIN GENERATE LOOP ##
+	  (MEMIF_Hwt2Mem_#i#_In_Data and (MEMIF_Hwt2Mem_#i#_In_Data'Range => grnt(#i#))) or
+	  -- ## END GENERATE LOOP ##
+	  (C_MEMIF_DATA_WIDTH - 1 downto 0 => '0');
+
+	hwt2mem_empty <=
+	  -- ## BEGIN GENERATE LOOP ##
+	  (MEMIF_Hwt2Mem_#i#_In_Empty and grnt(#i#)) or
+	  -- ## END GENERATE LOOP ##
+	  orr;
+
+	mem2hwt_full <=
+	  -- ## BEGIN GENERATE LOOP ##
+	  (MEMIF_Mem2Hwt_#i#_In_Full and grnt(#i#)) or
+	  -- ## END GENERATE LOOP ##
+	  orr;
+
+	MEMIF_Hwt2Mem_Out_Data  <= hwt2mem_data;
+	MEMIF_Hwt2Mem_Out_Empty <= hwt2mem_empty;
+	MEMIF_Mem2Hwt_Out_Full  <=  mem2hwt_full;
+	-- ## BEGIN GENERATE LOOP ##
+	MEMIF_Hwt2Mem_#i#_In_RE   <= MEMIF_Hwt2Mem_Out_RE and grnt(#i#);
+	MEMIF_Mem2Hwt_#i#_In_Data <= MEMIF_Mem2Hwt_Out_Data;
+	MEMIF_Mem2Hwt_#i#_In_WE   <= MEMIF_Mem2Hwt_Out_WE and grnt(#i#);
+	-- ## END GENERATE LOOP ##
+
+end architecture imp;

@@ -50,6 +50,13 @@ extern void reconos_proc_control_cache_flush(int fd);
 extern void reconos_proc_control_close(int fd);
 
 
+/* == Proc control related functions ==================================== */
+
+extern int reconos_clock_open(int num);
+extern void reconos_clock_set_divider(int fd, int clk, int divd);
+extern void reconos_clock_close(int fd);
+
+
 /* == Reconfiguration related functions ================================= */
 
 extern int load_partial_bitstream(uint32_t *bitstream, unsigned int bitstream_length);
