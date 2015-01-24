@@ -315,6 +315,20 @@ architecture behavioural of fifo32_arbiter_sh_rel is
     end if;
   end function;
     
+  -- Returns the minimum of two stripes of a std_logic_vector. 
+  -- Optionally an offset is added to that minimum.
+  function my_minimum( 	v: std_logic_vector; 
+						stripe_length: integer;
+						stripe_a: integer; 
+						stripe_b: integer;
+						offset  : integer := 0)
+	return std_logic_vector is
+  begin
+	return std_logic_vector(minimum(
+            unsigned(v((stripe_length * (1 + stripe_a))-1 downto 16 * stripe_a)),
+            unsigned(v((stripe_length * (1 + stripe_b))-1 downto 16 * stripe_b)))
+            + offset);
+  end function;
   
 begin  -- of architecture -------------------------------------------------------
 
@@ -572,46 +586,36 @@ begin  -- of architecture ------------------------------------------------------
       ------------------
       when READ_MODE_LENGTH =>
         IN_FIFO32_S_Rd(1 downto 0) <= "11";
+		
       when READ_ADDRESS =>
         IN_FIFO32_S_Rd(1 downto 0) <= "11";
+		
       when WRITE_MODE_LENGTH =>
-        -- fill_level handling: +2 for unwritten mode_length and address word        
-        INT_OUT_FIFO32_S_Fill <= std_logic_vector(minimum(
-            unsigned(IN_FIFO32_S_Fill((16 * (1 + 0))-1 downto 16 * 0)),
-            unsigned(IN_FIFO32_S_Fill((16 * (1 + 1))-1 downto 16 * 1)))
-            +2);
-         INT_OUT_FIFO32_S_Data <= mode_length_reg(0);
+        -- fill_level handling: +2 for unwritten mode_length and address word
+		INT_OUT_FIFO32_S_Fill <= my_minimum(IN_FIFO32_S_Fill, 16,0,1, offset=> 2);
+        INT_OUT_FIFO32_S_Data <= mode_length_reg(0);
 
       when COMP_REQ =>
         
       when WRITE_ADDRESS =>
         -- fill_level handling: +1 for unwritten address word
-          INT_OUT_FIFO32_S_Fill <= std_logic_vector(minimum(
-            unsigned(IN_FIFO32_S_Fill((16 * (1 + 0))-1 downto 16 * 0)),
-            unsigned(IN_FIFO32_S_Fill((16 * (1 + 1))-1 downto 16 * 1)))
-            +1);
+		INT_OUT_FIFO32_S_Fill <= my_minimum(IN_FIFO32_S_Fill, 16,0,1, offset=> 1);
         INT_OUT_FIFO32_S_Data <= address_reg(0);
           
       when DATA_READ =>
         -- synchronize mem port with thread ports
         IN_FIFO32_M_Data((32 * (1 + 0))-1 downto 32 * 0) <= OUT_FIFO32_M_Data;
         IN_FIFO32_M_Data((32 * (1 + 1))-1 downto 32 * 1) <= OUT_FIFO32_M_Data;
-        IN_FIFO32_M_Wr(0)                                <= OUT_FIFO32_M_Wr;
-        IN_FIFO32_M_Wr(1)                                <= OUT_FIFO32_M_Wr;
+        IN_FIFO32_M_Wr(1 downto 0)                       <= (others => OUT_FIFO32_M_Wr);
 
         -- fill_level handling
-        INT_OUT_FIFO32_M_Rem <= std_logic_vector(minimum(
-            unsigned(IN_FIFO32_M_Rem((16 * (1 + 0))-1 downto 16 * 0)),
-            unsigned(IN_FIFO32_M_Rem((16 * (1 + 1))-1 downto 16 * 1))));
-
+		INT_OUT_FIFO32_M_Rem <= my_minimum(IN_FIFO32_M_Rem, 16, 0, 1);
         
       when DATA_WRITE =>
         IN_FIFO32_S_Rd(0)     <= OUT_FIFO32_S_Rd;
         IN_FIFO32_S_Rd(1)     <= OUT_FIFO32_S_Rd;
         INT_OUT_FIFO32_S_DATA <= IN_FIFO32_S_Data(31 downto 0);
-        INT_OUT_FIFO32_S_Fill <= std_logic_vector(minimum(
-          unsigned(IN_FIFO32_S_Fill((16 * (1 + 0))-1 downto 16 * 0)),
-          unsigned(IN_FIFO32_S_Fill((16 * (1 + 1))-1 downto 16 * 1))));
+        INT_OUT_FIFO32_S_Fill <= my_minimum(IN_FIFO32_S_Fill, 16,0,1);
                
       -----------------
       -- Error handling
@@ -664,9 +668,7 @@ begin  -- of architecture ------------------------------------------------------
         IN_FIFO32_S_Rd(0)     <= OUT_FIFO32_S_Rd;
         IN_FIFO32_S_Rd(1)     <= OUT_FIFO32_S_Rd;
         INT_OUT_FIFO32_S_DATA <= IN_FIFO32_S_Data(31 downto 0);
-        INT_OUT_FIFO32_S_Fill <= std_logic_vector(minimum(
-          unsigned(IN_FIFO32_S_Fill((16 * (1 + 0))-1 downto 16 * 0)),
-          unsigned(IN_FIFO32_S_Fill((16 * (1 + 1))-1 downto 16 * 1))));
+		INT_OUT_FIFO32_S_Fill <= my_minimum(IN_FIFO32_S_Fill, 16,0,1);
         
       when REPORT_ERROR =>
         
