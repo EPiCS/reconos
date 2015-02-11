@@ -364,7 +364,9 @@ void shadow_init(shadowedthread_t *sh) {
 	if (error) {
 		perror("sem_init failed!");
 	}
+
 	sh->sh_status = TS_INACTIVE;
+
 	fifo_init(&(sh->func_calls), 1, sizeof(func_call_t));
 	sh->error_handler = shadow_error_abort;
 
@@ -891,6 +893,11 @@ void shadow_thread_create(shadowedthread_t * sh) // Init data passed to worker t
 	TS_DEBUG("Activating Threads \n");
 	shadow_set_threads(sh);
 	//shadow_dump(sh);
+
+	//
+	// Schedule this thread for the first time
+	//
+	shadow_schedule(sh,SCHED_FLAG_NONE);
 
 	ts_unlock();
 }

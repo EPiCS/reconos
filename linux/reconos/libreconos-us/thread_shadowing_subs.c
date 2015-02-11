@@ -35,7 +35,7 @@ extern shadowedthread_t *shadow_list_head;
 //
 // Debugging
 //
-//#define DEBUG 1
+#define DEBUG 1
 
 #ifdef DEBUG
     #define SUBS_DEBUG(message) printf("SUBS: " message)
@@ -78,8 +78,8 @@ extern shadowedthread_t *shadow_list_head;
 	}\
     if( is_shadowed ){ \
     	func_call_new(&func_call_tuo, __FUNCTION__);\
-    	t_start = gettime();\
-    	printf("Thread %lu called function %s at %ld s %ld us\n", (unsigned long)this, __FUNCTION__, t_start.tv_sec, t_start.tv_usec); \
+    	/*t_start = gettime();*/\
+    	/*printf("Thread %lu called function %s at %ld s %ld us\n", (unsigned long)this, __FUNCTION__, t_start.tv_sec, t_start.tv_usec);*/ \
     	/* func_call_tuo is not initialized, because we get a valid one via shadow_func_call_pop. */\
     }\
 
@@ -96,11 +96,12 @@ extern shadowedthread_t *shadow_list_head;
 //
 #define SHADOW_PROLOGUE \
     if( is_shadowed && !is_leading ) { \
+    		SUBS_DEBUG2("Thread %8lu %s() popping from fifo: \n", this, __FUNCTION__); \
     		t_start = gettime();\
     		shadow_func_call_pop(sh, &func_call_sh);\
     		t_stop = gettime();\
     		timerdiff(&t_stop, &t_start, &t_duration);\
-    		SUBS_DEBUG2("Thread %8lu %s() popping from fifo: ", this, __FUNCTION__); \
+    		SUBS_DEBUG2("Thread %8lu %s() popped from fifo: \n", this, __FUNCTION__); \
     		/*func_call_dump(&func_call_sh)*/;\
     		timing_t diff = func_call_timediff_us(&func_call_sh, &func_call_tuo );\
     		printf("Shadow %lu of thread %lu Latency of function %s : %ld s %ld us, waited for func_call_pop: %ld s %ld us\n", (unsigned long)this, sh->threads[0] ,__FUNCTION__, diff.tv_sec, diff.tv_usec, t_duration.tv_sec, t_duration.tv_usec); \
