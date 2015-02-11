@@ -569,6 +569,42 @@ begin  -- of architecture ------------------------------------------------------
   is
 
   begin
+      -- for ILA debug
+      ila_signals <= (others => '0');
+      case state is
+	      when WAIT_THREADS       => ila_signals(3 downto 0) <= "0000"; --0
+	      when READ_MODE_LENGTH   => ila_signals(3 downto 0) <= "0001"; --1
+	      when READ_ADDRESS       => ila_signals(3 downto 0) <= "0010"; --2
+	      when WRITE_MODE_LENGTH  => ila_signals(3 downto 0) <= "0011"; --3
+	      when COMP_REQ           => ila_signals(3 downto 0) <= "0100"; --4
+	      when WRITE_ADDRESS      => ila_signals(3 downto 0) <= "0101"; --5
+	      when DATA_READ          => ila_signals(3 downto 0) <= "0110"; --6
+	      when DATA_WRITE         => ila_signals(3 downto 0) <= "0111"; --7
+	      when DELETE_REQUEST_TUO => ila_signals(3 downto 0) <= "1000"; --8
+	      when DELETE_REQUEST_ST  => ila_signals(3 downto 0) <= "1001"; --9
+	      when COMPLETE_WRITE     => ila_signals(3 downto 0) <= "1010"; --A
+	      when REPORT_ERROR       => ila_signals(3 downto 0) <= "1011"; --B
+	      when WAIT_ERROR_ACK     => ila_signals(3 downto 0) <= "1100"; --C
+        when others      => null;
+      end case;
+      --ila_signals (15 downto 4)
+      ila_signals (7 downto 4) <= IN_FIFO32_S_Fill(3 downto 0); -- lower 4 bits of port A
+      ila_signals (11 downto 8) <= IN_FIFO32_S_Fill(19 downto 16); -- lower 4 bits of Port B
+      ila_signals(13 downto 12) <= IN_FIFO32_S_Rd(1 downto 0); -- read signal of ports A and B
+      --ila_signals (15 dowto 12) <= 
+      
+      
+      ila_signals(FIFO32_PORTS-1+16 downto 16) <= requests;
+      ila_signals(32 downto FIFO32_PORTS+16)   <= (others => '0');
+
+      ila_signals(64 downto 33) <= INT_OUT_FIFO32_S_Data;
+      ila_signals(80 downto 65) <= INT_OUT_FIFO32_S_Fill;
+      ila_signals(81)           <= OUT_FIFO32_S_Rd;
+
+      ila_signals(113 downto 82)  <= OUT_FIFO32_M_Data;
+      ila_signals(129 downto 114) <= INT_OUT_FIFO32_M_Rem;
+      ila_signals(130)            <= OUT_FIFO32_M_Wr;
+  
     -- defaults
     IN_FIFO32_S_Rd        <= (others => '0');
     IN_FIFO32_M_Wr        <= (others => '0');

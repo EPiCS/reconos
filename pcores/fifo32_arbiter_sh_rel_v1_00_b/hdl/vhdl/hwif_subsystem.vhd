@@ -63,22 +63,70 @@ end entity hwif_subsystem;
 
 architecture structural of hwif_subsystem is
   -----------------------------------------------------------------------------
+  -- Types
+  -----------------------------------------------------------------------------
+  type positive_vector is array(natural range<>) of positive;
+
+  -----------------------------------------------------------------------------
+  -- Functions
+  -----------------------------------------------------------------------------
+  function log2_ceil (
+    constant x : natural)
+    return natural is
+    variable e : integer := 1;
+  begin  -- function log2_ceil
+    while 2**e < x loop
+      e := e+1;
+    end loop;
+    return e;
+  end function log2_ceil;
+
+  -- Function for building an address range array.
+  -- Any number of register counts can be given, all counts will
+  -- be transformed into consecutive address ranges
+  -- of a length, that is the next bigger power of two.
+  function return_array (regs : positive_vector)
+    return SLV32_ARRAY_TYPE
+  is
+    variable ret_array  : SLV32_ARRAY_TYPE(0 to regs'length*2-1);
+    variable offset     : natural := 0;
+    variable size       : natural := 0;
+    variable last_index : natural := 0;
+  begin
+    for i in regs'range loop
+      size             := 2**log2_ceil(regs(i));
+      ret_array(2*i)   := std_logic_vector(to_unsigned(offset*4, 32));
+      ret_array(2*i+1) := std_logic_vector(to_unsigned((offset+size)*4-1, 32));
+      offset           := offset + size;
+      last_index       := i;
+    end loop;
+
+    return ret_array;
+  end function;
+  
+  -----------------------------------------------------------------------------
   -- Constants
   -----------------------------------------------------------------------------
-  constant C_ADDR_RANGE_ARRAY : SLV32_ARRAY_TYPE :=
-    (X"00000000", X"0000001F",          -- Identification Module, 5 Register
-     X"00000020", X"0000005F",          -- Performance monitor, 3 + 8 Register
-     X"00000060", X"000000DF",          -- Read  checksum generator, 5 + 16
-     X"000000E0", X"0000015F");         -- Write checksum generator, 5 + 16
-  
+  constant C_ADDR_RANGE_ARRAY : SLV32_ARRAY_TYPE := return_array((
+    5,  -- Identification Module, 5 Register
+    3+C_Perf_Counters_Num, -- Performance monitor, 3 + 8 Register
+    5+C_CHECKSUM_NUM_CHANNELS, -- Read  checksum generator, 5 + 32
+    5+C_CHECKSUM_NUM_CHANNELS  -- Write checksum generator, 5 + 32
+   ));
+                                                    
+    --(X"00000000", X"0000001F",          -- Identification Module, 5 Register
+    -- X"00000020", X"0000005F",          -- Performance monitor, 3 + 8 Register
+    -- X"00000060", X"000000DF",          -- Read  checksum generator, 5 + 32
+    -- X"000000E0", X"0000015F");         -- Write checksum generator, 5 + 32
+
   -----------------------------------------------------------------------------
   -- connections between the address decoder and the sub-modules
   -----------------------------------------------------------------------------
 
-  signal DEC2SUB: master2slave_array_t(0 to (C_ADDR_RANGE_ARRAY'length/2)-1);
-  signal SUB2DEC: slave2master_array_t(0 to (C_ADDR_RANGE_ARRAY'length/2)-1);
+  signal DEC2SUB : master2slave_array_t(0 to (C_ADDR_RANGE_ARRAY'length/2)-1);
+  signal SUB2DEC : slave2master_array_t(0 to (C_ADDR_RANGE_ARRAY'length/2)-1);
   
- begin  -- architecture structural
+begin  -- architecture structural
 
   assert C_Perf_Counters_Num = 8
     report "Changed Number of Performance Counters. Update Address Mapping!" severity failure;
@@ -102,7 +150,7 @@ architecture structural of hwif_subsystem is
 
       -- sub-module interfaces
       DEC2SUB => DEC2SUB,
-      SUB2DEC => SUB2DEC 
+      SUB2DEC => SUB2DEC
       );
 
 -- ID_register_0
@@ -192,7 +240,7 @@ architecture structural of hwif_subsystem is
       clk => clk,
       rst => rst
       );
-  
+
 -- GPIO for write ignore
 
 end architecture structural;
