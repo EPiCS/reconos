@@ -145,7 +145,7 @@ static void *reconos_control_thread_entry(void *arg)
 			/* Note: the lower 24 bits of ret are ignored by the HW. */
 			fsl_write(reconos_proc.proc_control_fsl_a, ret);
 		}
-		if (cmd == C_RETURN_EROR)
+		if (cmd == C_RETURN_SELFTEST)
 			whine("proc_control selftest part 2 success\n");
 		if (cmd == C_RETURN_ERROR){
 		  // What do we actually do here?
@@ -153,7 +153,7 @@ static void *reconos_control_thread_entry(void *arg)
 		  err_type =  fsl_read(reconos_proc.proc_control_fsl_a);
 		  err_addr =  fsl_read(reconos_proc.proc_control_fsl_a);
 		 
-		  sh_mem_error_handler(uint8_t hwt, uint32_t err_type, uint32_t err_addr);		  
+		  sh_mem_error_handler(0xFF, err_type, err_addr);		  
 		}
 	}
 	return NULL;
