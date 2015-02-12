@@ -1,11 +1,5 @@
 lib proc_common_v3_00_a  proc_common_pkg vhdl
-lib proc_common_v3_00_a  ipif_pkg vhdl
-lib plb2hwif_v1_00_a hwif_pck
-lib plb2hwif_v1_00_a hwif_identification vhdl
-lib plb2hwif_v1_00_a hwif_perfmon vhdl
-lib plb2hwif_v1_00_a hwif_address_decoder vhdl
 lib fifo32_arbiter_v1_00_b mux vhdl
 lib fifo32_arbiter_v1_00_b demux vhdl
 lib fifo32_arbiter_v1_00_b rr_arbiter vhdl
-lib fifo32_arbiter_v1_00_b hwif_subsystem vhdl
 lib fifo32_arbiter_v1_00_b fifo32_arbiter vhdl
