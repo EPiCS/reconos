@@ -16,6 +16,7 @@
 --
 -- ======================================================================
 
+<<reconos_preproc>>
 
 library ieee;
 use ieee.std_logic_1164.all;
@@ -49,17 +50,17 @@ entity reconos_memif_arbiter is
 	--   SYS_Rst - system reset
 	--
 	port (
-		-- ## BEGIN GENERATE LOOP ##
-		MEMIF_Hwt2Mem_#i#_In_Data  : in  std_logic_vector(C_MEMIF_DATA_WIDTH - 1 downto 0);
-		MEMIF_Hwt2Mem_#i#_In_Empty : in  std_logic;
-		MEMIF_Hwt2Mem_#i#_In_RE    : out std_logic;
-		-- ## END GENERATE LOOP ##
+		<<generate for SLOTS>>
+		MEMIF_Hwt2Mem_<<Id>>_In_Data  : in  std_logic_vector(C_MEMIF_DATA_WIDTH - 1 downto 0);
+		MEMIF_Hwt2Mem_<<Id>>_In_Empty : in  std_logic;
+		MEMIF_Hwt2Mem_<<Id>>_In_RE    : out std_logic;
+		<<end generate>>
 
-		-- ## BEGIN GENERATE LOOP ##
-		MEMIF_Mem2Hwt_#i#_In_Data  : out std_logic_vector(C_MEMIF_DATA_WIDTH - 1 downto 0);
-		MEMIF_Mem2Hwt_#i#_In_Full  : in  std_logic;
-		MEMIF_Mem2Hwt_#i#_In_WE    : out std_logic;
-		-- ## END GENERATE LOOP ##
+		<<generate for SLOTS>>
+		MEMIF_Mem2Hwt_<<Id>>_In_Data  : out std_logic_vector(C_MEMIF_DATA_WIDTH - 1 downto 0);
+		MEMIF_Mem2Hwt_<<Id>>_In_Full  : in  std_logic;
+		MEMIF_Mem2Hwt_<<Id>>_In_WE    : out std_logic;
+		<<end generate>>
 
 		MEMIF_Hwt2Mem_Out_Data  : out std_logic_vector(C_MEMIF_DATA_WIDTH - 1 downto 0);
 		MEMIF_Hwt2Mem_Out_Empty : out std_logic;
@@ -120,9 +121,9 @@ begin
 
 	-- == Assignment of input signals =====================================
 
-	-- ## BEGIN GENERATE LOOP ##
-	req(#i#) <= not MEMIF_Hwt2Mem_#i#_In_Empty and msk(#i#);
-	-- ## END GENERATE LOOP ##
+	<<generate for SLOTS>>
+	req(<<_i>>) <= not MEMIF_Hwt2Mem_<<Id>>_In_Empty and msk(<<_i>>);
+	<<end generate>>
 
 	msb <= req and std_logic_vector(unsigned(not(req)) + 1);
 
@@ -195,30 +196,30 @@ begin
 	       '0';
 
 	hwt2mem_data <=
-	  -- ## BEGIN GENERATE LOOP ##
-	  (MEMIF_Hwt2Mem_#i#_In_Data and (MEMIF_Hwt2Mem_#i#_In_Data'Range => grnt(#i#))) or
-	  -- ## END GENERATE LOOP ##
+	  <<generate for SLOTS>>
+	  (MEMIF_Hwt2Mem_<<Id>>_In_Data and (MEMIF_Hwt2Mem_<<Id>>_In_Data'Range => grnt(<<_i>>))) or
+	  <<end generate>>
 	  (C_MEMIF_DATA_WIDTH - 1 downto 0 => '0');
 
 	hwt2mem_empty <=
-	  -- ## BEGIN GENERATE LOOP ##
-	  (MEMIF_Hwt2Mem_#i#_In_Empty and grnt(#i#)) or
-	  -- ## END GENERATE LOOP ##
+	  <<generate for SLOTS>>
+	  (MEMIF_Hwt2Mem_<<Id>>_In_Empty and grnt(<<_i>>)) or
+	  <<end generate>>
 	  orr;
 
 	mem2hwt_full <=
-	  -- ## BEGIN GENERATE LOOP ##
-	  (MEMIF_Mem2Hwt_#i#_In_Full and grnt(#i#)) or
-	  -- ## END GENERATE LOOP ##
+	  <<generate for SLOTS>>
+	  (MEMIF_Mem2Hwt_<<Id>>_In_Full and grnt(<<_i>>)) or
+	  <<end generate>>
 	  orr;
 
 	MEMIF_Hwt2Mem_Out_Data  <= hwt2mem_data;
 	MEMIF_Hwt2Mem_Out_Empty <= hwt2mem_empty;
 	MEMIF_Mem2Hwt_Out_Full  <=  mem2hwt_full;
-	-- ## BEGIN GENERATE LOOP ##
-	MEMIF_Hwt2Mem_#i#_In_RE   <= MEMIF_Hwt2Mem_Out_RE and grnt(#i#);
-	MEMIF_Mem2Hwt_#i#_In_Data <= MEMIF_Mem2Hwt_Out_Data;
-	MEMIF_Mem2Hwt_#i#_In_WE   <= MEMIF_Mem2Hwt_Out_WE and grnt(#i#);
-	-- ## END GENERATE LOOP ##
+	<<generate for SLOTS>>
+	MEMIF_Hwt2Mem_<<Id>>_In_RE   <= MEMIF_Hwt2Mem_Out_RE and grnt(<<_i>>);
+	MEMIF_Mem2Hwt_<<Id>>_In_Data <= MEMIF_Mem2Hwt_Out_Data;
+	MEMIF_Mem2Hwt_<<Id>>_In_WE   <= MEMIF_Mem2Hwt_Out_WE and grnt(<<_i>>);
+	<<end generate>>
 
 end architecture imp;

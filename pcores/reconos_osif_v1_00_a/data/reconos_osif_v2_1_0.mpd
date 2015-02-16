@@ -1,3 +1,5 @@
+<<reconos_preproc>>
+
 BEGIN reconos_osif
 
 ## Peripheral Options
@@ -7,14 +9,14 @@ OPTION HDL = VHDL
 OPTION IP_GROUP = ReconOS
 OPTION DESC = ReconOS - OSIF Bus attachment
 OPTION LONG_DESC = A AXI slave which maps the FIFOs of the HWTs to registers accessible from the AXI-Bus.
-OPTION ARCH_SUPPORT_MAP = (others=DEVELOPMENT)
+#OPTION ARCH_SUPPORT_MAP = (others=DEVELOPMENT)
 
 ## Bus Interfaces
 BUS_INTERFACE BUS = S_AXI, BUS_STD = AXI, BUS_TYPE = SLAVE
-# ## BEGIN GENERATE LOOP ##
-BUS_INTERFACE BUS = OSIF_Hw2Sw_#i#_In, BUS_STD = FIFO_S, BUS_TYPE = INITIATOR
-BUS_INTERFACE BUS = OSIF_Sw2Hw_#i#_In, BUS_STD = FIFO_M, BUS_TYPE = INITIATOR
-# ## END GENERATE LOOP ##
+<<generate for SLOTS>>
+BUS_INTERFACE BUS = OSIF_Hw2Sw_<<Id>>_In, BUS_STD = FIFO_S, BUS_TYPE = INITIATOR
+BUS_INTERFACE BUS = OSIF_Sw2Hw_<<Id>>_In, BUS_STD = FIFO_M, BUS_TYPE = INITIATOR
+<<end generate>>
 
 ## Generics for VHDL or Parameters for Verilog
 PARAMETER C_NUM_HWTS = 1, DT = INTEGER
@@ -30,17 +32,17 @@ PARAMETER C_HIGHADDR = 0x00000000, DT = std_logic_vector, PAIR = C_BASEADDR, ADD
 PARAMETER C_S_AXI_PROTOCOL = AXI4LITE, TYPE = NON_HDL, ASSIGNMENT = CONSTANT, DT = STRING, BUS = S_AXI
 
 ## Ports
-# ## BEGIN GENERATE LOOP ##
-PORT OSIF_Hw2Sw_#i#_In_Data = "FIFO_S_Data", DIR = I, VEC = [C_OSIF_DATA_WIDTH - 1 : 0], BUS = OSIF_Hw2Sw_#i#_In
-PORT OSIF_Hw2Sw_#i#_In_Empty = "FIFO_S_Empty", DIR = I, BUS = OSIF_Hw2Sw_#i#_In
-PORT OSIF_Hw2Sw_#i#_In_RE = "FIFO_S_RE", DIR = O, BUS = OSIF_Hw2Sw_#i#_In
-# ## END GENERATE LOOP ##
+<<generate for SLOTS>>
+PORT OSIF_Hw2Sw_<<Id>>_In_Data = "FIFO_S_Data", DIR = I, VEC = [C_OSIF_DATA_WIDTH - 1 : 0], BUS = OSIF_Hw2Sw_<<Id>>_In
+PORT OSIF_Hw2Sw_<<Id>>_In_Empty = "FIFO_S_Empty", DIR = I, BUS = OSIF_Hw2Sw_<<Id>>_In
+PORT OSIF_Hw2Sw_<<Id>>_In_RE = "FIFO_S_RE", DIR = O, BUS = OSIF_Hw2Sw_<<Id>>_In
+<<end generate>>
 
-# ## BEGIN GENERATE LOOP ##
-PORT  OSIF_Sw2Hw_#i#_In_Data = "FIFO_M_Data", DIR = O, VEC = [C_OSIF_DATA_WIDTH - 1 : 0], BUS = OSIF_Sw2Hw_#i#_In
-PORT  OSIF_Sw2Hw_#i#_In_Full = "FIFO_M_Full", DIR = I, BUS = OSIF_Sw2Hw_#i#_In
-PORT  OSIF_Sw2Hw_#i#_In_WE = "FIFO_M_WE", DIR = O, BUS = OSIF_Sw2Hw_#i#_In
-# ## END GENERATE LOOP ##
+<<generate for SLOTS>>
+PORT  OSIF_Sw2Hw_<<Id>>_In_Data = "FIFO_M_Data", DIR = O, VEC = [C_OSIF_DATA_WIDTH - 1 : 0], BUS = OSIF_Sw2Hw_<<Id>>_In
+PORT  OSIF_Sw2Hw_<<Id>>_In_Full = "FIFO_M_Full", DIR = I, BUS = OSIF_Sw2Hw_<<Id>>_In
+PORT  OSIF_Sw2Hw_<<Id>>_In_WE = "FIFO_M_WE", DIR = O, BUS = OSIF_Sw2Hw_<<Id>>_In
+<<end generate>>
 
 PORT S_AXI_ACLK = "", DIR = I, SIGIS = CLK, BUS = S_AXI
 PORT S_AXI_ARESETN = ARESETN, DIR = I, SIGIS = RST, BUS = S_AXI

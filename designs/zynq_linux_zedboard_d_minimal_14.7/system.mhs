@@ -1,52 +1,52 @@
+<<reconos_preproc>>
 
-# ##############################################################################
-# Created by Base System Builder Wizard for Xilinx EDK 14.7 Build EDK_P.20131013
-# Thu Nov 14 15:53:27 2013
-# Target Board:  em.avnet.com ZedBoard Rev C
-# Family:    zynq
-# Device:    xc7z020
-# Package:   clg484
-# Speed Grade:  -1
-# ##############################################################################
- PARAMETER VERSION = 2.1.0
+PARAMETER VERSION = 2.1.0
 
-
- PORT processing_system7_0_MIO = processing_system7_0_MIO, DIR = IO, VEC = [53:0]
- PORT processing_system7_0_PS_SRSTB = processing_system7_0_PS_SRSTB, DIR = I
- PORT processing_system7_0_PS_CLK = processing_system7_0_PS_CLK, DIR = I, SIGIS = CLK
- PORT processing_system7_0_PS_PORB = processing_system7_0_PS_PORB, DIR = I
- PORT processing_system7_0_DDR_Clk = processing_system7_0_DDR_Clk, DIR = IO, SIGIS = CLK
- PORT processing_system7_0_DDR_Clk_n = processing_system7_0_DDR_Clk_n, DIR = IO, SIGIS = CLK
- PORT processing_system7_0_DDR_CKE = processing_system7_0_DDR_CKE, DIR = IO
- PORT processing_system7_0_DDR_CS_n = processing_system7_0_DDR_CS_n, DIR = IO
- PORT processing_system7_0_DDR_RAS_n = processing_system7_0_DDR_RAS_n, DIR = IO
- PORT processing_system7_0_DDR_CAS_n = processing_system7_0_DDR_CAS_n, DIR = IO
- PORT processing_system7_0_DDR_WEB_pin = processing_system7_0_DDR_WEB, DIR = O
- PORT processing_system7_0_DDR_BankAddr = processing_system7_0_DDR_BankAddr, DIR = IO, VEC = [2:0]
- PORT processing_system7_0_DDR_Addr = processing_system7_0_DDR_Addr, DIR = IO, VEC = [14:0]
- PORT processing_system7_0_DDR_ODT = processing_system7_0_DDR_ODT, DIR = IO
- PORT processing_system7_0_DDR_DRSTB = processing_system7_0_DDR_DRSTB, DIR = IO, SIGIS = RST
- PORT processing_system7_0_DDR_DQ = processing_system7_0_DDR_DQ, DIR = IO, VEC = [31:0]
- PORT processing_system7_0_DDR_DM = processing_system7_0_DDR_DM, DIR = IO, VEC = [3:0]
- PORT processing_system7_0_DDR_DQS = processing_system7_0_DDR_DQS, DIR = IO, VEC = [3:0]
- PORT processing_system7_0_DDR_DQS_n = processing_system7_0_DDR_DQS_n, DIR = IO, VEC = [3:0]
- PORT processing_system7_0_DDR_VRN = processing_system7_0_DDR_VRN, DIR = IO
- PORT processing_system7_0_DDR_VRP = processing_system7_0_DDR_VRP, DIR = IO
-
+PORT processing_system7_0_MIO = processing_system7_0_MIO, DIR = IO, VEC = [53:0]
+PORT processing_system7_0_PS_SRSTB = processing_system7_0_PS_SRSTB, DIR = I
+PORT processing_system7_0_PS_CLK = processing_system7_0_PS_CLK, DIR = I, SIGIS = CLK
+PORT processing_system7_0_PS_PORB = processing_system7_0_PS_PORB, DIR = I
+PORT processing_system7_0_DDR_Clk = processing_system7_0_DDR_Clk, DIR = IO, SIGIS = CLK
+PORT processing_system7_0_DDR_Clk_n = processing_system7_0_DDR_Clk_n, DIR = IO, SIGIS = CLK
+PORT processing_system7_0_DDR_CKE = processing_system7_0_DDR_CKE, DIR = IO
+PORT processing_system7_0_DDR_CS_n = processing_system7_0_DDR_CS_n, DIR = IO
+PORT processing_system7_0_DDR_RAS_n = processing_system7_0_DDR_RAS_n, DIR = IO
+PORT processing_system7_0_DDR_CAS_n = processing_system7_0_DDR_CAS_n, DIR = IO
+PORT processing_system7_0_DDR_WEB_pin = processing_system7_0_DDR_WEB, DIR = O
+PORT processing_system7_0_DDR_BankAddr = processing_system7_0_DDR_BankAddr, DIR = IO, VEC = [2:0]
+PORT processing_system7_0_DDR_Addr = processing_system7_0_DDR_Addr, DIR = IO, VEC = [14:0]
+PORT processing_system7_0_DDR_ODT = processing_system7_0_DDR_ODT, DIR = IO
+PORT processing_system7_0_DDR_DRSTB = processing_system7_0_DDR_DRSTB, DIR = IO, SIGIS = RST
+PORT processing_system7_0_DDR_DQ = processing_system7_0_DDR_DQ, DIR = IO, VEC = [31:0]
+PORT processing_system7_0_DDR_DM = processing_system7_0_DDR_DM, DIR = IO, VEC = [3:0]
+PORT processing_system7_0_DDR_DQS = processing_system7_0_DDR_DQS, DIR = IO, VEC = [3:0]
+PORT processing_system7_0_DDR_DQS_n = processing_system7_0_DDR_DQS_n, DIR = IO, VEC = [3:0]
+PORT processing_system7_0_DDR_VRN = processing_system7_0_DDR_VRN, DIR = IO
+PORT processing_system7_0_DDR_VRP = processing_system7_0_DDR_VRP, DIR = IO
 
 BEGIN axi_interconnect
  PARAMETER INSTANCE = axi_hwt
  PARAMETER HW_VER = 1.06.a
  PARAMETER C_INTERCONNECT_CONNECTIVITY_MODE = 0
- PORT INTERCONNECT_ACLK = processing_system7_0_FCLK_CLK0
- PORT INTERCONNECT_ARESETN = processing_system7_0_FCLK_RESET0_N_0
+ PORT INTERCONNECT_ACLK = reconos_clk_<<SYSCLK>>
+ PORT INTERCONNECT_ARESETN = reconos_rst_busn
 END
 
 BEGIN axi_interconnect
- PARAMETER INSTANCE = axi_acp
+ PARAMETER INSTANCE = axi_mem
  PARAMETER HW_VER = 1.06.a
- PORT INTERCONNECT_ACLK = processing_system7_0_FCLK_CLK0
- PORT INTERCONNECT_ARESETN = processing_system7_0_FCLK_RESET0_N_0
+ PORT INTERCONNECT_ACLK = reconos_clk_<<SYSCLK>>
+ PORT INTERCONNECT_ARESETN = reconos_rst_busn
+END
+
+BEGIN proc_sys_reset
+ PARAMETER INSTANCE = reset_0
+ PARAMETER HW_VER = 3.00.a
+ PARAMETER C_EXT_RESET_HIGH = 0
+ PORT DCM_Locked = reconos_clk_<<SYSCLK>>_locked
+ PORT Ext_Reset_In = processing_system7_0_FCLK_RESET0_N_0
+ PORT Slowest_sync_clk = reconos_clk_<<SYSCLK>>
+ PORT Interconnect_aresetn = reconos_rst_busn
 END
 
 BEGIN processing_system7
@@ -134,7 +134,222 @@ BEGIN processing_system7
  PORT DDR_VRP = processing_system7_0_DDR_VRP
  PORT FCLK_CLK0 = processing_system7_0_FCLK_CLK0
  PORT FCLK_RESET0_N = processing_system7_0_FCLK_RESET0_N_0
- PORT M_AXI_GP0_ACLK = processing_system7_0_FCLK_CLK0
- PORT S_AXI_ACP_ACLK = processing_system7_0_FCLK_CLK0
+ PORT M_AXI_GP0_ACLK = reconos_clk_<<SYSCLK>>
+ PORT S_AXI_ACP_ACLK = reconos_clk_<<SYSCLK>>
+
+ PARAMETER C_INTERCONNECT_S_AXI_ACP_MASTERS = reconos_memif_memory_controller_0.M_AXI
+ BUS_INTERFACE S_AXI_ACP = axi_mem
+ PORT IRQ_F2P = reconos_pgfirq & reconos_osifirq
 END
 
+BEGIN reconos_proc_control
+ PARAMETER INSTANCE = reconos_proc_control_0
+ PARAMETER HW_VER = 1.00.a
+ PARAMETER C_NUM_HWTS = <<NUM_SLOTS>>
+ PARAMETER C_BASEADDR = 0x6fe00000
+ PARAMETER C_HIGHADDR = 0x6fe0ffff
+ BUS_INTERFACE S_AXI = axi_hwt
+ PORT S_AXI_ACLK = reconos_clk_<<SYSCLK>>
+ <<generate for SLOTS>>
+ PORT PROC_Hwt_Rst_<<Id>> = reconos_rst_<<Id>>
+ PORT PROC_Hwt_Signal_<<Id>> = reconos_sig_<<Id>>
+ <<end generate>>
+ PORT PROC_Sys_Rst = reconos_rst_sys
+ PORT PROC_Pgf_Int = reconos_pgfirq
+ PORT MMU_Pgf = reconos_mmu_pgfirq
+ PORT MMU_Fault_Addr = reconos_mmu_faultaddr
+ PORT MMU_Retry = reconos_mmu_retry
+ PORT MMU_Pgd = reconos_mmu_pgd
+END
+
+BEGIN reconos_osif
+ PARAMETER INSTANCE = reconos_osif_0
+ PARAMETER HW_VER = 1.00.a
+ PARAMETER C_NUM_HWTS = <<NUM_SLOTS>>
+ PARAMETER C_BASEADDR = 0x75a00000
+ PARAMETER C_HIGHADDR = 0x75a0ffff
+ <<generate for SLOTS>>
+ BUS_INTERFACE OSIF_Hw2Sw_<<Id>>_In = reconos_osif_hw2sw_<<Id>>_s
+ BUS_INTERFACE OSIF_Sw2Hw_<<Id>>_In = reconos_osif_sw2hw_<<Id>>_m
+ <<end generate>>
+ BUS_INTERFACE S_AXI = axi_hwt
+ PORT S_AXI_ACLK = reconos_clk_<<SYSCLK>>
+END
+
+BEGIN reconos_osif_intc
+ PARAMETER INSTANCE = reconos_osif_intc_0
+ PARAMETER HW_VER = 1.00.a
+ PARAMETER C_NUM_INTERRUPTS = <<NUM_SLOTS>>
+ PARAMETER C_BASEADDR = 0x7b400000
+ PARAMETER C_HIGHADDR = 0x7b40ffff
+ <<generate for SLOTS>>
+ PORT OSIF_INTC_In_<<Id>> = reconos_osif_hw2sw_<<Id>>_irq
+ <<end generate>>
+ PORT OSIF_INTC_Out = reconos_osifirq
+ BUS_INTERFACE S_AXI = axi_hwt
+ PORT S_AXI_ACLK = reconos_clk_<<SYSCLK>>
+END
+
+<<generate for SLOTS>>
+BEGIN <<HwtCoreName>>
+ PARAMETER INSTANCE = slot_<<Id>>
+ PARAMETER HW_VER = <<HwtCoreVersion>>
+ BUS_INTERFACE OSIF_Sw2Hw = reconos_osif_sw2hw_<<Id>>_s
+ BUS_INTERFACE OSIF_Hw2Sw = reconos_osif_hw2sw_<<Id>>_m
+ BUS_INTERFACE MEMIF_Hwt2Mem = reconos_memif_hwt2mem_<<Id>>_m
+ BUS_INTERFACE MEMIF_Mem2Hwt = reconos_memif_mem2hwt_<<Id>>_s
+ PORT HWT_Clk = reconos_clk_<<Clk>>
+ PORT HWT_Rst = reconos_rst_<<Id>>
+ PORT HWT_Signal = reconos_sig_<<Id>>
+END
+<<end generate>>
+
+<<generate for SLOTS(Async == "async")>>
+BEGIN reconos_fifo_async
+ PARAMETER INSTANCE = reconos_osif_hw2sw_<<Id>>
+ PARAMETER HW_VER = 1.00.a
+ PARAMETER C_FIFO_ADDR_WIDTH = 3
+ BUS_INTERFACE FIFO_M = reconos_osif_hw2sw_<<Id>>_m
+ BUS_INTERFACE FIFO_S = reconos_osif_hw2sw_<<Id>>_s
+ PORT FIFO_Has_Data = reconos_osif_hw2sw_<<Id>>_irq
+ PORT FIFO_S_Clk = reconos_clk_<<SYSCLK>>
+ PORT FIFO_M_Clk = reconos_clk_<<Clk>>
+ PORT FIFO_Rst = reconos_rst_<<Id>>
+END
+
+BEGIN reconos_fifo_async
+ PARAMETER INSTANCE = reconos_osif_sw2hw_<<Id>>
+ PARAMETER HW_VER = 1.00.a
+ PARAMETER C_FIFO_ADDR_WIDTH = 3
+ BUS_INTERFACE FIFO_M = reconos_osif_sw2hw_<<Id>>_m
+ BUS_INTERFACE FIFO_S = reconos_osif_sw2hw_<<Id>>_s
+ PORT FIFO_S_Clk = reconos_clk_<<Clk>>
+ PORT FIFO_M_Clk = reconos_clk_<<SYSCLK>>
+ PORT FIFO_Rst = reconos_rst_<<Id>>
+END
+
+BEGIN reconos_fifo_async
+ PARAMETER INSTANCE = reconos_memif_hwt2mem_<<Id>>
+ PARAMETER HW_VER = 1.00.a
+ PARAMETER C_FIFO_ADDR_WIDTH = 7
+ BUS_INTERFACE FIFO_M = reconos_memif_hwt2mem_<<Id>>_m
+ BUS_INTERFACE FIFO_S = reconos_memif_hwt2mem_<<Id>>_s
+ PORT FIFO_S_Clk = reconos_clk_<<SYSCLK>>
+ PORT FIFO_M_Clk = reconos_clk_<<Clk>>
+ PORT FIFO_Rst = reconos_rst_<<Id>>
+END
+
+BEGIN reconos_fifo_async
+ PARAMETER INSTANCE = reconos_memif_mem2hwt_<<Id>>
+ PARAMETER HW_VER = 1.00.a
+ PARAMETER C_FIFO_ADDR_WIDTH = 7
+ BUS_INTERFACE FIFO_M = reconos_memif_mem2hwt_<<Id>>_m
+ BUS_INTERFACE FIFO_S = reconos_memif_mem2hwt_<<Id>>_s
+ PORT FIFO_S_Clk = reconos_clk_<<Clk>>
+ PORT FIFO_M_Clk = reconos_clk_<<SYSCLK>>
+ PORT FIFO_Rst = reconos_rst_<<Id>>
+END
+<<end generate>>
+
+<<generate for SLOTS(Async == "sync")>>
+BEGIN reconos_fifo_sync
+ PARAMETER INSTANCE = reconos_osif_hw2sw_<<Id>>
+ PARAMETER HW_VER = 1.00.a
+ PARAMETER C_FIFO_ADDR_WIDTH = 3
+ BUS_INTERFACE FIFO_M = reconos_osif_hw2sw_<<Id>>_m
+ BUS_INTERFACE FIFO_S = reconos_osif_hw2sw_<<Id>>_s
+ PORT FIFO_Has_Data = reconos_osif_hw2sw_<<Id>>_irq
+ PORT FIFO_Clk = reconos_clk_<<Clk>>
+ PORT FIFO_Rst = reconos_rst_<<Id>>
+END
+
+BEGIN reconos_fifo_sync
+ PARAMETER INSTANCE = reconos_osif_sw2hw_<<Id>>
+ PARAMETER HW_VER = 1.00.a
+ PARAMETER C_FIFO_ADDR_WIDTH = 3
+ BUS_INTERFACE FIFO_M = reconos_osif_sw2hw_<<Id>>_m
+ BUS_INTERFACE FIFO_S = reconos_osif_sw2hw_<<Id>>_s
+ PORT FIFO_Clk = reconos_clk_<<SYSCLK>>
+ PORT FIFO_Rst = reconos_rst_<<Id>>
+END
+
+BEGIN reconos_fifo_sync
+ PARAMETER INSTANCE = reconos_memif_hwt2mem_<<Id>>
+ PARAMETER HW_VER = 1.00.a
+ PARAMETER C_FIFO_ADDR_WIDTH = 7
+ BUS_INTERFACE FIFO_M = reconos_memif_hwt2mem_<<Id>>_m
+ BUS_INTERFACE FIFO_S = reconos_memif_hwt2mem_<<Id>>_s
+ PORT FIFO_Clk = reconos_clk_<<SYSCLK>>
+ PORT FIFO_Rst = reconos_rst_<<Id>>
+END
+
+BEGIN reconos_fifo_sync
+ PARAMETER INSTANCE = reconos_memif_mem2hwt_<<Id>>
+ PARAMETER HW_VER = 1.00.a
+ PARAMETER C_FIFO_ADDR_WIDTH = 7
+ BUS_INTERFACE FIFO_M = reconos_memif_mem2hwt_<<Id>>_m
+ BUS_INTERFACE FIFO_S = reconos_memif_mem2hwt_<<Id>>_s
+ PORT FIFO_Clk = reconos_clk_<<SYSCLK>>
+ PORT FIFO_Rst = reconos_rst_<<Id>>
+END
+<<end generate>>
+
+BEGIN reconos_memif_arbiter
+ PARAMETER INSTANCE = reconos_memif_arbiter_0
+ PARAMETER HW_VER = 1.00.a
+ PARAMETER C_NUM_HWTS = <<NUM_SLOTS>>
+ <<generate for SLOTS>>
+ BUS_INTERFACE MEMIF_Hwt2Mem_<<Id>>_In = reconos_memif_hwt2mem_<<Id>>_s
+ BUS_INTERFACE MEMIF_Mem2Hwt_<<Id>>_In = reconos_memif_mem2hwt_<<Id>>_m
+ <<end generate>>
+ BUS_INTERFACE MEMIF_Hwt2Mem_Out = reconos_memif_hwt2mem_arbiter
+ BUS_INTERFACE MEMIF_Mem2Hwt_Out = reconos_memif_mem2hwt_arbiter
+ PORT SYS_Clk = reconos_clk_<<SYSCLK>>
+ PORT SYS_Rst = reconos_rst_sys
+END
+
+BEGIN reconos_memif_mmu_zynq
+ PARAMETER INSTANCE = reconos_memif_mmu_0
+ PARAMETER HW_VER = 1.00.a
+ PARAMETER C_TLB_SIZE = 16
+ BUS_INTERFACE MEMIF_Hwt2Mem_In = reconos_memif_hwt2mem_arbiter
+ BUS_INTERFACE MEMIF_Mem2Hwt_In = reconos_memif_mem2hwt_arbiter
+ BUS_INTERFACE MEMIF_Hwt2Mem_Out = reconos_memif_hwt2mem_mmu
+ BUS_INTERFACE MEMIF_Mem2Hwt_Out = reconos_memif_mem2hwt_mmu
+ PORT MMU_Pgf = reconos_mmu_pgfirq
+ PORT MMU_Fault_Addr = reconos_mmu_faultaddr
+ PORT MMU_Retry = reconos_mmu_retry
+ PORT MMU_Pgd = reconos_mmu_pgd
+ PORT SYS_Clk = reconos_clk_<<SYSCLK>>
+ PORT SYS_Rst = reconos_rst_sys
+END
+
+BEGIN reconos_memif_memory_controller
+ PARAMETER INSTANCE = reconos_memif_memory_controller_0
+ PARAMETER HW_VER = 1.00.a
+ BUS_INTERFACE MEMIF_Hwt2Mem_In = reconos_memif_hwt2mem_mmu
+ BUS_INTERFACE MEMIF_Mem2Hwt_In = reconos_memif_mem2hwt_mmu
+ BUS_INTERFACE M_AXI = axi_mem
+ PORT M_AXI_ACLK = reconos_clk_<<SYSCLK>>
+END
+
+BEGIN reconos_clock
+ PARAMETER INSTANCE = reconos_clock_0
+ PARAMETER HW_VER = 1.00.a
+ PARAMETER C_BASEADDR = 0x69e00000
+ PARAMETER C_HIGHADDR = 0x69e0ffff
+ PARAMETER C_NUM_CLOCKS = <<NUM_CLOCKS>>
+ PARAMETER C_CLKIN_PERIOD = 10.0
+ <<generate for CLOCKS>>
+ PARAMETER C_CLK<<Id>>_CLKFBOUT_MULT = <<M>>
+ PARAMETER C_CLK<<Id>>_DIVCLK_DIVIDE = 1
+ PARAMETER C_CLK<<Id>>_CLKOUT_DIVIDE = <<O>>
+ <<end generate>>
+ BUS_INTERFACE S_AXI = axi_hwt
+ PORT S_AXI_ACLK = reconos_clk_<<SYSCLK>>
+ <<generate for CLOCKS>>
+ PORT CLK<<Id>>_Out = reconos_clk_<<Id>>
+ PORT CLK<<Id>>_Locked = reconos_clk_<<Id>>_locked
+ <<end generate>>
+ PORT CLK_Ref = processing_system7_0_FCLK_CLK0
+END

@@ -17,12 +17,12 @@
  * ======================================================================
  */
 
-#ifdef RECONOS_OS_linux
+#if defined(RECONOS_OS_linux)
 
 #include "arch.h"
 #include "../utils.h"
 
-#include "../../linux/driver/include/reconos.h"
+#include "arch_linux_kernel.h"
 
 #include <stdio.h>
 #include <unistd.h>
@@ -223,7 +223,7 @@ void reconos_proc_control_hwt_signal(int fd, int num, int sig) {
 }
 
 void reconos_proc_control_cache_flush(int fd) {
-#ifdef	RECONOS_ARCH_microblaze
+#if	defined(RECONOS_BOARD_ml605)
 	ioctl(fd, RECONOS_PROC_CONTROL_CACHE_FLUSH, NULL);
 #endif
 }
@@ -302,7 +302,7 @@ void reconos_clock_close(int fd) {
 
 /* == Reconfiguration related functions ================================= */
 
-#ifdef RECONOS_ARCH_zynq
+#if defined(RECONOS_BOARD_zedboard_c) || defined(RECONOS_BOARD_zedboard_c)
 
 int is_configured = 0;
 pthread_mutex_t mutex;
@@ -357,7 +357,7 @@ int load_partial_bitstream(uint32_t *bitstream, unsigned int bitstream_length) {
 	return 0;
 }
 
-#elif RECONOS_ARCH_microblaze
+#elif RECONOS_BOARD_ml605
 
 int load_partial_bitstream(uint32_t *bitstream, unsigned int bitstream_length) {
 	panic("NOT IMPLEMENTED YET\n");

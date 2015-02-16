@@ -1,3 +1,5 @@
+<<reconos_preproc>>
+
 BEGIN reconos_memif_arbiter
 
 ## Peripheral Options
@@ -7,13 +9,13 @@ OPTION HDL = VHDL
 OPTION IP_GROUP = ReconOS
 OPTION DESC = ReconOS - MEMIF Arbiter
 OPTION LONG_DESC = The arbiter connects the different HWTs to the memory system of ReconOS.
-OPTION ARCH_SUPPORT_MAP = (others=DEVELOPMENT)
+#OPTION ARCH_SUPPORT_MAP = (others=DEVELOPMENT)
 
 ## Bus Interfaces
-# ## BEGIN GENERATE LOOP
-BUS_INTERFACE BUS = MEMIF_Hwt2Mem_#i#_In, BUS_STD = FIFO_S, BUS_TYPE = INITIATOR
-BUS_INTERFACE BUS = MEMIF_Mem2Hwt_#i#_In, BUS_STD = FIFO_M, BUS_TYPE = INITIATOR
-# ## END GENERATE LOOP
+<<generate for SLOTS>>
+BUS_INTERFACE BUS = MEMIF_Hwt2Mem_<<Id>>_In, BUS_STD = FIFO_S, BUS_TYPE = INITIATOR
+BUS_INTERFACE BUS = MEMIF_Mem2Hwt_<<Id>>_In, BUS_STD = FIFO_M, BUS_TYPE = INITIATOR
+<<end generate>>
 
 BUS_INTERFACE BUS = MEMIF_Hwt2Mem_Out, BUS_STD = FIFO_S, BUS_TYPE = TARGET
 BUS_INTERFACE BUS = MEMIF_Mem2Hwt_Out, BUS_STD = FIFO_M, BUS_TYPE = TARGET
@@ -24,17 +26,17 @@ PARAMETER C_NUM_HWTS = 1, DT = INTEGER
 PARAMETER C_MEMIF_DATA_WIDTH = 32, DT = INTEGER, ASSIGNMENT = CONSTANT
 
 ## Ports
-# ## BEGIN GENERATE LOOP ##
-PORT MEMIF_Hwt2Mem_#i#_In_Data = "FIFO_S_Data", DIR = I, VEC = [C_MEMIF_DATA_WIDTH - 1 : 0], BUS = MEMIF_Hwt2Mem_#i#_In
-PORT MEMIF_Hwt2Mem_#i#_In_Empty = "FIFO_S_Empty", DIR = I, BUS = MEMIF_Hwt2Mem_#i#_In
-PORT MEMIF_Hwt2Mem_#i#_In_RE = "FIFO_S_RE", DIR = O, BUS = MEMIF_Hwt2Mem_#i#_In
-# ## END GENERATE LOOP ##
+<<generate for SLOTS>>
+PORT MEMIF_Hwt2Mem_<<Id>>_In_Data = "FIFO_S_Data", DIR = I, VEC = [C_MEMIF_DATA_WIDTH - 1 : 0], BUS = MEMIF_Hwt2Mem_<<Id>>_In
+PORT MEMIF_Hwt2Mem_<<Id>>_In_Empty = "FIFO_S_Empty", DIR = I, BUS = MEMIF_Hwt2Mem_<<Id>>_In
+PORT MEMIF_Hwt2Mem_<<Id>>_In_RE = "FIFO_S_RE", DIR = O, BUS = MEMIF_Hwt2Mem_<<Id>>_In
+<<end generate>>
 
-# ## BEGIN GENERATE LOOP ##
-PORT MEMIF_Mem2Hwt_#i#_In_Data = "FIFO_M_Data", DIR = O, VEC = [C_MEMIF_DATA_WIDTH - 1 : 0], BUS = MEMIF_Mem2Hwt_#i#_In
-PORT MEMIF_Mem2Hwt_#i#_In_Full = "FIFO_M_Full", DIR = I, BUS = MEMIF_Mem2Hwt_#i#_In
-PORT MEMIF_Mem2Hwt_#i#_In_WE = "FIFO_M_WE", DIR = O, BUS = MEMIF_Mem2Hwt_#i#_In
-# ## END GENERATE LOOP ##
+<<generate for SLOTS>>
+PORT MEMIF_Mem2Hwt_<<Id>>_In_Data = "FIFO_M_Data", DIR = O, VEC = [C_MEMIF_DATA_WIDTH - 1 : 0], BUS = MEMIF_Mem2Hwt_<<Id>>_In
+PORT MEMIF_Mem2Hwt_<<Id>>_In_Full = "FIFO_M_Full", DIR = I, BUS = MEMIF_Mem2Hwt_<<Id>>_In
+PORT MEMIF_Mem2Hwt_<<Id>>_In_WE = "FIFO_M_WE", DIR = O, BUS = MEMIF_Mem2Hwt_<<Id>>_In
+<<end generate>>
 
 PORT MEMIF_Hwt2Mem_Out_Data = "FIFO_S_Data", DIR = O, VEC = [C_MEMIF_DATA_WIDTH - 1 : 0], BUS = MEMIF_Hwt2Mem_Out
 PORT MEMIF_Hwt2Mem_Out_Empty = "FIFO_S_Empty", DIR = O, BUS = MEMIF_Hwt2Mem_Out

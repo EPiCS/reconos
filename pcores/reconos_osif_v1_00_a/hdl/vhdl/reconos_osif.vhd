@@ -19,6 +19,8 @@
 --
 -- ======================================================================
 
+<<reconos_preproc>>
+
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
@@ -69,17 +71,17 @@ entity reconos_osif is
 	--   S_AXI_ - @see axi bus
 	--
 	port (
-		-- ## BEGIN GENERATE LOOP ##
-		OSIF_Hw2Sw_#i#_In_Data  : in  std_logic_vector(C_OSIF_DATA_WIDTH - 1 downto 0);
-		OSIF_Hw2Sw_#i#_In_Empty : in  std_logic;
-		OSIF_Hw2Sw_#i#_In_RE    : out std_logic;
-		-- ## END GENERATE LOOP ##
+		<<generate for SLOTS>>
+		OSIF_Hw2Sw_<<Id>>_In_Data  : in  std_logic_vector(C_OSIF_DATA_WIDTH - 1 downto 0);
+		OSIF_Hw2Sw_<<Id>>_In_Empty : in  std_logic;
+		OSIF_Hw2Sw_<<Id>>_In_RE    : out std_logic;
+		<<end generate>>
 
-		-- ## BEGIN GENERATE LOOP ##
-		OSIF_Sw2Hw_#i#_In_Data  : out std_logic_vector(C_OSIF_DATA_WIDTH - 1 downto 0);
-		OSIF_Sw2Hw_#i#_In_Full  : in  std_logic;
-		OSIF_Sw2Hw_#i#_In_WE    : out std_logic;
-		-- ## END GENERATE LOOP ##
+		<<generate for SLOTS>>
+		OSIF_Sw2Hw_<<Id>>_In_Data  : out std_logic_vector(C_OSIF_DATA_WIDTH - 1 downto 0);
+		OSIF_Sw2Hw_<<Id>>_In_Full  : in  std_logic;
+		OSIF_Sw2Hw_<<Id>>_In_WE    : out std_logic;
+		<<end generate>>
 
 		S_AXI_ACLK    : in  std_logic;
 		S_AXI_ARESETN : in  std_logic;
@@ -128,16 +130,16 @@ architecture imp of reconos_osif is
 	constant C_ADDR_PAD : std_logic_vector(31 downto 0) := (others => '0');
 
 	constant C_ARD_ADDR_RANGE_ARRAY : SLV64_ARRAY_TYPE := (
-		-- ## BEGIN GENERATE LOOP ##
-		2 * #i# + 0 => C_ADDR_PAD & std_logic_vector(unsigned(C_BASEADDR) + #i# * 16),
-		2 * #i# + 1 => C_ADDR_PAD & std_logic_vector(unsigned(C_BASEADDR) + #i# * 16 + 15)#c,#
-		-- ## END GENERATE LOOP ##
+		<<generate for SLOTS>>
+		2 * <<_i>> + 0 => C_ADDR_PAD & std_logic_vector(unsigned(C_BASEADDR) + <<_i>> * 16),
+		2 * <<_i>> + 1 => C_ADDR_PAD & std_logic_vector(unsigned(C_BASEADDR) + <<_i>> * 16 + 15)<<c,>>
+		<<end generate>>
 	);
 
 	constant C_ARD_NUM_CE_ARRAY : INTEGER_ARRAY_TYPE := (
-		-- ## BEGIN GENERATE LOOP ##
-		#i# => 4#c,#
-		-- ## END GENERATE LOOP ##
+		<<generate for SLOTS>>
+		<<_i>> => 4<<c,>>
+		<<end generate>>
 	);
 begin
 
@@ -206,17 +208,17 @@ begin
 		)
 
 		port map (
-			-- ## BEGIN GENERATE LOOP ##
-			OSIF_Hw2Sw_#i#_In_Data  => OSIF_Hw2Sw_#i#_In_Data,
-			OSIF_Hw2Sw_#i#_In_Empty => OSIF_Hw2Sw_#i#_In_Empty,
-			OSIF_Hw2Sw_#i#_In_RE    => OSIF_Hw2Sw_#i#_In_RE,
-			-- ## END GENERATE LOOP ##
+			<<generate for SLOTS>>
+			OSIF_Hw2Sw_<<Id>>_In_Data  => OSIF_Hw2Sw_<<Id>>_In_Data,
+			OSIF_Hw2Sw_<<Id>>_In_Empty => OSIF_Hw2Sw_<<Id>>_In_Empty,
+			OSIF_Hw2Sw_<<Id>>_In_RE    => OSIF_Hw2Sw_<<Id>>_In_RE,
+			<<end generate>>
 
-			-- ## BEGIN GENERATE LOOP ##
-			OSIF_Sw2Hw_#i#_In_Data  => OSIF_Sw2Hw_#i#_In_Data,
-			OSIF_Sw2Hw_#i#_In_Full  => OSIF_Sw2Hw_#i#_In_Full,
-			OSIF_Sw2Hw_#i#_In_WE    => OSIF_Sw2Hw_#i#_In_WE,
-			-- ## END GENERATE LOOP ##
+			<<generate for SLOTS>>
+			OSIF_Sw2Hw_<<Id>>_In_Data  => OSIF_Sw2Hw_<<Id>>_In_Data,
+			OSIF_Sw2Hw_<<Id>>_In_Full  => OSIF_Sw2Hw_<<Id>>_In_Full,
+			OSIF_Sw2Hw_<<Id>>_In_WE    => OSIF_Sw2Hw_<<Id>>_In_WE,
+			<<end generate>>
 
 			BUS2IP_Clk    => bus2ip_clk,
 			BUS2IP_Resetn => bus2ip_resetn,

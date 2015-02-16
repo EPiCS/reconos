@@ -60,6 +60,8 @@ void reconos_resource_init(struct reconos_resource *rr,
 void reconos_thread_init(struct reconos_thread *rt,
                          char* name,
                          int state_size) {
+	int i;
+
 	rt->name = name;
 	rt->id = _thread_id++;
 
@@ -78,6 +80,16 @@ void reconos_thread_init(struct reconos_thread *rt,
 		memset((void *)rt->state_data, 0, state_size);
 	}
 
+	rt->allowed_hwslot_count = RECONOS_NUM_HWTS;
+	rt->allowed_hwslots = (struct hwslot **)malloc(RECONOS_NUM_HWTS * sizeof(struct hwslot *));
+	if (!rt->allowed_hwslots) {
+		panic("[reconos-core] ERROR: failed to allocate memory for allowed hwslots\n");
+	}
+
+	for (i = 0; i < rt->allowed_hwslot_count; i++) {
+		rt->allowed_hwslots[i] = &_hwslots[i];
+	}
+
 	rt->hwslot = NULL;
 
 	rt->bitstreams = NULL;
@@ -94,10 +106,51 @@ void reconos_thread_setinitdata(struct reconos_thread *rt, void *init_data) {
 /*
  * @see header
  */
+void reconos_thread_setallowedslots(struct reconos_thread *rt,
+                                    int *slots, int slot_count) {
+	int i;
+
+	if (rt->allowed_hwslots) {
+		free(rt->allowed_hwslots);
+	}
+
+	rt->allowed_hwslot_count = slot_count;
+	rt->allowed_hwslots = (struct hwslot **)malloc(slot_count * sizeof(struct hwslot *));
+	if (!rt->allowed_hwslots) {
+		panic("[reconos-core] ERROR: failed to allocate memory for allowed hwslots\n");
+	}
+
+	for (i = 0; i < rt->allowed_hwslot_count; i++) {
+		rt->allowed_hwslots[i] = &_hwslots[slots[i]];
+	}
+}
+
+/*
+ * @see header
+ */
 void reconos_thread_setresources(struct reconos_thread *rt,
                                  struct reconos_resource *resources,
                                  int resource_count) {
 	rt->resources = resources;
+	rt->resource_count = resource_count;
+}
+
+/*
+ * @see header
+ */
+void reconos_thread_setresourcepointers(struct reconos_thread *rt,
+                                        struct reconos_resource **resources,
+                                        int resource_count) {
+	int i;
+
+	rt->resources = (struct reconos_resource *)malloc(resource_count * sizeof(struct reconos_resource));
+	if (!rt->resources) {
+		panic("[reconos-core] ERROR: failed to allocate memory for resources\n");
+	}
+
+	for (i = 0; i < resource_count; i++) {
+		rt->resources[i] = *resources[i];
+	}
 	rt->resource_count = resource_count;
 }
 
@@ -156,7 +209,17 @@ void reconos_thread_loadbitstream(struct reconos_thread *rt,
 /*
  * @see header
  */
+void reconos_thread_setswentry(struct reconos_thread *rt,
+                               void *(*swentry)(void *data)) {
+	rt->swentry = swentry;
+}
+
+/*
+ * @see header
+ */
 void reconos_thread_create(struct reconos_thread *rt, int slot) {
+	int i;
+
 	if (slot < 0 || slot >= RECONOS_NUM_HWTS) {
 		panic("[reconos-core] ERROR: slot id out of range\n");
 	}
@@ -165,9 +228,41 @@ void reconos_thread_create(struct reconos_thread *rt, int slot) {
 		panic("[reconos-core] ERROR: thread is already running\n");
 	}
 
+	for (i = 0; i < rt->allowed_hwslot_count; i++) {
+		if (rt->allowed_hwslots[i]->id == _hwslots[slot].id) {
+			break;
+		}
+	}
+	if (i == rt->allowed_hwslot_count) {
+		panic("[reconos-core] ERROR: thread not allowed to run in slot\n");
+	}
+
 	rt->hwslot = &_hwslots[slot];
 	hwslot_createthread(rt->hwslot, rt);
 	rt->state = RECONOS_THREAD_STATE_RUNNING_HW;
+}
+
+/*
+ * @see header
+ */
+void reconos_thread_create_auto(struct reconos_thread *rt, int tt) {
+	int i;
+
+	if (tt && RECONOS_THREAD_HW) {
+		for (i = 0; i < rt->allowed_hwslot_count; i++) {
+			if (!rt->allowed_hwslots[i]->rt) {
+				break;
+			}
+		}
+		if (i == rt->allowed_hwslot_count) {
+			whine("[reconos_core] WARNING: no free slot for thread found");
+			return;
+		}
+
+		reconos_thread_create(rt, i);
+	} else if (tt && RECONOS_THREAD_SW) {
+		pthread_create(&rt->swslot, 0, rt->swentry, (void*)rt);
+	}
 }
 
 /*
@@ -201,8 +296,19 @@ void reconos_thread_suspend_block(struct reconos_thread *rt) {
  * @see header
  */
 void reconos_thread_resume(struct reconos_thread *rt, int slot) {
+	int i;
+
 	if (slot < 0 || slot >= RECONOS_NUM_HWTS) {
 		panic("[reconos-core] ERROR: slot id out of range\n");
+	}
+
+	for (i = 0; i < rt->allowed_hwslot_count; i++) {
+		if (rt->allowed_hwslots[i]->id == _hwslots[slot].id) {
+			break;
+		}
+	}
+	if (i == rt->allowed_hwslot_count) {
+		panic("[reconos-core] ERROR: thread not allowed to run in slot\n");
 	}
 
 	hwslot_resumethread(rt->hwslot, rt);
@@ -289,7 +395,7 @@ void reconos_init() {
 
 	reconos_proc_control_set_pgd(_proc_control);
 
-#ifdef RECONOS_MMU_true
+#ifdef RECONOS_OS_linux
 	pthread_create(&_pgf_handler, NULL, proc_pgfhandler, NULL);
 #endif
 }
@@ -853,7 +959,7 @@ void *dt_delegate(void *arg) {
 
 	slot->dt_state = DELEGATE_STATE_PROCESSING;
 
-	while(1) {
+	while (1) {
 		if (slot->dt_flags & DELEGATE_FLAG_SUSPEND) {
 			slot->dt_flags &= ~DELEGATE_FLAG_SUSPEND;
 			reconos_proc_control_hwt_signal(_proc_control, slot->id, 1);

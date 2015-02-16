@@ -16,6 +16,7 @@
 --
 -- ======================================================================
 
+<<reconos_preproc>>
 
 library ieee;
 use ieee.std_logic_1164.all;
@@ -53,12 +54,10 @@ entity reconos_osif_intc is
 		C_SLV_DWIDTH         : integer            := 32
 	);
 	port (
-		OSIF_INTC_Rst   : in  std_logic;
-
 		-- INTC ports
-		-- BEGIN GENERATE LOOP
-		OSIF_INTC_In_#i#   : in  std_logic;
-		-- END GENERATE LOOP
+		<<generate for SLOTS>>
+		OSIF_INTC_In_<<Id>>   : in  std_logic;
+		<<end generate>>
 		OSIF_INTC_Out   : out std_logic;
 	
 		-- Bus protocol ports, do not add to or delete
@@ -196,9 +195,6 @@ begin
 			C_SLV_DWIDTH   => USER_SLV_DWIDTH
 		)
 		port map (
-			-- only one global reset
-			OSIF_INTC_Rst   => OSIF_INTC_Rst,
-
 			-- INTC ports
 			OSIF_INTC_In    => intc_in,
 			OSIF_INTC_Out   => OSIF_INTC_Out,
@@ -225,8 +221,8 @@ begin
 	user_Bus2IP_RdCE <= ipif_Bus2IP_RdCE(USER_NUM_REG-1 downto 0);
 	user_Bus2IP_WrCE <= ipif_Bus2IP_WrCE(USER_NUM_REG-1 downto 0);
 
-	-- BEGIN GENERATE LOOP
-	intc_in(#i#) <= OSIF_INTC_In_#i#;
-	-- END GENERATE LOOP
+	<<generate for SLOTS>>
+	intc_in(<<_i>>) <= OSIF_INTC_In_<<Id>>;
+	<<end generate>>
 
 end implementation;

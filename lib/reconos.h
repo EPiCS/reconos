@@ -12,13 +12,15 @@
  *   project:      ReconOS
  *   author:       Andreas Agne, University of Paderborn
  *                 Christoph Rüthing, University of Paderborn
- *   description:  Main head file including general functions.
+ *   description:  Main header file including general functions.
  *
  * ======================================================================
  */
 
 #ifndef RECONOS_H
 #define RECONOS_H
+
+#include <pthread.h>
 
 #define RECONOS_VERSION_STRING "v3.1"
 
@@ -65,6 +67,15 @@ void reconos_resource_init(struct reconos_resource *rr,
 /* == ReconOS thread =================================================== */
 
 /*
+ * Definition of thread types
+ *
+ *   sw - software thread
+ *   hw - hardware thread
+ */
+#define RECONOS_THREAD_SW 0x0
+#define RECONOS_THREAD_HW 0x1
+
+/*
  * Definition of the thread states
  *
  *   stoped     - not created yet
@@ -91,6 +102,7 @@ void reconos_resource_init(struct reconos_resource *rr,
  *   state             - current state (refers to RECONOS_THREAD_STATE_...)
  *   state_data        - memory to store the internal state
  *
+ *   allowed_slots     - allowed slots to execute the thread in
  *   hw_slot           - hardware slot the thread is executing in
  *
  *   bitstreams        - array of bitstreams for the different slots
@@ -107,10 +119,14 @@ struct reconos_thread {
 	int state;
 	volatile void *state_data;
 
+	struct hwslot **allowed_hwslots;
+	int allowed_hwslot_count;
 	struct hwslot *hwslot;
+	pthread_t swslot;
 
 	char **bitstreams;
 	int *bitstream_lengths;
+	void *(*swentry)(void *data);
 };
 
 /*
@@ -134,7 +150,20 @@ void reconos_thread_init(struct reconos_thread *rt,
 void reconos_thread_setinitdata(struct reconos_thread *rt, void *init_data);
 
 /*
- * Associated the resource array to this thread.
+ * Specifies the allowed threads the hardware thread is allowed to
+ * run in.
+ *
+ *   rt         - pointer to the ReconOS thread
+ *   slots      - array of allowed slot ids
+ *   slot_count - number of slot ids in slot array
+ */
+void reconos_thread_setallowedslots(struct reconos_thread *rt,
+                                    int *slots, int slot_count);
+
+/*
+ * Associates the resource array to this thread. The resource array
+ * is used directly and no copy is created. Make shure to not modify
+ * it and not put it on the stack.
  *
  *   rt             - pointer to the ReconOS thread
  *   resources      - array of resources
@@ -143,6 +172,20 @@ void reconos_thread_setinitdata(struct reconos_thread *rt, void *init_data);
 void reconos_thread_setresources(struct reconos_thread *rt,
                                  struct reconos_resource *resources,
                                  int resource_count);
+
+/*
+ * Associates the resource array to this thread. Therefore it allocates
+ * memory and copies the provided resource structures. You can savely
+ * free all memory allocated to pass data to this function.
+ *
+ *   rt             - pointer to the ReconOS thread
+ *   resources      - array of pointers to resources
+ *   resource_count - number of resources in resource array
+ */
+
+void reconos_thread_setresourcepointers(struct reconos_thread *rt,
+                                        struct reconos_resource **resources,
+                                        int resource_count);
 
 /*
  * Assigns the bitstream array to the hardware thread. The bitstream
@@ -167,6 +210,16 @@ void reconos_thread_loadbitstream(struct reconos_thread *rt,
                                   char *path);
 
 /*
+ * Sets the main method of the software thread. When createing the
+ * thread, a pointer to the thread is passed via the data parameter.
+ *
+ *   rt      - pointer to the ReconOS thread
+ *   swentry - function pointer to the main entry point
+ */
+void reconos_thread_setswentry(struct reconos_thread *rt,
+                               void *(*swentry)(void *data));
+
+/*
  * Creates the ReconOS thread and executes it in the given slot number.
  *
  *   rt   - pointer to the ReconOS thread
@@ -174,6 +227,15 @@ void reconos_thread_loadbitstream(struct reconos_thread *rt,
  *
  */
 void reconos_thread_create(struct reconos_thread *rt, int slot);
+
+/*
+ * Creates the ReconOS thread and executes it in a free slot.
+ *
+ *   rt - pointer to the ReconOS thread
+ *   tt - software or hardware thread
+ *
+ */
+void reconos_thread_create_auto(struct reconos_thread *rt, int tt);
 
 /*
  * Suspends the ReconOS thread by saving its state and pausing execution.

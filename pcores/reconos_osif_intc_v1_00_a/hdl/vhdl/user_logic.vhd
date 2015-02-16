@@ -37,8 +37,6 @@ entity user_logic is
 		C_SLV_DWIDTH   : integer   := 32
 	);
   port (
-		OSIF_INTC_Rst  : in  std_logic;
-
 		OSIF_INTC_in   : in  std_logic_vector(C_NUM_INTERRUPTS - 1 downto 0);
 		OSIF_INTC_out  : out std_logic;
   
@@ -80,7 +78,7 @@ architecture imp of user_logic is
 begin
 
 	clk <= Bus2IP_Clk;
-	rst <= OSIF_INTC_Rst or not Bus2IP_Resetn;
+	rst <= not Bus2IP_Resetn;
 	pad <= (others => '0');
 	
 	interrupt_enable <= interrupt_enable_reg(C_NUM_INTERRUPTS - 1 downto 0);

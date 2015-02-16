@@ -13,16 +13,11 @@
 --   description:  A clock manager which can be configures via the AXI
 --                 bus. Therefore it provides the following write only
 --                 registers:
---                   Reg0: Clock 1 and 2 register of clock output 0
---                   Reg1: Clock 1 and 2 register of clock output 1
---                   Reg2: Clock 1 and 2 register of clock output 2
---                   Reg3: Clock 1 and 2 register of clock output 3
---                   Reg4: Clock 1 and 2 register of clock output 4
---                   Reg5: Clock 1 and 2 register of clock output 5
---                   Reg6: Reserved
---                   Reg7: Reserved
+--                   Reg#i#: Clock 1 and 2 register of pll#i#
 --
 -- ======================================================================
+
+<<reconos_preproc>>
 
 library ieee;
 use ieee.std_logic_1164.all;
@@ -35,45 +30,47 @@ entity user_logic is
 	--
 	-- Generic definitions
 	--
-	--   C_NUM_CLOKMGS - number of clock managers
+	--   C_NUM_CLOCKS - number of clocks
 	--
-	--   C_PLL#i# - pll generics
+	--   C_CLKIN_PERIOD - input clock period
+	--
+	--   C_CLK#i# - pll generics
 	--
 	generic (
-		C_NUM_CLOCKMGS : integer := 1;
+		C_NUM_CLOCKS : integer := 1;
 
-		-- ## BEGIN GENERATE LOOP ##
-		C_PLL#i#_CLKIN_PERIOD  : real := 10.00;
-		C_PLL#i#_CLKFBOUT_MULT : integer := 16;
-		C_PLL#i#_DIVCLK_DIVIDE : integer := 1#c;#
-		-- ## END GENERATE LOOP ##
+		C_CLKIN_PERIOD  : real := 10.00;
+
+		<<generate for CLOCKS>>
+		C_CLK<<Id>>_CLKFBOUT_MULT : integer := 16;
+		C_CLK<<Id>>_DIVCLK_DIVIDE : integer := 1;
+		C_CLK<<Id>>_CLKOUT_DIVIDE : integer := 16<<c;>>
+		<<end generate>>
 	);
 
 	--
 	-- Port defintions
 	--
-	--   CLK_Ref  - reference clock
-	--   CLK_#i#_Out_ - clock outputs
+	--   CLK_Ref - reference clock
+	--
+	--   CLK#i#_ - clock outputs
 	--
 	--   BUS2IP_/IP2BUS_ - axi ipif signals
 	--
 	port (
 		CLK_Ref       : in std_logic;
-		-- ## BEGIN GENERATE LOOP ##
-		CLK_#i#_Out_0 : out std_logic;
-		CLK_#i#_Out_1 : out std_logic;
-		CLK_#i#_Out_2 : out std_logic;
-		CLK_#i#_Out_3 : out std_logic;
-		CLK_#i#_Out_4 : out std_logic;
-		CLK_#i#_Out_5 : out std_logic;
-		-- ## END GENERATE LOOP ##
+
+		<<generate for CLOCKS>>
+		CLK<<Id>>_Out    : out std_logic;
+		CLK<<Id>>_Locked : out std_logic;
+		<<end generate>>
 
 		BUS2IP_Clk    : in  std_logic;
 		BUS2IP_Resetn : in  std_logic;
 		BUS2IP_Data   : in  std_logic_vector(31 downto 0);
-		BUS2IP_CS     : in  std_logic_vector(C_NUM_CLOCKMGS - 1 downto 0);
-		BUS2IP_RdCE   : in  std_logic_vector(C_NUM_CLOCKMGS * 8 - 1 downto 0);
-		BUS2IP_WrCE   : in  std_logic_vector(C_NUM_CLOCKMGS * 8 - 1 downto 0);
+		BUS2IP_CS     : in  std_logic_vector(C_NUM_CLOCKS - 1 downto 0);
+		BUS2IP_RdCE   : in  std_logic_vector(C_NUM_CLOCKS - 1 downto 0);
+		BUS2IP_WrCE   : in  std_logic_vector(C_NUM_CLOCKS - 1 downto 0);
 		IP2BUS_Data   : out std_logic_vector(31 downto 0);
 		IP2BUS_RdAck  : out std_logic;
 		IP2BUS_WrAck  : out std_logic;
@@ -98,7 +95,9 @@ architecture imp of user_logic is
 	--
 	--   req      - indication of write request
 	--   pll_     - pll drp multiplexed signals
-	--   pll_#i#_ - pll drp signal
+	--   pll#i#_  - pll drp signal
+	--
+	--   pll#i#_clk, pll#i#_clkbuf - pll clock (buffered) output
 	--
 	signal req : std_logic;
 
@@ -107,33 +106,27 @@ architecture imp of user_logic is
 	signal pll_den, pll_dwe  : std_logic;
 	signal pll_drdy, pll_rst : std_logic;
 
-	-- ## BEGIN GENERATE LOOP ##
-	signal pll#i#_daddr            : std_logic_vector(7 downto 0);
-	signal pll#i#_di, pll#i#_do    : std_logic_vector(15 downto 0);
-	signal pll#i#_den, pll#i#_dwe  : std_logic;
-	signal pll#i#_drdy, pll#i#_rst : std_logic;
-	signal pll#i#_clkfbout         : std_logic;
-	signal pll#i#_locked           : std_logic;
+	<<generate for CLOCKS>>
+	signal pll<<Id>>_daddr               : std_logic_vector(7 downto 0);
+	signal pll<<Id>>_di, pll<<Id>>_do    : std_logic_vector(15 downto 0);
+	signal pll<<Id>>_den, pll<<Id>>_dwe  : std_logic;
+	signal pll<<Id>>_drdy, pll<<Id>>_rst : std_logic;
+	signal pll<<Id>>_locked              : std_logic;
 
-	signal pll#i#_clk0, pll#i#_clk1, pll#i#_clk2, pll#i#_clk3, pll#i#_clk4, pll#i#_clk5 : std_logic;
-	-- ## END GENERATE LOOP ##
+	signal pll<<Id>>_clk, pll<<Id>>_clkbuf : std_logic;
+	<<end generate>>
 begin
 
 	-- == Instantiation of pll primitives =================================
 
-	-- ## BEGIN GENERATE LOOP ##
-	pll#i# : PLLE2_ADV
+	<<generate for CLOCKS>>
+	pll<<Id>> : PLLE2_ADV
 		generic map (
-			CLKIN1_PERIOD => C_PLL#i#_CLKIN_PERIOD,
-			CLKFBOUT_MULT => C_PLL#i#_CLKFBOUT_MULT,
-			DIVCLK_DIVIDE => C_PLL#i#_DIVCLK_DIVIDE,
+			CLKIN1_PERIOD => C_CLKIN_PERIOD,
+			CLKFBOUT_MULT => C_CLK<<Id>>_CLKFBOUT_MULT,
+			DIVCLK_DIVIDE => C_CLK<<Id>>_DIVCLK_DIVIDE,
 
-			CLKOUT0_DIVIDE => C_PLL#i#_CLKFBOUT_MULT,
-			CLKOUT1_DIVIDE => C_PLL#i#_CLKFBOUT_MULT,
-			CLKOUT2_DIVIDE => C_PLL#i#_CLKFBOUT_MULT,
-			CLKOUT3_DIVIDE => C_PLL#i#_CLKFBOUT_MULT,
-			CLKOUT4_DIVIDE => C_PLL#i#_CLKFBOUT_MULT,
-			CLKOUT5_DIVIDE => C_PLL#i#_CLKFBOUT_MULT
+			CLKOUT0_DIVIDE => C_CLK<<Id>>_CLKOUT_DIVIDE
 		)
 
 		port map (
@@ -141,64 +134,28 @@ begin
 			CLKIN2   => '0',
 			CLKINSEL => '1',
 
-			CLKFBOUT => pll#i#_clkfbout,
-			CLKFBIN  => pll#i#_clkfbout,
+			CLKFBIN  => pll<<Id>>_clkbuf,
 
-			CLKOUT0 => pll#i#_clk0,
-			CLKOUT1 => pll#i#_clk1,
-			CLKOUT2 => pll#i#_clk2,
-			CLKOUT3 => pll#i#_clk3,
-			CLKOUT4 => pll#i#_clk4,
-			CLKOUT5 => pll#i#_clk5,
+			CLKOUT0 => pll<<Id>>_clk,
 
 			DCLK   => BUS2IP_Clk,
-			DADDR  => pll#i#_daddr(6 downto 0),
-			DO     => pll#i#_do,
-			DI     => pll#i#_di,
-			DEN    => pll#i#_den,
-			DWE    => pll#i#_dwe,
-			DRDY   => pll#i#_drdy,
+			DADDR  => pll<<Id>>_daddr(6 downto 0),
+			DO     => pll<<Id>>_do,
+			DI     => pll<<Id>>_di,
+			DEN    => pll<<Id>>_den,
+			DWE    => pll<<Id>>_dwe,
+			DRDY   => pll<<Id>>_drdy,
 			PWRDWN => '0',
-			LOCKED => pll#i#_locked,
-			RST    => pll#i#_rst
+			LOCKED => pll<<Id>>_locked,
+			RST    => pll<<Id>>_rst
 		);
 
-	bufg_pll#i#_0 : BUFG
+	bufg_pll<<Id>> : BUFG
 		port map (
-		I => pll#i#_clk0,
-		O => CLK_#i#_Out_0
+		I => pll<<Id>>_clk,
+		O => pll<<Id>>_clkbuf
 	);
-
-	bufg_pll#i#_1 : BUFG
-		port map (
-		I => pll#i#_clk1,
-		O => CLK_#i#_Out_1
-	);
-
-	bufg_pll#i#_2 : BUFG
-		port map (
-		I => pll#i#_clk2,
-		O => CLK_#i#_Out_2
-	);
-
-	bufg_pll#i#_3 : BUFG
-		port map (
-		I => pll#i#_clk3,
-		O => CLK_#i#_Out_3
-	);
-
-	bufg_pll#i#_4 : BUFG
-		port map (
-		I => pll#i#_clk4,
-		O => CLK_#i#_Out_4
-	);
-
-	bufg_pll#i#_5 : BUFG
-		port map (
-		I => pll#i#_clk5,
-		O => CLK_#i#_Out_5
-	);
-	-- ## END GENERATE LOOP ##
+	<<end generate>>
 
 
 	-- == Process definitions =============================================
@@ -262,39 +219,12 @@ begin
 
 
 	req <=
-	  -- ## BEGIN GENERATE LOOP ##
-	  BUS2IP_CS(#i#) or
-	  -- ## END GENERATE LOOP ##
+	  <<generate for CLOCKS>>
+	  BUS2IP_CS(<<_i>>) or
+	  <<end generate>>
 	  '0';
 
-	pll_daddr <= 
-	  -- ## BEGIN GENERATE LOOP ##
-	  x"08" when state = STATE_READ0 and BUS2IP_WrCE((C_NUM_CLOCKMGS - #i#) * 8 - 1) = '1' else
-	  x"08" when state = STATE_WRITE0 and BUS2IP_WrCE((C_NUM_CLOCKMGS - #i#) * 8 - 1) = '1' else
-	  x"09" when state = STATE_READ1 and BUS2IP_WrCE((C_NUM_CLOCKMGS - #i#) * 8 - 1) = '1' else
-	  x"09" when state = STATE_WRITE1 and BUS2IP_WrCE((C_NUM_CLOCKMGS - #i#) * 8 - 1) = '1' else
-	  x"0a" when state = STATE_READ0 and BUS2IP_WrCE((C_NUM_CLOCKMGS - #i#) * 8 - 2) = '1' else
-	  x"0a" when state = STATE_WRITE0 and BUS2IP_WrCE((C_NUM_CLOCKMGS - #i#) * 8 - 2) = '1' else
-	  x"0b" when state = STATE_READ1 and BUS2IP_WrCE((C_NUM_CLOCKMGS - #i#) * 8 - 2) = '1' else
-	  x"0b" when state = STATE_WRITE1 and BUS2IP_WrCE((C_NUM_CLOCKMGS - #i#) * 8 - 2) = '1' else
-	  x"0c" when state = STATE_READ0 and BUS2IP_WrCE((C_NUM_CLOCKMGS - #i#) * 8 - 3) = '1' else
-	  x"0c" when state = STATE_WRITE0 and BUS2IP_WrCE((C_NUM_CLOCKMGS - #i#) * 8 - 3) = '1' else
-	  x"0d" when state = STATE_READ1 and BUS2IP_WrCE((C_NUM_CLOCKMGS - #i#) * 8 - 3) = '1' else
-	  x"0d" when state = STATE_WRITE1 and BUS2IP_WrCE((C_NUM_CLOCKMGS - #i#) * 8 - 3) = '1' else
-	  x"0e" when state = STATE_READ0 and BUS2IP_WrCE((C_NUM_CLOCKMGS - #i#) * 8 - 4) = '1' else
-	  x"0e" when state = STATE_WRITE0 and BUS2IP_WrCE((C_NUM_CLOCKMGS - #i#) * 8 - 4) = '1' else
-	  x"0f" when state = STATE_READ1 and BUS2IP_WrCE((C_NUM_CLOCKMGS - #i#) * 8 - 4) = '1' else
-	  x"0f" when state = STATE_WRITE1 and BUS2IP_WrCE((C_NUM_CLOCKMGS - #i#) * 8 - 4) = '1' else
-	  x"10" when state = STATE_READ0 and BUS2IP_WrCE((C_NUM_CLOCKMGS - #i#) * 8 - 5) = '1' else
-	  x"10" when state = STATE_WRITE0 and BUS2IP_WrCE((C_NUM_CLOCKMGS - #i#) * 8 - 5) = '1' else
-	  x"11" when state = STATE_READ1 and BUS2IP_WrCE((C_NUM_CLOCKMGS - #i#) * 8 - 5) = '1' else
-	  x"11" when state = STATE_WRITE1 and BUS2IP_WrCE((C_NUM_CLOCKMGS - #i#) * 8 - 5) = '1' else
-	  x"06" when state = STATE_READ0 and BUS2IP_WrCE((C_NUM_CLOCKMGS - #i#) * 8 - 6) = '1' else
-	  x"06" when state = STATE_WRITE0 and BUS2IP_WrCE((C_NUM_CLOCKMGS - #i#) * 8 - 6) = '1' else
-	  x"07" when state = STATE_READ1 and BUS2IP_WrCE((C_NUM_CLOCKMGS - #i#) * 8 - 6) = '1' else
-	  x"07" when state = STATE_WRITE1 and BUS2IP_WrCE((C_NUM_CLOCKMGS - #i#) * 8 - 6) = '1' else
-	  -- ## END GENERATE LOOP ##
-	  x"00";
+	pll_daddr <= x"08";
 
 	pll_den <=
 	  '1' when state = STATE_READ0 else
@@ -319,41 +249,37 @@ begin
 	  pll_do(15 downto 8) & BUS2IP_Data(23 downto 16) when state = STATE_WRITERDY1 else
 	  (others => '0');
 
+	<<generate for CLOCKS>>
+	pll<<Id>>_rst <= pll_rst when BUS2IP_CS(C_NUM_CLOCKS - <<_i>> - 1) = '1' else '0';
 
-	-- ## BEGIN GENERATE LOOP ##
-	pll#i#_rst <= pll_rst when BUS2IP_CS(C_NUM_CLOCKMGS - #i# - 1) = '1' else '0';
-	-- ## END GENERATE LOOP ##
+	pll<<Id>>_daddr <= pll_daddr;
 
-	-- ## BEGIN GENERATE LOOP ##
-	pll#i#_daddr <= pll_daddr;
-	-- ## END GENERATE LOOP ##
+	pll<<Id>>_den <= pll_den when BUS2IP_CS(C_NUM_CLOCKS - <<_i>> - 1) = '1' else '0';
 
-	-- ## BEGIN GENERATE LOOP ##
-	pll#i#_den <= pll_den when BUS2IP_CS(C_NUM_CLOCKMGS - #i# - 1) = '1' else '0';
-	-- ## END GENERATE LOOP ##
+	pll<<Id>>_dwe <= pll_dwe when BUS2IP_CS(C_NUM_CLOCKS - <<_i>> - 1) = '1' else '0';
 
-	-- ## BEGIN GENERATE LOOP ##
-	pll#i#_dwe <= pll_dwe when BUS2IP_CS(C_NUM_CLOCKMGS - #i# - 1) = '1' else '0';
-	-- ## END GENERATE LOOP ##
-
-	-- ## BEGIN GENERATE LOOP ##
-	pll#i#_di <= pll_di;
-	-- ## END GENERATE LOOP ##
+	pll<<Id>>_di <= pll_di;
+	<<end generate>>
 
 	pll_drdy <=
-	  -- ## BEGIN GENERATE LOOP ##
-	  (pll#i#_drdy and BUS2IP_CS(C_NUM_CLOCKMGS - #i# - 1)) or
-	  -- ## END GENERATE LOOP ##
+	  <<generate for CLOCKS>>
+	  (pll<<Id>>_drdy and BUS2IP_CS(C_NUM_CLOCKS - <<_i>> - 1)) or
+	  <<end generate>>
 	  '0';
 
 	pll_do <=
-	  -- ## BEGIN GENERATE LOOP ##
-	  (pll#i#_do and (pll#i#_do'Range => BUS2IP_CS(C_NUM_CLOCKMGS - #i# - 1))) or
-	  -- ## END GENERATE LOOP ##
+	  <<generate for CLOCKS>>
+	  (pll<<Id>>_do and (pll<<Id>>_do'Range => BUS2IP_CS(C_NUM_CLOCKS - <<_i>> - 1))) or
+	  <<end generate>>
 	  (15 downto 0 => '0');
 
 
 	-- == Assignment of ouput ports =======================================
+
+	<<generate for CLOCKS>>
+	CLK<<Id>>_Out <= pll<<Id>>_clkbuf;
+	CLK<<Id>>_Locked <= pll<<Id>>_locked;
+	<<end generate>>
 
 	IP2BUS_Data <= (others => '0');
 

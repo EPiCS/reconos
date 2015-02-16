@@ -7,7 +7,7 @@ OPTION HDL = VHDL
 OPTION IP_GROUP = ReconOS
 OPTION DESC = ReconOS - MEMIF Memory Management Unit
 OPTION LONG_DESC = The MMU enables support for virtual address translation.
-OPTION ARCH_SUPPORT_MAP = (others=DEVELOPMENT)
+#OPTION ARCH_SUPPORT_MAP = (others=DEVELOPMENT)
 
 ## Bus Interfaces
 BUS_INTERFACE BUS = MEMIF_Hwt2Mem_In, BUS_STD = FIFO_S, BUS_TYPE = INITIATOR

@@ -41,6 +41,7 @@
 --
 -- ======================================================================
 
+<<reconos_preproc>>
 
 library ieee;
 use ieee.std_logic_1164.all;
@@ -78,13 +79,10 @@ entity reconos_proc_control is
 		C_SLV_DWIDTH         : integer            := 32
 	);
 	port (
-		-- Proc control ports
-		PROC_Clk             : in  std_logic;
-		PROC_Rst             : in  std_logic;
-		-- BEGIN GENERATE LOOP
-		PROC_Hwt_Rst_#i#     : out std_logic;
-		PROC_Hwt_Signal_#i#  : out std_logic;
-		-- END GENERATE LOOP
+		<<generate for SLOTS>>
+		PROC_Hwt_Rst_<<Id>>     : out std_logic;
+		PROC_Hwt_Signal_<<Id>>  : out std_logic;
+		<<end generate>>
 		PROC_Sys_Rst         : out std_logic;
 		PROC_Pgf_Int         : out std_logic;
 
@@ -234,10 +232,8 @@ begin
 		)
 		port map (
 			-- Proc Control ports
-			PROC_Clk         => PROC_Clk,
-			PROC_Rst         => not PROC_Rst,
 			PROC_Hwt_Rst     => hwt_rst,
-			PROC_Hwt_Signal => hwt_signal,
+			PROC_Hwt_Signal  => hwt_signal,
 			PROC_Sys_Rst     => PROC_Sys_Rst,
 			PROC_Pgf_Int     => PROC_Pgf_Int,
 
@@ -272,9 +268,9 @@ begin
 	user_Bus2IP_RdCE <= ipif_Bus2IP_RdCE(USER_NUM_REG-1 downto 0);
 	user_Bus2IP_WrCE <= ipif_Bus2IP_WrCE(USER_NUM_REG-1 downto 0);
 
-	-- BEGIN GENERATE LOOP
-	PROC_Hwt_Rst_#i# <= hwt_rst(#i#);
-	PROC_Hwt_Signal_#i# <= hwt_signal(#i#);
-	-- END GENERATE LOOP
+	<<generate for SLOTS>>
+	PROC_Hwt_Rst_<<Id>> <= hwt_rst(<<_i>>);
+	PROC_Hwt_Signal_<<Id>> <= hwt_signal(<<_i>>);
+	<<end generate>>
 
 end implementation;

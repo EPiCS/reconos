@@ -7,7 +7,7 @@ OPTION HDL = VHDL
 OPTION IP_GROUP = ReconOS
 OPTION DESC = ReconOS - MEMIF Memory controller
 OPTION LONG_DESC = The memory controller connects the memory subsystem of ReconOS to the memory bus of the system as an AXI master.
-OPTION ARCH_SUPPORT_MAP = (others=DEVELOPMENT)
+#OPTION ARCH_SUPPORT_MAP = (others=DEVELOPMENT)
 
 ## Bus Interfaces
 BUS_INTERFACE BUS = M_AXI, BUS_STD = AXI, BUS_TYPE = MASTER

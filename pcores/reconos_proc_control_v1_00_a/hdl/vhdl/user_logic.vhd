@@ -63,8 +63,6 @@ entity user_logic is
 	);
   port (
 		-- PROC control ports
-		PROC_Clk         : in  std_logic;
-		PROC_Rst         : in  std_logic;
 		PROC_Hwt_Rst     : out std_logic_vector(C_NUM_HWTS - 1 downto 0);
 		PROC_Hwt_Signal  : out std_logic_vector(C_NUM_HWTS - 1 downto 0);
 		PROC_Sys_Rst     : out std_logic;
@@ -128,7 +126,7 @@ architecture imp of user_logic is
 begin
 
 	clk <= Bus2IP_Clk;
-	rst <= PROC_Rst or not Bus2IP_Resetn;
+	rst <= not Bus2IP_Resetn;
 	
 	-- Dive bus signals
 	IP2Bus_Data  <= slv_ip2bus_data;

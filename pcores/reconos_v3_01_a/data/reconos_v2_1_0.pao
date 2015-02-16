@@ -1,1 +1,2 @@
 lib reconos_v3_01_a reconos_pkg vhdl
+lib reconos_v3_01_a reconos_app_pkg vhdl

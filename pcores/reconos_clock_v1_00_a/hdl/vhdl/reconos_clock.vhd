@@ -13,16 +13,11 @@
 --   description:  A clock manager which can be configures via the AXI
 --                 bus. Therefore it provides the following write only
 --                 registers:
---                   Reg0: Clock 1 and 2 register of clock output 0
---                   Reg1: Clock 1 and 2 register of clock output 1
---                   Reg2: Clock 1 and 2 register of clock output 2
---                   Reg3: Clock 1 and 2 register of clock output 3
---                   Reg4: Clock 1 and 2 register of clock output 4
---                   Reg5: Clock 1 and 2 register of clock output 5
---                   Reg6: Reserved
---                   Reg7: Reserved
+--                   Reg#i#: Clock 1 and 2 register of pll#i#
 --
 -- ======================================================================
+
+<<reconos_preproc>>
 
 library ieee;
 use ieee.std_logic_1164.all;
@@ -46,9 +41,11 @@ entity reconos_clock is
 	--   C_BASE_ADDR - lower address of axi slave
 	--   C_HIGH_ADDR - higher address of axi slave
 	--
-	--   C_NUM_CLOCKMGS - number of clock managers
+	--   C_NUM_CLOCKS - number of clocks
 	--
-	--   C_PLL#i# - pll generics
+	--   C_CLKIN_PERIOD - input clock period
+	--
+	--   C_CLK#i# - pll generics
 	--
 	generic (
 		C_S_AXI_ADDR_WIDTH : integer := 32;
@@ -57,33 +54,33 @@ entity reconos_clock is
 		C_BASEADDR : std_logic_vector := x"FFFFFFFF";
 		C_HIGHADDR : std_logic_vector := x"00000000";
 
-		C_NUM_CLOCKMGS: integer := 1;
+		C_NUM_CLOCKS: integer := 1;
 
-		-- ## BEGIN GENERATE LOOP ##
-		C_PLL#i#_CLKIN_PERIOD  : real := 10.00;
-		C_PLL#i#_CLKFBOUT_MULT : integer := 16;
-		C_PLL#i#_DIVCLK_DIVIDE : integer := 1#c;#
-		-- ## END GENERATE LOOP ##
+		C_CLKIN_PERIOD : real := 10.00;
+
+		<<generate for CLOCKS>>
+		C_CLK<<Id>>_CLKFBOUT_MULT : integer := 16;
+		C_CLK<<Id>>_DIVCLK_DIVIDE : integer := 1;
+		C_CLK<<Id>>_CLKOUT_DIVIDE : integer := 16<<c;>>
+		<<end generate>>
 	);
 
 	--
 	-- Port defintions
 	--
 	--   CLK_Ref  - reference clock
-	--   CLK_Out_ - clock outputs
+	--
+	--   CLK#i#_ - clock outputs
 	--
 	--   S_AXI_ - @see axi bus
 	--
 	port (
 		CLK_Ref       : in std_logic;
-		-- ## BEGIN GENERATE LOOP ##
-		CLK_#i#_Out_0 : out std_logic;
-		CLK_#i#_Out_1 : out std_logic;
-		CLK_#i#_Out_2 : out std_logic;
-		CLK_#i#_Out_3 : out std_logic;
-		CLK_#i#_Out_4 : out std_logic;
-		CLK_#i#_Out_5 : out std_logic;
-		-- ## END GENERATE LOOP ##
+
+		<<generate for CLOCKS>>
+		CLK<<Id>>_Out    : out std_logic;
+		CLK<<Id>>_Locked : out std_logic;
+		<<end generate>>
 
 		S_AXI_ACLK    : in  std_logic;
 		S_AXI_ARESETN : in  std_logic;
@@ -116,9 +113,9 @@ architecture imp of reconos_clock is
 	signal bus2ip_clk    : std_logic;
 	signal bus2ip_resetn : std_logic;
 	signal bus2ip_data   : std_logic_vector(31 downto 0);
-	signal bus2ip_cs     : std_logic_vector(C_NUM_CLOCKMGS - 1 downto 0);
-	signal bus2ip_rdce   : std_logic_vector(C_NUM_CLOCKMGS * 8 - 1 downto 0);
-	signal bus2ip_wrce   : std_logic_vector(C_NUM_CLOCKMGS * 8 - 1 downto 0);
+	signal bus2ip_cs     : std_logic_vector(C_NUM_CLOCKS - 1 downto 0);
+	signal bus2ip_rdce   : std_logic_vector(C_NUM_CLOCKS - 1 downto 0);
+	signal bus2ip_wrce   : std_logic_vector(C_NUM_CLOCKS - 1 downto 0);
 	signal ip2bus_data   : std_logic_vector(31 downto 0);
 	signal ip2bus_rdack  : std_logic;
 	signal ip2bus_wrack  : std_logic;
@@ -132,16 +129,16 @@ architecture imp of reconos_clock is
 	constant C_ADDR_PAD : std_logic_vector(31 downto 0) := (others => '0');
 
 	constant C_ARD_ADDR_RANGE_ARRAY : SLV64_ARRAY_TYPE := (
-		-- ## BEGIN GENERATE LOOP ##
-		2 * #i# + 0 => C_ADDR_PAD & std_logic_vector(unsigned(C_BASEADDR) + #i# * 32),
-		2 * #i# + 1 => C_ADDR_PAD & std_logic_vector(unsigned(C_BASEADDR) + #i# * 32 + 31)#c,#
-		-- ## END GENERATE LOOP ##
+		<<generate for CLOCKS>>
+		2 * <<_i>> + 0 => C_ADDR_PAD & std_logic_vector(unsigned(C_BASEADDR) + <<_i>> * 4),
+		2 * <<_i>> + 1 => C_ADDR_PAD & std_logic_vector(unsigned(C_BASEADDR) + <<_i>> * 4 + 3)<<c,>>
+		<<end generate>>
 	);
 
 	constant C_ARD_NUM_CE_ARRAY : INTEGER_ARRAY_TYPE := (
-		-- ## BEGIN GENERATE LOOP ##
-		#i# => 8#c,#
-		-- ## END GENERATE LOOP ##
+		<<generate for CLOCKS>>
+		<<_i>> => 1<<c,>>
+		<<end generate>>
 	);
 begin
 
@@ -203,25 +200,24 @@ begin
 	--
 	ul : entity reconos_clock_v1_00_a.user_logic
 		generic map (
-			C_NUM_CLOCKMGS => C_NUM_CLOCKMGS,
+			C_NUM_CLOCKS => C_NUM_CLOCKS,
 
-			-- ## BEGIN GENERATE LOOP ##
-			C_PLL#i#_CLKIN_PERIOD => C_PLL#i#_CLKIN_PERIOD,
-			C_PLL#i#_CLKFBOUT_MULT => C_PLL#i#_CLKFBOUT_MULT,
-			C_PLL#i#_DIVCLK_DIVIDE => C_PLL#i#_DIVCLK_DIVIDE
-			-- ## END GENERATE LOOP ##
+			C_CLKIN_PERIOD => C_CLKIN_PERIOD,
+
+			<<generate for CLOCKS>>
+			C_CLK<<Id>>_CLKFBOUT_MULT => C_CLK<<Id>>_CLKFBOUT_MULT,
+			C_CLK<<Id>>_DIVCLK_DIVIDE => C_CLK<<Id>>_DIVCLK_DIVIDE,
+			C_CLK<<Id>>_CLKOUT_DIVIDE => C_CLK<<Id>>_CLKOUT_DIVIDE<<c,>>
+			<<end generate>>
 		)
 
 		port map (
-			CLK_Ref       => CLK_Ref,
-			-- ## BEGIN GENERATE LOOP ##
-			CLK_#i#_Out_0 => CLK_#i#_Out_0,
-			CLK_#i#_Out_1 => CLK_#i#_Out_1,
-			CLK_#i#_Out_2 => CLK_#i#_Out_2,
-			CLK_#i#_Out_3 => CLK_#i#_Out_3,
-			CLK_#i#_Out_4 => CLK_#i#_Out_4,
-			CLK_#i#_Out_5 => CLK_#i#_Out_5,
-			-- ## END GENERATE LOOP ##
+			CLK_Ref => CLK_Ref,
+
+			<<generate for CLOCKS>>
+			CLK<<Id>>_Out    => CLK<<Id>>_Out,
+			CLK<<Id>>_Locked => CLK<<Id>>_Locked,
+			<<end generate>>
 
 			BUS2IP_Clk    => bus2ip_clk,
 			BUS2IP_Resetn => bus2ip_resetn,

@@ -18,8 +18,8 @@
  */
 
 
-#ifdef RECONOS_ARCH_microblaze
-#ifdef RECONOS_OS_xilkernel
+#if defined(RECONOS_BOARD_ml605)
+#if defined(RECONOS_OS_xilkernel)
 
 #include "arch.h"
 
