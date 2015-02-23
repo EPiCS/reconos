@@ -21,11 +21,12 @@ def get_parser(prj):
 
 def build(args):
 	prj = args.prj
+	swdir = prj.basedir + ".sw"
 
 	try:
-		shutil2.chdir(prj.swdir)
+		shutil2.chdir(swdir)
 	except:
-		log.error("software directory '" + prj.swdir + "' not found")
+		log.error("software directory '" + swdir + "' not found")
 		return
 	
 	subprocess.call("make", shell=True)

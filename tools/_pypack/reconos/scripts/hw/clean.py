@@ -23,14 +23,15 @@ def get_parser(prj):
 
 def clean_xil_ise(args):
 	prj = args.prj
+	hwdir = prj.basedir + ".hw"
 
 	if args.remove:
-		shutil2.rmtree(prj.hwdir)
+		shutil2.rmtree(hwdir)
 	else:
 		try:
-			shutil2.chdir(prj.hwdir)
+			shutil2.chdir(hwdir)
 		except:
-			log.error("hardware directory '" + prj.hwdir + "' not found")
+			log.error("hardware directory '" + hwdir + "' not found")
 			return
 		
 		subprocess.call("""

@@ -1,3 +1,5 @@
+<<reconos_preproc>>
+
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
@@ -167,7 +169,7 @@ begin
 			FIFO_Rst => sys_rst
 		);
 
-	hwt : entity work.hwt
+	hwt : entity work.<<Thread>>
 		port map (
 			OSIF_Sw2Hw_Data => osif_sw2hw_s_data,
 			OSIF_Sw2Hw_Empty => osif_sw2hw_s_empty,

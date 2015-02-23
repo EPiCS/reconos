@@ -171,6 +171,9 @@ class Project:
 
 		return shutil2.join(self.repo, os, "project")
 
+	def get_simref(self):
+		return shutil2.join(self.repo, "testbench")
+
 
 	#
 	# Opens a project by parsing the project file.
@@ -184,8 +187,9 @@ class Project:
 		self.threads = []
 		self.file = shutil2.abspath(filepath)
 		self.dir = shutil2.dirname(self.file)
-		self.hwdir = shutil2.trimext(self.file) + ".hw"
-		self.swdir = shutil2.trimext(self.file) + ".sw"
+		self.basedir = shutil2.trimext(self.file)
+		#self.hwdir = shutil2.trimext(self.file) + ".hw"
+		#self.swdir = shutil2.trimext(self.file) + ".sw"
 
 		cfg = configparser.RawConfigParser()
 		cfg.optionxform = str

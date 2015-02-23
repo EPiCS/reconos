@@ -22,7 +22,7 @@ def get_parser(prj):
 
 def export_xil_ise(args):
 	prj = args.prj
-	hwdir = args.hwdir if args.hwdir is not None else prj.hwdir
+	hwdir = args.hwdir if args.hwdir is not None else prj.basedir + ".hw"
 
 	log.info("Export hardware to project directory '" + hwdir + "'")
 

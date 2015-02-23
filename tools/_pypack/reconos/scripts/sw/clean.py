@@ -21,14 +21,15 @@ def get_parser(prj):
 
 def clean(args):
 	prj = args.prj
+	swdir = prj.basedir + ".sw"
 
 	if args.remove:
-		shutil2.rmtree(prj.swdir)
+		shutil2.rmtree(swdir)
 	else:
 		try:
-			shutil2.chdir(prj.swdir)
+			shutil2.chdir(swdir)
 		except:
-			log.error("software directory '" + prj.swdir + "' not found")
+			log.error("software directory '" + swdir + "' not found")
 			return
 		
 		subprocess.call("make clean", shell=True)

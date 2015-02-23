@@ -38,7 +38,7 @@ package reconos_pkg_tb is
 	--
 	constant C_CLK_PRD : time := 10 ns;
 	constant C_OSIF_ADDR_WIDTH : integer := 2;
-	constant C_MEMIF_ADDR_WIDTH : integer := 1;
+	constant C_MEMIF_ADDR_WIDTH : integer := 6;
 	constant C_SYSTEM_RAM_SIZE_WORDS : integer := 1024;
 
 

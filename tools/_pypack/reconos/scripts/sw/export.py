@@ -21,6 +21,7 @@ def get_parser(prj):
 
 def export_xil_ise(args):
 	prj = args.prj
+	swdir = prj.basedir + ".sw"
 
 	logging.info("Export software to project directory '" + prj.dir + "'")
 
@@ -32,7 +33,7 @@ def export_xil_ise(args):
 	dictionary["CFLAGS"] = prj.cflags
 	dictionary["LDFLAGS"] = prj.ldflags
 	dictionary["THREADS"] = []
-	dictionary["SWDIR"] = prj.swdir
+	dictionary["SWDIR"] = swdir
 	for t in prj.threads:
 		d = {}
 		d["Name"] = t.name.lower()
@@ -59,14 +60,14 @@ def export_xil_ise(args):
 			i += 1
 
 	logging.info("Copying reference design to project folder ...")
-	shutil2.mkdir(prj.swdir)
-	shutil2.copytree(prj.get_swref(), prj.swdir, followlinks=True)
+	shutil2.mkdir(swdir)
+	shutil2.copytree(prj.get_swref(), swdir, followlinks=True)
 
 	logging.info("Linking sources ...")
 	if args.link:
-		shutil2.linktree(shutil2.join(prj.dir, "src/application"), prj.swdir)
+		shutil2.linktree(shutil2.join(prj.dir, "src/application"), swdir)
 	else:
-		shutil2.copytree(shutil2.join(prj.dir, "src/application"), prj.swdir)
+		shutil2.copytree(shutil2.join(prj.dir, "src/application"), swdir)
 
 	for t in prj.threads:
 		if t.swsource is None or t.swsource == "":
@@ -74,15 +75,15 @@ def export_xil_ise(args):
 
 		thread = shutil2.join(prj.dir, "src", t.swsource)
 		if args.link:
-			shutil2.symlink(thread, shutil2.join(prj.swdir, t.swsource))
+			shutil2.symlink(thread, shutil2.join(swdir, t.swsource))
 		else:
-			shutil2.mkdir(shutil2.join(prj.swdir, t.swsource))
-			shutil2.copytree(thread, shutil2.join(prj.swdir, t.swsource))
+			shutil2.mkdir(shutil2.join(swdir, t.swsource))
+			shutil2.copytree(thread, shutil2.join(swdir, t.swsource))
 
 	logging.info("Generating project ...")
-	dictionary["REPO_REL"] = shutil2.relpath(prj.repo, prj.swdir)
+	dictionary["REPO_REL"] = shutil2.relpath(prj.repo, swdir)
 	dictionary["OBJS"] = [{"Source": shutil2.trimext(_) + ".o"}
-	                       for _ in shutil2.listfiles(prj.swdir, True, ".c")]
+	                       for _ in shutil2.listfiles(swdir, True, ".c")]
 
 	def pp(f): return preproc.preproc(f, dictionary, "overwrite")
-	shutil2.walk(prj.swdir, pp)
+	shutil2.walk(swdir, pp)
