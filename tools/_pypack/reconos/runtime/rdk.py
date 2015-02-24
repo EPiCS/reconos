@@ -20,6 +20,7 @@ import readline
 import pkgutil
 import importlib
 import reconos
+import reconos.scripts
 import argparse
 import logging
 
@@ -38,7 +39,7 @@ def main():
 		sys.exit(1)
 	prj.open(prjfile)
 
-	pkgs = pkgutil.walk_packages(reconos.__path__, reconos.__name__ + ".")
+	pkgs = pkgutil.walk_packages(reconos.scripts.__path__, reconos.scripts.__name__ + ".")
 	cmds = {}
 	for m in [importlib.import_module(m) for f,m,p in pkgs if not p]:
 		try:
