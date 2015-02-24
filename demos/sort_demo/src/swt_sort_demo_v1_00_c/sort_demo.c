@@ -36,7 +36,7 @@ void *swt_sort_demo(void *data) {
 	struct reconos_resource *res = rt->resources;
 
 	mbox_addr = (struct mbox *)res[SORTDEMO_RESOURCES_ADDRESS].ptr;
-	mbox_ack = (struct mbox *)res[SORTDEMO_RESOURCES_ADDRESS].ptr;
+	mbox_ack = (struct mbox *)res[SORTDEMO_RESOURCES_ACKNOWLEDGE].ptr;
 
 	while (1) {
 		ret = mbox_get(mbox_addr);
