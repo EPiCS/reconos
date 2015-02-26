@@ -1,0 +1,10 @@
+##############################################################################
+## Filename:          noc_rst_block_v2_1_0.mpd
+## Description:       reset block to stop NoC communication whenever rst equals one
+## Date:              Tue Oct 13 12:47:26 2013 (by Create and Import Peripheral Wizard)
+##############################################################################
+
+lib proc_common_v3_00_a  proc_common_pkg vhdl
+lib noc_rst_block_v1_00_a noc_rst_block vhdl
+
+

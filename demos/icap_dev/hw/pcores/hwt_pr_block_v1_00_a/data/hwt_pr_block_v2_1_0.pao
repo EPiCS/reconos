@@ -1,0 +1,9 @@
+##############################################################################
+## Filename:          hwt_pr_block_v2_1_0.pao
+## Description:       pr block
+## Date:              Wed Mar 12 12:47:26 2014 (by Create and Import Peripheral Wizard)
+##############################################################################
+
+lib proc_common_v3_00_a  proc_common_pkg vhdl
+lib reconos_v3_00_b reconos_pkg vhdl
+lib hwt_pr_block_v1_00_a hwt_pr_block vhdl

@@ -1,0 +1,222 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<wave_config>
+   <wave_state>
+   </wave_state>
+   <db_ref_list>
+      <db_ref path="/home/atraber/git/reconos/demos/icap_dev/hw/hwt_pr_sim/hwt_tb_isim_beh.wdb" id="1" type="auto">
+         <top_modules>
+            <top_module name="hwt_tb" />
+            <top_module name="numeric_std" />
+            <top_module name="proc_common_pkg" />
+            <top_module name="reconos_pkg" />
+            <top_module name="std_logic_1164" />
+            <top_module name="std_logic_arith" />
+            <top_module name="std_logic_textio" />
+            <top_module name="std_logic_unsigned" />
+            <top_module name="textio" />
+            <top_module name="vcomponents" />
+            <top_module name="vital_primitives" />
+            <top_module name="vital_timing" />
+            <top_module name="vpkg" />
+         </top_modules>
+      </db_ref>
+   </db_ref_list>
+   <WVObjectSize size="40" />
+   <wvobject fp_name="divider62" type="divider">
+      <obj_property name="label">CLK and RST</obj_property>
+      <obj_property name="DisplayName">label</obj_property>
+      <obj_property name="BkColor">128 128 255</obj_property>
+      <obj_property name="TextColor">230 230 230</obj_property>
+   </wvobject>
+   <wvobject fp_name="/hwt_tb/clk" type="logic" db_ref_id="1">
+      <obj_property name="ElementShortName">clk</obj_property>
+      <obj_property name="ObjectShortName">clk</obj_property>
+   </wvobject>
+   <wvobject fp_name="/hwt_tb/rst" type="logic" db_ref_id="1">
+      <obj_property name="ElementShortName">rst</obj_property>
+      <obj_property name="ObjectShortName">rst</obj_property>
+   </wvobject>
+   <wvobject fp_name="divider94" type="divider">
+      <obj_property name="label">ReconosFSM</obj_property>
+      <obj_property name="DisplayName">label</obj_property>
+      <obj_property name="BkColor">128 128 255</obj_property>
+      <obj_property name="TextColor">230 230 230</obj_property>
+   </wvobject>
+   <wvobject fp_name="/hwt_tb/uut/state" type="other" db_ref_id="1">
+      <obj_property name="DisplayName">label</obj_property>
+      <obj_property name="ElementShortName">state</obj_property>
+      <obj_property name="ObjectShortName">state</obj_property>
+      <obj_property name="label">state</obj_property>
+   </wvobject>
+   <wvobject fp_name="divider44" type="divider">
+      <obj_property name="label">FSL_A</obj_property>
+      <obj_property name="DisplayName">label</obj_property>
+      <obj_property name="BkColor">128 128 255</obj_property>
+      <obj_property name="TextColor">230 230 230</obj_property>
+   </wvobject>
+   <wvobject fp_name="/hwt_tb/fsl_a/fsl_m_clk" type="logic" db_ref_id="1">
+      <obj_property name="ElementShortName">fsl_m_clk</obj_property>
+      <obj_property name="ObjectShortName">fsl_m_clk</obj_property>
+   </wvobject>
+   <wvobject fp_name="/hwt_tb/fsl_a/fsl_m_data" type="array" db_ref_id="1">
+      <obj_property name="ElementShortName">fsl_m_data[0:31]</obj_property>
+      <obj_property name="ObjectShortName">fsl_m_data[0:31]</obj_property>
+      <obj_property name="Radix">HEXRADIX</obj_property>
+   </wvobject>
+   <wvobject fp_name="/hwt_tb/fsl_a/fsl_m_control" type="logic" db_ref_id="1">
+      <obj_property name="ElementShortName">fsl_m_control</obj_property>
+      <obj_property name="ObjectShortName">fsl_m_control</obj_property>
+   </wvobject>
+   <wvobject fp_name="/hwt_tb/fsl_a/fsl_m_write" type="logic" db_ref_id="1">
+      <obj_property name="ElementShortName">fsl_m_write</obj_property>
+      <obj_property name="ObjectShortName">fsl_m_write</obj_property>
+   </wvobject>
+   <wvobject fp_name="/hwt_tb/fsl_a/fsl_m_full" type="logic" db_ref_id="1">
+      <obj_property name="ElementShortName">fsl_m_full</obj_property>
+      <obj_property name="ObjectShortName">fsl_m_full</obj_property>
+   </wvobject>
+   <wvobject fp_name="/hwt_tb/fsl_a/fsl_s_clk" type="logic" db_ref_id="1">
+      <obj_property name="ElementShortName">fsl_s_clk</obj_property>
+      <obj_property name="ObjectShortName">fsl_s_clk</obj_property>
+   </wvobject>
+   <wvobject fp_name="/hwt_tb/fsl_a/fsl_s_data" type="array" db_ref_id="1">
+      <obj_property name="ElementShortName">fsl_s_data[0:31]</obj_property>
+      <obj_property name="ObjectShortName">fsl_s_data[0:31]</obj_property>
+      <obj_property name="Radix">HEXRADIX</obj_property>
+   </wvobject>
+   <wvobject fp_name="/hwt_tb/fsl_a/fsl_s_control" type="logic" db_ref_id="1">
+      <obj_property name="ElementShortName">fsl_s_control</obj_property>
+      <obj_property name="ObjectShortName">fsl_s_control</obj_property>
+   </wvobject>
+   <wvobject fp_name="/hwt_tb/fsl_a/fsl_s_read" type="logic" db_ref_id="1">
+      <obj_property name="ElementShortName">fsl_s_read</obj_property>
+      <obj_property name="ObjectShortName">fsl_s_read</obj_property>
+   </wvobject>
+   <wvobject fp_name="/hwt_tb/fsl_a/fsl_s_exists" type="logic" db_ref_id="1">
+      <obj_property name="ElementShortName">fsl_s_exists</obj_property>
+      <obj_property name="ObjectShortName">fsl_s_exists</obj_property>
+   </wvobject>
+   <wvobject fp_name="/hwt_tb/fsl_a/fsl_full" type="logic" db_ref_id="1">
+      <obj_property name="ElementShortName">fsl_full</obj_property>
+      <obj_property name="ObjectShortName">fsl_full</obj_property>
+   </wvobject>
+   <wvobject fp_name="/hwt_tb/fsl_a/fsl_has_data" type="logic" db_ref_id="1">
+      <obj_property name="ElementShortName">fsl_has_data</obj_property>
+      <obj_property name="ObjectShortName">fsl_has_data</obj_property>
+   </wvobject>
+   <wvobject fp_name="/hwt_tb/fsl_a/fifo_full" type="logic" db_ref_id="1">
+      <obj_property name="ElementShortName">fifo_full</obj_property>
+      <obj_property name="ObjectShortName">fifo_full</obj_property>
+   </wvobject>
+   <wvobject fp_name="/hwt_tb/fsl_a/fifo_has_data" type="logic" db_ref_id="1">
+      <obj_property name="ElementShortName">fifo_has_data</obj_property>
+      <obj_property name="ObjectShortName">fifo_has_data</obj_property>
+   </wvobject>
+   <wvobject fp_name="divider62" type="divider">
+      <obj_property name="label">FSL_B</obj_property>
+      <obj_property name="DisplayName">label</obj_property>
+      <obj_property name="BkColor">128 128 255</obj_property>
+      <obj_property name="TextColor">230 230 230</obj_property>
+   </wvobject>
+   <wvobject fp_name="/hwt_tb/fsl_b/fsl_clk" type="logic" db_ref_id="1">
+      <obj_property name="ElementShortName">fsl_clk</obj_property>
+      <obj_property name="ObjectShortName">fsl_clk</obj_property>
+   </wvobject>
+   <wvobject fp_name="/hwt_tb/fsl_b/fsl_m_data" type="array" db_ref_id="1">
+      <obj_property name="ElementShortName">fsl_m_data[0:31]</obj_property>
+      <obj_property name="ObjectShortName">fsl_m_data[0:31]</obj_property>
+      <obj_property name="Radix">HEXRADIX</obj_property>
+   </wvobject>
+   <wvobject fp_name="/hwt_tb/fsl_b/fsl_m_control" type="logic" db_ref_id="1">
+      <obj_property name="ElementShortName">fsl_m_control</obj_property>
+      <obj_property name="ObjectShortName">fsl_m_control</obj_property>
+   </wvobject>
+   <wvobject fp_name="/hwt_tb/fsl_b/fsl_m_write" type="logic" db_ref_id="1">
+      <obj_property name="ElementShortName">fsl_m_write</obj_property>
+      <obj_property name="ObjectShortName">fsl_m_write</obj_property>
+   </wvobject>
+   <wvobject fp_name="/hwt_tb/fsl_b/fsl_m_full" type="logic" db_ref_id="1">
+      <obj_property name="ElementShortName">fsl_m_full</obj_property>
+      <obj_property name="ObjectShortName">fsl_m_full</obj_property>
+   </wvobject>
+   <wvobject fp_name="/hwt_tb/fsl_b/fsl_s_clk" type="logic" db_ref_id="1">
+      <obj_property name="ElementShortName">fsl_s_clk</obj_property>
+      <obj_property name="ObjectShortName">fsl_s_clk</obj_property>
+   </wvobject>
+   <wvobject fp_name="/hwt_tb/fsl_b/fsl_s_data" type="array" db_ref_id="1">
+      <obj_property name="ElementShortName">fsl_s_data[0:31]</obj_property>
+      <obj_property name="ObjectShortName">fsl_s_data[0:31]</obj_property>
+      <obj_property name="Radix">HEXRADIX</obj_property>
+   </wvobject>
+   <wvobject fp_name="/hwt_tb/fsl_b/fsl_s_control" type="logic" db_ref_id="1">
+      <obj_property name="ElementShortName">fsl_s_control</obj_property>
+      <obj_property name="ObjectShortName">fsl_s_control</obj_property>
+   </wvobject>
+   <wvobject fp_name="/hwt_tb/fsl_b/fsl_s_read" type="logic" db_ref_id="1">
+      <obj_property name="ElementShortName">fsl_s_read</obj_property>
+      <obj_property name="ObjectShortName">fsl_s_read</obj_property>
+   </wvobject>
+   <wvobject fp_name="/hwt_tb/fsl_b/fsl_s_exists" type="logic" db_ref_id="1">
+      <obj_property name="ElementShortName">fsl_s_exists</obj_property>
+      <obj_property name="ObjectShortName">fsl_s_exists</obj_property>
+   </wvobject>
+   <wvobject fp_name="/hwt_tb/fsl_b/fsl_full" type="logic" db_ref_id="1">
+      <obj_property name="ElementShortName">fsl_full</obj_property>
+      <obj_property name="ObjectShortName">fsl_full</obj_property>
+   </wvobject>
+   <wvobject fp_name="/hwt_tb/fsl_b/fsl_has_data" type="logic" db_ref_id="1">
+      <obj_property name="ElementShortName">fsl_has_data</obj_property>
+      <obj_property name="ObjectShortName">fsl_has_data</obj_property>
+   </wvobject>
+   <wvobject fp_name="/hwt_tb/fsl_b/fifo_full" type="logic" db_ref_id="1">
+      <obj_property name="ElementShortName">fifo_full</obj_property>
+      <obj_property name="ObjectShortName">fifo_full</obj_property>
+   </wvobject>
+   <wvobject fp_name="/hwt_tb/fsl_b/fifo_has_data" type="logic" db_ref_id="1">
+      <obj_property name="ElementShortName">fifo_has_data</obj_property>
+      <obj_property name="ObjectShortName">fifo_has_data</obj_property>
+   </wvobject>
+   <wvobject fp_name="/hwt_tb/fsl_b/fsl_s_control_i" type="logic" db_ref_id="1">
+      <obj_property name="ElementShortName">fsl_s_control_i</obj_property>
+      <obj_property name="ObjectShortName">fsl_s_control_i</obj_property>
+   </wvobject>
+   <wvobject fp_name="divider48" type="divider">
+      <obj_property name="label">NOTHING</obj_property>
+      <obj_property name="DisplayName">label</obj_property>
+      <obj_property name="BkColor">128 128 255</obj_property>
+      <obj_property name="TextColor">230 230 230</obj_property>
+   </wvobject>
+   <wvobject fp_name="/hwt_tb/uut/registersxd" type="array" db_ref_id="1">
+      <obj_property name="ElementShortName">registersxd[0:3]</obj_property>
+      <obj_property name="ObjectShortName">registersxd[0:3]</obj_property>
+      <obj_property name="Radix">HEXRADIX</obj_property>
+      <wvobject fp_name="/hwt_tb/uut/registersxd[0]" type="array" db_ref_id="1">
+         <obj_property name="ElementShortName">[0]</obj_property>
+         <obj_property name="ObjectShortName">registersxd[0]</obj_property>
+         <obj_property name="Radix">HEXRADIX</obj_property>
+      </wvobject>
+      <wvobject fp_name="/hwt_tb/uut/registersxd[1]" type="array" db_ref_id="1">
+         <obj_property name="ElementShortName">[1]</obj_property>
+         <obj_property name="ObjectShortName">registersxd[1]</obj_property>
+         <obj_property name="Radix">HEXRADIX</obj_property>
+      </wvobject>
+      <wvobject fp_name="/hwt_tb/uut/registersxd[2]" type="array" db_ref_id="1">
+         <obj_property name="ElementShortName">[2]</obj_property>
+         <obj_property name="ObjectShortName">registersxd[2]</obj_property>
+         <obj_property name="Radix">HEXRADIX</obj_property>
+      </wvobject>
+      <wvobject fp_name="/hwt_tb/uut/registersxd[3]" type="array" db_ref_id="1">
+         <obj_property name="ElementShortName">[3]</obj_property>
+         <obj_property name="ObjectShortName">registersxd[3]</obj_property>
+         <obj_property name="Radix">HEXRADIX</obj_property>
+      </wvobject>
+   </wvobject>
+   <wvobject fp_name="/hwt_tb/mb_s_read" type="logic" db_ref_id="1">
+      <obj_property name="ElementShortName">mb_s_read</obj_property>
+      <obj_property name="ObjectShortName">mb_s_read</obj_property>
+   </wvobject>
+   <wvobject fp_name="/hwt_tb/mb_s_exists" type="logic" db_ref_id="1">
+      <obj_property name="ElementShortName">mb_s_exists</obj_property>
+      <obj_property name="ObjectShortName">mb_s_exists</obj_property>
+   </wvobject>
+</wave_config>

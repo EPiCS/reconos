@@ -1,0 +1,93 @@
+This is a HowTo, which desribes the steps you have to do to create the partial reconfigurable hardware design for the icap demo.
+
+The system design looks like this:
+
+         --------------     
+         | MicroBlaze | 
+         -------------- 
+           /        \   
+       -----------   ===========
+       | 0: ICAP |   || 1: PR || <---- partial reconfigurable (PR) slot
+       -----------   =========== 
+
+
+We have two hardware slots
+
+(slot 0) The hwt_icap which can reconfigure partial bitstreams
+(slot 1) The reconfigurable hardware slot which can store different partial bitstreams (hwt_pr_block)
+         Thread A: gets 4 byte message and adds the first 2 bytes to the second two bytes and sends result back as 4 byte message
+         Thread B: gets 4 byte message and subtracts the second 2 bytes from the first two bytes and sends result back as 4 byte message
+
+-----------------------------------------------------------------------------------------------
+
+For our demo we require the following four bitstreams:
+
+[1] system_add.bit:  full bitstream, where 'PR_a' is configured into the 'PR' slot (configuration A)
+[2] system_sub.bit:  full bitstream, where 'PR_b' is configured into the 'PR' slot (configuration B)
+[3] partial_add.bit: partial bitstream for the 'PR_a' FB
+[4] partial_sub.bit: partial bitstream for the 'PR_b' FB
+
+-----------------------------------------------------------------------------------------------
+
+To generate these bitstreams you have to follow these steps:
+
+STEP 1: Generate static and partial netlists for configuration A
+================================================================
+- Install the Xilinx 14.6 or 14.7 tools to your system (if this is not already the case)
+- Open 'hw/edk/system.xmp' using the Xilinx Platform Studio (XPS) and click on 'Hardware>Generate Netlist'
+
+STEP 2: Copy static and partial netlists to the 'hw/prdesign'
+=============================================================
+- Copy all netlists (*.ngc) from the folder 'hw/edk/implementation' to 'hw/prdesign/syn/static'
+- Move the partial netlist 'system_hwt_pr_block_0_wrapper.ngc' from 'hw/prdesign/syn/static' to 'hw/prdesign/syn/pr_a'
+
+STEP 3: Generate partial netlists for configuration B
+=====================================================
+- Open 'hw/edk/system.xmp' using the Xilinx Platform Studio (XPS) and click on 'Hardware>Clean Hardware'
+- Open the file 'hw/edk/pcores/hwt_pr_block_v1_00_a/hdl/vhdl/hwt_pr_block.vhd' wit a text editor and change the following line
+  old: 'result1 <= val1 + val2;' (line 67)
+  new: 'result1 <= val1 - val2;'
+- In XPS: click 'Hardware>Generate Netlist'
+
+STEP 4: Copy partial netlist/s to the 'hw/prdesign'
+===================================================
+- Copy the partial netlist 'system_hwt_pr_block_0_wrapper.ngc' from the folder 'hw/edk/implementation' to 'hw/prdesign/syn/pr_b'
+
+STEP 5: Generate bitstreams for configuration A
+================================================
+- goto the folder 'hw/prdesign/imp/config_pr_a' and call './generate_config.sh'
+- this step will create the full bistream 'system.bit' and the partial bitstream for configuration A 
+- copy the full bitstream 'hw/prdesign/imp/config_pr_a/system.bit' to 'hw/prdesign/bitfiles/system_add.bit'
+- copy the partial bitstream 'hw/prdesign/imp/config_pr_a/system_hwt_pr_block_0_hwt_pr_a_partial.bin' 
+  to 'hw/prdesign/bitfiles/partial_add.bit' (important: the file *.bin contains the partial bitstream without a header)
+- copy the partial bitstreams partial_add.bit to the compact flash card (folder "partial_bitstreams")
+
+STEP 6: Generate bitstreams for configuration B
+================================================
+- goto the folder 'hw/prdesign/imp/config_pr_b' and call './generate_config.sh'
+- this step will create the full bistream 'system.bit' and the partial bitstream for configuration B 
+- copy the full bitstream 'hw/prdesign/imp/config_pr_b/system.bit' to 'hw/prdesign/bitfiles/system_sub.bit'
+- copy the partial bitstream 'hw/prdesign/imp/config_pr_b/system_hwt_pr_block_0_hwt_pr_b_partial.bin' 
+  to 'hw/prdesign/bitfiles/partial_sub.bit' (important: the file *.bin contains the partial bitstream without a header)
+- copy the partial bitstreams partial_sub.bit to the compact flash card (folder "partial_bitstreams")
+
+STEP 7: Build the software
+==========================
+- go to the /sw/test_icap folder (cd ../sw/test_icap) and generate the icap_demo application (using make clean all)
+- copy the executable 'icap_demo' to the compact flash card, 
+  which should already contain the current load_fsl.sh, load_getpgd.sh, etc. 
+
+STEP 8: Configure the FPGA and download the kernel image
+========================================================
+- power on the Xilinx Virtex-6 ML605 FPGA board
+- download the system_add.bit using Xilinx Impact or the 'dow' script
+- download the Linux kernel image ('simpleImage.icap') using the 'xmd' tool or the 'dow' script
+
+STEP 9: Test the system
+=======================
+- open minicom in a terminal (e.g. 'minicom -D /dev/ttyUSB0')
+- if /dev/icap0 does not already exist: mknod /dev/icap0 c 259 0 (in minicom)
+- setup and start the "icap_demo" according to the file 'sw/config.sh' (line 2-3)
+- the icap demo continuously switches between the threads A (add) and B (sub)
+- after each reconfiguration, the active thread is tested once, to ensure that the reconfiguration has worked 
+

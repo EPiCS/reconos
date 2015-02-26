@@ -1,0 +1,13 @@
+
+
+/hdl/
+/implementation/
+/synthesis/
+/__xps/
+/clock_generator_0.log
+/platgen.log
+/platgen.opt
+/system.log
+/system.make
+/system_incl.make
+

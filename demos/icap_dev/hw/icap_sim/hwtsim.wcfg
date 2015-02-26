@@ -1,0 +1,195 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<wave_config>
+   <wave_state>
+   </wave_state>
+   <db_ref_list>
+      <db_ref path="/home/atraber/git/reconos/demos/icap_dev/hw/hwtsim/hwt_tb_isim_beh.wdb" id="1" type="auto">
+         <top_modules>
+            <top_module name="hwt_tb" />
+            <top_module name="numeric_std" />
+            <top_module name="proc_common_pkg" />
+            <top_module name="reconos_pkg" />
+            <top_module name="std_logic_1164" />
+            <top_module name="std_logic_arith" />
+            <top_module name="std_logic_textio" />
+            <top_module name="std_logic_unsigned" />
+            <top_module name="textio" />
+            <top_module name="vcomponents" />
+            <top_module name="vital_primitives" />
+            <top_module name="vital_timing" />
+            <top_module name="vpkg" />
+         </top_modules>
+      </db_ref>
+   </db_ref_list>
+   <WVObjectSize size="37" />
+   <wvobject fp_name="divider62" type="divider">
+      <obj_property name="label">CLK and RST</obj_property>
+      <obj_property name="DisplayName">label</obj_property>
+      <obj_property name="BkColor">128 128 255</obj_property>
+      <obj_property name="TextColor">230 230 230</obj_property>
+   </wvobject>
+   <wvobject fp_name="/hwt_tb/clk" type="logic" db_ref_id="1">
+      <obj_property name="ElementShortName">clk</obj_property>
+      <obj_property name="ObjectShortName">clk</obj_property>
+   </wvobject>
+   <wvobject fp_name="/hwt_tb/rst" type="logic" db_ref_id="1">
+      <obj_property name="ElementShortName">rst</obj_property>
+      <obj_property name="ObjectShortName">rst</obj_property>
+   </wvobject>
+   <wvobject fp_name="/hwt_tb/mem_i/addr" type="array" db_ref_id="1">
+      <obj_property name="ElementShortName">addr[31:0]</obj_property>
+      <obj_property name="ObjectShortName">addr[31:0]</obj_property>
+      <obj_property name="Radix">HEXRADIX</obj_property>
+   </wvobject>
+   <wvobject fp_name="/hwt_tb/mem_i/we" type="logic" db_ref_id="1">
+      <obj_property name="ElementShortName">we</obj_property>
+      <obj_property name="ObjectShortName">we</obj_property>
+   </wvobject>
+   <wvobject fp_name="divider94" type="divider">
+      <obj_property name="label">ReconosFSM</obj_property>
+      <obj_property name="DisplayName">label</obj_property>
+      <obj_property name="BkColor">128 128 255</obj_property>
+      <obj_property name="TextColor">230 230 230</obj_property>
+   </wvobject>
+   <wvobject fp_name="/hwt_tb/uut/state" type="other" db_ref_id="1">
+      <obj_property name="DisplayName">label</obj_property>
+      <obj_property name="ElementShortName">state</obj_property>
+      <obj_property name="ObjectShortName">state</obj_property>
+      <obj_property name="label">state</obj_property>
+   </wvobject>
+   <wvobject fp_name="/hwt_tb/uut/addrxd" type="array" db_ref_id="1">
+      <obj_property name="ElementShortName">addrxd[31:0]</obj_property>
+      <obj_property name="ObjectShortName">addrxd[31:0]</obj_property>
+      <obj_property name="Radix">HEXRADIX</obj_property>
+   </wvobject>
+   <wvobject fp_name="/hwt_tb/uut/lenxd" type="array" db_ref_id="1">
+      <obj_property name="ElementShortName">lenxd[31:0]</obj_property>
+      <obj_property name="ObjectShortName">lenxd[31:0]</obj_property>
+      <obj_property name="Radix">HEXRADIX</obj_property>
+   </wvobject>
+   <wvobject fp_name="divider44" type="divider">
+      <obj_property name="label">ICAPFsm</obj_property>
+      <obj_property name="DisplayName">label</obj_property>
+      <obj_property name="BkColor">128 128 255</obj_property>
+      <obj_property name="TextColor">230 230 230</obj_property>
+   </wvobject>
+   <wvobject fp_name="/hwt_tb/uut/ICAPFsmInst/clkxci" type="logic" db_ref_id="1">
+      <obj_property name="ElementShortName">clkxci</obj_property>
+      <obj_property name="ObjectShortName">clkxci</obj_property>
+   </wvobject>
+   <wvobject fp_name="/hwt_tb/uut/ICAPFsmInst/startxsi" type="logic" db_ref_id="1">
+      <obj_property name="ElementShortName">startxsi</obj_property>
+      <obj_property name="ObjectShortName">startxsi</obj_property>
+   </wvobject>
+   <wvobject fp_name="/hwt_tb/uut/ICAPFsmInst/donexso" type="logic" db_ref_id="1">
+      <obj_property name="ElementShortName">donexso</obj_property>
+      <obj_property name="ObjectShortName">donexso</obj_property>
+   </wvobject>
+   <wvobject fp_name="/hwt_tb/uut/ICAPFsmInst/errorxso" type="logic" db_ref_id="1">
+      <obj_property name="ElementShortName">errorxso</obj_property>
+      <obj_property name="ObjectShortName">errorxso</obj_property>
+   </wvobject>
+   <wvobject fp_name="/hwt_tb/uut/ICAPFsmInst/ramaddrxdo" type="array" db_ref_id="1">
+      <obj_property name="ElementShortName">ramaddrxdo[0:10]</obj_property>
+      <obj_property name="ObjectShortName">ramaddrxdo[0:10]</obj_property>
+      <obj_property name="Radix">HEXRADIX</obj_property>
+   </wvobject>
+   <wvobject fp_name="/hwt_tb/uut/ICAPFsmInst/addrxdp" type="array" db_ref_id="1">
+      <obj_property name="ElementShortName">addrxdp[10:0]</obj_property>
+      <obj_property name="ObjectShortName">addrxdp[10:0]</obj_property>
+      <obj_property name="Radix">HEXRADIX</obj_property>
+   </wvobject>
+   <wvobject fp_name="/hwt_tb/uut/ICAPFsmInst/addrxdn" type="array" db_ref_id="1">
+      <obj_property name="ElementShortName">addrxdn[10:0]</obj_property>
+      <obj_property name="ObjectShortName">addrxdn[10:0]</obj_property>
+      <obj_property name="Radix">HEXRADIX</obj_property>
+   </wvobject>
+   <wvobject fp_name="/hwt_tb/uut/ICAPFsmInst/lenxdn" type="array" db_ref_id="1">
+      <obj_property name="ElementShortName">lenxdn[0:10]</obj_property>
+      <obj_property name="ObjectShortName">lenxdn[0:10]</obj_property>
+      <obj_property name="Radix">HEXRADIX</obj_property>
+   </wvobject>
+   <wvobject fp_name="/hwt_tb/uut/ICAPFsmInst/lenxdp" type="array" db_ref_id="1">
+      <obj_property name="ElementShortName">lenxdp[0:10]</obj_property>
+      <obj_property name="ObjectShortName">lenxdp[0:10]</obj_property>
+      <obj_property name="Radix">HEXRADIX</obj_property>
+   </wvobject>
+   <wvobject fp_name="/hwt_tb/uut/ICAPFsmInst/statexdp" type="other" db_ref_id="1">
+      <obj_property name="ElementShortName">statexdp</obj_property>
+      <obj_property name="ObjectShortName">statexdp</obj_property>
+   </wvobject>
+   <wvobject fp_name="/hwt_tb/uut/ICAPFsmInst/statexdn" type="other" db_ref_id="1">
+      <obj_property name="ElementShortName">statexdn</obj_property>
+      <obj_property name="ObjectShortName">statexdn</obj_property>
+   </wvobject>
+   <wvobject fp_name="/hwt_tb/uut/ICAPFsmInst/donexs" type="logic" db_ref_id="1">
+      <obj_property name="ElementShortName">donexs</obj_property>
+      <obj_property name="ObjectShortName">donexs</obj_property>
+   </wvobject>
+   <wvobject fp_name="/hwt_tb/uut/ICAPFsmInst/errorxs" type="logic" db_ref_id="1">
+      <obj_property name="ElementShortName">errorxs</obj_property>
+      <obj_property name="ObjectShortName">errorxs</obj_property>
+   </wvobject>
+   <wvobject fp_name="/hwt_tb/uut/ICAPFsmInst/icaperrorxs" type="logic" db_ref_id="1">
+      <obj_property name="ElementShortName">icaperrorxs</obj_property>
+      <obj_property name="ObjectShortName">icaperrorxs</obj_property>
+   </wvobject>
+   <wvobject fp_name="divider62" type="divider">
+      <obj_property name="label">ICAP</obj_property>
+      <obj_property name="DisplayName">label</obj_property>
+      <obj_property name="BkColor">128 128 255</obj_property>
+      <obj_property name="TextColor">230 230 230</obj_property>
+   </wvobject>
+   <wvobject fp_name="/hwt_tb/uut/icapbusyxs" type="logic" db_ref_id="1">
+      <obj_property name="ElementShortName">icapbusyxs</obj_property>
+      <obj_property name="ObjectShortName">icapbusyxs</obj_property>
+   </wvobject>
+   <wvobject fp_name="/hwt_tb/uut/icapcexsb" type="logic" db_ref_id="1">
+      <obj_property name="ElementShortName">icapcexsb</obj_property>
+      <obj_property name="ObjectShortName">icapcexsb</obj_property>
+   </wvobject>
+   <wvobject fp_name="/hwt_tb/uut/icapwexsb" type="logic" db_ref_id="1">
+      <obj_property name="ElementShortName">icapwexsb</obj_property>
+      <obj_property name="ObjectShortName">icapwexsb</obj_property>
+   </wvobject>
+   <wvobject fp_name="/hwt_tb/uut/icapramaddrxd" type="array" db_ref_id="1">
+      <obj_property name="ElementShortName">icapramaddrxd[0:10]</obj_property>
+      <obj_property name="ObjectShortName">icapramaddrxd[0:10]</obj_property>
+      <obj_property name="Radix">HEXRADIX</obj_property>
+   </wvobject>
+   <wvobject fp_name="/hwt_tb/uut/ICAPFsmInst/ramwexs" type="logic" db_ref_id="1">
+      <obj_property name="ElementShortName">ramwexs</obj_property>
+      <obj_property name="ObjectShortName">ramwexs</obj_property>
+   </wvobject>
+   <wvobject fp_name="/hwt_tb/uut/icapdataoutxd" type="array" db_ref_id="1">
+      <obj_property name="ElementShortName">icapdataoutxd[0:31]</obj_property>
+      <obj_property name="ObjectShortName">icapdataoutxd[0:31]</obj_property>
+      <obj_property name="Radix">HEXRADIX</obj_property>
+   </wvobject>
+   <wvobject fp_name="/hwt_tb/uut/icapcachevalidxsp" type="logic" db_ref_id="1">
+      <obj_property name="ElementShortName">icapcachevalidxsp</obj_property>
+      <obj_property name="ObjectShortName">icapcachevalidxsp</obj_property>
+   </wvobject>
+   <wvobject fp_name="/hwt_tb/uut/icapcachevalidxsn" type="logic" db_ref_id="1">
+      <obj_property name="ElementShortName">icapcachevalidxsn</obj_property>
+      <obj_property name="ObjectShortName">icapcachevalidxsn</obj_property>
+   </wvobject>
+   <wvobject fp_name="divider48" type="divider">
+      <obj_property name="label">NOTHING</obj_property>
+      <obj_property name="DisplayName">label</obj_property>
+      <obj_property name="BkColor">128 128 255</obj_property>
+      <obj_property name="TextColor">230 230 230</obj_property>
+   </wvobject>
+   <wvobject fp_name="/hwt_tb/uut/icapWrapperInst/busycounterxdp" type="other" db_ref_id="1">
+      <obj_property name="ElementShortName">busycounterxdp</obj_property>
+      <obj_property name="ObjectShortName">busycounterxdp</obj_property>
+   </wvobject>
+   <wvobject fp_name="/hwt_tb/uut/icapWrapperInst/busycounterxdn" type="other" db_ref_id="1">
+      <obj_property name="ElementShortName">busycounterxdn</obj_property>
+      <obj_property name="ObjectShortName">busycounterxdn</obj_property>
+   </wvobject>
+   <wvobject fp_name="/hwt_tb/uut/icapWrapperInst/busyxs" type="logic" db_ref_id="1">
+      <obj_property name="ElementShortName">busyxs</obj_property>
+      <obj_property name="ObjectShortName">busyxs</obj_property>
+   </wvobject>
+</wave_config>

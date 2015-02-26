@@ -1,0 +1,24 @@
+##############################################################################
+## Description:       Microprocessor Peripheral Description
+## Date:              Wed Mar 12 12:47:26 2014 (by Create and Import Peripheral Wizard)
+##############################################################################
+
+BEGIN clock_enable
+
+# EDK should recompile our module every time as we are making active changes to it
+# this option is deprecated now: OPTION CORE_STATE=DEVELOPMENT
+# so instead we use the following option
+OPTION ARCH_SUPPORT_MAP = (OTHERS = DEVELOPMENT)
+
+## Peripheral Options
+OPTION IPTYPE = PERIPHERAL
+OPTION IMP_NETLIST = TRUE
+OPTION HDL = VHDL
+#OPTION STYLE = MIX
+
+
+PORT Clk="", DIR=I, SIGIS=Clk
+PORT Clk_en="", DIR=I
+PORT Clk_out="", DIR=O, SIGIS=Clk, CLK_INPORT = Clk, CLK_FACTOR = 1.0
+
+END
