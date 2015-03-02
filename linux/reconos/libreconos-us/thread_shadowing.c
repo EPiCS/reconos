@@ -886,6 +886,10 @@ void shadow_thread_create(shadowedthread_t * sh) // Init data passed to worker t
 	shadow_list_add(sh);
 	//shadow_dump(sh);
 
+	//
+	// Schedule this thread for the first time
+	//
+	shadow_schedule(sh,SCHED_FLAG_NONE);
 
 	//
 	// Activate new threads, deactivate unneeded ones.
@@ -894,10 +898,7 @@ void shadow_thread_create(shadowedthread_t * sh) // Init data passed to worker t
 	shadow_set_threads(sh);
 	//shadow_dump(sh);
 
-	//
-	// Schedule this thread for the first time
-	//
-	shadow_schedule(sh,SCHED_FLAG_NONE);
+
 
 	ts_unlock();
 }
