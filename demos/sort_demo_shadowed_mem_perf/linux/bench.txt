@@ -1,0 +1,7 @@
+
+sort_demo build: Sep  6 2013 17:59:03
+Parameters: hwt:  0, swt:  1, blocks:    64, thread interface: RQUEUE, shadowing: off, schedule: 0, transmodal: 0, main threads: 0, blocksize: 8192
+Main thread is pthread 145078336
+malloc page aligned ...
+generating 131072 words of data ...
+Creating 0 main-threads: 
