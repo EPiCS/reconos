@@ -41,6 +41,9 @@ const char *gengetopt_args_info_detailed_help[] = {
   "  -b, --matrix-size=number      Size of matrices to multiply. Only powers of 2, \n                                  bigger than 128 allowed. Default is 512.  \n                                  (possible values=\"256\", \"512\", \"1024\", \n                                  \"2048\" default=`512')",
   "  -t, --thread-interface=number Which interface shall be used to communicate \n                                  with worker threads?  (possible values=\"0\", \n                                  \"1\", \"2\" default=`0')",
   "  0= SHMEM, 1= MBOX, 2= RQUEUE",
+  "\n Group: file ops",
+  "  -f, --read-matrices           Read input matrices and precomputed output \n                                  matrix from files",
+  "  -w, --write-matrices          Write out input matrices and poutput matrix to \n                                  files",
   "\nShadowing Options:",
   "  Activate and configure the shadow subsystem",
   "  -a, --shadow                  Activates the shadowing subsystem.  \n                                  (default=off)",
@@ -65,11 +68,14 @@ init_help_array(void)
   gengetopt_args_info_help[10] = gengetopt_args_info_detailed_help[11];
   gengetopt_args_info_help[11] = gengetopt_args_info_detailed_help[12];
   gengetopt_args_info_help[12] = gengetopt_args_info_detailed_help[13];
-  gengetopt_args_info_help[13] = 0; 
+  gengetopt_args_info_help[13] = gengetopt_args_info_detailed_help[14];
+  gengetopt_args_info_help[14] = gengetopt_args_info_detailed_help[15];
+  gengetopt_args_info_help[15] = gengetopt_args_info_detailed_help[16];
+  gengetopt_args_info_help[16] = 0; 
   
 }
 
-const char *gengetopt_args_info_help[14];
+const char *gengetopt_args_info_help[17];
 
 typedef enum {ARG_NO
   , ARG_FLAG
@@ -106,9 +112,12 @@ void clear_given (struct gengetopt_args_info *args_info)
   args_info->mt_given = 0 ;
   args_info->matrix_size_given = 0 ;
   args_info->thread_interface_given = 0 ;
+  args_info->read_matrices_given = 0 ;
+  args_info->write_matrices_given = 0 ;
   args_info->shadow_given = 0 ;
   args_info->shadow_schedule_given = 0 ;
   args_info->shadow_transmodal_given = 0 ;
+  args_info->file_ops_group_counter = 0 ;
 }
 
 static
@@ -143,9 +152,11 @@ void init_args_info(struct gengetopt_args_info *args_info)
   args_info->mt_help = gengetopt_args_info_detailed_help[5] ;
   args_info->matrix_size_help = gengetopt_args_info_detailed_help[6] ;
   args_info->thread_interface_help = gengetopt_args_info_detailed_help[7] ;
-  args_info->shadow_help = gengetopt_args_info_detailed_help[11] ;
-  args_info->shadow_schedule_help = gengetopt_args_info_detailed_help[12] ;
-  args_info->shadow_transmodal_help = gengetopt_args_info_detailed_help[13] ;
+  args_info->read_matrices_help = gengetopt_args_info_detailed_help[10] ;
+  args_info->write_matrices_help = gengetopt_args_info_detailed_help[11] ;
+  args_info->shadow_help = gengetopt_args_info_detailed_help[14] ;
+  args_info->shadow_schedule_help = gengetopt_args_info_detailed_help[15] ;
+  args_info->shadow_transmodal_help = gengetopt_args_info_detailed_help[16] ;
   
 }
 
@@ -328,6 +339,10 @@ cmdline_parser_dump(FILE *outfile, struct gengetopt_args_info *args_info)
     write_into_file(outfile, "matrix-size", args_info->matrix_size_orig, cmdline_parser_matrix_size_values);
   if (args_info->thread_interface_given)
     write_into_file(outfile, "thread-interface", args_info->thread_interface_orig, cmdline_parser_thread_interface_values);
+  if (args_info->read_matrices_given)
+    write_into_file(outfile, "read-matrices", 0, 0 );
+  if (args_info->write_matrices_given)
+    write_into_file(outfile, "write-matrices", 0, 0 );
   if (args_info->shadow_given)
     write_into_file(outfile, "shadow", 0, 0 );
   if (args_info->shadow_schedule_given)
@@ -379,6 +394,18 @@ gengetopt_strdup (const char *s)
     return (char*)0;
   strcpy(result, s);
   return result;
+}
+
+static void
+reset_group_file_ops(struct gengetopt_args_info *args_info)
+{
+  if (! args_info->file_ops_group_counter)
+    return;
+  
+  args_info->read_matrices_given = 0 ;
+  args_info->write_matrices_given = 0 ;
+
+  args_info->file_ops_group_counter = 0;
 }
 
 int
@@ -637,13 +664,15 @@ cmdline_parser_internal (
         { "mt",	1, NULL, 'm' },
         { "matrix-size",	1, NULL, 'b' },
         { "thread-interface",	1, NULL, 't' },
+        { "read-matrices",	0, NULL, 'f' },
+        { "write-matrices",	0, NULL, 'w' },
         { "shadow",	0, NULL, 'a' },
         { "shadow-schedule",	1, NULL, 'c' },
         { "shadow-transmodal",	0, NULL, 'r' },
         { 0,  0, 0, 0 }
       };
 
-      c = getopt_long (argc, argv, "Vh:s:m:b:t:ac:r", long_options, &option_index);
+      c = getopt_long (argc, argv, "Vh:s:m:b:t:fwac:r", long_options, &option_index);
 
       if (c == -1) break;	/* Exit from `while (1)' loop.  */
 
@@ -714,6 +743,36 @@ cmdline_parser_internal (
             goto failure;
         
           break;
+        case 'f':	/* Read input matrices and precomputed output matrix from files.  */
+        
+          if (args_info->file_ops_group_counter && override)
+            reset_group_file_ops (args_info);
+          args_info->file_ops_group_counter += 1;
+        
+          if (update_arg( 0 , 
+               0 , &(args_info->read_matrices_given),
+              &(local_args_info.read_matrices_given), optarg, 0, 0, ARG_NO,
+              check_ambiguity, override, 0, 0,
+              "read-matrices", 'f',
+              additional_error))
+            goto failure;
+        
+          break;
+        case 'w':	/* Write out input matrices and poutput matrix to files.  */
+        
+          if (args_info->file_ops_group_counter && override)
+            reset_group_file_ops (args_info);
+          args_info->file_ops_group_counter += 1;
+        
+          if (update_arg( 0 , 
+               0 , &(args_info->write_matrices_given),
+              &(local_args_info.write_matrices_given), optarg, 0, 0, ARG_NO,
+              check_ambiguity, override, 0, 0,
+              "write-matrices", 'w',
+              additional_error))
+            goto failure;
+        
+          break;
         case 'a':	/* Activates the shadowing subsystem..  */
         
         
@@ -770,6 +829,12 @@ cmdline_parser_internal (
         } /* switch */
     } /* while */
 
+  if (args_info->file_ops_group_counter > 1)
+    {
+      fprintf (stderr, "%s: %d options of group file ops were given. At most one is required%s.\n", argv[0], args_info->file_ops_group_counter, (additional_error ? additional_error : ""));
+      error = 1;
+    }
+  
 
 
   if (check_required)

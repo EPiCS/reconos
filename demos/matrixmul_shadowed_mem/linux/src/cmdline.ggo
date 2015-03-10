@@ -30,6 +30,15 @@ option "thread-interface" t "Which interface shall be used to communicate with w
 	int typestr="number" default="0" optional values="0","1","2"
 	details="0= SHMEM, 1= MBOX, 2= RQUEUE"
 
+defgroup "file ops"
+groupoption "read-matrices" f "Read input matrices and precomputed output matrix from files" 
+	group="file ops" 
+#flag off
+groupoption "write-matrices" w "Write out input matrices and poutput matrix to files" 
+	group="file ops" 
+#flag off
+
+
 section "Shadowing Options" sectiondesc="Activate and configure the shadow subsystem"
 option "shadow" a "Activates the shadowing subsystem." flag off
 option "shadow-schedule" c "Determines the algorithm of the shadow scheduler."

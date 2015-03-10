@@ -55,6 +55,8 @@ struct gengetopt_args_info
   int thread_interface_arg;	/**< @brief Which interface shall be used to communicate with worker threads? (default='0').  */
   char * thread_interface_orig;	/**< @brief Which interface shall be used to communicate with worker threads? original value given at command line.  */
   const char *thread_interface_help; /**< @brief Which interface shall be used to communicate with worker threads? help description.  */
+  const char *read_matrices_help; /**< @brief Read input matrices and precomputed output matrix from files help description.  */
+  const char *write_matrices_help; /**< @brief Write out input matrices and poutput matrix to files help description.  */
   int shadow_flag;	/**< @brief Activates the shadowing subsystem. (default=off).  */
   const char *shadow_help; /**< @brief Activates the shadowing subsystem. help description.  */
   int shadow_schedule_arg;	/**< @brief Determines the algorithm of the shadow scheduler. (default='0').  */
@@ -71,10 +73,13 @@ struct gengetopt_args_info
   unsigned int mt_given ;	/**< @brief Whether mt was given.  */
   unsigned int matrix_size_given ;	/**< @brief Whether matrix-size was given.  */
   unsigned int thread_interface_given ;	/**< @brief Whether thread-interface was given.  */
+  unsigned int read_matrices_given ;	/**< @brief Whether read-matrices was given.  */
+  unsigned int write_matrices_given ;	/**< @brief Whether write-matrices was given.  */
   unsigned int shadow_given ;	/**< @brief Whether shadow was given.  */
   unsigned int shadow_schedule_given ;	/**< @brief Whether shadow-schedule was given.  */
   unsigned int shadow_transmodal_given ;	/**< @brief Whether shadow-transmodal was given.  */
 
+  int file_ops_group_counter; /**< @brief Counter for group file_ops */
 } ;
 
 /** @brief The additional parameters to pass to parser functions */

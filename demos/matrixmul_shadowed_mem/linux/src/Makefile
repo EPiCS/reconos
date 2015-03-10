@@ -2,8 +2,7 @@ CC = microblaze-unknown-linux-gnu-gcc
 CFLAGS=-O0 -g -std=c99 -Wall -static
 
 HOST_CC = gcc
-HOST_CFLAGS = -O0 -g -m32 -std=c99 -Wall  -DHOST_COMPILE 
-#-static
+HOST_CFLAGS = -O0 -g -m32 -std=c99 -Wall  -DHOST_COMPILE -static
 # -m32
 
 APP_OBJS = common.o matrix_functions.o std_mmp.o str_mmp.o logging.o
@@ -45,7 +44,7 @@ clean:
 
 install:
 	#./genBenchmark.py benchmark.sh
-	cp matrixmul matrixmul_shadowed /exports/rootfs_mb/demos/matrixmul_shadowed/
+	cp matrixmul matrixmul_shadowed /exports/rootfs_mb/demos/matrixmul_shadowed_mem/
 
 %.o: %.c
 	$(CC) -c $(CFLAGS) $(LIBPATH) $(INCLUDEPATH) -o $@ $<
