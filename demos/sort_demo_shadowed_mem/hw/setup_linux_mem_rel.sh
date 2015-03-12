@@ -12,6 +12,15 @@ then
 fi
 
 
+
+
+
+
+
+
+
+
+
 EDKDIR="edk_mem_rel"
 
 # copy base design
