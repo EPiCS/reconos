@@ -11,6 +11,12 @@ unsigned int time_ms();
 
 void generate_data(int *input_matrixes[2], int **output_matrix, int matrix_size);
 void generate_result(int *input_matrixes[2], int **res, int matrix_size);
+
+void read_data(int *input_matrixes[2], int **output_matrix, int matrix_size);
+void read_result(int **res, int matrix_size);
+void write_data(int *input_matrixes[2], int **output_matrix, int matrix_size) ;
+void write_result(int **res, int matrix_size);
+
 void print_matrix(int *matrix, char matrix_name, int matrix_size);
 int compare_result(int *result, int *compare, int matrix_size);
 

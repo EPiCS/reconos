@@ -2,12 +2,13 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <assert.h>
 #include "common.h"
 #include "mmp.h"
 #include <sys/time.h>
 #include "timing.h"
 #include "xutils.h"
-
+#include "matrix_functions.h"
 
 
 unsigned int time_ms(){
@@ -33,6 +34,52 @@ void generate_result(int *input_matrixes[2], int **res, int matrix_size) {
 	*res = xmalloc_aligned(matrix_size*matrix_size*sizeof(int), PAGE_SIZE);
 
 	std_matrix_mul(input_matrixes[0], input_matrixes[1], *res, matrix_size);
+}
+
+
+void read_data(int *input_matrixes[2], int **output_matrix, int matrix_size) {
+	input_matrixes[0]	= xmalloc_aligned(matrix_size*matrix_size*sizeof(int), PAGE_SIZE);
+	input_matrixes[1]	= xmalloc_aligned(matrix_size*matrix_size*sizeof(int), PAGE_SIZE);
+	*output_matrix		= xmalloc_aligned(matrix_size*matrix_size*sizeof(int), PAGE_SIZE);
+
+
+	char in0[32];
+	char in1[32];
+	char out[32];
+	snprintf(in0, sizeof(in0), "matrixmul_in0_%06d.dat", matrix_size);
+	snprintf(in1, sizeof(in1), "matrixmul_in1_%06d.dat", matrix_size);
+	snprintf(out, sizeof(out), "matrixmul_out_%06d.dat", matrix_size);
+	assert(read_matrix(input_matrixes[0], in0, matrix_size));
+	assert(read_matrix(input_matrixes[1], in1, matrix_size));
+	assert(read_matrix(*output_matrix, out, matrix_size));
+
+}
+
+void read_result(int **res, int matrix_size){
+	*res  		= xmalloc_aligned(matrix_size*matrix_size*sizeof(int), PAGE_SIZE);
+
+	char res_path[32];
+	snprintf(res_path, sizeof(res_path), "matrixmul_compare_%06d.dat", matrix_size);
+	assert(read_matrix(*res, res_path, matrix_size));
+}
+
+void write_data(int *input_matrixes[2], int **output_matrix, int matrix_size) {
+	char in0[32];
+	char in1[32];
+	char out[32];
+	snprintf(in0, sizeof(in0), "matrixmul_in0_%06d.dat", matrix_size);
+	snprintf(in1, sizeof(in1), "matrixmul_in1_%06d.dat", matrix_size);
+	snprintf(out, sizeof(out), "matrixmul_out_%06d.dat", matrix_size);
+
+	write_matrix(input_matrixes[0], in0, matrix_size);
+	write_matrix(input_matrixes[1], in1, matrix_size);
+	write_matrix(*output_matrix, out, matrix_size);
+}
+
+void write_result(int **res, int matrix_size) {
+	char res_path[32];
+	snprintf(res_path, sizeof(res_path), "matrixmul_compare_%06d.dat", matrix_size);
+	write_matrix(*res, res_path, matrix_size);
 }
 
 void print_matrix(int *matrix, char matrix_name, int matrix_size) {
