@@ -10,7 +10,7 @@ use reconos_v3_00_b.reconos_pkg.all;
 entity proc_control is
   generic (
     C_ENABLE_ILA          : integer := 0;
-    C_FAULT_CHANNEL_WIDTH : natural := 2  -- 2^2 = 4 channels
+    C_FAULT_CHANNEL_WIDTH : natural := 0  -- 2^2 = 4 channels
     );
   port (
     clk : in std_logic;
