@@ -452,7 +452,6 @@ int main(int argc, char **argv) {
 	unsigned calculation_time_std;
 	unsigned calculation_time_str;
 
-	asm volatile ("nop");
 	install_sighandlers();
 	handle_commandline(argc, argv);
 
