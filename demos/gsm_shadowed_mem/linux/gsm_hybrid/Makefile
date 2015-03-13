@@ -41,7 +41,7 @@ CC		= microblaze-unknown-linux-gnu-gcc -pedantic -static
 #CCFLAGS 	= -c -O1 -DSTUPID_COMPILER -DNeedFunctionPrototypes=1
 #############################################
 #modified by Alexander Sprenger MiBenchHybrid
-CCFLAGS 	= -c -O3 -DSTUPID_COMPILER -DNeedFunctionPrototypes=1
+CCFLAGS 	= -c -std=c99 -O3 -DSTUPID_COMPILER -D_POSIX_SOURCE -DNeedFunctionPrototypes=1
 #############################################
 
 LD 		= $(CC)
@@ -95,7 +95,7 @@ TOAST_INSTALL_MAN = $(TOAST_INSTALL_ROOT)/man/man1
 #modified by Alexander Sprenger MiBenchHybrid
 # Where do you want to install toast_hybrid binaries
 
-TOAST_HYBRID_INSTALL_ROOT = /exports/rootfs_mb/demos/mibench/gsm
+TOAST_HYBRID_INSTALL_ROOT = /exports/rootfs_mb/demos/gsm_shadowed_mem
 #############################################
 
 #  Other tools
@@ -136,8 +136,8 @@ INC	= $(ROOT)/inc
 #modified by Alexander Sprenger MiBenchHybrid
 STDINC = /usr/include/
 MIBENCHINC = $(ROOT)/../../inc
-RECONOSINC = $(ROOT)/../../libreconos
-RECONOSLIB = $(ROOT)/../../libreconos
+RECONOSINC = $(ROOT)/../../../../linux/reconos/libreconos-us
+RECONOSLIB = $(ROOT)/../../../../linux/reconos/libreconos-us
 LIBS = -lreconos -lpthread -lm -lrt
 #############################################
 
@@ -211,8 +211,7 @@ GSM_SOURCES =	$(SRC)/add.c		\
 MIBENCHHYBRID_SOURCES = $(SRC)/toast_hybrid.c	\
 		$(SRC)/gsm_decode_hybrid.c	\
 		$(SRC)/decode_hybrid.c		\
-		$(SRC)/short_term_hybrid.c	\
-		$(MIBENCHINC)/timing.c
+		$(SRC)/short_term_hybrid.c
 #############################################
 
 TOAST_SOURCES = $(SRC)/toast.c 		\
@@ -265,7 +264,6 @@ MIBENCHHYBRID_OBJECTS = $(SRC)/toast_hybrid.o	\
 		$(SRC)/gsm_decode_hybrid.o	\
 		$(SRC)/decode_hybrid.o		\
 		$(SRC)/short_term_hybrid.o	\
-		$(MIBENCHINC)/timing.o		\
 		$(SRC)/toast_audio.o		\
 		$(SRC)/toast_ulaw.o			\
 		$(SRC)/toast_alaw.o			\

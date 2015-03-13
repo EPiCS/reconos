@@ -24,7 +24,7 @@
 #include	"proto.h"
 
 //Reconos Headerfiles
-#include "rq.h"
+#include "rqueue.h"
 
 /*
  *  4.3 FIXED POINT IMPLEMENTATION OF THE RPE-LTP DECODER

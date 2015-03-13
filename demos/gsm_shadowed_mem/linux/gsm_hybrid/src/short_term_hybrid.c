@@ -28,10 +28,10 @@
 
 /*RECONOS HEADERFILES*/
 #include "reconos.h"
-#include "rq.h"
+#include "rqueue.h"
 
 /*TIMING */
-#include "../../../inc/timing.h"
+#include "timing.h"
 
 
 /* define/undefne dor additional output */

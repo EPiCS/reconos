@@ -16,14 +16,13 @@
  */
 
 /* $Header: /home/mguthaus/.cvsroot/mibench/telecomm/gsm/src/gsm_decode.c,v 1.1.1.1 2000/11/06 19:54:25 mguthaus Exp $ */
-
 #include "private.h"
 
 #include "gsm.h"
 #include "proto.h"
 
 //Reconos Headerfiles
-#include "rq.h"
+#include "rqueue.h"
 
 int gsm_decode P3((s, c, target), gsm s, gsm_byte * c, gsm_signal * target)
 {

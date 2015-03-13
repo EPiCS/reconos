@@ -17,14 +17,19 @@
 
 /*RECONOS HEADERFILES*/
 #include "reconos.h"
-#include "rq.h"
+#include "rqueue.h"
 
 /* MiBenchHybrid */
 #include "mibench_hybrid.h"
+
 #include "timing.h"
+
 #include <stdint.h>
+#include <stdio.h>
 #include <limits.h>
 #include <pthread.h>
+#include <sys/stat.h>
+
 
 //Length of Reconosqueues
 #define INDATA_LEN 5
