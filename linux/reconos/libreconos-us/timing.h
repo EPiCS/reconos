@@ -22,6 +22,7 @@
 typedef unsigned int timing_t;
 typedef unsigned int ms_t;
 #elif defined USE_GETTIMEOFDAY
+#include <sys/time.h>
 typedef struct timeval timing_t;
 typedef unsigned long ms_t;
 #else

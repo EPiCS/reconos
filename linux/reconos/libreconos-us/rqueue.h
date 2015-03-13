@@ -6,8 +6,8 @@
 #ifndef RQUEUE_H
 #define RQUEUE_H
 
-#include <semaphore.h>
 #include <pthread.h>
+#include <semaphore.h>
 #include <stdint.h>
 
 #include "mbox.h"
