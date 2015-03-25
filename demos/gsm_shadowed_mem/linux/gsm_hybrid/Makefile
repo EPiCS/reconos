@@ -167,6 +167,13 @@ TCAT	= $(BIN)/tcat
 TOAST_HYBRID = $(BIN)/toast_hybrid
 UNTOAST_HYBRID = $(BIN)/untoast_hybrid
 #############################################
+#############################################
+#modified by Sebastian Meisner MiBenchHybridShadowed
+TOAST_HYBRID_SHADOWED = $(BIN)/toast_hybrid_shadowed
+UNTOAST_HYBRID_SHADOWED = $(BIN)/untoast_hybrid_shadowed
+#############################################
+
+
 
 # Headers
 
@@ -180,6 +187,8 @@ HEADERS	=	$(INC)/proto.h		\
 		$(INC)/private.h	\
 		$(INC)/gsm.h		\
 		$(INC)/toast.h		\
+		$(INC)/slot_map.h		\
+		$(INC)/thread_helpers.h		\
 		$(TLS)/taste.h		\
 		$(MIBENCHINC)/mibench_hybrid.h
 #############################################
@@ -211,6 +220,8 @@ GSM_SOURCES =	$(SRC)/add.c		\
 MIBENCHHYBRID_SOURCES = $(SRC)/toast_hybrid.c	\
 		$(SRC)/gsm_decode_hybrid.c	\
 		$(SRC)/decode_hybrid.c		\
+		$(SRC)/slot_map.c		\
+		$(SRC)/thread_helpers.c		\
 		$(SRC)/short_term_hybrid.c
 #############################################
 
@@ -261,6 +272,21 @@ GSM_OBJECTS =	$(SRC)/add.o		\
 #############################################
 #modified by Alexander Sprenger MiBenchHybrid
 MIBENCHHYBRID_OBJECTS = $(SRC)/toast_hybrid.o	\
+		$(SRC)/slot_map.o	\
+		$(SRC)/thread_helpers.o	\
+		$(SRC)/gsm_decode_hybrid.o	\
+		$(SRC)/decode_hybrid.o		\
+		$(SRC)/short_term_hybrid.o	\
+		$(SRC)/toast_audio.o		\
+		$(SRC)/toast_ulaw.o			\
+		$(SRC)/toast_alaw.o			\
+		$(SRC)/toast_lin.o
+#############################################
+#############################################
+#modified by Sebastian Meisner MiBenchHybridShadowed
+MIBENCHHYBRIDSHADOWED_OBJECTS = $(SRC)/toast_hybrid.o	\
+		$(SRC)/slot_map.o	\
+		$(SRC)/thread_helpers.o	\
 		$(SRC)/gsm_decode_hybrid.o	\
 		$(SRC)/decode_hybrid.o		\
 		$(SRC)/short_term_hybrid.o	\
@@ -280,6 +306,11 @@ TOAST_OBJECTS =	$(SRC)/toast.o 		\
 #modified by Alexander Sprenger MiBenchHybrid
 OBJECTS =	 $(GSM_OBJECTS) $(TOAST_OBJECTS) $(MIBENCHHYBRID_OBJECTS)
 #############################################
+#############################################
+#modified by Sebastian Meisner MiBenchHybridShadowed
+OBJECTS =	 $(GSM_OBJECTS) $(TOAST_OBJECTS) $(MIBENCHHYBRIDSHADOWED_OBJECTS)
+#############################################
+
 
 # Manuals
 
@@ -335,7 +366,8 @@ TOAST_INSTALL_TARGETS =	\
 
 #############################################
 #modified by Alexander Sprenger MiBenchHybrid
-all:		$(LIBGSM) $(TOAST) $(TCAT) $(UNTOAST) $(TOAST_HYBRID) $(UNTOAST_HYBRID)
+# and Sebastian Meisner MiBenchHybridShadowed
+all:		$(LIBGSM) $(TOAST) $(TCAT) $(UNTOAST) $(TOAST_HYBRID) $(UNTOAST_HYBRID) $(TOAST_HYBRID_SHADOWED) $(UNTOAST_HYBRID_SHADOWED)
 		@-echo $(ROOT): Done.
 #############################################
 
@@ -385,6 +417,23 @@ $(UNTOAST_HYBRID):	$(BIN) $(TOAST_HYBRID)
 		$(LN) $(TOAST_HYBRID) $(UNTOAST_HYBRID)
 #############################################
 
+#############################################
+#modified by Sebastian Meisner MiBenchHybridShadowed
+$(TOAST_HYBRID_SHADOWED): $(BIN) $(MIBENCHHYBRID_OBJECTS) $(LIBGSM)
+		@-echo SHADOWING COMPILE TOAST: Start.
+		-rm $(RMFLAGS) $(SRC)/short_term_hybrid.o
+		-rm $(RMFLAGS) $(SRC)/toast_hybrid.o
+		$(CC) $(CFLAGS) -DSHADOWING -o $(SRC)/short_term_hybrid.o $(SRC)/short_term_hybrid.c  $(LIBS)		
+		$(CC) $(CFLAGS) -DSHADOWING -o $(SRC)/toast_hybrid.o $(SRC)/toast_hybrid.c  $(LIBS)
+		$(LD) $(LFLAGS) -L$(RECONOSLIB) -o $(TOAST_HYBRID_SHADOWED) $(MIBENCHHYBRID_OBJECTS) $(LIBGSM) $(LDLIB) -lreconos -lpthread -lm -lrt
+		@-echo SHADOWING COMPILE TOAST: Stop.
+
+$(UNTOAST_HYBRID_SHADOWED):	$(BIN) $(TOAST_HYBRID)
+		@-echo SHADOWING COMPILE UNTOAST: Start.
+		-rm $(RMFLAGS) $(UNTOAST_HYBRID_SHADOWED)
+		$(LN) $(TOAST_HYBRID_SHADOWED) $(UNTOAST_HYBRID_SHADOWED)
+		@-echo SHADOWING COMPILE UNTOAST: Stop.
+#############################################
 
 # The local bin and lib directories
 

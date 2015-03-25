@@ -30,6 +30,12 @@
 #include "reconos.h"
 #include "rqueue.h"
 
+#ifdef SHADOWING
+#include "thread_shadowing.h"
+#include "thread_shadowing_subs.h"
+#endif
+
+
 /*TIMING */
 #include "timing.h"
 

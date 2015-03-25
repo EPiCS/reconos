@@ -19,10 +19,18 @@
 #include "reconos.h"
 #include "rqueue.h"
 
+#ifdef SHADOWING
+#include "thread_shadowing.h"
+#include "thread_shadowing_subs.h"
+#endif
+
 /* MiBenchHybrid */
 #include "mibench_hybrid.h"
 
 #include "timing.h"
+
+#include "thread_helpers.h"
+#include "slot_map.h"
 
 #include <stdint.h>
 #include <stdio.h>
@@ -56,19 +64,44 @@ int	f_force	   = 0;		/* force deletion 		 (-f) */
 int	f_precious = 0;		/* avoid deletion		 (-p) */
 int	f_fast	   = 0;		/* use faster fpt algorithm	 (-F) */
 int	f_verbose  = 0;		/* debugging			 (-V) */
+
+/*
+ * RECONOS STUFF START
+ */
 /*MiBenchHybrid*/
 int f_hybrid   = 0;		/* Hybrid variant (-H)*/
+int f_transmodal = 0;   /* Not yet implemented, no commandline option specified*/
 int sw_threads = 0;		/* Number of Softwarethreads */
 int hw_threads = 0;		/* Number of Hardwarethreads */
 //ReconOSqueues
 rqueue rq_SENDING;
 rqueue rq_RECIEVE;
+
+struct reconos_resource res[2];
+
+
+#ifdef SHADOWING
+// Thread shadowing
+
+int f_shadowing = 0; /* Flag set from commandline, (de-)activates shadowing */
+
+shadowedthread_t sh[MAX_THREADS];
+unsigned int sh_free_idx=0;
+#else
 // software threads
 pthread_t swt[MAX_THREADS];
 pthread_attr_t swt_attr[MAX_THREADS];
+
 // hardware threads
-struct reconos_resource res[2];
 struct reconos_hwt hwt[MAX_THREADS];
+
+// workercpu threads
+struct reconos_hwt hwt_worker[MAX_THREADS];
+#endif
+
+/*
+ * RECONOS STUFF STOP
+ */
 
 struct stat instat;		/* stat (inname) 		 */
 
@@ -634,6 +667,7 @@ static int process_decode P0()
 	
 	//Mibench Variables
 	int i=0;
+	unsigned int sh_free_idx=0;
 	int running_threads = sw_threads + hw_threads;
 	uint32 indata[INDATA_LEN];
 	uint32 outdata[OUTDATA_LEN];
@@ -657,39 +691,70 @@ static int process_decode P0()
 	
 	reconos_init_autodetect();
 	
-	/* creating hw_threads */
-	#ifndef _MIBENCHOUTPUT
-	fprintf(stderr, "Creating %i hw-threads: ", hw_threads);
-	fflush(stdout);
-	#endif
-	for (i = 0; i < hw_threads; i++)
-	{
-	  #ifndef _MIBENCHOUTPUT
-	  fprintf(stderr, " %i",i);fflush(stdout);
-	  #endif
-	  reconos_hwt_setresources(&(hwt[i]),res,2);
-	  reconos_hwt_create(&(hwt[i]),FIRST_SHORT_TERM_SLOT+i,NULL);
-	}
-	#ifndef _MIBENCHOUTPUT
-	fprintf(stderr, "\n");
-	#endif
-	
-	// init software threads
-	#ifndef _MIBENCHOUTPUT
-	fprintf(stderr, "Creating %i sw-threads: ",sw_threads);
-	fflush(stdout);
-	#endif
-	for (i = 0; i < sw_threads; i++)
-	{
-	  #ifndef _MIBENCHOUTPUT
-	  fprintf(stderr, " %i",i);fflush(stdout);
-	  #endif
-	  pthread_attr_init(&swt_attr[i]);
-	  pthread_create(&swt[i], &swt_attr[i], short_term_synthesis_filtering_swt, (void*)res);
-	}
-	#ifndef _MIBENCHOUTPUT
-	fprintf(stderr, "\n");
-	#endif	
+	/*
+	 * Creating threads
+	 * Some explanation of wording:
+	 *   hw_thread -> functionality implemented in hw in a hw slot
+	 *   sw_thread -> functionality implemented in sw on a CPU in a hw slot
+	 *   mt_thread/host -> functionality implemented on systems main processor, which also runs this programm
+	 */
+#ifdef SHADOWING
+	prepare_threads_shadowing(running_threads,
+								res,
+								2,
+								sh,
+								NULL,
+								short_term_synthesis_filtering_swt,
+								f_hybrid);
+#ifndef HOST_COMPILE
+	start_threads_shadowing_hw(hw_threads,
+								sh,
+								&sh_free_idx,
+								actual_slot_map,
+								"SLOT_GSM",
+								f_shadowing,
+								f_transmodal);
+
+	start_threads_shadowing_sw(0,
+								sh,
+								&sh_free_idx,
+								actual_slot_map,
+								"SLOT_GSM_SW",
+								f_shadowing,
+								f_transmodal);
+#endif // HOST_COMPILE
+	start_threads_shadowing_host(sw_threads,
+									sh,
+									&sh_free_idx,
+									actual_slot_map,
+									"SLOT_GSM",
+									f_shadowing,
+									f_transmodal);
+#else // not SHADOWING
+
+#ifndef HOST_COMPILE
+	start_threads_hw(hw_threads,
+						res,
+						2,
+						hwt,
+						"SLOT_GSM",
+						actual_slot_map);
+
+	start_threads_sw(0,
+						res,
+						2,
+						hwt_worker,
+						"SLOT_GSM_SW",
+						actual_slot_map);
+#endif // HOST_COMPILE
+	start_threads_host(sw_threads,
+						res,
+						2,
+						swt,
+						swt_attr,
+						short_term_synthesis_filtering_swt);
+#endif // SHADOWING
+
 	t_stop = gettime();
 	t_generate_threads = calc_timediff_ms(t_start,t_stop);
 	/* END: MiBenchHybrid thread generation*/
@@ -777,14 +842,12 @@ static int process_decode P0()
 	
 	fprintf(stderr, "Waiting for termination...\n");
 	#endif
-	for (i=0; i<hw_threads; i++)
-	{
-	  pthread_join(hwt[i].delegate,NULL);
-	}
-	for (i=0; i<sw_threads; i++)
-	{
-	  pthread_join(swt[i],NULL);
-	}
+
+#ifdef SHADOWING
+	join_threads_shadowing(sh, running_threads);
+#else
+	join_threads(sw_threads, swt, hw_threads, hwt);
+#endif
 	#ifndef _MIBENCHOUTPUT
 	fprintf(stderr, "\n");
 	#endif
@@ -922,7 +985,12 @@ static void version P0()
 
 static void help P0()
 {
+#ifdef SHADOWING
+	fprintf(stderr,"Usage: %s [-fcpdhvuaslFSH] [sw_threads] [hw_threads] [files...] (-h for help)\n", progname);
+#else
 	fprintf(stderr,"Usage: %s [-fcpdhvuaslFH] [sw_threads] [hw_threads] [files...] (-h for help)\n", progname);
+#endif
+
 	fprintf(stderr,"\n");
 
 	fprintf(stderr," -f  force     Replace existing files without asking\n");
@@ -930,6 +998,9 @@ static void help P0()
 	fprintf(stderr," -d  decode    Decode data (default is encode)\n");
 	fprintf(stderr," -p  precious  Do not delete the source\n");
 	fprintf(stderr," -H  Hybrid    Run the Hybridvariant\n");	/*MiBenchHybrid*/
+#ifdef SHADOWING
+	fprintf(stderr," -S  Shadowing Enables thread shadowing error detection\n");
+#endif // SHADOWING
 	fprintf(stderr,"\n");
 
 	fprintf(stderr," -u  u-law     Force 8 kHz/8 bit u-law in/output format\n");
@@ -966,7 +1037,11 @@ int main P2((ac, av), int ac, char **av)
 
 	parse_argv0( *av );
 
+#ifdef SHADOWING
+	while ((opt = getopt(ac, av, "fcdpvhuaslVFSH")) != EOF)
+#else
 	while ((opt = getopt(ac, av, "fcdpvhuaslVFH")) != EOF)
+#endif
 	switch (opt) {
 
 	case 'd': f_decode   = 1; break;
@@ -975,6 +1050,9 @@ int main P2((ac, av), int ac, char **av)
 	case 'p': f_precious = 1; break;
 	case 'F': f_fast     = 1; break;
 	case 'H': f_hybrid   = 1; break;/*MiBenchHybrid*/
+#ifdef SHADOWING
+	case 'S': f_shadowing = 1; break;/*MiBenchHybrid*/
+#endif
 
 #ifndef	NDEBUG
 	case 'V': f_verbose  = 1; break;	/* undocumented */
@@ -990,7 +1068,11 @@ int main P2((ac, av), int ac, char **av)
 
 	default: 
 		fprintf(stderr,
-			"Usage: %s [-fcpdhvuaslFH] [sw_threads] [hw_threads] [files...] (-h for help)\n",
+#ifdef SHADOWING
+			"Usage: %s [-fcpdhvuaslFSH] [sw_threads] [hw_threads] [files...] (-h for help)\n",
+#else
+			"Usage: %s [-fcpdhvuaslFSH] [sw_threads] [hw_threads] [files...] (-h for help)\n",
+#endif
 			progname);
 		exit(1);
 	}
