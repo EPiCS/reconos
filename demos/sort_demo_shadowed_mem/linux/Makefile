@@ -42,7 +42,7 @@ clean:
 
 install:
 	./genBenchmark.py benchmark.sh
-	cp sort_demo sort_demo_shadowed benchmark.sh  fault_injection /exports/rootfs_mb/demos/sort_demo_shadowed_mem_rel/
+	cp sort_demo sort_demo_shadowed benchmark.sh  fault_injection /exports/rootfs_mb/demos/sort_demo_shadowed_mem/
 
 %.o: %.c
 	$(CC) -c $(CFLAGS) $(LIBPATH) $(INCLUDEPATH) -o $@ $<
