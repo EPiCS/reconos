@@ -38,6 +38,5 @@ option "shadow-transmodal" r "Uses shadow threads of opposite modality."
 	flag off #dependon="shadow" optional
 
 section "Error Injection" sectiondesc="Configure error injection for testing the shadwing subsystem"
-option "error-count" - "How many errors du you want to be inserted?"
-	int typestr="number" optional
-option "error-seed" - "For deterministic error insertion you can specify the random number generator's seed value." int typestr="seed" optional
+option "error-type" - "One-hot coded bitfield that specifies error types to apply."	int typestr="number" optional
+option "error-time" - "before what block number shall the error be activated? -1 is at program start." int typestr="number" optional

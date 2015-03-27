@@ -65,12 +65,12 @@ struct gengetopt_args_info
   const char *shadow_schedule_help; /**< @brief Determines the algorithm of the shadow scheduler. help description.  */
   int shadow_transmodal_flag;	/**< @brief Uses shadow threads of opposite modality. (default=off).  */
   const char *shadow_transmodal_help; /**< @brief Uses shadow threads of opposite modality. help description.  */
-  int error_count_arg;	/**< @brief How many errors du you want to be inserted?.  */
-  char * error_count_orig;	/**< @brief How many errors du you want to be inserted? original value given at command line.  */
-  const char *error_count_help; /**< @brief How many errors du you want to be inserted? help description.  */
-  int error_seed_arg;	/**< @brief For deterministic error insertion you can specify the random number generator's seed value..  */
-  char * error_seed_orig;	/**< @brief For deterministic error insertion you can specify the random number generator's seed value. original value given at command line.  */
-  const char *error_seed_help; /**< @brief For deterministic error insertion you can specify the random number generator's seed value. help description.  */
+  int error_type_arg;	/**< @brief One-hot coded bitfield that specifies error types to apply..  */
+  char * error_type_orig;	/**< @brief One-hot coded bitfield that specifies error types to apply. original value given at command line.  */
+  const char *error_type_help; /**< @brief One-hot coded bitfield that specifies error types to apply. help description.  */
+  int error_time_arg;	/**< @brief before what block number shall the error be activated? -1 is at program start..  */
+  char * error_time_orig;	/**< @brief before what block number shall the error be activated? -1 is at program start. original value given at command line.  */
+  const char *error_time_help; /**< @brief before what block number shall the error be activated? -1 is at program start. help description.  */
   
   unsigned int help_given ;	/**< @brief Whether help was given.  */
   unsigned int detailed_help_given ;	/**< @brief Whether detailed-help was given.  */
@@ -84,8 +84,8 @@ struct gengetopt_args_info
   unsigned int shadow_given ;	/**< @brief Whether shadow was given.  */
   unsigned int shadow_schedule_given ;	/**< @brief Whether shadow-schedule was given.  */
   unsigned int shadow_transmodal_given ;	/**< @brief Whether shadow-transmodal was given.  */
-  unsigned int error_count_given ;	/**< @brief Whether error-count was given.  */
-  unsigned int error_seed_given ;	/**< @brief Whether error-seed was given.  */
+  unsigned int error_type_given ;	/**< @brief Whether error-type was given.  */
+  unsigned int error_time_given ;	/**< @brief Whether error-time was given.  */
 
 } ;
 

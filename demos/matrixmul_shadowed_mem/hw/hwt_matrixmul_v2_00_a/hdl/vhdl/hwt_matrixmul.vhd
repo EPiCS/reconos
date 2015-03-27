@@ -48,6 +48,9 @@ entity hwt_matrixmul is
 		FIFO32_S_Rd : out std_logic;
 		FIFO32_M_Wr : out std_logic;
 		
+		-- fault control
+		fault_control : in std_logic_vector(31 downto 0);
+		
 		-- HWT reset and clock
 		clk           : in std_logic;
 		rst           : in std_logic
@@ -134,6 +137,7 @@ architecture implementation of hwt_matrixmul is
 	
 	-- fsm state
 	signal state		: STATE_TYPE;
+	signal state_with_potential_fault		: STATE_TYPE;
 	
 	-- additional data for memif interfaces
 	signal len_data_MATRIX_A_C	: std_logic_vector(23 downto 0);
@@ -188,6 +192,15 @@ architecture implementation of hwt_matrixmul is
 	
 	signal multiplier_start	: std_logic;
 	signal multiplier_done	: std_logic;
+	
+	
+	alias control_flow_logic_fault : std_logic is fault_control(0);
+    alias control_flow_memory_fault : std_logic is fault_control(1);
+    signal control_flow_memory_fault_old : std_logic := '0';
+    alias control_flow_wiring_fault : std_logic is fault_control(2);
+    alias data_flow_logic_fault : std_logic is fault_control(3);
+    alias data_flow_memory_fault : std_logic is fault_control(4);
+    alias data_flow_wiring_fault : std_logic is fault_control(5);
 	
 begin
 	
@@ -303,8 +316,24 @@ begin
 	o_RAM_B_Addr_reconos(0 to C_LOCAL_RAM_ADDR_WIDTH_MATRIX_B   - 1) <= o_RAM_B_Addr_reconos_2((32-C_LOCAL_RAM_ADDR_WIDTH_MATRIX_B  ) to 31);
 	o_RAM_C_Addr_reconos(0 to C_LOCAL_RAM_ADDR_WIDTH_MATRIX_A_C - 1) <= o_RAM_C_Addr_reconos_2((32-C_LOCAL_RAM_ADDR_WIDTH_MATRIX_A_C) to 31);
 	
+	
+	control_logic_memory_fault_p: process(clk, rst, control_flow_memory_fault) is	
+	begin
+		 if rst = '1' then
+			 control_flow_memory_fault_old <= '0';
+		 elsif clk'event and clk = '1' then
+			 control_flow_memory_fault_old <= control_flow_memory_fault;
+		end if;
+	end process;
+	
+	state_with_potential_fault <= STATE_GET_ADDR2MADDRS when control_flow_memory_fault_old = '0' and control_flow_memory_fault ='1' else
+									state;
+
+	
+	
 	reconos_fsm	: process(clk, rst, o_osif, o_memif, o_ram_a, o_ram_b, o_ram_c) is
 		variable done					: boolean;
+		variable done_with_potential_fault  : boolean;
 		variable addr_pos				: integer;
 		variable calculated_rows	: integer;
 	begin
@@ -336,11 +365,12 @@ begin
 			state					<= STATE_GET_ADDR2MADDRS;
 			
 		elsif (clk'event and clk = '1') then
-			case state is
+			case state_with_potential_fault is
 				-- Get address pointing to the addresses pointing to the 3 matrixes via FSL.
 				when STATE_GET_ADDR2MADDRS =>
 					osif_mbox_get(i_osif, o_osif, C_MBOX_RECV, addr2maddrs, done);
-					if (done) then
+					if (control_flow_wiring_fault /= '1') then done_with_potential_fault := done; end if;
+					if (done_with_potential_fault) then
 						if (addr2maddrs = x"FFFFFFFF") then
 							state <= STATE_THREAD_EXIT;
 						else
@@ -399,7 +429,13 @@ begin
 							temp_addr_C <= conv_std_logic_vector(unsigned(temp_addr_C) + C_LINE_LEN_MATRIX*4, 32);
 							state <= STATE_READ_MATRIX_ROW_FROM_A;
 						else
-							state <= STATE_ACK;
+							-- FAULT INJECTION
+							if (control_flow_logic_fault = '1') then
+								state             <= STATE_STATE_GET_ADDR2MADDRS; -- skips over STATE_ACK
+							else
+								state <= STATE_ACK;
+							end if;
+							-- FAULT INJECTION END
 						end if;
 					end if;
 				

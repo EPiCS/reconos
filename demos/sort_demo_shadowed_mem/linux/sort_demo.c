@@ -581,28 +581,6 @@ void join_threads(){
 */
 }
 #endif
-//
-// Install permanent error in first Message Based HW Sort Thread
-//
-void faultinject_activate(int error_count){
-	if (error_count) {
-		// Lowest bit in data signals coming from  sorter will suffer a stuck-at-0 error
-		//reconos_faultinject(1, 0x00000001, 0x00000000);
-
-		// Disturb hwt state machine
-		reconos_faultinject(0, 0x00000001, 0x00000000);
-	}
-}
-
-//
-// Deactivate Fault Injection
-//
-void faultinject_deactivate(int error_count){
-	if (error_count) {
-		reconos_faultinject(0, 0x00000000, 0x00000000);
-		reconos_faultinject(1, 0x00000000, 0x00000000);
-	}
-}
 
 /**
  * @brief Main function
@@ -684,6 +662,12 @@ int main(int argc, char ** argv) {
 						pout.sort_thread_main);
 #endif // SHADOWING
 
+#ifndef HOST_COMPILE
+	// fault injection has to be here, because we need to first call reconos_init() ...
+	printf(" Activating fault injection: %x\n", args_info.error_type_arg);
+	reconos_faultinject(0,args_info.error_type_arg,args_info.error_type_arg); // set  error injection
+#endif
+
 
 	//
 	// Transfer data to compute threads
@@ -692,9 +676,14 @@ int main(int argc, char ** argv) {
 				printf("Putting %i blocks into job queues...\n", TO_BLOCKS(buffer_size, args_info.blocksize_arg));
 				pinterface.put_data(&pin);
 
-			#ifndef HOST_COMPILE
-				faultinject_activate(args_info.error_count_arg);
-			#endif
+#ifndef HOST_COMPILE
+	// fault injection has to be here, because we need to first call reconos_init() ...
+if (args_info.error_type_arg == 2){
+	printf(" Activating fault injection: %x\n", args_info.error_type_arg);
+	reconos_faultinject(0,0,0); // set  error injection
+	reconos_faultinject(0,args_info.error_type_arg,args_info.error_type_arg); // set  error injection
+}
+#endif
 
 				printf("Waiting for %i blocks of data...\n", TO_BLOCKS(buffer_size, args_info.blocksize_arg));
 				pinterface.get_data(&pin);
@@ -744,10 +733,7 @@ int main(int argc, char ** argv) {
 
 	pinterface.teardown_resources(&pin, &pout);
 
-#ifndef HOST_COMPILE
-	faultinject_deactivate(args_info.error_count_arg);
-#endif
-
+	reconos_faultinject(0,0,0); // deactivate all errors on exit
 	exit(0);
 }
 

@@ -80,9 +80,10 @@ void reconos_mmu_stats(uint32_t *tlb_hits, uint32_t *tlb_misses,
 
 
 #define CMD_FAULT_INJECTION 0xF0000000
-void reconos_faultinject(unsigned char channel, long int sa0, long int sa1){
-
-	unsigned long cmd_n_channel = CMD_FAULT_INJECTION | channel;
+void reconos_faultinject(uint8_t channel, uint32_t sa0, uint32_t sa1){
+	whine("LIBRECONOS: Activating fault at channel %hhd and values 0x%lx, 0x%lx\n", channel, sa0, sa1);
+	uint32_t cmd_n_channel = CMD_FAULT_INJECTION | channel;
+	whine("LIBRECONOS: fault injection command is 0x%lx\n", cmd_n_channel);
 	fsl_write(reconos_proc.proc_control_fsl_b, cmd_n_channel);
 	fsl_write(reconos_proc.proc_control_fsl_b, sa0);
 	fsl_write(reconos_proc.proc_control_fsl_b, sa1);

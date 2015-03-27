@@ -9,8 +9,7 @@ use reconos_v3_00_b.reconos_pkg.all;
 
 entity proc_control is
   generic (
-    C_ENABLE_ILA          : integer := 0;
-    C_FAULT_CHANNEL_WIDTH : natural := 0  -- 2^2 = 4 channels
+    C_ENABLE_ILA          : integer := 0
     );
   port (
     clk : in std_logic;
@@ -66,8 +65,8 @@ entity proc_control is
     tlb_misses : in  std_logic_vector(31 downto 0);
 
     -- Fault injection related ports
-    fault_sa0 : out std_logic_vector(32*(2**C_FAULT_CHANNEL_WIDTH)-1 downto 0);
-    fault_sa1 : out std_logic_vector(32*(2**C_FAULT_CHANNEL_WIDTH)-1 downto 0);
+    fault_sa0 : out std_logic_vector(31 downto 0);
+    fault_sa1 : out std_logic_vector(31 downto 0);
 
     -- Error signals from arbiter
     ERROR_REQ : in  std_logic;
@@ -76,7 +75,10 @@ entity proc_control is
     ERROR_ADR : in  std_logic_vector(31 downto 0);
 
     -- ReconOS reset
-    reconos_reset : out std_logic
+    reconos_reset : out std_logic;
+    
+    -- debug
+    debug : out std_logic_vector(199 downto 0)
     );
 end entity;
 
@@ -137,7 +139,7 @@ architecture implementation of proc_control is
   signal i_fslb                 : i_fsl_t;
   signal o_fslb                 : o_fsl_t;
 
-  signal fault_channel : std_logic_vector(C_FAULT_CHANNEL_WIDTH-1 downto 0);
+  signal fault_channel : std_logic_vector(7 downto 0);
   
 begin
 
@@ -167,7 +169,12 @@ begin
   CSDATA(2) <= '1' when astate = A_PAGE_FAULT_0 else '0';
   CSDATA(3) <= '1' when astate = A_PAGE_FAULT_1      else '0';
   CSDATA(4) <= '1' when astate = A_WAIT_PAGE_READY_0 else '0';
-
+  CSDATA(5) <= '1' when astate = A_WAIT_PAGE_READY_1 else '0';
+  CSDATA(6) <= '1' when astate = A_ERROR_CMD else '0';
+  CSDATA(7) <= '1' when astate = A_ERROR_TYPE else '0';
+  CSDATA(8) <= '1' when astate = A_ERROR_ADDRESS else '0';
+  CSDATA(9) <= '1' when astate = A_ERROR_ACK else '0';
+  
   CSDATA(16) <= '1' when bstate = B_WAIT          else '0';
   CSDATA(17) <= '1' when bstate = B_BRANCH        else '0';
   CSDATA(18) <= '1' when bstate = B_SELFTEST      else '0';
@@ -177,6 +184,8 @@ begin
   CSDATA(22) <= '1' when bstate = B_TLB_MISSES    else '0';
   CSDATA(23) <= '1' when bstate = B_PGD           else '0';
   CSDATA(24) <= '1' when bstate = B_RECONOS_RESET else '0';
+  CSDATA(25) <= '1' when bstate = B_FAULT_SA0     else '0';
+  CSDATA(26) <= '1' when bstate = B_FAULT_SA1     else '0';
 
   CSDATA(63 downto 32) <= FSLA_S_Data;
   CSDATA(64)           <= Rst;
@@ -200,6 +209,7 @@ begin
 
   TRIG <= CSDATA(4 downto 0) & CSDATA(24 downto 16) & CSDATA(65) & CSDATA(100);
 
+  debug <= CSDATA;
 
 ---------------------------------------------------------
 
@@ -236,7 +246,7 @@ begin
   resetC <= hwt_reset(12); resetD <= hwt_reset(13); resetE <= hwt_reset(14); resetF <= hwt_reset(15);
 
   -- this process initiates requests and handles incoming replys
-  FSLA_PROC : process (clk, rst) is
+  FSLA_PROC : process (clk, rst, reconos_reset_dup, o_fsla, o_fslb) is
     variable done : boolean;
   begin
     if rst = '1' or reconos_reset_dup = '1' then
@@ -308,7 +318,7 @@ begin
   end process;
 
   -- this process replies to incoming requests
-  FSLB_PROC : process (clk, rst) is
+  FSLB_PROC : process (clk, rst, o_fslb) is
     variable done : boolean;
   begin
     if rst = '1' then
@@ -344,7 +354,7 @@ begin
               bstate <= B_SELFTEST;
             when C_FAULT_INJECTION=>
               bstate        <= B_FAULT_SA0;
-              fault_channel <= data(C_FAULT_CHANNEL_WIDTH-1 downto 0);
+              fault_channel <= data(7 downto 0);
             when others =>
               bstate <= B_WAIT;         -- ignore everything else
           end case;
@@ -394,16 +404,14 @@ begin
           fsl_read_word(i_fslb, o_fslb, data, done);
           if done then
             bstate <= B_FAULT_SA1;
-            fault_sa0((32*(to_integer(ieee.numeric_std.unsigned(fault_channel))+1))-1
-                      downto (32*to_integer(ieee.numeric_std.unsigned(fault_channel)))) <= data;
+            fault_sa0 <= data;
           end if;
           
         when B_FAULT_SA1 =>
           fsl_read_word(i_fslb, o_fslb, data, done);
           if done then
             bstate <= B_WAIT;
-            fault_sa1((32*(to_integer(ieee.numeric_std.unsigned(fault_channel))+1))-1
-                       downto (32*to_integer(ieee.numeric_std.unsigned(fault_channel)))) <= data; 
+            fault_sa1 <= data; 
           end if;
           
       end case;

@@ -8,7 +8,6 @@ OPTION STYLE = MIX
 
 
 PARAMETER C_ENABLE_ILA = 0, DT = integer, RANGE = (0:1)
-PARAMETER C_FAULT_CHANNEL_WIDTH = 0, DT = natural, RANGE = (0:2)
 
 ## Bus Interfaces
 #BUS_INTERFACE BUS=OS_SFSL, BUS_STD=FSL, BUS_TYPE=SLAVE
@@ -87,13 +86,10 @@ PORT retry="", DIR=O
 PORT pgd="", DIR=O, VEC=[0:31]
 PORT reconos_reset="", DIR=O
 
-PORT fault_sa0=fault_sa0, DIR=O, VEC=[0:127], ISVALID = (C_FAULT_CHANNEL_WIDTH == 2)
-PORT fault_sa1=fault_sa1, DIR=O, VEC=[0:127], ISVALID = (C_FAULT_CHANNEL_WIDTH == 2)
 
-PORT fault_sa0=fault_sa0, DIR=O, VEC=[0:63], ISVALID = (C_FAULT_CHANNEL_WIDTH == 1)
-PORT fault_sa1=fault_sa1, DIR=O, VEC=[0:63], ISVALID = (C_FAULT_CHANNEL_WIDTH == 1)
+PORT fault_sa0="", DIR=O, VEC=[31:0]
+PORT fault_sa1="", DIR=O, VEC=[31:0]
 
-PORT fault_sa0=fault_sa0, DIR=O, VEC=[0:31], ISVALID = (C_FAULT_CHANNEL_WIDTH == 0)
-PORT fault_sa1=fault_sa1, DIR=O, VEC=[0:31], ISVALID = (C_FAULT_CHANNEL_WIDTH == 0)
+PORT debug ="", DIR=O, VEC=[199:0]
 
 END

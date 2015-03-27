@@ -49,8 +49,8 @@ const char *gengetopt_args_info_detailed_help[] = {
   "  -r, --shadow-transmodal       Uses shadow threads of opposite modality.  \n                                  (default=off)",
   "\nError Injection:",
   "  Configure error injection for testing the shadwing subsystem",
-  "      --error-count=number      How many errors du you want to be inserted?",
-  "      --error-seed=seed         For deterministic error insertion you can \n                                  specify the random number generator's seed \n                                  value.",
+  "      --error-type=number       One-hot coded bitfield that specifies error \n                                  types to apply.",
+  "      --error-time=number       before what block number shall the error be \n                                  activated? -1 is at program start.",
     0
 };
 
@@ -119,8 +119,8 @@ void clear_given (struct gengetopt_args_info *args_info)
   args_info->shadow_given = 0 ;
   args_info->shadow_schedule_given = 0 ;
   args_info->shadow_transmodal_given = 0 ;
-  args_info->error_count_given = 0 ;
-  args_info->error_seed_given = 0 ;
+  args_info->error_type_given = 0 ;
+  args_info->error_time_given = 0 ;
 }
 
 static
@@ -140,8 +140,8 @@ void clear_args (struct gengetopt_args_info *args_info)
   args_info->shadow_schedule_arg = 0;
   args_info->shadow_schedule_orig = NULL;
   args_info->shadow_transmodal_flag = 0;
-  args_info->error_count_orig = NULL;
-  args_info->error_seed_orig = NULL;
+  args_info->error_type_orig = NULL;
+  args_info->error_time_orig = NULL;
   
 }
 
@@ -162,8 +162,8 @@ void init_args_info(struct gengetopt_args_info *args_info)
   args_info->shadow_help = gengetopt_args_info_detailed_help[12] ;
   args_info->shadow_schedule_help = gengetopt_args_info_detailed_help[13] ;
   args_info->shadow_transmodal_help = gengetopt_args_info_detailed_help[14] ;
-  args_info->error_count_help = gengetopt_args_info_detailed_help[17] ;
-  args_info->error_seed_help = gengetopt_args_info_detailed_help[18] ;
+  args_info->error_type_help = gengetopt_args_info_detailed_help[17] ;
+  args_info->error_time_help = gengetopt_args_info_detailed_help[18] ;
   
 }
 
@@ -260,8 +260,8 @@ cmdline_parser_release (struct gengetopt_args_info *args_info)
   free_string_field (&(args_info->blocksize_orig));
   free_string_field (&(args_info->thread_interface_orig));
   free_string_field (&(args_info->shadow_schedule_orig));
-  free_string_field (&(args_info->error_count_orig));
-  free_string_field (&(args_info->error_seed_orig));
+  free_string_field (&(args_info->error_type_orig));
+  free_string_field (&(args_info->error_time_orig));
   
   
 
@@ -357,10 +357,10 @@ cmdline_parser_dump(FILE *outfile, struct gengetopt_args_info *args_info)
     write_into_file(outfile, "shadow-schedule", args_info->shadow_schedule_orig, cmdline_parser_shadow_schedule_values);
   if (args_info->shadow_transmodal_given)
     write_into_file(outfile, "shadow-transmodal", 0, 0 );
-  if (args_info->error_count_given)
-    write_into_file(outfile, "error-count", args_info->error_count_orig, 0);
-  if (args_info->error_seed_given)
-    write_into_file(outfile, "error-seed", args_info->error_seed_orig, 0);
+  if (args_info->error_type_given)
+    write_into_file(outfile, "error-type", args_info->error_type_orig, 0);
+  if (args_info->error_time_given)
+    write_into_file(outfile, "error-time", args_info->error_time_orig, 0);
   
 
   i = EXIT_SUCCESS;
@@ -674,8 +674,8 @@ cmdline_parser_internal (
         { "shadow",	0, NULL, 'a' },
         { "shadow-schedule",	1, NULL, 'c' },
         { "shadow-transmodal",	0, NULL, 'r' },
-        { "error-count",	1, NULL, 0 },
-        { "error-seed",	1, NULL, 0 },
+        { "error-type",	1, NULL, 0 },
+        { "error-time",	1, NULL, 0 },
         { 0,  0, 0, 0 }
       };
 
@@ -808,30 +808,30 @@ cmdline_parser_internal (
             exit (EXIT_SUCCESS);
           }
 
-          /* How many errors du you want to be inserted?.  */
-          if (strcmp (long_options[option_index].name, "error-count") == 0)
+          /* One-hot coded bitfield that specifies error types to apply..  */
+          if (strcmp (long_options[option_index].name, "error-type") == 0)
           {
           
           
-            if (update_arg( (void *)&(args_info->error_count_arg), 
-                 &(args_info->error_count_orig), &(args_info->error_count_given),
-                &(local_args_info.error_count_given), optarg, 0, 0, ARG_INT,
+            if (update_arg( (void *)&(args_info->error_type_arg), 
+                 &(args_info->error_type_orig), &(args_info->error_type_given),
+                &(local_args_info.error_type_given), optarg, 0, 0, ARG_INT,
                 check_ambiguity, override, 0, 0,
-                "error-count", '-',
+                "error-type", '-',
                 additional_error))
               goto failure;
           
           }
-          /* For deterministic error insertion you can specify the random number generator's seed value..  */
-          else if (strcmp (long_options[option_index].name, "error-seed") == 0)
+          /* before what block number shall the error be activated? -1 is at program start..  */
+          else if (strcmp (long_options[option_index].name, "error-time") == 0)
           {
           
           
-            if (update_arg( (void *)&(args_info->error_seed_arg), 
-                 &(args_info->error_seed_orig), &(args_info->error_seed_given),
-                &(local_args_info.error_seed_given), optarg, 0, 0, ARG_INT,
+            if (update_arg( (void *)&(args_info->error_time_arg), 
+                 &(args_info->error_time_orig), &(args_info->error_time_given),
+                &(local_args_info.error_time_given), optarg, 0, 0, ARG_INT,
                 check_ambiguity, override, 0, 0,
-                "error-seed", '-',
+                "error-time", '-',
                 additional_error))
               goto failure;
           

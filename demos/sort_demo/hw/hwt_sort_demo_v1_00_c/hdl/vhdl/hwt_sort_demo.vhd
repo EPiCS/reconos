@@ -31,6 +31,9 @@ entity hwt_sort_demo is
 		FIFO32_S_Rd : out std_logic;
 		FIFO32_M_Wr : out std_logic;
 		
+		-- fault control
+		fault_control : in std_logic_vector(31 downto 0);
+		
 		-- HWT reset and clock
 		clk           : in std_logic;
 		rst           : in std_logic
@@ -83,6 +86,7 @@ architecture implementation of hwt_sort_demo is
 	signal len_sorter      : std_logic_vector(0 to C_LOCAL_RAM_ADDRESS_WIDTH-1) := (others => '0'); -- length in words of data
   signal len_reconos     : std_logic_vector(31 downto 0) := (others => '0'); -- length in words of data
 	signal state    : STATE_TYPE;
+	signal state_with_potential_fault    : STATE_TYPE;
 	signal i_osif   : i_osif_t;
 	signal o_osif   : o_osif_t;
 	signal i_memif  : i_memif_t;
@@ -110,6 +114,14 @@ architecture implementation of hwt_sort_demo is
 	signal sort_start : std_logic := '0';
 	signal sort_done  : std_logic := '0';  
   
+    alias control_flow_logic_fault : std_logic is fault_control(0);
+    alias control_flow_memory_fault : std_logic is fault_control(1);
+    signal control_flow_memory_fault_old : std_logic := '0';
+    alias control_flow_wiring_fault : std_logic is fault_control(2);
+    alias data_flow_logic_fault : std_logic is fault_control(3);
+    alias data_flow_memory_fault : std_logic is fault_control(4);
+    alias data_flow_wiring_fault : std_logic is fault_control(5);
+    
 begin
 	
 	-- local dual-port RAM
@@ -197,9 +209,22 @@ begin
 	
 	o_RAMAddr_reconos(0 to C_LOCAL_RAM_ADDRESS_WIDTH-1) <= o_RAMAddr_reconos_2((32-C_LOCAL_RAM_ADDRESS_WIDTH) to 31);
 		
+	control_logic_memory_fault_p: process(clk, rst, control_flow_memory_fault) is	
+	begin
+		 if rst = '1' then
+			 control_flow_memory_fault_old <= '0';
+		 elsif clk'event and clk = '1' then
+			 control_flow_memory_fault_old <= control_flow_memory_fault;
+		end if;
+	end process;
+	
+	state_with_potential_fault <= STATE_GET_LEN when control_flow_memory_fault_old = '0' and control_flow_memory_fault ='1' else
+									state;
+			
 	-- os and memory synchronisation state machine
 	reconos_fsm: process (clk,rst,o_osif,o_memif,o_ram) is
 		variable done  : boolean;
+		variable done_with_potential_fault  : boolean;
 	begin
 		if rst = '1' then
 			osif_reset(o_osif);
@@ -211,24 +236,33 @@ begin
 			len_reconos <= (others => '0');
 			sort_start <= '0';
 		elsif rising_edge(clk) then
-			case state is
+			case state_with_potential_fault is
 
         -- get length via mbox: the amount of data in words to be sorted, will be saved in a local register
 				when STATE_GET_LEN =>
 					osif_mbox_get(i_osif, o_osif, MBOX_RECV, temp, done);
-					if done then
+					if (control_flow_wiring_fault /= '1') then done_with_potential_fault := done; end if;
+					if done_with_potential_fault then
 						if (temp = X"FFFFFFFF") then
 							state <= STATE_THREAD_EXIT;
 						else
 							len_reconos       <= temp;
+							
+							-- FAULT INJECTION
+							if (control_flow_logic_fault = '1') then
+							state             <= STATE_READ; -- skips over STATE_GET_ADDR
+							else
 							state             <= STATE_GET_ADDR;
+							end if;
+							-- FAULT INJECTION END	
 						end if;
 					end if;
           
 				-- get address via mbox: the data will be copied from this address to the local ram in the next states
 				when STATE_GET_ADDR =>
 					osif_mbox_get(i_osif, o_osif, MBOX_RECV, temp, done);
-					if done then
+					if (control_flow_wiring_fault = '0') then done_with_potential_fault := done; end if;
+					if done_with_potential_fault then
 						addr              <= temp(31 downto 2) & "00";
 						state             <= STATE_READ;						
 					end if;
