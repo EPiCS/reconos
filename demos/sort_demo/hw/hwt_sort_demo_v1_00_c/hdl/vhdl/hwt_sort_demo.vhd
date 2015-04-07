@@ -43,9 +43,9 @@ end entity;
 
 architecture implementation of hwt_sort_demo is
 	type STATE_TYPE is (
-          STATE_GET_LEN,
-					STATE_GET_ADDR,STATE_READ,STATE_SORTING,
-					STATE_WRITE,STATE_ACK,STATE_THREAD_EXIT);
+        STATE_THREAD_YIELD, STATE_GET_LEN,
+		STATE_GET_ADDR,STATE_READ,STATE_SORTING,
+		STATE_WRITE,STATE_ACK,STATE_THREAD_EXIT);
 
 	component bubble_sorter is
 		generic (
@@ -230,13 +230,21 @@ begin
 			osif_reset(o_osif);
 			memif_reset(o_memif);
 			ram_reset(o_ram);
-			state <= STATE_GET_LEN;
+			state <= STATE_THREAD_YIELD;
 			done  := False;
 			addr <= (others => '0');
 			len_reconos <= (others => '0');
 			sort_start <= '0';
 		elsif rising_edge(clk) then
 			case state_with_potential_fault is
+				-- signal to runtime system we don't have any state now and are ready to be replaced
+                -- with another thread
+                when STATE_THREAD_YIELD =>
+                  -- return value is stored to temp, because it is not needed
+                  osif_thread_yield(i_osif, o_osif, temp, done);
+                  if done then
+                    state <= STATE_GET_LEN;
+                  end if;
 
         -- get length via mbox: the amount of data in words to be sorted, will be saved in a local register
 				when STATE_GET_LEN =>
@@ -296,7 +304,7 @@ begin
 				-- send mbox that signals that the sorting is finished
 				when STATE_ACK =>
 					osif_mbox_put(i_osif, o_osif, MBOX_SEND, addr, ignore, done);
-					if done then state <= STATE_GET_LEN; end if;
+					if done then state <= STATE_THREAD_YIELD; end if;
 
 				-- thread exit
 				when STATE_THREAD_EXIT =>

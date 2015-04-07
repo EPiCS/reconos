@@ -63,6 +63,7 @@ end hwt_matrixmul;
 
 architecture implementation of hwt_matrixmul is
 	type STATE_TYPE is (
+		STATE_THREAD_YIELD,
 		STATE_GET_ADDR2MADDRS,
 		STATE_READ_MADDRS,
 		STATE_READ_MATRIX_B,
@@ -132,6 +133,7 @@ architecture implementation of hwt_matrixmul is
 	signal addr2maddrs	: std_logic_vector(31 downto 0);
 	
 	-- temporary signals
+	signal temp     : std_logic_vector(31 downto 0);
 	signal temp_addr_A	: std_logic_vector(31 downto 0);
 	signal temp_addr_C	: std_logic_vector(31 downto 0);
 	
@@ -362,10 +364,19 @@ begin
 			temp_addr_A			<= (others => '0');
 			temp_addr_C			<= (others => '0');
 			
-			state					<= STATE_GET_ADDR2MADDRS;
+			state					<= STATE_THREAD_YIELD;
 			
 		elsif (clk'event and clk = '1') then
 			case state_with_potential_fault is
+				-- signal to runtime system we don't have any state now and are ready to be replaced
+                -- with another thread
+                when STATE_THREAD_YIELD =>
+                  -- return value is stored to temp, because it is not needed
+                  osif_thread_yield(i_osif, o_osif, temp, done);
+                  if done then
+                    state <= STATE_GET_ADDR2MADDRS;
+                  end if;
+                  
 				-- Get address pointing to the addresses pointing to the 3 matrixes via FSL.
 				when STATE_GET_ADDR2MADDRS =>
 					osif_mbox_get(i_osif, o_osif, C_MBOX_RECV, addr2maddrs, done);
@@ -431,7 +442,7 @@ begin
 						else
 							-- FAULT INJECTION
 							if (control_flow_logic_fault = '1') then
-								state             <= STATE_STATE_GET_ADDR2MADDRS; -- skips over STATE_ACK
+								state             <= STATE_THREAD_YIELD; -- skips over STATE_ACK
 							else
 								state <= STATE_ACK;
 							end if;
@@ -447,7 +458,7 @@ begin
 						addr_pos				:= C_MADDRS - 1;
 						temp_addr_A			<= (others => '0');
 						temp_addr_C			<= (others => '0');
-						state					<= STATE_GET_ADDR2MADDRS;
+						state					<= STATE_THREAD_YIELD;
 					end if;
 				
 				-- Terminate hardware thread.

@@ -44,6 +44,7 @@ end entity;
 
 architecture implementation of hwt_short_term_synthesis_filtering is
 	type STATE_TYPE is (
+					STATE_THREAD_YIELD,
 					STATE_GET_DATA,
 					STATE_WAIT_1,
 					STATE_GET_GSMSTATEADDR,
@@ -116,7 +117,8 @@ architecture implementation of hwt_short_term_synthesis_filtering is
 	
 	constant RQ_RECV  : std_logic_vector(C_FSL_WIDTH-1 downto 0) := x"00000000";
 	constant RQ_SEND  : std_logic_vector(C_FSL_WIDTH-1 downto 0) := x"00000001";
-
+	
+	signal temp     : std_logic_vector(31 downto 0);
 	signal data     : std_logic_vector(31 downto 0);
 	signal len_recieve	: std_logic_vector(31 downto 0);
 	signal len_send      : std_logic_vector(31 downto 0);
@@ -258,7 +260,7 @@ begin
 			osif_reset(o_osif);
 			memif_reset(o_memif);
 			ram_reset(o_ram);			
-			state <= STATE_GET_DATA;
+			state <= STATE_THREAD_YIELD;
 			done  := False;
 			data <= (others => '0');
 			len_recieve <= std_logic_vector(to_unsigned(RQ_RECV_LEN_BYTES,32));
@@ -275,6 +277,15 @@ begin
 			cnt <= std_logic_vector(count_hwt);
 		
 			case state is
+				-- signal to runtime system we don't have any state now and are ready to be replaced
+                -- with another thread
+                when STATE_THREAD_YIELD =>
+                  -- return value is stored to temp, because it is not needed
+                  osif_thread_yield(i_osif, o_osif, temp, done);
+                  if done then
+                    state <= STATE_GET_DATA;
+                  end if;
+                  
 				-- get Data via rq
 				when STATE_GET_DATA =>				
 					osif_rq_receive(i_osif,o_osif,i_ram,o_ram,RQ_RECV,len_recieve,X"00000000",message_width,done);
@@ -432,7 +443,7 @@ begin
 				when STATE_ACK_3 =>
 					osif_rq_send(i_osif, o_osif, i_ram, o_ram, RQ_SEND, len_send, X"00000000", ignore, done);
 					if done then 
-						state <= STATE_GET_DATA; 
+						state <= STATE_THREAD_YIELD; 
 					end if;
 
 				-- thread exit
