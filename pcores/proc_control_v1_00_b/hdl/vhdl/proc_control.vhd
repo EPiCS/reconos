@@ -68,6 +68,9 @@ entity proc_control is
     fault_sa0 : out std_logic_vector(31 downto 0);
     fault_sa1 : out std_logic_vector(31 downto 0);
 
+    -- Arbiter run-time options
+    ARB_RUNTIME_OPTIONS: out std_logic_vector(15 downto 0);
+    
     -- Error signals from arbiter
     ERROR_REQ : in  std_logic;
     ERROR_ACK : out std_logic;
@@ -92,6 +95,7 @@ architecture implementation of proc_control is
   constant C_SELFTEST      : std_logic_vector(7 downto 0) := x"06";
 
   constant C_FAULT_INJECTION : std_logic_vector(7 downto 0) := x"F0";
+  constant C_ARB_RUNTIME_OPTION : std_logic_vector(7 downto 0) := x"F1";
 
   -- return values
   constant C_RETURN_ADDR     : std_logic_vector(31 downto 0) := x"00000001";
@@ -333,6 +337,9 @@ begin
       selftest_initiate_req <= '0';
       fault_sa0             <= (others => '0');
       fault_sa1             <= (others => '0');
+      
+      ARB_RUNTIME_OPTIONS <= X"0000"; -- Error checking enabled by default
+      
     elsif rising_edge(clk) then
       reconos_reset_dup <= '0';
       case bstate is

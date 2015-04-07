@@ -170,6 +170,9 @@ entity fifo32_arbiter_sh_rel is
     DEC2HWIF_RdAck : out std_logic;
     DEC2HWIF_WrAck : out std_logic;
 
+    -- Run-time options
+    RUNTIME_OPTIONS : in std_logic_vector(15 downto 0 );
+
     -- Error reporting
     ERROR_REQ : out std_logic;
     ERROR_ACK : in  std_logic;
@@ -260,6 +263,7 @@ architecture behavioural of fifo32_arbiter_sh_rel is
   type FSM_STATE_T is (
     -- Synchronization
     WAIT_THREADS,
+    UPDATE_RUNTIME_OPTIONS,
     -- Packet handling
     READ_MODE_LENGTH, READ_ADDRESS, WRITE_MODE_LENGTH, COMP_REQ,
     WRITE_ADDRESS, DATA_READ, DATA_WRITE,
@@ -303,10 +307,20 @@ architecture behavioural of fifo32_arbiter_sh_rel is
   signal write_data_valid : std_logic;
   signal write_channel    : std_logic_vector(clog2(C_CHECKSUM_NUM_CHANNELS)-1 downto 0);
 
+  -- run-time options registers
+  signal error_detection_on_reg: std_logic;
+
   -- GPIO 
   signal write_inhibit : std_logic_vector(31 downto 0);
 
-  -- Functions
+--------------------------------------------------------------------------------
+-- Aliases
+--------------------------------------------------------------------------------
+  alias error_detection_on : std_logic is RUNTIME_OPTIONS(0);
+
+--------------------------------------------------------------------------------
+-- Functions
+--------------------------------------------------------------------------------
   function minimum (a : unsigned; b : unsigned)
     return unsigned is
   begin
@@ -617,6 +631,7 @@ begin  -- of architecture ------------------------------------------------------
       -- Synchronization
       ------------------
       when WAIT_THREADS => -- does nothing
+      when UPDATE_RUNTIME_OPTIONS => -- does nothing
       ------------------
       -- Packet handling
       ------------------
@@ -645,13 +660,18 @@ begin  -- of architecture ------------------------------------------------------
         IN_FIFO32_M_Wr(1 downto 0)                       <= (others => OUT_FIFO32_M_Wr);
 
         -- fill_level handling
-		INT_OUT_FIFO32_M_Rem <= my_minimum(IN_FIFO32_M_Rem, 16, 0, 1);
-        
+        INT_OUT_FIFO32_M_Rem <= my_minimum(IN_FIFO32_M_Rem, 16, 0, 1);
+                
       when DATA_WRITE =>
         IN_FIFO32_S_Rd(0)     <= OUT_FIFO32_S_Rd;
         IN_FIFO32_S_Rd(1)     <= OUT_FIFO32_S_Rd;
         INT_OUT_FIFO32_S_DATA <= IN_FIFO32_S_Data(31 downto 0);
-        INT_OUT_FIFO32_S_Fill <= my_minimum(IN_FIFO32_S_Fill, 16,0,1);
+        if (error_detection_on_reg = '1') then
+        	INT_OUT_FIFO32_S_Fill <= my_minimum(IN_FIFO32_S_Fill, 16,0,1);
+        else
+	        -- with no error detection let TUO determine write speed
+	        INT_OUT_FIFO32_S_Fill <= IN_FIFO32_S_Fill(15 downto 0);
+        end if;
                
       -----------------
       -- Error handling
@@ -710,6 +730,18 @@ begin  -- of architecture ------------------------------------------------------
         
       when WAIT_ERROR_ACK =>
     end case;
+    
+    
+    -- Overrides
+    -- If error detection is disabled, we don't care for ST results, so we always accept them and throw them away
+    if (error_detection_on_reg = '1') then
+	    if ( unsigned( IN_FIFO32_S_Fill((16 * (1 + 1))-1 downto 16 * 1)) > 0  ) then
+    		IN_FIFO32_S_Rd(1)     <= '1';
+	    else
+		    IN_FIFO32_S_Rd(1)     <= '0';
+	    end if;
+    end if;
+    
   end process;
   
   -- State machine for request selection, packet tracking and shadowing
@@ -725,6 +757,8 @@ begin  -- of architecture ------------------------------------------------------
       address_reg     <= (others=>(others => '0'));
       transfer_mode   := READ;
       transfer_size   := 0;
+
+      error_detection_on_reg <= '1';
 
       ERROR_REQ <= '0';
       ERROR_TYP <= (others => '0');
@@ -744,13 +778,17 @@ begin  -- of architecture ------------------------------------------------------
         ------------------
         -- Synchronization
         ------------------
-        when WAIT_THREADS =>
+		    
+		when WAIT_THREADS =>
           -- TODO: fill_level handling!
           -- when both TUO and ST are ready we start lock stepped request processing
           if requests(1 downto 0) = "11" then
-            state                      <= READ_MODE_LENGTH;
+            state                      <= UPDATE_RUNTIME_OPTIONS;
           end if;
 
+	    when UPDATE_RUNTIME_OPTIONS =>
+		    error_detection_on_reg <= error_detection_on;		    
+		    state <= READ_MODE_LENGTH;
         ------------------
         -- Packet handling
         ------------------
@@ -783,14 +821,14 @@ begin  -- of architecture ------------------------------------------------------
           -- Compare both headers. If same continue normally, if not, go to
           -- error handling.
           if
-            (mode_length_reg(0) = mode_length_reg(1))AND
-            (address_reg(0)     = address_reg(1))            
+	        (error_detection_on_reg = '0') OR -- override error checks if runtime options says so
+            ( (mode_length_reg(0) = mode_length_reg(1))AND(address_reg(0) = address_reg(1)) )            
           then
             state       <= WRITE_MODE_LENGTH;
 
-          --
+          --------------------
           -- ERROR HANDLING
-          --
+          --------------------
           elsif mode_length_reg(0) /= mode_length_reg(1) then
             state         <= DELETE_REQUEST_TUO;
             error_typ_reg <= ERROR_TYP_HEADER1;
@@ -838,7 +876,9 @@ begin  -- of architecture ------------------------------------------------------
 
           -- Lesson learned: error handling has to outvote everything else, so we
           -- have to put error handling last in the VHDL code.
-          if IN_FIFO32_S_Data(31 downto 0) /= IN_FIFO32_S_Data(63 downto 32) then
+          if  (error_detection_on_reg = '1') AND -- override error checks if runtime options says so
+	          ( IN_FIFO32_S_Data(31 downto 0) /= IN_FIFO32_S_Data(63 downto 32) ) 
+	      then
             state         <= COMPLETE_WRITE;
             error_typ_reg <= ERROR_TYP_DATA;
             error_adr_reg <= std_logic_vector(unsigned(mode_length_reg(0)(23 downto 0)) - transfer_size+ unsigned(address_reg(0))-4);
