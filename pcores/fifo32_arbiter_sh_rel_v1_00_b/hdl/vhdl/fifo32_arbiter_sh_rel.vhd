@@ -265,12 +265,13 @@ architecture behavioural of fifo32_arbiter_sh_rel is
     WAIT_THREADS,
     UPDATE_RUNTIME_OPTIONS,
     -- Packet handling
-    READ_MODE_LENGTH, READ_ADDRESS, WRITE_MODE_LENGTH, COMP_REQ,
+    READ_MODE_LENGTH, READ_ADDRESS, WRITE_MODE_LENGTH, SYNC_READ, SYNC_WRITE, COMP_REQ,
     WRITE_ADDRESS, DATA_READ, DATA_WRITE,
     -- Error Handling:
     DELETE_REQUEST_TUO, DELETE_REQUEST_ST,  COMPLETE_WRITE,
     REPORT_ERROR, WAIT_ERROR_ACK);
-  signal state : FSM_STATE_T;
+  signal state_tuo : FSM_STATE_T;
+  signal state_st : FSM_STATE_T;
 
   --! For storing the first packet word
   type reg_vector_t is array (natural range<>) of std_logic_vector(C_SLV_DWIDTH-1 downto 0);
@@ -309,6 +310,10 @@ architecture behavioural of fifo32_arbiter_sh_rel is
 
   -- run-time options registers
   signal error_detection_on_reg: std_logic;
+  
+  -- State machine synchronization signals
+  signal sync_req: std_logic;
+  signal sync_ack: std_logic;
 
   -- GPIO 
   signal write_inhibit : std_logic_vector(31 downto 0);
@@ -574,18 +579,20 @@ begin  -- of architecture ------------------------------------------------------
     end loop;
   end process;
 
-  -- This process controll non registered state machine outputs.
+  -- This process controlls non registered state machine outputs.
   -- If we don't register all outputs, the state machine reacts faster to
   -- changing inputs and state machine design is easier.
-  fsm_outputs_p: process (state, IN_FIFO32_M_Rem, mode_length_reg, address_reg,
+  fsm_outputs_tuo_p: process (state_tuo, IN_FIFO32_M_Rem, mode_length_reg, address_reg,
                           OUT_FIFO32_M_Data, OUT_FIFO32_M_Wr, OUT_FIFO32_S_Rd,
-                          IN_FIFO32_S_Data, IN_FIFO32_S_Fill)
+                          IN_FIFO32_S_Data, IN_FIFO32_S_Fill, IN_FIFO32_S_Rd, REQUESTS, 
+                          int_out_fifo32_s_data,int_out_fifo32_s_fill, int_out_fifo32_m_rem, 
+                          error_detection_on_reg )
   is
 
   begin
       -- for ILA debug
       ila_signals <= (others => '0');
-      case state is
+      case state_tuo is
 	      when WAIT_THREADS       => ila_signals(3 downto 0) <= "0000"; --0
 	      when READ_MODE_LENGTH   => ila_signals(3 downto 0) <= "0001"; --1
 	      when READ_ADDRESS       => ila_signals(3 downto 0) <= "0010"; --2
@@ -620,13 +627,13 @@ begin  -- of architecture ------------------------------------------------------
       ila_signals(130)            <= OUT_FIFO32_M_Wr;
   
     -- defaults
-    IN_FIFO32_S_Rd        <= (others => '0');
-    IN_FIFO32_M_Wr        <= (others => '0');
-    IN_FIFO32_M_Data      <= (others => '0');
-    INT_OUT_FIFO32_M_Rem  <= (others => '0');
-    INT_OUT_FIFO32_S_Data <= (others => '0');
-    INT_OUT_FIFO32_S_Fill <= (others => '0');
-    case state is
+    IN_FIFO32_S_Rd(0) 			        <= '0';
+    IN_FIFO32_M_Wr(0)                   <= '0';
+    IN_FIFO32_M_Data(31 downto 0)      <= (others => '0');
+    INT_OUT_FIFO32_M_Rem(15 downto 0)  <= (others => '0');
+    INT_OUT_FIFO32_S_Data(31 downto 0) <= (others => '0');
+    INT_OUT_FIFO32_S_Fill(15 downto 0) <= (others => '0');
+    case state_tuo is
       ------------------
       -- Synchronization
       ------------------
@@ -636,36 +643,51 @@ begin  -- of architecture ------------------------------------------------------
       -- Packet handling
       ------------------
       when READ_MODE_LENGTH =>
-        IN_FIFO32_S_Rd(1 downto 0) <= "11";
+        IN_FIFO32_S_Rd(0 downto 0) <= "1";
 		
       when READ_ADDRESS =>
-        IN_FIFO32_S_Rd(1 downto 0) <= "11";
-		
+        IN_FIFO32_S_Rd(0 downto 0) <= "1";
+        
+	  when SYNC_READ =>
+		    
+	  when SYNC_WRITE =>
+		    
+	  when COMP_REQ =>
+		    
       when WRITE_MODE_LENGTH =>
         -- fill_level handling: +2 for unwritten mode_length and address word
-		INT_OUT_FIFO32_S_Fill <= my_minimum(IN_FIFO32_S_Fill, 16,0,1, offset=> 2);
-        INT_OUT_FIFO32_S_Data <= mode_length_reg(0);
+        if (error_detection_on_reg = '1') then
+			INT_OUT_FIFO32_S_Fill <= my_minimum(IN_FIFO32_S_Fill, 16,0,1, offset=> 2);
+        	INT_OUT_FIFO32_S_Data <= mode_length_reg(0);
+        else 
+	        INT_OUT_FIFO32_S_Fill <= my_minimum(IN_FIFO32_S_Fill, 16,1,1, offset=> 2);
+        	INT_OUT_FIFO32_S_Data <= mode_length_reg(0);
+        end if;
 
-      when COMP_REQ =>
-        
       when WRITE_ADDRESS =>
         -- fill_level handling: +1 for unwritten address word
-		INT_OUT_FIFO32_S_Fill <= my_minimum(IN_FIFO32_S_Fill, 16,0,1, offset=> 1);
-        INT_OUT_FIFO32_S_Data <= address_reg(0);
+        if (error_detection_on_reg = '1') then
+			INT_OUT_FIFO32_S_Fill <= my_minimum(IN_FIFO32_S_Fill, 16,0,1, offset=> 1);
+        	INT_OUT_FIFO32_S_Data <= address_reg(0);
+        else 
+	        INT_OUT_FIFO32_S_Fill <= my_minimum(IN_FIFO32_S_Fill, 16,1,1, offset=> 1);
+        	INT_OUT_FIFO32_S_Data <= address_reg(0);
+        end if;
           
       when DATA_READ =>
         -- synchronize mem port with thread ports
         IN_FIFO32_M_Data((32 * (1 + 0))-1 downto 32 * 0) <= OUT_FIFO32_M_Data;
-        IN_FIFO32_M_Data((32 * (1 + 1))-1 downto 32 * 1) <= OUT_FIFO32_M_Data;
-        IN_FIFO32_M_Wr(1 downto 0)                       <= (others => OUT_FIFO32_M_Wr);
+        IN_FIFO32_M_Wr(0 downto 0)                       <= (others => OUT_FIFO32_M_Wr);
 
         -- fill_level handling
+        -- reads have to be always synchronized
         INT_OUT_FIFO32_M_Rem <= my_minimum(IN_FIFO32_M_Rem, 16, 0, 1);
                 
       when DATA_WRITE =>
         IN_FIFO32_S_Rd(0)     <= OUT_FIFO32_S_Rd;
-        IN_FIFO32_S_Rd(1)     <= OUT_FIFO32_S_Rd;
         INT_OUT_FIFO32_S_DATA <= IN_FIFO32_S_Data(31 downto 0);
+        
+        -- Writes are only synchronized and checked for error when error detection is on
         if (error_detection_on_reg = '1') then
         	INT_OUT_FIFO32_S_Fill <= my_minimum(IN_FIFO32_S_Fill, 16,0,1);
         else
@@ -699,6 +721,323 @@ begin  -- of architecture ------------------------------------------------------
         end case;
 
       when DELETE_REQUEST_ST =>
+	      -- handled by st state machine
+
+	  when COMPLETE_WRITE =>
+		-- forwards TUO data    
+        IN_FIFO32_S_Rd(0)     <= OUT_FIFO32_S_Rd;
+        INT_OUT_FIFO32_S_DATA <= IN_FIFO32_S_Data(31 downto 0);
+		INT_OUT_FIFO32_S_Fill <= my_minimum(IN_FIFO32_S_Fill, 16,0,1);
+        
+      when REPORT_ERROR =>
+        
+      when WAIT_ERROR_ACK =>
+    end case;
+  end process;
+  
+  -- State machine for request selection, packet tracking and shadowing
+  fsm_states_tuo_p : process (clk, rst) is
+    type TRANSFER_MODE_T is (READ, WRITE);
+    variable transfer_mode : TRANSFER_MODE_T;
+    variable transfer_size : natural range 0 to 2**24;
+    
+  begin
+    if rst = '1' then
+      state_tuo          <= WAIT_THREADS;
+      mode_length_reg(0) <= (others => '0');
+      address_reg(0)     <= (others => '0');
+      transfer_mode   := READ;
+      transfer_size   := 0;
+
+      error_detection_on_reg <= '1';
+
+      ERROR_REQ <= '0';
+      ERROR_TYP <= (others => '0');
+      ERROR_ADR <= (others => '0');
+    elsif clk'event and clk = '1' then
+
+      -- default is to hold all outputs.
+      state_tuo         <= state_tuo;
+      transfer_mode := transfer_mode;
+      transfer_size := transfer_size;
+
+      -----------------------------------------------------------------------
+      -- INFO: We expect TUO to be connected to port 0 and ST to be connected
+      -- to port 1. No other ports are served.
+      -----------------------------------------------------------------------
+      case state_tuo is
+        ------------------
+        -- Synchronization
+        ------------------
+		    
+		when WAIT_THREADS =>
+          -- TODO: fill_level handling!
+          -- TUO and ST read in headers seperatley and then synchronize 
+          if requests(0 downto 0) = "1" then
+            state_tuo                      <= UPDATE_RUNTIME_OPTIONS;
+          end if;
+
+	    when UPDATE_RUNTIME_OPTIONS =>
+		    error_detection_on_reg <= error_detection_on;		    
+		    state_tuo <= READ_MODE_LENGTH;
+        ------------------
+        -- Packet handling
+        ------------------
+        when READ_MODE_LENGTH =>
+          -- TODO: fill_level handling!
+          -- Read in first word of header from both threads
+            mode_length_reg(0)            <= IN_FIFO32_S_Data(31 downto 0);
+            state_tuo                      <= READ_ADDRESS;
+
+          -- Take information from TUO
+          case IN_FIFO32_S_DATA(31) is
+            when '0'    => transfer_mode := READ;
+            when others => transfer_mode := WRITE;
+          end case;
+          -- lower 24 bits of first word are defined to be the length
+          -- of the transfer.
+          transfer_size := to_integer(unsigned(IN_FIFO32_S_DATA(23 downto 0)));
+
+          
+        when READ_ADDRESS =>
+          -- TODO: fill_level handling!
+          -- Read in second  word of header from both threads 
+            address_reg(0) <= IN_FIFO32_S_Data(31 downto 0);
+            if transfer_mode = READ then
+            	state_tuo       <= SYNC_READ;
+            else
+	            state_tuo       <= SYNC_WRITE;
+            end if;
+            
+	    when SYNC_READ =>
+		      -- do we sync every time?
+		      -- when we are here we either have a read ar write request.
+		      -- on a read request we always have to sync.
+		      -- on a write request only if error detection is on
+		      -- We also need to check if the other thread has the same request as we have!
+		    if  ( (state_st = SYNC_READ) or 
+			     (state_st = SYNC_WRITE and error_detection_on_reg = '1') ) 
+			then
+				state_tuo <= COMP_REQ;		    
+		    end if;
+		
+	    when SYNC_WRITE =>
+			if ( error_detection_on_reg = '1' and (state_st = SYNC_WRITE or state_st = SYNC_READ) ) OR
+			    (error_detection_on_reg = '0' )
+			then
+				state_tuo <= COMP_REQ;		    
+			end if;  
+			
+        when COMP_REQ =>
+          -- TODO: fill_level handling!
+          -- Compare both headers. If same continue normally, if not, go to
+          -- error handling.
+          if
+	        (error_detection_on_reg = '0') OR -- override error checks if runtime options says so
+            ( (mode_length_reg(0) = mode_length_reg(1))AND(address_reg(0) = address_reg(1)) )            
+          then
+            state_tuo       <= WRITE_MODE_LENGTH;
+
+          --------------------
+          -- ERROR HANDLING
+          --------------------
+          elsif mode_length_reg(0) /= mode_length_reg(1) then
+            state_tuo         <= DELETE_REQUEST_TUO;
+            error_typ_reg <= ERROR_TYP_HEADER1;
+            error_adr_reg <= (others => '0');
+          elsif address_reg(0) /= address_reg(1)then
+            state_tuo         <= DELETE_REQUEST_TUO;
+            error_typ_reg <= ERROR_TYP_HEADER2;
+            error_adr_reg <= (others => '0');
+          end if;
+            
+	    when WRITE_MODE_LENGTH =>
+		  -- wait for header word being read
+          if OUT_FIFO32_S_Rd = '1' then
+            state_tuo                 <= WRITE_ADDRESS;
+          end if;
+          
+	    when WRITE_ADDRESS =>
+		  -- wait for header word being read
+		  -- and then jump to read or write data
+          if OUT_FIFO32_S_Rd = '1' then
+            case transfer_mode is
+              when READ =>
+                state_tuo <= DATA_READ;
+              when WRITE =>
+                state_tuo <= DATA_WRITE;              
+            end case;
+          end if;
+          
+
+        when DATA_READ =>
+          if OUT_FIFO32_M_Wr = '1' then
+            transfer_size := transfer_size-4;
+          end if;
+          if transfer_size = 0 then
+            state_tuo <= WAIT_THREADS;
+          end if;
+          
+        when DATA_WRITE =>
+          -- TODO: What data do we write on error? TUO Data? ST Data? All
+          -- zeros? Special Marker?
+          -- TODO: What about forever stalling thread?
+          if OUT_FIFO32_S_Rd = '1' then
+            transfer_size := transfer_size-4;
+          end if;
+          if transfer_size = 0 then
+            state_tuo <= WAIT_THREADS;
+          end if;
+
+          -- Lesson learned: error handling has to outvote everything else, so we
+          -- have to put error handling last in the VHDL code.
+          if  (error_detection_on_reg = '1') AND -- override error checks if runtime options says so
+	          ( IN_FIFO32_S_Data(31 downto 0) /= IN_FIFO32_S_Data(63 downto 32) ) 
+	      then
+            state_tuo         <= COMPLETE_WRITE;
+            error_typ_reg <= ERROR_TYP_DATA;
+            error_adr_reg <= std_logic_vector(unsigned(mode_length_reg(0)(23 downto 0)) - transfer_size+ unsigned(address_reg(0))-4);
+          end if;
+        -----------------
+        -- Error handling
+        -----------------
+        when DELETE_REQUEST_TUO =>
+          -- TODO: What about forever stalling thread?
+          -- Handle threads seperately: they might have different request types and
+          -- lengths, so we have to delete the request individually
+
+          if (unsigned(IN_FIFO32_S_Fill((16 * (1 + 0))-1 downto 16 * 0)) > 0 and mode_length_reg(0)(31) = '1') or
+             (unsigned(IN_FIFO32_M_Rem((16 * (1 + 0))-1 downto 16 * 0)) > 0 and mode_length_reg(0)(31) = '0')
+          then
+            transfer_size              := transfer_size-4;          
+          end if;
+
+          if transfer_size = 0 then
+            state_tuo <= DELETE_REQUEST_ST;
+            transfer_size := to_integer(unsigned(mode_length_reg(1)(23 downto 0)));
+          end if;
+
+        when DELETE_REQUEST_ST =>
+          if (unsigned(IN_FIFO32_S_Fill((16 * (1 + 1))-1 downto 16 * 1)) > 0 and mode_length_reg(1)(31) = '1') or
+             (unsigned(IN_FIFO32_M_Rem((16 * (1 + 1))-1 downto 16 * 1)) > 0 and mode_length_reg(1)(31) = '0')
+          then
+            transfer_size              := transfer_size-4;          
+          end if;
+
+          if transfer_size = 0 then
+            state_tuo <= REPORT_ERROR;
+          end if;
+          
+        when COMPLETE_WRITE =>
+          -- TODO: What data do we write on error? TUO Data? ST Data? All
+          -- zeros? Special Marker?
+          -- TODO: What about forever stalling thread?
+          if OUT_FIFO32_S_Rd = '1' then
+            transfer_size := transfer_size-4;
+          end if;
+          if transfer_size = 0 then
+            state_tuo <= REPORT_ERROR;
+          end if;
+
+        when REPORT_ERROR =>
+          ERROR_REQ <= '1';
+          ERROR_TYP <= error_typ_reg;
+          ERROR_ADR <= error_adr_reg;
+          state_tuo <= WAIT_ERROR_ACK;
+          
+        when WAIT_ERROR_ACK =>
+          if ERROR_ACK = '1' then
+            state_tuo <= WAIT_THREADS;
+
+            -- reset error interface
+            ERROR_REQ <= '0';
+            ERROR_TYP <= ERROR_TYP_NONE;
+            ERROR_ADR <= (others => '0');
+          end if;
+          
+        when others =>
+          state_tuo <= WAIT_THREADS;
+      end case;
+    end if;
+  end process;
+
+
+
+ -- This process controll non registered state machine outputs.
+  -- If we don't register all outputs, the state machine reacts faster to
+  -- changing inputs and state machine design is easier.
+  fsm_outputs_st_p: process (state_st, IN_FIFO32_M_Rem, mode_length_reg, address_reg,
+                          OUT_FIFO32_M_Data, OUT_FIFO32_M_Wr, OUT_FIFO32_S_Rd,
+                          IN_FIFO32_S_Data, IN_FIFO32_S_Fill)
+  is
+
+  begin
+  
+    -- defaults
+    IN_FIFO32_S_Rd(1)        <= '0';
+    IN_FIFO32_M_Wr(1)        <= '0';
+    IN_FIFO32_M_Data(63 downto 32)     <= (others => '0');
+    
+    -- Following signals are handled by TUO state machine
+    --INT_OUT_FIFO32_M_Rem(31 downto 15)  <= (others => '0');
+    --INT_OUT_FIFO32_S_Data(63 downto 32) <= (others => '0');
+    --INT_OUT_FIFO32_S_Fill(31 downto 15) <= (others => '0');
+    case state_st is
+      ------------------
+      -- Synchronization
+      ------------------
+      when WAIT_THREADS => -- does nothing
+      when UPDATE_RUNTIME_OPTIONS => -- does nothing
+      ------------------
+      -- Packet handling
+      ------------------
+      when READ_MODE_LENGTH =>
+        IN_FIFO32_S_Rd(1 downto 1) <= "1";
+		
+      when READ_ADDRESS =>
+        IN_FIFO32_S_Rd(1 downto 1) <= "1";
+
+	  when SYNC_READ =>
+		    
+	  when SYNC_WRITE =>
+		    
+      when COMP_REQ =>
+      
+      when WRITE_MODE_LENGTH =>
+        -- fill_level handling: +2 for unwritten mode_length and address word
+	    -- empty for st, because st writes are discarded
+  
+      when WRITE_ADDRESS =>
+        -- fill_level handling: +1 for unwritten address word
+		-- empty for st, because st writes are discarded
+          
+      when DATA_READ =>
+        -- synchronize mem port with thread ports
+        IN_FIFO32_M_Data((32 * (1 + 1))-1 downto 32 * 1) <= OUT_FIFO32_M_Data;
+        IN_FIFO32_M_Wr(1 downto 1)                       <= (others => OUT_FIFO32_M_Wr);
+
+        -- fill_level handling
+        -- controlled by tuo state machine
+        --INT_OUT_FIFO32_M_Rem <= my_minimum(IN_FIFO32_M_Rem, 16, 0, 1);
+                
+      when DATA_WRITE =>
+        IN_FIFO32_S_Rd(1)     <= OUT_FIFO32_S_Rd;
+        -- TUO state machine writes outputs
+        --INT_OUT_FIFO32_S_DATA <= IN_FIFO32_S_Data(31 downto 0);
+        --if (error_detection_on_reg = '1') then
+        --	INT_OUT_FIFO32_S_Fill <= my_minimum(IN_FIFO32_S_Fill, 16,0,1);
+        --else
+	        -- with no error detection let TUO determine write speed
+	    --    INT_OUT_FIFO32_S_Fill <= IN_FIFO32_S_Fill(15 downto 0);
+        --end if;
+               
+      -----------------
+      -- Error handling
+      -----------------
+      when DELETE_REQUEST_TUO =>
+	      -- handled by tuo state machine
+
+      when DELETE_REQUEST_ST =>
         case mode_length_reg(1)(31) is
           when '0' =>
             -- thread reads
@@ -720,53 +1059,40 @@ begin  -- of architecture ------------------------------------------------------
             report "Request mode undefined!" severity ERROR;
         end case;
         
-      when COMPLETE_WRITE =>
-        IN_FIFO32_S_Rd(0)     <= OUT_FIFO32_S_Rd;
+	  when COMPLETE_WRITE =>
+		-- tuo state machine handles rest of signals
+		-- TUO data is forwarded, ST data is discarded
         IN_FIFO32_S_Rd(1)     <= OUT_FIFO32_S_Rd;
-        INT_OUT_FIFO32_S_DATA <= IN_FIFO32_S_Data(31 downto 0);
-		INT_OUT_FIFO32_S_Fill <= my_minimum(IN_FIFO32_S_Fill, 16,0,1);
         
       when REPORT_ERROR =>
         
       when WAIT_ERROR_ACK =>
-    end case;
-    
-    
-    -- Overrides
-    -- If error detection is disabled, we don't care for ST results, so we always accept them and throw them away
-    if (error_detection_on_reg = '1') then
-	    if ( unsigned( IN_FIFO32_S_Fill((16 * (1 + 1))-1 downto 16 * 1)) > 0  ) then
-    		IN_FIFO32_S_Rd(1)     <= '1';
-	    else
-		    IN_FIFO32_S_Rd(1)     <= '0';
-	    end if;
-    end if;
-    
+    end case;   
   end process;
   
   -- State machine for request selection, packet tracking and shadowing
-  fsm_states_p : process (clk, rst) is
+  fsm_states_st_p : process (clk, rst) is
     type TRANSFER_MODE_T is (READ, WRITE);
     variable transfer_mode : TRANSFER_MODE_T;
     variable transfer_size : natural range 0 to 2**24;
     
   begin
     if rst = '1' then
-      state           <= WAIT_THREADS;
-      mode_length_reg <= (others=>(others => '0'));
-      address_reg     <= (others=>(others => '0'));
+      state_st           <= WAIT_THREADS;
+      mode_length_reg(1) <= (others => '0');
+      address_reg(1)     <= (others => '0');
       transfer_mode   := READ;
       transfer_size   := 0;
 
-      error_detection_on_reg <= '1';
-
-      ERROR_REQ <= '0';
-      ERROR_TYP <= (others => '0');
-      ERROR_ADR <= (others => '0');
+      -- controlled by tuo state machine
+      --error_detection_on_reg <= '1';
+      --ERROR_REQ <= '0';
+      --ERROR_TYP <= (others => '0');
+      --ERROR_ADR <= (others => '0');
     elsif clk'event and clk = '1' then
 
       -- default is to hold all outputs.
-      state         <= state;
+      state_st         <= state_st;
       transfer_mode := transfer_mode;
       transfer_size := transfer_size;
 
@@ -774,83 +1100,105 @@ begin  -- of architecture ------------------------------------------------------
       -- INFO: We expect TUO to be connected to port 0 and ST to be connected
       -- to port 1. No other ports are served.
       -----------------------------------------------------------------------
-      case state is
+      case state_st is
         ------------------
         -- Synchronization
         ------------------
 		    
 		when WAIT_THREADS =>
           -- TODO: fill_level handling!
-          -- when both TUO and ST are ready we start lock stepped request processing
-          if requests(1 downto 0) = "11" then
-            state                      <= UPDATE_RUNTIME_OPTIONS;
+          -- TUO and ST read in headers seperatley and then synchronize 
+          if requests(1 downto 1) = "1" then
+            state_st                      <= UPDATE_RUNTIME_OPTIONS;
           end if;
 
 	    when UPDATE_RUNTIME_OPTIONS =>
-		    error_detection_on_reg <= error_detection_on;		    
-		    state <= READ_MODE_LENGTH;
+		    -- done by tuo state machine  
+		    --error_detection_on_reg <= error_detection_on;		    
+		    state_st <= READ_MODE_LENGTH;
         ------------------
         -- Packet handling
         ------------------
         when READ_MODE_LENGTH =>
           -- TODO: fill_level handling!
           -- Read in first word of header from both threads
-            mode_length_reg(0)            <= IN_FIFO32_S_Data(31 downto 0);
             mode_length_reg(1)            <= IN_FIFO32_S_Data(63 downto 32);
-            state                      <= READ_ADDRESS;
+            state_st                      <= READ_ADDRESS;
 
           -- Take information from TUO
-          case IN_FIFO32_S_DATA(31) is
+          case IN_FIFO32_S_DATA(63) is
             when '0'    => transfer_mode := READ;
             when others => transfer_mode := WRITE;
           end case;
           -- lower 24 bits of first word are defined to be the length
           -- of the transfer.
-          transfer_size := to_integer(unsigned(IN_FIFO32_S_DATA(23 downto 0)));
+          transfer_size := to_integer(unsigned(IN_FIFO32_S_DATA(55 downto 32)));
 
           
         when READ_ADDRESS =>
           -- TODO: fill_level handling!
           -- Read in second  word of header from both threads 
-            address_reg(0) <= IN_FIFO32_S_Data(31 downto 0);
             address_reg(1) <= IN_FIFO32_S_Data(63 downto 32);            
-            state       <= COMP_REQ;
+            if transfer_mode = READ then
+            	state_st       <= SYNC_READ;
+            else
+	            state_st       <= SYNC_WRITE;
+            end if;
+            
+	    when SYNC_READ =>
+	      -- do we sync every time?
+		      -- when we are here we either have a read ar write request.
+		      -- on a read request we always have to sync.
+		      -- on a write request only if error detection is on
+		      -- We also need to check if the other thread has the same request as we have!
+		    if  ( (state_tuo = SYNC_READ) or 
+			     (state_tuo = SYNC_WRITE and error_detection_on_reg = '1') )  
+			then
+				state_st <= COMP_REQ;		    
+		    end if; 
 
+	    when SYNC_WRITE =>
+			if ( error_detection_on_reg = '1' and (state_tuo = SYNC_WRITE or state_tuo = SYNC_READ) ) OR
+			    (error_detection_on_reg = '0' )
+			then
+				state_st <= COMP_REQ;		    
+			end if;
+				
         when COMP_REQ =>
           -- TODO: fill_level handling!
           -- Compare both headers. If same continue normally, if not, go to
           -- error handling.
-          if
+	      -- copy/pasted from TUO state machine.
+	      if
 	        (error_detection_on_reg = '0') OR -- override error checks if runtime options says so
             ( (mode_length_reg(0) = mode_length_reg(1))AND(address_reg(0) = address_reg(1)) )            
           then
-            state       <= WRITE_MODE_LENGTH;
+            state_st       <= WRITE_MODE_LENGTH;
 
           --------------------
           -- ERROR HANDLING
           --------------------
           elsif mode_length_reg(0) /= mode_length_reg(1) then
-            state         <= DELETE_REQUEST_TUO;
-            error_typ_reg <= ERROR_TYP_HEADER1;
-            error_adr_reg <= (others => '0');
+            state_st         <= DELETE_REQUEST_TUO;            
           elsif address_reg(0) /= address_reg(1)then
-            state         <= DELETE_REQUEST_TUO;
-            error_typ_reg <= ERROR_TYP_HEADER2;
-            error_adr_reg <= (others => '0');
+            state_st         <= DELETE_REQUEST_TUO;            
           end if;
-            
+
         when WRITE_MODE_LENGTH =>
+	      -- wait for header word being read 
           if OUT_FIFO32_S_Rd = '1' then
-            state                 <= WRITE_ADDRESS;
+            state_st                 <= WRITE_ADDRESS;
           end if;
           
-        when WRITE_ADDRESS =>
+	    when WRITE_ADDRESS =>
+		  -- wait for header word being read
+		  -- and then jump to read or write data
           if OUT_FIFO32_S_Rd = '1' then
             case transfer_mode is
               when READ =>
-                state <= DATA_READ;
+                state_st <= DATA_READ;
               when WRITE =>
-                state <= DATA_WRITE;              
+                state_st <= DATA_WRITE;              
             end case;
           end if;
           
@@ -860,7 +1208,7 @@ begin  -- of architecture ------------------------------------------------------
             transfer_size := transfer_size-4;
           end if;
           if transfer_size = 0 then
-            state <= WAIT_THREADS;
+            state_st <= WAIT_THREADS;
           end if;
           
         when DATA_WRITE =>
@@ -871,7 +1219,7 @@ begin  -- of architecture ------------------------------------------------------
             transfer_size := transfer_size-4;
           end if;
           if transfer_size = 0 then
-            state <= WAIT_THREADS;
+            state_st <= WAIT_THREADS;
           end if;
 
           -- Lesson learned: error handling has to outvote everything else, so we
@@ -879,9 +1227,10 @@ begin  -- of architecture ------------------------------------------------------
           if  (error_detection_on_reg = '1') AND -- override error checks if runtime options says so
 	          ( IN_FIFO32_S_Data(31 downto 0) /= IN_FIFO32_S_Data(63 downto 32) ) 
 	      then
-            state         <= COMPLETE_WRITE;
-            error_typ_reg <= ERROR_TYP_DATA;
-            error_adr_reg <= std_logic_vector(unsigned(mode_length_reg(0)(23 downto 0)) - transfer_size+ unsigned(address_reg(0))-4);
+            state_st         <= COMPLETE_WRITE;
+            -- Setting error signals is a TUO state machine task
+            --error_typ_reg <= ERROR_TYP_DATA;
+            --error_adr_reg <= std_logic_vector(unsigned(mode_length_reg(0)(23 downto 0)) - transfer_size+ unsigned(address_reg(0))-4);
           end if;
         -----------------
         -- Error handling
@@ -898,7 +1247,7 @@ begin  -- of architecture ------------------------------------------------------
           end if;
 
           if transfer_size = 0 then
-            state <= DELETE_REQUEST_ST;
+            state_st <= DELETE_REQUEST_ST;
             transfer_size := to_integer(unsigned(mode_length_reg(1)(23 downto 0)));
           end if;
 
@@ -910,7 +1259,7 @@ begin  -- of architecture ------------------------------------------------------
           end if;
 
           if transfer_size = 0 then
-            state <= REPORT_ERROR;
+            state_st <= REPORT_ERROR;
           end if;
           
         when COMPLETE_WRITE =>
@@ -921,30 +1270,34 @@ begin  -- of architecture ------------------------------------------------------
             transfer_size := transfer_size-4;
           end if;
           if transfer_size = 0 then
-            state <= REPORT_ERROR;
+            state_st <= REPORT_ERROR;
           end if;
 
-        when REPORT_ERROR =>
-          ERROR_REQ <= '1';
-          ERROR_TYP <= error_typ_reg;
-          ERROR_ADR <= error_adr_reg;
-          state <= WAIT_ERROR_ACK;
+	    when REPORT_ERROR =>
+		  -- TUO state machine handles error signals 
+          --ERROR_REQ <= '1';
+          --ERROR_TYP <= error_typ_reg;
+          --ERROR_ADR <= error_adr_reg;
+          state_st <= WAIT_ERROR_ACK;
           
         when WAIT_ERROR_ACK =>
           if ERROR_ACK = '1' then
-            state <= WAIT_THREADS;
+            state_st <= WAIT_THREADS;
 
             -- reset error interface
-            ERROR_REQ <= '0';
-            ERROR_TYP <= ERROR_TYP_NONE;
-            ERROR_ADR <= (others => '0');
+            -- TUO state machine handles error signals
+            --ERROR_REQ <= '0';
+            --ERROR_TYP <= ERROR_TYP_NONE;
+            --ERROR_ADR <= (others => '0');
           end if;
           
         when others =>
-          state <= WAIT_THREADS;
+          state_st <= WAIT_THREADS;
       end case;
     end if;
   end process;
+
+
 
 --  checksum : process(clk, rst) is
 --  begin
