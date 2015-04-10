@@ -347,7 +347,7 @@ architecture behavioural of fifo32_arbiter_sh_perf is
 -- Aliases
 --------------------------------------------------------------------------------
   alias error_detection_on : std_logic is RUNTIME_OPTIONS(0);
-  
+  alias sh_buffer_size_exp : std_logic_vector(2 downto 0) is RUNTIME_OPTIONS(3 downto 1);
 --------------------------------------------------------------------------------
 -- Functions
 --------------------------------------------------------------------------------
@@ -1166,7 +1166,9 @@ begin  -- of architecture ------------------------------------------------------
 				when WAIT_SH_BUFFER =>
 					-- TODO: Don't wait until sh_buffer has enough space for a whole packet: maybe sh_buffer is too small for a complete packet.
 					-- we wait until the full packet will fit into the sh_buffer to ease buffer handling.
-					if ( unsigned(sh_rem) >= unsigned(mode_length_reg(0)(15 downto 2)) ) then
+					if ( minimum( unsigned(sh_rem), to_unsigned( (2**to_integer(unsigned(sh_buffer_size_exp)))*1024, 24) )  
+						>= unsigned(mode_length_reg(0)(15 downto 2)) ) 
+					then
 						state_tuo <= WRITE_MODE_LENGTH;
 					end if;
 					
