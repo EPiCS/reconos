@@ -310,10 +310,6 @@ architecture behavioural of fifo32_arbiter_sh_rel is
 
   -- run-time options registers
   signal error_detection_on_reg: std_logic;
-  
-  -- State machine synchronization signals
-  signal sync_req: std_logic;
-  signal sync_ack: std_logic;
 
   -- GPIO 
   signal write_inhibit : std_logic_vector(31 downto 0);
