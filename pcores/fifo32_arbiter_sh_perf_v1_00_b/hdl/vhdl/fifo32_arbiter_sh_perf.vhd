@@ -173,6 +173,9 @@ entity fifo32_arbiter_sh_perf is
 		DEC2HWIF_RdAck : out std_logic;
 		DEC2HWIF_WrAck : out std_logic;
 
+    	-- Run-time options
+    	RUNTIME_OPTIONS : in std_logic_vector(15 downto 0 );
+
 		-- Error reporting
 		ERROR_REQ : out std_logic;
 		ERROR_ACK : in  std_logic;
@@ -280,6 +283,7 @@ architecture behavioural of fifo32_arbiter_sh_perf is
 	type FSM_STATE_T is (
 		-- Synchronization
 		WAIT_THREADS,
+		UPDATE_RUNTIME_OPTIONS,
 		-- Packet handling
 		READ_MODE_LENGTH, READ_ADDRESS, WRITE_MODE_LENGTH, WAIT_SH_BUFFER, COMPARE_REQ,
 		WRITE_ADDRESS, DATA_READ, DATA_WRITE,
@@ -324,6 +328,9 @@ architecture behavioural of fifo32_arbiter_sh_perf is
 	signal write_data_valid : std_logic;
 	signal write_channel    : std_logic_vector(clog2(C_CHECKSUM_NUM_CHANNELS)-1 downto 0);
 
+  	-- run-time options registers
+  	signal error_detection_on_reg: std_logic;
+
 	-- GPIO
 	signal write_inhibit : std_logic_vector(31 downto 0);
 
@@ -336,6 +343,11 @@ architecture behavioural of fifo32_arbiter_sh_perf is
 	signal sh_read : std_logic;
 	signal sh_write : std_logic;
 
+--------------------------------------------------------------------------------
+-- Aliases
+--------------------------------------------------------------------------------
+  alias error_detection_on : std_logic is RUNTIME_OPTIONS(0);
+  
 --------------------------------------------------------------------------------
 -- Functions
 --------------------------------------------------------------------------------
@@ -673,16 +685,23 @@ begin  -- of architecture ------------------------------------------------------
 			-- Synchronization
 			------------------
 			when WAIT_THREADS => -- does nothing
+			when UPDATE_RUNTIME_OPTIONS => -- does nothing
 			------------------
 			-- Packet handling
 			------------------
 			when READ_MODE_LENGTH =>
-				IN_FIFO32_S_Rd(1) <= '1';
-				sh_read           <= '1';
+				IN_FIFO32_S_Rd(1) <= '1';				
+				-- only read from buffer if error detection is on and always on read requests
+				if (error_detection_on_reg = '1' or IN_FIFO32_S_Data(63) = '0' ) then
+					sh_read           <= '1';
+				end if;
 
 			when READ_ADDRESS =>
 				IN_FIFO32_S_Rd(1) <= '1';
-				sh_read           <= '1';
+				-- only read from buffer if error detection is on and always on read requests
+				if (error_detection_on_reg = '1' or IN_FIFO32_S_Data(63) = '0' ) then
+					sh_read           <= '1';
+				end if;
 				
 			when COMPARE_REQ => -- does nothing
 								
@@ -703,12 +722,19 @@ begin  -- of architecture ------------------------------------------------------
 			when DATA_WRITE =>
 				-- fill the shadow buffer
 				-- TODO: suppress more than one write to it
-				
-				if ( unsigned(IN_FIFO32_S_Fill(31 downto 16)) >= 1  and 
-					  unsigned(sh_fill) >= 1 ) 
-				then
-					sh_read <= '1';
+				if ( (error_detection_on_reg = '0' and  						
+					  unsigned(IN_FIFO32_S_Fill(31 downto 16)) >= 1)
+					  OR
+					  (error_detection_on_reg = '1' and  						
+					  unsigned(IN_FIFO32_S_Fill(31 downto 16)) >= 1 and 
+					  unsigned(sh_fill) >= 1) 
+				    ) 
+				then					
 					IN_FIFO32_S_Rd(1) <= '1';
+					-- onyl read from shadow buffer, when error detection is on
+					if (error_detection_on_reg = '1') then 
+						sh_read <= '1';
+					end if;
 				end if;
 
 			-----------------
@@ -781,6 +807,7 @@ begin  -- of architecture ------------------------------------------------------
 			-- Synchronization
 			------------------
 			when WAIT_THREADS => -- does nothing
+			when UPDATE_RUNTIME_OPTIONS => -- does nothing
 			------------------
 			-- Packet handling
 			------------------
@@ -793,9 +820,12 @@ begin  -- of architecture ------------------------------------------------------
 			when WAIT_SH_BUFFER=> -- does nothing
 
 			when WRITE_MODE_LENGTH =>
-				-- fill the shadow buffer
-				sh_write_data <=     mode_length_reg(0);
-				sh_write      <=  OUT_FIFO32_S_Rd;
+				-- fill the shadow buffer with request
+				-- if error detection is on, but always on a read request
+				if (error_detection_on_reg = '1' or mode_length_reg(0)(31) = '0') then
+					sh_write_data <=     mode_length_reg(0);
+					sh_write      <=  OUT_FIFO32_S_Rd;
+				end if;
 
 				-- fill_level handling: +2 for unwritten mode_length and address word
 				INT_OUT_FIFO32_S_Fill <= STD_LOGIC_VECTOR(unsigned(IN_FIFO32_S_Fill(15 downto 0)) +2 );
@@ -803,9 +833,12 @@ begin  -- of architecture ------------------------------------------------------
 
 
 			when WRITE_ADDRESS =>
-				-- fill the shadow buffer
-				sh_write_data <=     address_reg(0);
-				sh_write      <=  OUT_FIFO32_S_Rd;
+				-- fill the shadow buffer with request
+				-- if error detection is on, but always on a read request
+				if (error_detection_on_reg = '1' or mode_length_reg(0)(31) = '0') then
+					sh_write_data <=     address_reg(0);
+					sh_write      <=  OUT_FIFO32_S_Rd;
+				end if;
 
 				-- fill_level handling: +1 for unwritten address word
 				INT_OUT_FIFO32_S_Fill <= STD_LOGIC_VECTOR(unsigned(IN_FIFO32_S_Fill(15 downto 0)) +1 );
@@ -826,8 +859,10 @@ begin  -- of architecture ------------------------------------------------------
 			when DATA_WRITE =>
 				-- fill the shadow buffer
 				-- TODO: suppress more than one write to it
-				sh_write_data <=     IN_FIFO32_S_Data(31 downto 0);
-				sh_write      <=  OUT_FIFO32_S_Rd;
+				if (error_detection_on_reg = '1') then
+					sh_write_data <=     IN_FIFO32_S_Data(31 downto 0);
+					sh_write      <=  OUT_FIFO32_S_Rd;
+				end if;
 
 				IN_FIFO32_S_Rd(0)     <= OUT_FIFO32_S_Rd;
 				INT_OUT_FIFO32_S_DATA <= IN_FIFO32_S_Data(31 downto 0);
@@ -876,9 +911,11 @@ begin  -- of architecture ------------------------------------------------------
 					-- TODO: fill_level handling!
 					-- when ST and sh_buffer are ready we start processing the request
 					if (requests(1) = '1') and  ( unsigned(sh_fill) >= 2 ) then
-						state_st                     <= READ_MODE_LENGTH;
+						state_st                     <= UPDATE_RUNTIME_OPTIONS;
 					end if;
 
+				when UPDATE_RUNTIME_OPTIONS => -- does nothing
+					state_st <= READ_MODE_LENGTH;
 				------------------
 				-- Packet handling
 				------------------
@@ -891,14 +928,15 @@ begin  -- of architecture ------------------------------------------------------
 					state_st              <= READ_ADDRESS;
 
 					-- Take information from sh_buffer and thus, indirectly from TUO
-					case sh_read_data(31) is
+					--case sh_read_data(31) is
+					case IN_FIFO32_S_Data(63) is
 						when '0'    => transfer_mode := READ;
 						when others => transfer_mode := WRITE;
 					end case;
 					-- lower 24 bits of first word are defined to be the length
 					-- of the transfer.
-					transfer_size := to_integer(unsigned(sh_read_data(23 downto 0)));
-
+					--transfer_size := to_integer(unsigned(sh_read_data(23 downto 0)));
+					transfer_size := to_integer(unsigned(IN_FIFO32_S_Data(55 downto 32)));
 
 				when READ_ADDRESS =>
 					-- TODO: fill_level handling!
@@ -910,9 +948,9 @@ begin  -- of architecture ------------------------------------------------------
 					-- TODO: fill_level handling!
 					-- Compare both headers. If same, continue normally, if not, go to
 					-- error handling.
-					if
-						(mode_length_reg(2) = mode_length_reg(1))AND
-						(address_reg(2)     = address_reg(1))
+					if( (error_detection_on_reg = '0') OR -- override error checks if runtime options says so
+						((mode_length_reg(2) = mode_length_reg(1))AND
+						(address_reg(2)     = address_reg(1)))  )
 					then
 						case transfer_mode is
 							when READ =>
@@ -956,8 +994,13 @@ begin  -- of architecture ------------------------------------------------------
 					-- TODO: What about forever stalling thread?
 					-- Read data from sh_buffer and ST and compare them.
 					-- On error jump to error handling.
-					if ( unsigned(IN_FIFO32_S_Fill(31 downto 16)) >= 1 and 
-						  unsigned(sh_fill) >= 1 ) 
+					if ( (error_detection_on_reg = '0' and  						
+						  unsigned(IN_FIFO32_S_Fill(31 downto 16)) >= 1)
+						  OR
+						  (error_detection_on_reg = '1' and  						
+						  unsigned(IN_FIFO32_S_Fill(31 downto 16)) >= 1 and 
+						  unsigned(sh_fill) >= 1) 
+					    ) 
 				    then
 						transfer_size := transfer_size-4;
 						if transfer_size = 0 then
@@ -967,7 +1010,8 @@ begin  -- of architecture ------------------------------------------------------
 						--
 						-- ERROR HANDLING
 						--
-						if ( sh_read_data /= IN_FIFO32_S_Data(63 downto 32) )
+						if (error_detection_on_reg = '1' and  
+							sh_read_data /= IN_FIFO32_S_Data(63 downto 32) )
 						then
 							error_typ_reg <= ERROR_TYP_DATA;
 							error_adr_reg <= std_logic_vector(unsigned(mode_length_reg(0)(23 downto 0)) - transfer_size+ unsigned(address_reg(0))-4);
@@ -1059,6 +1103,8 @@ begin  -- of architecture ------------------------------------------------------
 			transfer_mode   := READ;
 			transfer_size   := 0;
 
+			error_detection_on_reg <= '1';
+			
 		elsif clk'event and clk = '1' then
 
 			-- default is to hold all outputs.
@@ -1078,9 +1124,13 @@ begin  -- of architecture ------------------------------------------------------
 					-- TODO: fill_level handling!
 					-- when TUO is ready we start its processing its request
 					if requests(0) = '1' then
-						state_tuo                      <= READ_MODE_LENGTH;
+						state_tuo                      <= UPDATE_RUNTIME_OPTIONS;
 					end if;
 
+				when UPDATE_RUNTIME_OPTIONS =>
+					error_detection_on_reg <= error_detection_on;		    
+		    		state_tuo <= READ_MODE_LENGTH;
+		    		
 				------------------
 				-- Packet handling
 				------------------
@@ -1105,15 +1155,21 @@ begin  -- of architecture ------------------------------------------------------
 					-- Only forward packet if the sh_buffer has enough empty space to
 					-- for the current packet.
 					address_reg(0) <= IN_FIFO32_S_Data(31 downto 0);
-					state_tuo          <= WAIT_SH_BUFFER;
-
+					-- Only wait when we actually want to write something into the shadow buffer
+					-- When is that? When error detection is on and when we have a write re
+					if (error_detection_on_reg = '1' or transfer_mode = READ) then
+						state_tuo          <= WAIT_SH_BUFFER;
+					else 
+						state_tuo          <= WRITE_MODE_LENGTH;
+					end if;
+					
 				when WAIT_SH_BUFFER =>
 					-- TODO: Don't wait until sh_buffer has enough space for a whole packet: maybe sh_buffer is too small for a complete packet.
 					-- we wait until the full packet will fit into the sh_buffer to ease buffer handling.
 					if ( unsigned(sh_rem) >= unsigned(mode_length_reg(0)(15 downto 2)) ) then
 						state_tuo <= WRITE_MODE_LENGTH;
 					end if;
-
+					
 				when WRITE_MODE_LENGTH =>
 					if OUT_FIFO32_S_Rd = '1' then
 						state_tuo                 <= WRITE_ADDRESS;

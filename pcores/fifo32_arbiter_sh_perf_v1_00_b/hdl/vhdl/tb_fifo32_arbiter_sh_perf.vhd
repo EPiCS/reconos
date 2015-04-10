@@ -35,8 +35,7 @@ architecture testbench of tb_fifo32_arbiter_sh_perf is
 
 component proc_control is
   generic (
-    C_ENABLE_ILA          : integer := 0;
-    C_FAULT_CHANNEL_WIDTH : natural := 0  -- 2^2 = 4 channels
+    C_ENABLE_ILA          : integer := 0
     );
   port (
     clk : in std_logic;
@@ -92,8 +91,11 @@ component proc_control is
     tlb_misses : in  std_logic_vector(31 downto 0);
 
     -- Fault injection related ports
-    fault_sa0 : out std_logic_vector(32*(2**C_FAULT_CHANNEL_WIDTH)-1 downto 0);
-    fault_sa1 : out std_logic_vector(32*(2**C_FAULT_CHANNEL_WIDTH)-1 downto 0);
+    fault_sa0 : out std_logic_vector(31 downto 0);
+    fault_sa1 : out std_logic_vector(31 downto 0);
+    
+    -- Arbiter run-time options
+	ARB_RUNTIME_OPTIONS: out std_logic_vector(15 downto 0);
 
     -- Error signals from arbiter
     ERROR_REQ : in  std_logic;
@@ -260,6 +262,9 @@ end component;
       DEC2HWIF_RdAck : out std_logic;
       DEC2HWIF_WrAck : out std_logic;
 
+      -- Run-time options
+      RUNTIME_OPTIONS : in std_logic_vector(15 downto 0 );
+
       -- Error reporting
       ERROR_REQ : out std_logic;
       ERROR_ACK : in  std_logic;
@@ -347,6 +352,9 @@ end component;
   signal DEC2HWIF_RdAck : std_logic;
   signal DEC2HWIF_WrAck : std_logic;
 
+  -- Run-time options
+  signal RUNTIME_OPTIONS: std_logic_vector(15 downto 0);
+
   -- Error reporting
   signal ERROR_REQ : std_logic;
   signal ERROR_ACK : std_logic;
@@ -373,6 +381,9 @@ end component;
   type tb_phase_t is (READ1, WRITE1, READ128, WRITE128, REQUEST_ERROR, LENGTH_ERROR, DATA_ERROR, DONE);
   type tb_phase_vector_t is array  (natural range<>) of tb_phase_t;
   signal tb_phase : tb_phase_vector_t(0 to HWT_COUNT-1);
+
+
+  signal transfer_size_sig    : natural range 0 to 2**24;
 
 begin  -- of architecture -------------------------------------------------------
 
@@ -652,6 +663,9 @@ proc_control_i: proc_control
     fault_sa0 => open,
     fault_sa1 => open,
 
+    -- Arbiter run-time options
+	ARB_RUNTIME_OPTIONS => RUNTIME_OPTIONS,
+
     -- Error signals from arbiter
     ERROR_REQ  => ERROR_REQ,
     ERROR_ACK  => ERROR_ACK,
@@ -818,6 +832,9 @@ proc_control_i: proc_control
       DEC2HWIF_RdAck => DEC2HWIF_RdAck,
       DEC2HWIF_WrAck => DEC2HWIF_WrAck,
 
+	  -- Run-time options	  
+	  RUNTIME_OPTIONS => RUNTIME_OPTIONS,
+	  
       -- Error reporting
       ERROR_REQ => ERROR_REQ,
       ERROR_ACK => ERROR_ACK,
@@ -895,32 +912,36 @@ proc_control_i: proc_control
               a2m_memif_out.m_data <= transfer_address;
             when WRITE =>
               state := DATA_WRITE;
+              a2m_memif_out.s_rd <= '0';
+              --transfer_size := transfer_size - 4;
             when others => null;
           end case;
           
         when DATA_WRITE =>
-          if (a2m_memif_in.s_fill /= X"0001" or transfer_size = 4)and
-             a2m_memif_in.s_fill /= X"0000" then
-            a2m_memif_out.s_rd <= '1';
-            transfer_size := transfer_size - 4;
-          else
+          if (a2m_memif_in.s_fill = X"0001" and transfer_size /= 4) or
+             (a2m_memif_in.s_fill = X"0000") 
+          then
             a2m_memif_out.s_rd <= '0';
+          else
+	        a2m_memif_out.s_rd <= '1';
+            transfer_size := transfer_size - 4;
           end if;
           
           if transfer_size = 0 then
             state              := IDLE;
-            a2m_memif_out.s_rd <= '0';
+            --a2m_memif_out.s_rd <= '0';
           end if;
           
         when DATA_READ =>
           -- following line determines read data
           a2m_memif_out.m_data <= transfer_address;
-          if a2m_memif_in.m_remainder /= X"0001" and
-             a2m_memif_in.m_remainder /= X"0000" then
-            a2m_memif_out.m_wr <= '1';
-            transfer_size      := transfer_size - 4;
+          if a2m_memif_in.m_remainder = X"0001" or
+             a2m_memif_in.m_remainder = X"0000" 
+          then
+			a2m_memif_out.m_wr <= '0';
           else
-            a2m_memif_out.m_wr <= '0';
+            a2m_memif_out.m_wr <= '1';
+            transfer_size      := transfer_size - 4;	          
           end if;
 
           if transfer_size = 0 then
@@ -932,6 +953,7 @@ proc_control_i: proc_control
         when others =>
           state := IDLE;
       end case;
+      transfer_size_sig <= transfer_size;
     end if;
   end process;
 
