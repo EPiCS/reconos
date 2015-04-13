@@ -89,6 +89,13 @@ void reconos_faultinject(uint8_t channel, uint32_t sa0, uint32_t sa1){
 	fsl_write(reconos_proc.proc_control_fsl_b, sa1);
 }
 
+#define CMD_ARB_RUNTIME_OPTS 0xF1000000
+extern void reconos_set_arb_runtime_opts(uint16_t arb_options){
+	fsl_write(reconos_proc.proc_control_fsl_b, CMD_ARB_RUNTIME_OPTS);
+	fsl_write(reconos_proc.proc_control_fsl_b, arb_options);
+
+}
+
 void reconos_proc_control_selftest(void)
 {
 	uint32_t res, expect = 0x5E1F7E57;

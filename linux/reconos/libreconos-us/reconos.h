@@ -94,6 +94,7 @@ extern int reconos_init_autodetect(void);
 extern void reconos_mmu_stats(uint32_t *tlb_hits, uint32_t *tlb_misses,
 			      uint32_t *page_faults);
 extern void reconos_faultinject(uint8_t channel, uint32_t sa0, uint32_t sa1);
+extern void reconos_set_arb_runtime_opts(uint16_t arb_options);
 extern void reconos_hwt_setresources(struct reconos_hwt *hwt,
 				     struct reconos_resource *res,
 				     size_t num_resources);

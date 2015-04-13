@@ -105,7 +105,7 @@ architecture implementation of proc_control is
   type ASTATE_TYPE is (A_WAIT, A_SELFTEST, A_PAGE_FAULT_0, A_PAGE_FAULT_1, A_WAIT_PAGE_READY_0, A_WAIT_PAGE_READY_1,
                        A_ERROR_CMD, A_ERROR_TYPE, A_ERROR_ADDRESS, A_ERROR_ACK);
   type BSTATE_TYPE is (B_WAIT, B_BRANCH, B_SELFTEST, B_SELFTEST_REQ, B_RESET, B_TLB_HITS, B_TLB_MISSES, B_PGD, B_RECONOS_RESET,
-                       B_FAULT_SA0, B_FAULT_SA1);
+                       B_FAULT_SA0, B_FAULT_SA1, B_ARB_RUNTIME_OPTION);
 
   
   constant C_ILA_WIDTH : integer := 200;
@@ -362,6 +362,8 @@ begin
             when C_FAULT_INJECTION=>
               bstate        <= B_FAULT_SA0;
               fault_channel <= data(7 downto 0);
+            when C_ARB_RUNTIME_OPTION =>
+              bstate <= B_ARB_RUNTIME_OPTION;
             when others =>
               bstate <= B_WAIT;         -- ignore everything else
           end case;
@@ -419,6 +421,13 @@ begin
           if done then
             bstate <= B_WAIT;
             fault_sa1 <= data; 
+          end if;
+
+        when B_ARB_RUNTIME_OPTION =>
+          fsl_read_word(i_fslb, o_fslb, data, done);
+          if done then
+            bstate <= B_WAIT;
+            ARB_RUNTIME_OPTIONS <= data(15 downto 0); 
           end if;
           
       end case;
