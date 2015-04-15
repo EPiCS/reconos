@@ -187,13 +187,20 @@ void handle_commandline(int argc, char** argv){
 	args_info.mt_arg = limit(args_info.mt_arg, 0, NUM_MAX_MTS);
 	running_threads = args_info.hwt_arg + args_info.swt_arg + args_info.mt_arg;
 
+	uint16_t arb_options = 0;
+	if (args_info.shadow_arb_err_det_given || args_info.shadow_arb_buf_size_given)  {
+		arb_options = ARB_ERROR_DETECTION_ON | ((args_info.shadow_arb_buf_size_arg<<1) & ARB_SHADOW_BUFFER_MASK );
+	}
+	reconos_set_arb_runtime_opts(arb_options);
+
 #ifdef SHADOWING
 	printf("matrixmul_shadowed build: %s %s\n", __DATE__, __TIME__);
 #else
 	printf("matrixmul build: %s %s\n", __DATE__, __TIME__);
 #endif
 	printf(
-			"Parameters: hwt: %2i, swt: %2i, matrix size: %i, thread interface: %s, shadowing: %s, schedule: %i, transmodal: %i, main threads: %i\n",
+			"Parameters: hwt: %2i, swt: %2i, matrix size: %i, thread interface: %s, shadowing: %s, schedule: %i, transmodal: %i, main threads: %i,"
+			"arb_error_det: %i, arb_buf_size: %i\n",
 			args_info.hwt_arg, args_info.swt_arg, args_info.matrix_size_arg,
 			(args_info.thread_interface_arg == TI_SHMEM ?
 					"SHMEM" :
@@ -203,7 +210,8 @@ void handle_commandline(int argc, char** argv){
 									"RQUEUE" : "unknown"))),
 			((args_info.shadow_flag + 1) == 1 ? "off" : "on"),
 			args_info.shadow_schedule_arg, args_info.shadow_transmodal_flag,
-			args_info.mt_arg);
+			args_info.mt_arg,
+			args_info.shadow_arb_err_det_flag, args_info.shadow_arb_buf_size_arg);
 	printf("Reading matrice data from file: %s, writing matrice data to file: %s\n",
 			args_info.read_matrices_given ? "yes" : "no", args_info.write_matrices_given ? "yes" : "no");
 	printf("Main thread is pthread %lu\n", (unsigned long)pthread_self());

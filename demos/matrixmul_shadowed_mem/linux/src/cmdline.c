@@ -41,6 +41,8 @@ const char *gengetopt_args_info_detailed_help[] = {
   "  -b, --matrix-size=number      Size of matrices to multiply. Only powers of 2, \n                                  bigger than 128 allowed. Default is 512.  \n                                  (possible values=\"256\", \"512\", \"1024\", \n                                  \"2048\" default=`512')",
   "  -t, --thread-interface=number Which interface shall be used to communicate \n                                  with worker threads?  (possible values=\"0\", \n                                  \"1\", \"2\" default=`0')",
   "  0= SHMEM, 1= MBOX, 2= RQUEUE",
+  "  -E, --shadow-arb-err-det      Enable error detection in memory access \n                                  arbiter.  (default=off)",
+  "  -B, --shadow-arb-buf-size=exponent\n                                How much memory should be used to buffer memory \n                                  requests? 0^= 1KB ... 7^= 128KB  (possible \n                                  values=\"0\", \"1\", \"2\", \"3\", \"4\", \n                                  \"5\", \"6\", \"7\" default=`3')",
   "\n Group: file ops",
   "  -f, --read-matrices           Read input matrices and precomputed output \n                                  matrix from files",
   "  -w, --write-matrices          Write out input matrices and poutput matrix to \n                                  files",
@@ -71,11 +73,13 @@ init_help_array(void)
   gengetopt_args_info_help[13] = gengetopt_args_info_detailed_help[14];
   gengetopt_args_info_help[14] = gengetopt_args_info_detailed_help[15];
   gengetopt_args_info_help[15] = gengetopt_args_info_detailed_help[16];
-  gengetopt_args_info_help[16] = 0; 
+  gengetopt_args_info_help[16] = gengetopt_args_info_detailed_help[17];
+  gengetopt_args_info_help[17] = gengetopt_args_info_detailed_help[18];
+  gengetopt_args_info_help[18] = 0; 
   
 }
 
-const char *gengetopt_args_info_help[17];
+const char *gengetopt_args_info_help[19];
 
 typedef enum {ARG_NO
   , ARG_FLAG
@@ -96,6 +100,7 @@ cmdline_parser_required2 (struct gengetopt_args_info *args_info, const char *pro
 
 const char *cmdline_parser_matrix_size_values[] = {"256", "512", "1024", "2048", 0}; /*< Possible values for matrix-size. */
 const char *cmdline_parser_thread_interface_values[] = {"0", "1", "2", 0}; /*< Possible values for thread-interface. */
+const char *cmdline_parser_shadow_arb_buf_size_values[] = {"0", "1", "2", "3", "4", "5", "6", "7", 0}; /*< Possible values for shadow-arb-buf-size. */
 const char *cmdline_parser_shadow_schedule_values[] = {"0", "1", 0}; /*< Possible values for shadow-schedule. */
 
 static char *
@@ -112,6 +117,8 @@ void clear_given (struct gengetopt_args_info *args_info)
   args_info->mt_given = 0 ;
   args_info->matrix_size_given = 0 ;
   args_info->thread_interface_given = 0 ;
+  args_info->shadow_arb_err_det_given = 0 ;
+  args_info->shadow_arb_buf_size_given = 0 ;
   args_info->read_matrices_given = 0 ;
   args_info->write_matrices_given = 0 ;
   args_info->shadow_given = 0 ;
@@ -132,6 +139,9 @@ void clear_args (struct gengetopt_args_info *args_info)
   args_info->matrix_size_orig = NULL;
   args_info->thread_interface_arg = 0;
   args_info->thread_interface_orig = NULL;
+  args_info->shadow_arb_err_det_flag = 0;
+  args_info->shadow_arb_buf_size_arg = 3;
+  args_info->shadow_arb_buf_size_orig = NULL;
   args_info->shadow_flag = 0;
   args_info->shadow_schedule_arg = 0;
   args_info->shadow_schedule_orig = NULL;
@@ -152,11 +162,13 @@ void init_args_info(struct gengetopt_args_info *args_info)
   args_info->mt_help = gengetopt_args_info_detailed_help[5] ;
   args_info->matrix_size_help = gengetopt_args_info_detailed_help[6] ;
   args_info->thread_interface_help = gengetopt_args_info_detailed_help[7] ;
-  args_info->read_matrices_help = gengetopt_args_info_detailed_help[10] ;
-  args_info->write_matrices_help = gengetopt_args_info_detailed_help[11] ;
-  args_info->shadow_help = gengetopt_args_info_detailed_help[14] ;
-  args_info->shadow_schedule_help = gengetopt_args_info_detailed_help[15] ;
-  args_info->shadow_transmodal_help = gengetopt_args_info_detailed_help[16] ;
+  args_info->shadow_arb_err_det_help = gengetopt_args_info_detailed_help[9] ;
+  args_info->shadow_arb_buf_size_help = gengetopt_args_info_detailed_help[10] ;
+  args_info->read_matrices_help = gengetopt_args_info_detailed_help[12] ;
+  args_info->write_matrices_help = gengetopt_args_info_detailed_help[13] ;
+  args_info->shadow_help = gengetopt_args_info_detailed_help[16] ;
+  args_info->shadow_schedule_help = gengetopt_args_info_detailed_help[17] ;
+  args_info->shadow_transmodal_help = gengetopt_args_info_detailed_help[18] ;
   
 }
 
@@ -251,6 +263,7 @@ cmdline_parser_release (struct gengetopt_args_info *args_info)
   free_string_field (&(args_info->mt_orig));
   free_string_field (&(args_info->matrix_size_orig));
   free_string_field (&(args_info->thread_interface_orig));
+  free_string_field (&(args_info->shadow_arb_buf_size_orig));
   free_string_field (&(args_info->shadow_schedule_orig));
   
   
@@ -339,6 +352,10 @@ cmdline_parser_dump(FILE *outfile, struct gengetopt_args_info *args_info)
     write_into_file(outfile, "matrix-size", args_info->matrix_size_orig, cmdline_parser_matrix_size_values);
   if (args_info->thread_interface_given)
     write_into_file(outfile, "thread-interface", args_info->thread_interface_orig, cmdline_parser_thread_interface_values);
+  if (args_info->shadow_arb_err_det_given)
+    write_into_file(outfile, "shadow-arb-err-det", 0, 0 );
+  if (args_info->shadow_arb_buf_size_given)
+    write_into_file(outfile, "shadow-arb-buf-size", args_info->shadow_arb_buf_size_orig, cmdline_parser_shadow_arb_buf_size_values);
   if (args_info->read_matrices_given)
     write_into_file(outfile, "read-matrices", 0, 0 );
   if (args_info->write_matrices_given)
@@ -491,6 +508,11 @@ cmdline_parser_required2 (struct gengetopt_args_info *args_info, const char *pro
   
   
   /* checks for dependences among options */
+  if (args_info->shadow_arb_buf_size_given && ! args_info->shadow_given)
+    {
+      fprintf (stderr, "%s: '--shadow-arb-buf-size' ('-B') option depends on option 'shadow'%s\n", prog_name, (additional_error ? additional_error : ""));
+      error = 1;
+    }
   if (args_info->shadow_schedule_given && ! args_info->shadow_given)
     {
       fprintf (stderr, "%s: '--shadow-schedule' ('-c') option depends on option 'shadow'%s\n", prog_name, (additional_error ? additional_error : ""));
@@ -664,6 +686,8 @@ cmdline_parser_internal (
         { "mt",	1, NULL, 'm' },
         { "matrix-size",	1, NULL, 'b' },
         { "thread-interface",	1, NULL, 't' },
+        { "shadow-arb-err-det",	0, NULL, 'E' },
+        { "shadow-arb-buf-size",	1, NULL, 'B' },
         { "read-matrices",	0, NULL, 'f' },
         { "write-matrices",	0, NULL, 'w' },
         { "shadow",	0, NULL, 'a' },
@@ -672,7 +696,7 @@ cmdline_parser_internal (
         { 0,  0, 0, 0 }
       };
 
-      c = getopt_long (argc, argv, "Vh:s:m:b:t:fwac:r", long_options, &option_index);
+      c = getopt_long (argc, argv, "Vh:s:m:b:t:EB:fwac:r", long_options, &option_index);
 
       if (c == -1) break;	/* Exit from `while (1)' loop.  */
 
@@ -739,6 +763,28 @@ cmdline_parser_internal (
               &(local_args_info.thread_interface_given), optarg, cmdline_parser_thread_interface_values, "0", ARG_INT,
               check_ambiguity, override, 0, 0,
               "thread-interface", 't',
+              additional_error))
+            goto failure;
+        
+          break;
+        case 'E':	/* Enable error detection in memory access arbiter..  */
+        
+        
+          if (update_arg((void *)&(args_info->shadow_arb_err_det_flag), 0, &(args_info->shadow_arb_err_det_given),
+              &(local_args_info.shadow_arb_err_det_given), optarg, 0, 0, ARG_FLAG,
+              check_ambiguity, override, 1, 0, "shadow-arb-err-det", 'E',
+              additional_error))
+            goto failure;
+        
+          break;
+        case 'B':	/* How much memory should be used to buffer memory requests? 0^= 1KB ... 7^= 128KB.  */
+        
+        
+          if (update_arg( (void *)&(args_info->shadow_arb_buf_size_arg), 
+               &(args_info->shadow_arb_buf_size_orig), &(args_info->shadow_arb_buf_size_given),
+              &(local_args_info.shadow_arb_buf_size_given), optarg, cmdline_parser_shadow_arb_buf_size_values, "3", ARG_INT,
+              check_ambiguity, override, 0, 0,
+              "shadow-arb-buf-size", 'B',
               additional_error))
             goto failure;
         

@@ -55,6 +55,11 @@ struct gengetopt_args_info
   int thread_interface_arg;	/**< @brief Which interface shall be used to communicate with worker threads? (default='0').  */
   char * thread_interface_orig;	/**< @brief Which interface shall be used to communicate with worker threads? original value given at command line.  */
   const char *thread_interface_help; /**< @brief Which interface shall be used to communicate with worker threads? help description.  */
+  int shadow_arb_err_det_flag;	/**< @brief Enable error detection in memory access arbiter. (default=off).  */
+  const char *shadow_arb_err_det_help; /**< @brief Enable error detection in memory access arbiter. help description.  */
+  int shadow_arb_buf_size_arg;	/**< @brief How much memory should be used to buffer memory requests? 0^= 1KB ... 7^= 128KB (default='3').  */
+  char * shadow_arb_buf_size_orig;	/**< @brief How much memory should be used to buffer memory requests? 0^= 1KB ... 7^= 128KB original value given at command line.  */
+  const char *shadow_arb_buf_size_help; /**< @brief How much memory should be used to buffer memory requests? 0^= 1KB ... 7^= 128KB help description.  */
   const char *read_matrices_help; /**< @brief Read input matrices and precomputed output matrix from files help description.  */
   const char *write_matrices_help; /**< @brief Write out input matrices and poutput matrix to files help description.  */
   int shadow_flag;	/**< @brief Activates the shadowing subsystem. (default=off).  */
@@ -73,6 +78,8 @@ struct gengetopt_args_info
   unsigned int mt_given ;	/**< @brief Whether mt was given.  */
   unsigned int matrix_size_given ;	/**< @brief Whether matrix-size was given.  */
   unsigned int thread_interface_given ;	/**< @brief Whether thread-interface was given.  */
+  unsigned int shadow_arb_err_det_given ;	/**< @brief Whether shadow-arb-err-det was given.  */
+  unsigned int shadow_arb_buf_size_given ;	/**< @brief Whether shadow-arb-buf-size was given.  */
   unsigned int read_matrices_given ;	/**< @brief Whether read-matrices was given.  */
   unsigned int write_matrices_given ;	/**< @brief Whether write-matrices was given.  */
   unsigned int shadow_given ;	/**< @brief Whether shadow was given.  */
@@ -209,6 +216,7 @@ int cmdline_parser_required (struct gengetopt_args_info *args_info,
 
 extern const char *cmdline_parser_matrix_size_values[];  /**< @brief Possible values for matrix-size. */
 extern const char *cmdline_parser_thread_interface_values[];  /**< @brief Possible values for thread-interface. */
+extern const char *cmdline_parser_shadow_arb_buf_size_values[];  /**< @brief Possible values for shadow-arb-buf-size. */
 extern const char *cmdline_parser_shadow_schedule_values[];  /**< @brief Possible values for shadow-schedule. */
 
 

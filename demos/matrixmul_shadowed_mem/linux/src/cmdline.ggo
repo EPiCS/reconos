@@ -30,6 +30,11 @@ option "thread-interface" t "Which interface shall be used to communicate with w
 	int typestr="number" default="0" optional values="0","1","2"
 	details="0= SHMEM, 1= MBOX, 2= RQUEUE"
 
+option "shadow-arb-err-det" E "Enable error detection in memory access arbiter."
+	flag off #dependon="shadow" optional	
+option "shadow-arb-buf-size" B "How much memory should be used to buffer memory requests? 0^= 1KB ... 7^= 128KB"
+	int typestr="exponent" default="3" values="0","1","2","3","4","5","6","7" dependon="shadow" optional	
+
 defgroup "file ops"
 groupoption "read-matrices" f "Read input matrices and precomputed output matrix from files" 
 	group="file ops" 
