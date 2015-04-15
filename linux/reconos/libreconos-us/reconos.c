@@ -204,6 +204,11 @@ int reconos_init(int proc_control_fsl_a, int proc_control_fsl_b)
 
 	reconos_proc.fd_cache = open_or_die("/dev/getpgd", O_WRONLY);
 
+	/*
+	 * Setup default runtime options for memory arbiter
+	 */
+	reconos_set_arb_runtime_opts(ARB_ERROR_DETECTION_OFF | ARB_SHADOW_BUFFER_1K);
+
 	return 0;
 }
 

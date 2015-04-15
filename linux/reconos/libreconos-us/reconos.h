@@ -94,6 +94,21 @@ extern int reconos_init_autodetect(void);
 extern void reconos_mmu_stats(uint32_t *tlb_hits, uint32_t *tlb_misses,
 			      uint32_t *page_faults);
 extern void reconos_faultinject(uint8_t channel, uint32_t sa0, uint32_t sa1);
+
+#define ARB_ERROR_DETECTION_MASK 0x0001
+#define ARB_SHADOW_BUFFER_MASK  0x000E
+
+#define ARB_ERROR_DETECTION_OFF 0x0000
+#define ARB_ERROR_DETECTION_ON  0x0001
+#define ARB_SHADOW_BUFFER_1K    0x0000
+#define ARB_SHADOW_BUFFER_2K    0x0002
+#define ARB_SHADOW_BUFFER_4K    0x0004
+#define ARB_SHADOW_BUFFER_8K    0x0006
+#define ARB_SHADOW_BUFFER_16K   0x0008
+#define ARB_SHADOW_BUFFER_32K   0x000A
+#define ARB_SHADOW_BUFFER_64K   0x000C
+#define ARB_SHADOW_BUFFER_128K  0x000E
+
 extern void reconos_set_arb_runtime_opts(uint16_t arb_options);
 extern void reconos_hwt_setresources(struct reconos_hwt *hwt,
 				     struct reconos_resource *res,
