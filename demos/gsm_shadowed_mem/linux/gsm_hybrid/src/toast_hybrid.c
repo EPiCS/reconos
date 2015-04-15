@@ -84,6 +84,8 @@ struct reconos_resource res[2];
 // Thread shadowing
 
 int f_shadowing = 0; /* Flag set from commandline, (de-)activates shadowing */
+int f_shadowing_arb_err_det = 0; // per default, arbiter error detection is off
+int f_shadowing_arb_buf_size = 3; // default size of arbiter buffer is 8 KB
 
 shadowedthread_t sh[MAX_THREADS];
 unsigned int sh_free_idx=0;
@@ -699,6 +701,13 @@ static int process_decode P0()
 	 *   mt_thread/host -> functionality implemented on systems main processor, which also runs this programm
 	 */
 #ifdef SHADOWING
+	uint16_t arb_options = 0;
+		if ( f_shadowing_arb_err_det == 1)  {
+			arb_options = ARB_ERROR_DETECTION_ON | ((f_shadowing_arb_buf_size<<1) & ARB_SHADOW_BUFFER_MASK );
+		}
+	reconos_set_arb_runtime_opts(arb_options);
+
+
 	prepare_threads_shadowing(running_threads,
 								res,
 								2,
@@ -1038,7 +1047,7 @@ int main P2((ac, av), int ac, char **av)
 	parse_argv0( *av );
 
 #ifdef SHADOWING
-	while ((opt = getopt(ac, av, "fcdpvhuaslVFSH")) != EOF)
+	while ((opt = getopt(ac, av, "fcdpvhuaslVFSEBH")) != EOF)
 #else
 	while ((opt = getopt(ac, av, "fcdpvhuaslVFH")) != EOF)
 #endif
@@ -1052,6 +1061,8 @@ int main P2((ac, av), int ac, char **av)
 	case 'H': f_hybrid   = 1; break;/*MiBenchHybrid*/
 #ifdef SHADOWING
 	case 'S': f_shadowing = 1; break;/*MiBenchHybrid*/
+	case 'E': f_shadowing_arb_err_det = 1; break;/*MiBenchHybrid*/
+	case 'B': f_shadowing_arb_buf_size = -1; break;/*MiBenchHybrid*/
 #endif
 
 #ifndef	NDEBUG
@@ -1124,6 +1135,19 @@ int main P2((ac, av), int ac, char **av)
 			exit(1);
 		}
 	}
+#ifdef SHADOWING
+	if (f_shadowing_arb_buf_size == -1){
+		/*get exponent of buffer size */
+		if(!string_is_number(*av))
+		{
+			help();
+			exit(0);
+		}
+		f_shadowing_arb_buf_size = atoi(*av);
+		av++;
+		ac--;
+	}
+#endif
 	/* END: MiBenchHybrid get arguments */
 
 	catch_signals(onintr);
