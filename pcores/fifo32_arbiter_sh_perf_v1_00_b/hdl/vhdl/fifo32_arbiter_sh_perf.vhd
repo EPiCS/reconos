@@ -1166,7 +1166,16 @@ begin  -- of architecture ------------------------------------------------------
 				when WAIT_SH_BUFFER =>
 					-- TODO: Don't wait until sh_buffer has enough space for a whole packet: maybe sh_buffer is too small for a complete packet.
 					-- we wait until the full packet will fit into the sh_buffer to ease buffer handling.
-					if ( minimum( unsigned(sh_rem), to_unsigned( (2**to_integer(unsigned(sh_buffer_size_exp)))*1024, 24) )  
+          -- First argument of minimum function is remaining (empty) words in shadow buffer.
+          -- Right argument is complex: sh_buffer_size_exp is an exponent that gives the limit of to be used bytes of the buffer.
+          -- The meaning of the exponent is: 
+          -- 0-> 1KBytes of shadow buffer used
+          -- 1-> 2KBytes of shadow buffer used
+          -- 2-> 4KBytes of shadow buffer used
+          -- ...
+          -- 7-> 128KBytes of shadow buffer used
+          -- As sh_rem is given in words and the exponent is given in bytes, we need to convert it properly
+					if ( minimum( unsigned(sh_rem), to_unsigned( (2**to_integer(unsigned(sh_buffer_size_exp)))*(1024/4), 16) )  
 						>= unsigned(mode_length_reg(0)(15 downto 2)) ) 
 					then
 						state_tuo <= WRITE_MODE_LENGTH;
