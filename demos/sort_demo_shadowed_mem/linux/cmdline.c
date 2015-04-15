@@ -47,6 +47,8 @@ const char *gengetopt_args_info_detailed_help[] = {
   "  -a, --shadow                  Activates the shadowing subsystem.  \n                                  (default=off)",
   "  -c, --shadow-schedule=algorithm\n                                Determines the algorithm of the shadow \n                                  scheduler.  (possible values=\"0\", \"1\" \n                                  default=`0')",
   "  -r, --shadow-transmodal       Uses shadow threads of opposite modality.  \n                                  (default=off)",
+  "  -E, --shadow-arb-err-det      Enable error detection in memory access \n                                  arbiter.  (default=off)",
+  "  -B, --shadow-arb-buf-size=exponent\n                                How much memory should be used to buffer memory \n                                  requests? 0^= 1KB ... 7^= 128KB  (possible \n                                  values=\"0\", \"1\", \"2\", \"3\", \"4\", \n                                  \"5\", \"6\", \"7\" default=`3')",
   "\nError Injection:",
   "  Configure error injection for testing the shadwing subsystem",
   "      --error-type=number       One-hot coded bitfield that specifies error \n                                  types to apply.",
@@ -75,11 +77,13 @@ init_help_array(void)
   gengetopt_args_info_help[15] = gengetopt_args_info_detailed_help[16];
   gengetopt_args_info_help[16] = gengetopt_args_info_detailed_help[17];
   gengetopt_args_info_help[17] = gengetopt_args_info_detailed_help[18];
-  gengetopt_args_info_help[18] = 0; 
+  gengetopt_args_info_help[18] = gengetopt_args_info_detailed_help[19];
+  gengetopt_args_info_help[19] = gengetopt_args_info_detailed_help[20];
+  gengetopt_args_info_help[20] = 0; 
   
 }
 
-const char *gengetopt_args_info_help[19];
+const char *gengetopt_args_info_help[21];
 
 typedef enum {ARG_NO
   , ARG_FLAG
@@ -100,6 +104,7 @@ cmdline_parser_required2 (struct gengetopt_args_info *args_info, const char *pro
 
 const char *cmdline_parser_thread_interface_values[] = {"0", "1", "2", 0}; /*< Possible values for thread-interface. */
 const char *cmdline_parser_shadow_schedule_values[] = {"0", "1", 0}; /*< Possible values for shadow-schedule. */
+const char *cmdline_parser_shadow_arb_buf_size_values[] = {"0", "1", "2", "3", "4", "5", "6", "7", 0}; /*< Possible values for shadow-arb-buf-size. */
 
 static char *
 gengetopt_strdup (const char *s);
@@ -119,6 +124,8 @@ void clear_given (struct gengetopt_args_info *args_info)
   args_info->shadow_given = 0 ;
   args_info->shadow_schedule_given = 0 ;
   args_info->shadow_transmodal_given = 0 ;
+  args_info->shadow_arb_err_det_given = 0 ;
+  args_info->shadow_arb_buf_size_given = 0 ;
   args_info->error_type_given = 0 ;
   args_info->error_time_given = 0 ;
 }
@@ -140,6 +147,9 @@ void clear_args (struct gengetopt_args_info *args_info)
   args_info->shadow_schedule_arg = 0;
   args_info->shadow_schedule_orig = NULL;
   args_info->shadow_transmodal_flag = 0;
+  args_info->shadow_arb_err_det_flag = 0;
+  args_info->shadow_arb_buf_size_arg = 3;
+  args_info->shadow_arb_buf_size_orig = NULL;
   args_info->error_type_orig = NULL;
   args_info->error_time_orig = NULL;
   
@@ -162,8 +172,10 @@ void init_args_info(struct gengetopt_args_info *args_info)
   args_info->shadow_help = gengetopt_args_info_detailed_help[12] ;
   args_info->shadow_schedule_help = gengetopt_args_info_detailed_help[13] ;
   args_info->shadow_transmodal_help = gengetopt_args_info_detailed_help[14] ;
-  args_info->error_type_help = gengetopt_args_info_detailed_help[17] ;
-  args_info->error_time_help = gengetopt_args_info_detailed_help[18] ;
+  args_info->shadow_arb_err_det_help = gengetopt_args_info_detailed_help[15] ;
+  args_info->shadow_arb_buf_size_help = gengetopt_args_info_detailed_help[16] ;
+  args_info->error_type_help = gengetopt_args_info_detailed_help[19] ;
+  args_info->error_time_help = gengetopt_args_info_detailed_help[20] ;
   
 }
 
@@ -260,6 +272,7 @@ cmdline_parser_release (struct gengetopt_args_info *args_info)
   free_string_field (&(args_info->blocksize_orig));
   free_string_field (&(args_info->thread_interface_orig));
   free_string_field (&(args_info->shadow_schedule_orig));
+  free_string_field (&(args_info->shadow_arb_buf_size_orig));
   free_string_field (&(args_info->error_type_orig));
   free_string_field (&(args_info->error_time_orig));
   
@@ -357,6 +370,10 @@ cmdline_parser_dump(FILE *outfile, struct gengetopt_args_info *args_info)
     write_into_file(outfile, "shadow-schedule", args_info->shadow_schedule_orig, cmdline_parser_shadow_schedule_values);
   if (args_info->shadow_transmodal_given)
     write_into_file(outfile, "shadow-transmodal", 0, 0 );
+  if (args_info->shadow_arb_err_det_given)
+    write_into_file(outfile, "shadow-arb-err-det", 0, 0 );
+  if (args_info->shadow_arb_buf_size_given)
+    write_into_file(outfile, "shadow-arb-buf-size", args_info->shadow_arb_buf_size_orig, cmdline_parser_shadow_arb_buf_size_values);
   if (args_info->error_type_given)
     write_into_file(outfile, "error-type", args_info->error_type_orig, 0);
   if (args_info->error_time_given)
@@ -500,6 +517,11 @@ cmdline_parser_required2 (struct gengetopt_args_info *args_info, const char *pro
   if (args_info->shadow_schedule_given && ! args_info->shadow_given)
     {
       fprintf (stderr, "%s: '--shadow-schedule' ('-c') option depends on option 'shadow'%s\n", prog_name, (additional_error ? additional_error : ""));
+      error = 1;
+    }
+  if (args_info->shadow_arb_buf_size_given && ! args_info->shadow_given)
+    {
+      fprintf (stderr, "%s: '--shadow-arb-buf-size' ('-B') option depends on option 'shadow'%s\n", prog_name, (additional_error ? additional_error : ""));
       error = 1;
     }
 
@@ -674,12 +696,14 @@ cmdline_parser_internal (
         { "shadow",	0, NULL, 'a' },
         { "shadow-schedule",	1, NULL, 'c' },
         { "shadow-transmodal",	0, NULL, 'r' },
+        { "shadow-arb-err-det",	0, NULL, 'E' },
+        { "shadow-arb-buf-size",	1, NULL, 'B' },
         { "error-type",	1, NULL, 0 },
         { "error-time",	1, NULL, 0 },
         { 0,  0, 0, 0 }
       };
 
-      c = getopt_long (argc, argv, "Vh:s:m:b:l:t:ac:r", long_options, &option_index);
+      c = getopt_long (argc, argv, "Vh:s:m:b:l:t:ac:rEB:", long_options, &option_index);
 
       if (c == -1) break;	/* Exit from `while (1)' loop.  */
 
@@ -790,6 +814,28 @@ cmdline_parser_internal (
           if (update_arg((void *)&(args_info->shadow_transmodal_flag), 0, &(args_info->shadow_transmodal_given),
               &(local_args_info.shadow_transmodal_given), optarg, 0, 0, ARG_FLAG,
               check_ambiguity, override, 1, 0, "shadow-transmodal", 'r',
+              additional_error))
+            goto failure;
+        
+          break;
+        case 'E':	/* Enable error detection in memory access arbiter..  */
+        
+        
+          if (update_arg((void *)&(args_info->shadow_arb_err_det_flag), 0, &(args_info->shadow_arb_err_det_given),
+              &(local_args_info.shadow_arb_err_det_given), optarg, 0, 0, ARG_FLAG,
+              check_ambiguity, override, 1, 0, "shadow-arb-err-det", 'E',
+              additional_error))
+            goto failure;
+        
+          break;
+        case 'B':	/* How much memory should be used to buffer memory requests? 0^= 1KB ... 7^= 128KB.  */
+        
+        
+          if (update_arg( (void *)&(args_info->shadow_arb_buf_size_arg), 
+               &(args_info->shadow_arb_buf_size_orig), &(args_info->shadow_arb_buf_size_given),
+              &(local_args_info.shadow_arb_buf_size_given), optarg, cmdline_parser_shadow_arb_buf_size_values, "3", ARG_INT,
+              check_ambiguity, override, 0, 0,
+              "shadow-arb-buf-size", 'B',
               additional_error))
             goto failure;
         

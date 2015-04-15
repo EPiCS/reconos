@@ -65,6 +65,11 @@ struct gengetopt_args_info
   const char *shadow_schedule_help; /**< @brief Determines the algorithm of the shadow scheduler. help description.  */
   int shadow_transmodal_flag;	/**< @brief Uses shadow threads of opposite modality. (default=off).  */
   const char *shadow_transmodal_help; /**< @brief Uses shadow threads of opposite modality. help description.  */
+  int shadow_arb_err_det_flag;	/**< @brief Enable error detection in memory access arbiter. (default=off).  */
+  const char *shadow_arb_err_det_help; /**< @brief Enable error detection in memory access arbiter. help description.  */
+  int shadow_arb_buf_size_arg;	/**< @brief How much memory should be used to buffer memory requests? 0^= 1KB ... 7^= 128KB (default='3').  */
+  char * shadow_arb_buf_size_orig;	/**< @brief How much memory should be used to buffer memory requests? 0^= 1KB ... 7^= 128KB original value given at command line.  */
+  const char *shadow_arb_buf_size_help; /**< @brief How much memory should be used to buffer memory requests? 0^= 1KB ... 7^= 128KB help description.  */
   int error_type_arg;	/**< @brief One-hot coded bitfield that specifies error types to apply..  */
   char * error_type_orig;	/**< @brief One-hot coded bitfield that specifies error types to apply. original value given at command line.  */
   const char *error_type_help; /**< @brief One-hot coded bitfield that specifies error types to apply. help description.  */
@@ -84,6 +89,8 @@ struct gengetopt_args_info
   unsigned int shadow_given ;	/**< @brief Whether shadow was given.  */
   unsigned int shadow_schedule_given ;	/**< @brief Whether shadow-schedule was given.  */
   unsigned int shadow_transmodal_given ;	/**< @brief Whether shadow-transmodal was given.  */
+  unsigned int shadow_arb_err_det_given ;	/**< @brief Whether shadow-arb-err-det was given.  */
+  unsigned int shadow_arb_buf_size_given ;	/**< @brief Whether shadow-arb-buf-size was given.  */
   unsigned int error_type_given ;	/**< @brief Whether error-type was given.  */
   unsigned int error_time_given ;	/**< @brief Whether error-time was given.  */
 
@@ -216,6 +223,7 @@ int cmdline_parser_required (struct gengetopt_args_info *args_info,
 
 extern const char *cmdline_parser_thread_interface_values[];  /**< @brief Possible values for thread-interface. */
 extern const char *cmdline_parser_shadow_schedule_values[];  /**< @brief Possible values for shadow-schedule. */
+extern const char *cmdline_parser_shadow_arb_buf_size_values[];  /**< @brief Possible values for shadow-arb-buf-size. */
 
 
 #ifdef __cplusplus

@@ -36,6 +36,11 @@ option "shadow-schedule" c "Determines the algorithm of the shadow scheduler."
 	int typestr="algorithm" default="0" values="0","1" dependon="shadow" optional
 option "shadow-transmodal" r "Uses shadow threads of opposite modality."
 	flag off #dependon="shadow" optional
+	
+option "shadow-arb-err-det" E "Enable error detection in memory access arbiter."
+	flag off #dependon="shadow" optional	
+option "shadow-arb-buf-size" B "How much memory should be used to buffer memory requests? 0^= 1KB ... 7^= 128KB"
+	int typestr="exponent" default="3" values="0","1","2","3","4","5","6","7" dependon="shadow" optional	
 
 section "Error Injection" sectiondesc="Configure error injection for testing the shadwing subsystem"
 option "error-type" - "One-hot coded bitfield that specifies error types to apply."	int typestr="number" optional
