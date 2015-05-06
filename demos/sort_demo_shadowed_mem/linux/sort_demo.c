@@ -162,7 +162,7 @@ void sigsegv_handler(int sig, siginfo_t *siginfo, void * context) {
 		shadow_dump(sh + i);
 	}
 #endif
-	exit(32);
+	exit(EXIT_SEGFAULT);
 }
 
 //extern int pthread_attr_getstack(pthread_attr_t *attr, void **stackaddr, size_t *stacksize);
@@ -219,7 +219,7 @@ void handle_commandline(int argc, char** argv){
 	// Parse command line arguments
 	//
 	if (cmdline_parser(argc, argv, &args_info) != 0) {
-		exit(1);
+		exit(EXIT_CMD_LINE_PARSE);
 	}
 	args_info.hwt_arg = limit(args_info.hwt_arg, 0, MAX_THREADS);
 	args_info.swt_arg = limit(args_info.swt_arg, 0, MAX_THREADS);
@@ -525,7 +525,7 @@ unsigned int * merge_sort_data(unsigned int * data, int buffer_size, int blocksi
 	//printf("Size of a sorting block in bytes: %i\n",args_info.blocksize_arg);
 	if (scratchpad_buffer == NULL) {
 		printf("Buffer allocation failed. Exiting...\n");
-		exit(2);
+		exit(EXIT_MALLOC);
 	}
 	merged_buffer = recursive_merge(data, scratchpad_buffer, TO_WORDS(buffer_size),
 			TO_WORDS(blocksize), simple_merge);
@@ -547,7 +547,7 @@ void check_sort_data(unsigned int * data, unsigned int * copy, int buffer_size){
 		print_data_first_last(data, buffer_size, 16, 16); //TO_WORDS(buffer_size)
 		printf("\ndumping the first and last %i words of copy:\n", 16); //TO_WORDS(buffer_size));
 		print_data_first_last(copy, buffer_size, 16, 16);
-		exit(4);
+		exit(EXIT_FAULTY_RESULT);
 	} else {
 		printf("success\n");
 	}
@@ -742,6 +742,6 @@ if (args_info.error_type_arg == 2){
 	pinterface.teardown_resources(&pin, &pout);
 
 	reconos_faultinject(0,0,0); // deactivate all errors on exit
-	exit(0);
+	exit(EXIT_SUCCESS);
 }
 

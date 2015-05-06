@@ -32,4 +32,11 @@
 
 extern char *  actual_slot_map[];
 
+#define EXIT_SUCCESS 0
+#define EXIT_CMD_LINE_PARSE 1
+#define EXIT_MALLOC 2
+#define EXIT_FAULTY_RESULT 4
+#define EXIT_FAULTY_RQ_RECV 24
+#define EXIT_SEGFAULT 32
+
 #endif /* SORT_DEMO_H_ */

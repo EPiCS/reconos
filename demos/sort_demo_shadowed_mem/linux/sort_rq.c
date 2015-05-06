@@ -74,7 +74,7 @@ void *sort_rq_thread(void* data)
         if ( error != sizeof(length_bytes) )
         {
         	printf("ERROR: rq_receive 1 returned to few data. Expected: %lu bytes, returned %i bytes", sizeof(length_bytes), error);
-        	exit(24);
+        	exit(EXIT_FAULTY_RQ_RECV);
         }
 		//printf("SW Thread %lu: Got address %p from mailbox %p.\n", self, (void*)ret, mb_start);
 		if (length_bytes == UINT_MAX)
@@ -98,7 +98,7 @@ void *sort_rq_thread(void* data)
 		  if ( error != length_bytes)
 		  {
 			printf("ERROR: rq_receive 2 returned to few data. Expected: %i bytes, returned %i bytes", length_bytes, error);
-			exit(24);
+			exit(EXIT_FAULTY_RQ_RECV);
 		  }
 
 		  SORT_DEBUG3("First three data words read: %i %i %i\n", buffer[0],buffer[1],buffer[2]);
