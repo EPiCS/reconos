@@ -338,7 +338,10 @@ begin
       fault_sa0             <= (others => '0');
       fault_sa1             <= (others => '0');
       
-      ARB_RUNTIME_OPTIONS <= X"0000"; -- Error checking enabled by default
+      -- Index 0 = Error checking on/off
+      -- Index 3 downto 1 = size of maximum shadow buffer
+      -- Default is maximum shadow buffer, but error detection off
+      ARB_RUNTIME_OPTIONS <= X"000E";
       
     elsif rising_edge(clk) then
       reconos_reset_dup <= '0';
