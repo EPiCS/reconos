@@ -34,6 +34,7 @@ entity hwt_sort_demo is
 		-- fault control
 		fault_control : in std_logic_vector(31 downto 0);
 		
+		debug : out std_logic_vector(127 downto 0);
 		-- HWT reset and clock
 		clk           : in std_logic;
 		rst           : in std_logic
@@ -220,7 +221,23 @@ begin
 	
 	state_with_potential_fault <= STATE_GET_LEN when control_flow_memory_fault_old = '0' and control_flow_memory_fault ='1' else
 									state;
+	
+	debug(3 downto 0) <= X"0" when state = STATE_THREAD_YIELD else
+					      X"1" when state = STATE_GET_LEN else
+						  X"2" when state = STATE_GET_ADDR else 
+						  X"3" when state = STATE_READ else
+						  X"4" when state = STATE_SORTING else
+					      X"5" when state = STATE_WRITE else
+						  X"6" when state = STATE_ACK else
+						  X"7" when state = STATE_THREAD_EXIT;
+						 
+	debug(4) <= sort_start;
+	debug(5) <= sort_done;
+	debug(21 downto 6) <= FIFO32_S_Fill;
+	debug(37 downto 22) <= FIFO32_M_Rem;
 			
+	debug(127 downto 38) <= (others => '0');
+	
 	-- os and memory synchronisation state machine
 	reconos_fsm: process (clk,rst,o_osif,o_memif,o_ram) is
 		variable done  : boolean;

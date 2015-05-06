@@ -49,6 +49,8 @@ PORT FIFO32_M_Rem  = FIFO32_M_Rem,  DIR=I, VEC=[0:15], BUS=MFIFO32
 # Fault injection 
 PORT FAULT_CONTROL = "", DIR=I, VEC=[31:0]
 
+PORT DEBUG = "", DIR=O, VEC=[127:0]
+
 PORT Rst="", DIR=I, SIGIS=Rst
 PORT Clk="", DIR=I, SIGIS=Clk
 
