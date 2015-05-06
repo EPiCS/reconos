@@ -186,14 +186,15 @@ static int shadow_add_hw_thread(shadowedthread_t *sh) {
 	TS_DEBUG1("set resources; &(sh->hw_thread[index]) is : %p\n", &(sh->hw_thread[index]));
 	reconos_hwt_setresources(&(sh->hw_thread[index]), sh->resources,
 			sh->resources_count);
-	TS_DEBUG("create hw thread\n");
-	reconos_hwt_create(&sh->hw_thread[index], sh->hw_slot_nums[index], NULL);
-
 	sh->threads[index] = sh->hw_thread[index].delegate;
-
-	TS_DEBUG("Created HW Thread.");
 	sh->threads_type[index] = TS_THREAD_HW;
 	sh->running_num_hw_threads++;
+
+	TS_DEBUG("create hw thread\n");
+	reconos_hwt_create(&sh->hw_thread[index], sh->hw_slot_nums[index], NULL);
+	sh->threads[index] = sh->hw_thread[index].delegate;
+	TS_DEBUG("Created HW Thread.");
+
 	return true;
 }
 

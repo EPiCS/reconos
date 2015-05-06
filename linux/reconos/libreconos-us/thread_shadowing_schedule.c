@@ -23,7 +23,7 @@
 //
 // Debugging
 //
-//#define DEBUG 1
+#define DEBUG 1
 
 #ifdef DEBUG
 #define SCHED_DEBUG(message) printf("SCHED: " message)
@@ -163,6 +163,8 @@ void shadow_schedule(shadowedthread_t *this_shadow,  uint32 flags) {
 				break;
 		}
 	}  else if ( this_shadow->options & TS_MANUAL_SCHEDULE ) {
+		SCHED_DEBUG3("Scheduler Manual: Activating Shadow Thread 0x%p, with threads %lu, %lu \n",this_shadow, this_shadow->threads[0],this_shadow->threads[0]);
+
 		shadow_set_state(this_shadow, TS_ACTIVE);
 		sem_getvalue(&this_shadow->sh_wait_sem, &semval);
 		if(semval < 1){sem_post(&this_shadow->sh_wait_sem);}

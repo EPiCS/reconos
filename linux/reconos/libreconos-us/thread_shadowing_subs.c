@@ -67,7 +67,9 @@ extern shadowedthread_t *shadow_list_head;
 	bool is_leading = false;\
 	shadow_state_t status = TS_INACTIVE;\
 	SUBS_DEBUG2("Thread %8lu %s() START \n", this, __FUNCTION__); \
+	ts_lock();\
 	is_shadowed = is_shadowed_in_parent(this, &sh); \
+	ts_unlock();\
 	if( is_shadowed ){ \
         SUBS_DEBUG2("Thread %8lu %s() is shadowed\n", this,__FUNCTION__); \
 		is_leading = is_leading_thread(sh, this);\
