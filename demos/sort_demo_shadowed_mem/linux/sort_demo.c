@@ -296,12 +296,14 @@ void prepare_threads_shadowing(int thread_count,
 	//
 	printf("Configuring %i shadowed threads: ", thread_count);
 	for (int i = 0; i < thread_count; i++) {
+		printf(" %i",i);fflush(stdout);
 		shadow_init( sh+i );
 		shadow_set_resources( sh+i, res+i*reconos_resource_count, reconos_resource_count );
 		shadow_set_program( sh+i , worker_progname);
 		shadow_set_swthread( sh+i, actual_sort_thread );
 		if(args_info.shadow_schedule_arg==0) {shadow_set_options(sh+i, TS_MANUAL_SCHEDULE);}
 	}
+	printf("\n");
 }
 
 void start_threads_shadowing_hw(int hwt_count,
@@ -622,6 +624,7 @@ int main(int argc, char ** argv) {
 								pout.sort_program_worker,
 								pout.sort_thread_main);
 #ifndef HOST_COMPILE
+	// Calls reconos_init()!
 	start_threads_shadowing_hw(args_info.hwt_arg,
 								sh,
 								&sh_free_idx,
