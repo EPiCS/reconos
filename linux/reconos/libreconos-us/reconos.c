@@ -207,7 +207,7 @@ int reconos_init(int proc_control_fsl_a, int proc_control_fsl_b)
 	/*
 	 * Setup default runtime options for memory arbiter
 	 */
-	reconos_set_arb_runtime_opts(ARB_ERROR_DETECTION_OFF | ARB_SHADOW_BUFFER_1K);
+	reconos_set_arb_runtime_opts(ARB_ERROR_DETECTION_OFF | ARB_SHADOW_BUFFER_128K);
 
 	return 0;
 }
