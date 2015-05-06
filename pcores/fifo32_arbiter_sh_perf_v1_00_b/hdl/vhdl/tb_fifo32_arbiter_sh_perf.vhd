@@ -494,9 +494,9 @@ begin  -- of architecture ------------------------------------------------------
          READ, READ, WRITE);                    -- ST,  intentional discrepancy to ST
          
       variable LENGTH_LIST  : LENGTH_VECTOR(1 to MAX_PACKETS*2)  := (
-        4, 4, 128, 128, -- TUO lengths
+        4, 4, 9000, 9000, -- TUO lengths
         128, 128, 128,
-        4, 4, 128, 128, -- ST  lengths
+        4, 4, 9000, 9000, -- ST  lengths
         128, 124, 128);
       
       variable ADDRESS_LIST : ADDRESS_VECTOR(1 to MAX_PACKETS*2) := (
