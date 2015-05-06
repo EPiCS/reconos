@@ -285,7 +285,7 @@ architecture behavioural of fifo32_arbiter_sh_perf is
 		WAIT_THREADS,
 		UPDATE_RUNTIME_OPTIONS,
 		-- Packet handling
-		READ_MODE_LENGTH, READ_ADDRESS, WRITE_MODE_LENGTH, WAIT_SH_BUFFER, COMPARE_REQ,
+		READ_MODE_LENGTH, READ_ADDRESS, READ_MODE_LENGTH_SH, READ_ADDRESS_SH, WRITE_MODE_LENGTH, WAIT_SH_BUFFER, COMPARE_REQ,
 		WRITE_ADDRESS, DATA_READ, DATA_WRITE,
 		-- Error Handling:
 		DELETE_REQUEST_TUO, DELETE_REQUEST_ST,  COMPLETE_WRITE,
@@ -502,7 +502,7 @@ begin  -- of architecture ------------------------------------------------------
 		IN_FIFO32_S_Data((32 * (1 + 12))-1 downto 32 * 12) <= IN_FIFO32_S_Data_M;
 		IN_FIFO32_S_Fill((16 * (1 + 12))-1 downto 16 * 12) <= IN_FIFO32_S_Fill_M;
 		IN_FIFO32_S_Rd_M                                   <= IN_FIFO32_S_Rd(12);
-
+		
 		IN_FIFO32_M_Data_M                                <= IN_FIFO32_M_Data((32 * (1 + 12))-1 downto 32 * 12);
 		IN_FIFO32_M_Rem((16 * (1 + 12))-1 downto 16 * 12) <= IN_FIFO32_M_Rem_M;
 		IN_FIFO32_M_Wr_M                                  <= IN_FIFO32_M_Wr(12);
@@ -637,42 +637,62 @@ begin  -- of architecture ------------------------------------------------------
 
 	begin
 		-- for ILA debug
-		ila_signals <= (others => '0');
 		case state_st is
 			when WAIT_THREADS       => ila_signals(3 downto 0) <= "0000"; --0
-			when READ_MODE_LENGTH   => ila_signals(3 downto 0) <= "0001"; --1
-			when READ_ADDRESS       => ila_signals(3 downto 0) <= "0010"; --2
-			when WRITE_MODE_LENGTH  => ila_signals(3 downto 0) <= "0011"; --3
-			when COMPARE_REQ        => ila_signals(3 downto 0) <= "0100"; --4
+			when UPDATE_RUNTIME_OPTIONS =>ila_signals(3 downto 0) <= "0001"; --1
+			when READ_MODE_LENGTH   => ila_signals(3 downto 0) <= "0010"; --2
+			when READ_ADDRESS       => ila_signals(3 downto 0) <= "0011"; --3
+			when WRITE_MODE_LENGTH  => ila_signals(3 downto 0) <= "0100"; --4			
 			when WRITE_ADDRESS      => ila_signals(3 downto 0) <= "0101"; --5
-			when DATA_READ          => ila_signals(3 downto 0) <= "0110"; --6
-			when DATA_WRITE         => ila_signals(3 downto 0) <= "0111"; --7
-			when DELETE_REQUEST_TUO => ila_signals(3 downto 0) <= "1000"; --8
-			when DELETE_REQUEST_ST  => ila_signals(3 downto 0) <= "1001"; --9
-			when COMPLETE_WRITE     => ila_signals(3 downto 0) <= "1010"; --A
-			when REPORT_ERROR       => ila_signals(3 downto 0) <= "1011"; --B
-			when WAIT_ERROR_ACK     => ila_signals(3 downto 0) <= "1100"; --C
-			when WAIT_SH_BUFFER     => ila_signals(3 downto 0) <= "1101"; --D
+			when COMPARE_REQ        => ila_signals(3 downto 0) <= "0110"; --6
+			when DATA_READ          => ila_signals(3 downto 0) <= "0111"; --7
+			when DATA_WRITE         => ila_signals(3 downto 0) <= "1000"; --8
+			when DELETE_REQUEST_TUO => ila_signals(3 downto 0) <= "1001"; --9
+			when DELETE_REQUEST_ST  => ila_signals(3 downto 0) <= "1010"; --A
+			when COMPLETE_WRITE     => ila_signals(3 downto 0) <= "1011"; --B
+			when REPORT_ERROR       => ila_signals(3 downto 0) <= "1100"; --C
+			when WAIT_ERROR_ACK     => ila_signals(3 downto 0) <= "1101"; --D
+			when WAIT_SH_BUFFER     => ila_signals(3 downto 0) <= "1110"; --E
 			when others      => null;
 		end case;
-		--ila_signals (15 downto 4)
-		ila_signals (7 downto 4) <= IN_FIFO32_S_Fill(3 downto 0); -- lower 4 bits of port A
-		ila_signals (11 downto 8) <= IN_FIFO32_S_Fill(19 downto 16); -- lower 4 bits of Port B
-		ila_signals(13 downto 12) <= IN_FIFO32_S_Rd(1 downto 0); -- read signal of ports A and B
-		ila_signals (15 downto 12) <= sh_fill(3 downto 0); -- lower 4 bits of shadow buffer fill
+		
+		-- shadow buffer 
+		ila_signals (19 downto 4) <= sh_fill; -- shadow buffer fill
+		ila_signals (35 downto 20) <= sh_rem; -- shadow buffer remaining
+		ila_signals (36) <= sh_read; -- shadow buffer read indicator
+		ila_signals (37) <= sh_write; -- shadow buffer write indicator
 
+		-- ST side connection to ST
+		ila_signals(53 downto 38) <= IN_FIFO32_S_Fill((16 * (1 + 1))-1 downto 16 * 1);
+		ila_signals(54) 		   <= IN_FIFO32_S_Rd(1);
+		
+		ila_signals(70 downto 55)<= IN_FIFO32_M_Rem((16 * (1 + 1))-1 downto 16 * 1);
+		ila_signals(71)           <= IN_FIFO32_M_Wr(1);
+		
+		--ila_signals(69 downto 38) <= IN_FIFO32_S_Data((32 * (1 + 1))-1 downto 32 * 1) ;
+		--ila_signals(118 downto 87) <= IN_FIFO32_M_Data((32 * (1 + 1))-1 downto 32 * 1);
+		
+--		--ila_signals (15 downto 4)
+--		ila_signals (7 downto 4) <= IN_FIFO32_S_Fill(3 downto 0); -- lower 4 bits of port A
+--		ila_signals (11 downto 8) <= IN_FIFO32_S_Fill(19 downto 16); -- lower 4 bits of Port B
+--		ila_signals(13 downto 12) <= IN_FIFO32_S_Rd(1 downto 0); -- read signal of ports A and B
+--		ila_signals (15 downto 12) <= sh_fill(3 downto 0); -- lower 4 bits of shadow buffer fill
+--
+--
+--		ila_signals(FIFO32_PORTS-1+16 downto 16) <= requests;
+--		--ila_signals(32 downto FIFO32_PORTS+16)   <= (others => '0');
+--
+--		ila_signals(64 downto 33) <= INT_OUT_FIFO32_S_Data;
+--		ila_signals(80 downto 65) <= INT_OUT_FIFO32_S_Fill;
+--		ila_signals(81)           <= OUT_FIFO32_S_Rd;
+--
+--		ila_signals(113 downto 82)  <= OUT_FIFO32_M_Data;
+--		ila_signals(129 downto 114) <= INT_OUT_FIFO32_M_Rem;
+--		ila_signals(130)            <= OUT_FIFO32_M_Wr;
 
-		ila_signals(FIFO32_PORTS-1+16 downto 16) <= requests;
-		--ila_signals(32 downto FIFO32_PORTS+16)   <= (others => '0');
-
-		ila_signals(64 downto 33) <= INT_OUT_FIFO32_S_Data;
-		ila_signals(80 downto 65) <= INT_OUT_FIFO32_S_Fill;
-		ila_signals(81)           <= OUT_FIFO32_S_Rd;
-
-		ila_signals(113 downto 82)  <= OUT_FIFO32_M_Data;
-		ila_signals(129 downto 114) <= INT_OUT_FIFO32_M_Rem;
-		ila_signals(130)            <= OUT_FIFO32_M_Wr;
-
+		-- 95 downto 72 used in process fsm_states_st_p
+		ila_signals(130 downto 96) <= (others => '0');
+		
 		-- defaults
 		IN_FIFO32_S_Rd(1)        <= '0';
 		IN_FIFO32_M_Wr(1)        <= '0';
@@ -692,16 +712,21 @@ begin  -- of architecture ------------------------------------------------------
 			when READ_MODE_LENGTH =>
 				IN_FIFO32_S_Rd(1) <= '1';				
 				-- only read from buffer if error detection is on and always on read requests
-				if (error_detection_on_reg = '1' or IN_FIFO32_S_Data(63) = '0' ) then
-					sh_read           <= '1';
-				end if;
+				--if (error_detection_on_reg = '1' or IN_FIFO32_S_Data(63) = '0' ) then
+				--	sh_read           <= '1';
+				--end if;
 
 			when READ_ADDRESS =>
 				IN_FIFO32_S_Rd(1) <= '1';
 				-- only read from buffer if error detection is on and always on read requests
-				if (error_detection_on_reg = '1' or IN_FIFO32_S_Data(63) = '0' ) then
-					sh_read           <= '1';
-				end if;
+				--if (error_detection_on_reg = '1' or IN_FIFO32_S_Data(63) = '0' ) then
+				--	sh_read           <= '1';
+				--end if;
+				
+			when READ_MODE_LENGTH_SH =>
+				sh_read           <= '1';
+			when READ_ADDRESS_SH =>		
+				sh_read           <= '1';
 				
 			when COMPARE_REQ => -- does nothing
 								
@@ -753,7 +778,7 @@ begin  -- of architecture ------------------------------------------------------
 						-- thread reads
 						if unsigned(IN_FIFO32_M_Rem((16 * (1 + 1))-1 downto 16 * 1)) >= 1 then
 							IN_FIFO32_M_Wr(1) <= '1';
-						end if;
+						end if; 
 
 					when '1' =>
 						-- thread writes
@@ -903,6 +928,7 @@ begin  -- of architecture ------------------------------------------------------
 			-- INFO: We expect TUO to be connected to port 0 and ST to be connected
 			-- to port 1. No other ports are served.
 			-----------------------------------------------------------------------
+			ila_signals(95 downto 72) <= std_logic_vector(to_unsigned(transfer_size, 24));
 			case state_st is
 				------------------
 				-- Synchronization
@@ -910,7 +936,8 @@ begin  -- of architecture ------------------------------------------------------
 				when WAIT_THREADS =>
 					-- TODO: fill_level handling!
 					-- when ST and sh_buffer are ready we start processing the request
-					if (requests(1) = '1') and  ( unsigned(sh_fill) >= 2 ) then
+					if (requests(1) = '1') -- and	( unsigned(sh_fill) >= 2 ) 
+					then
 						state_st                     <= UPDATE_RUNTIME_OPTIONS;
 					end if;
 
@@ -924,7 +951,7 @@ begin  -- of architecture ------------------------------------------------------
 					-- Read in first word of header from tuo thread
 					-- and first word of header from sh_buffer.
 					mode_length_reg(1) <= IN_FIFO32_S_Data(63 downto 32);
-					mode_length_reg(2) <= sh_read_data;
+					--mode_length_reg(2) <= sh_read_data;
 					state_st              <= READ_ADDRESS;
 
 					-- Take information from sh_buffer and thus, indirectly from TUO
@@ -941,6 +968,28 @@ begin  -- of architecture ------------------------------------------------------
 				when READ_ADDRESS =>
 					-- TODO: fill_level handling!
 					address_reg(1) <= IN_FIFO32_S_Data(63 downto 32);
+					--address_reg(2) <= sh_read_data;
+					
+					--state_st          <= COMPARE_REQ;
+					if ((error_detection_on_reg = '1') or 
+						transfer_mode = READ)
+					then
+						state_st          <= WAIT_SH_BUFFER;
+					else 
+						state_st          <= DATA_WRITE;
+					end if;
+					
+					
+				when WAIT_SH_BUFFER =>
+					if ( unsigned(sh_fill) >= unsigned(mode_length_reg(1)(15 downto 2)) )  then 
+						state_st <= READ_MODE_LENGTH_SH; 
+					end if;
+					
+				when READ_MODE_LENGTH_SH =>
+					mode_length_reg(2) <= sh_read_data;
+					state_st <= READ_ADDRESS_SH;
+			
+				when READ_ADDRESS_SH =>		
 					address_reg(2) <= sh_read_data;
 					state_st          <= COMPARE_REQ;
 
