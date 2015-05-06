@@ -314,8 +314,6 @@ void start_threads_shadowing_hw(int hwt_count,
 								int shadow_flag,
 								int shadow_transmodal_flag)
 {
-	reconos_init_autodetect();
-
 	printf("Creating %i shadowed hw-threads: ", hwt_count);
 	fflush(stdout);
 	for (int i = *sh_free_idx; i < hwt_count+*sh_free_idx; i++)
@@ -602,6 +600,11 @@ int main(int argc, char ** argv) {
 
 	INIT_THE_CLOCK()
 	install_sighandlers();
+
+#ifndef HOST_COMPILE
+	reconos_init_autodetect();
+#endif
+
 	handle_commandline(argc, argv);
 	STOP_THE_CLOCK(t_generate,
 		setup_sort_data(&data, &copy, buffer_size);
