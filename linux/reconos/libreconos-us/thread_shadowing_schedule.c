@@ -163,7 +163,7 @@ void shadow_schedule(shadowedthread_t *this_shadow,  uint32 flags) {
 				break;
 		}
 	}  else if ( this_shadow->options & TS_MANUAL_SCHEDULE ) {
-		SCHED_DEBUG3("Scheduler Manual: Activating Shadow Thread 0x%p, with threads %lu, %lu \n",this_shadow, this_shadow->threads[0],this_shadow->threads[0]);
+		SCHED_DEBUG3("Scheduler Manual: Activating Shadow Thread 0x%p, with threads %lu, %lu \n",this_shadow, this_shadow->threads[0],this_shadow->threads[1]);
 
 		shadow_set_state(this_shadow, TS_ACTIVE);
 		sem_getvalue(&this_shadow->sh_wait_sem, &semval);
