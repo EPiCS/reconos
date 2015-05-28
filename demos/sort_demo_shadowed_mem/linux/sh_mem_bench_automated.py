@@ -13,31 +13,36 @@ BIT_SORT_REL = RECONOS+"demos/sort_demo_shadowed_mem/hw/edk_mem_rel/implementati
 BIT_SORT_PERF = RECONOS+"demos/sort_demo_shadowed_mem/hw/edk_mem_perf/implementation/system.bit"
 DEMO_EXPORT_DIR="/exports/rootfs_mb/demos/sort_demo_shadowed_mem/"
 
-LOG_FILE_BASELINE="baseline_run"
-LOG_FILE_BASELINE_SH="baseline_sh_run"
-
-REPEAT_COUNT = 5
+REPEAT_COUNT = 3
 PARAMS = [4,8,16,32,64,128,256,512]
 
-commands_baseline = ["./sort_demo -h 1 -s 0 -b "+str(x)+" >> {}/"+LOG_FILE_BASELINE+" 2>&1" 
-                     for x in PARAMS]
-commands_baseline += ["./sort_demo_shadowed -h 1 -s 0 -b "+str(x)+" -a >> {}/"+LOG_FILE_BASELINE_SH+" 2>&1" 
-                     for x in PARAMS]
-                      
-            
+LOG_FILE_BASELINE="baseline_run"
+LOG_FILE_BASELINE_SH="baseline_sh_run"
+LOG_FILE_BASELINE_SH_ON_LVL1="baseline_sh_on_lvl1_run"
+LOG_FILE_BASELINE_SH_ON_LVL2="baseline_sh_on_lvl2_run"
+LOG_FILE_BASELINE_SH_ON_LVL3="baseline_sh_on_lvl3_run" # makes no sense for baseline, do it for sanity checking
+commands_baseline = ["./sort_demo -h 1 -s 0 -b "+str(x)+" >> {}/"+LOG_FILE_BASELINE+" 2>&1" for x in PARAMS]
+commands_baseline += ["./sort_demo_shadowed -h 1 -s 0 -b "+str(x)+" >> {}/"+LOG_FILE_BASELINE_SH+" 2>&1" for x in PARAMS]
+commands_baseline += ["./sort_demo_shadowed -h 1 -s 0 -b "+str(x)+" -a --level 1 >> {}/"+LOG_FILE_BASELINE_SH_ON_LVL1+" 2>&1" for x in PARAMS]
+commands_baseline += ["./sort_demo_shadowed -h 1 -s 0 -b "+str(x)+" -a --level 2 >> {}/"+LOG_FILE_BASELINE_SH_ON_LVL2+" 2>&1" for x in PARAMS]
+commands_baseline += ["./sort_demo_shadowed -h 1 -s 0 -b "+str(x)+" -a --level 3 >> {}/"+LOG_FILE_BASELINE_SH_ON_LVL3+" 2>&1" for x in PARAMS]
 
-LOG_FILE_REL_OFF="rel_off_run"
-LOG_FILE_REL_ON="rel_on_run"
-commands_rel = ["./sort_demo_shadowed -h 1 -s 0 -b "+str(x)+" -a 2>&1 >> {}/"+LOG_FILE_REL_OFF +" 2>&1" for x in PARAMS] 
-commands_rel +=["./sort_demo_shadowed -h 1 -s 0 -b "+str(y)+" -a -E  2>&1 >> {}/"+LOG_FILE_REL_ON +" 2>&1" for y in PARAMS]
+#LOG_FILE_REL_OFF="rel_off_run"
+LOG_FILE_REL_ON_LVL1="rel_on_lvl1_run"
+LOG_FILE_REL_ON_LVL2="rel_on_lvl2_run"
+LOG_FILE_REL_ON_LVL3="rel_on_lvl3_run"
+commands_rel = ["./sort_demo_shadowed -h 1 -s 0 -b "+str(x)+" -a  --level 1 >> {}/"+LOG_FILE_REL_ON_LVL1 +" 2>&1" for x in PARAMS] 
+commands_rel +=["./sort_demo_shadowed -h 1 -s 0 -b "+str(y)+" -a  --level 2 >> {}/"+LOG_FILE_REL_ON_LVL2 +" 2>&1" for y in PARAMS]
+commands_rel +=["./sort_demo_shadowed -h 1 -s 0 -b "+str(y)+" -a  --level 3 >> {}/"+LOG_FILE_REL_ON_LVL3 +" 2>&1" for y in PARAMS]
 
-LOG_FILE_PERF_OFF="perf_off_run"
-LOG_FILE_PERF_ON="perf_on_run"
-commands_perf = ["./sort_demo_shadowed -h 1 -s 0 -b "+str(x)+" -a 2>&1 >> {}/"+LOG_FILE_PERF_OFF +" 2>&1" for x in PARAMS] 
-commands_perf +=["./sort_demo_shadowed -h 1 -s 0 -b "+str(y)+" -a -E  2>&1 >> {}/"+LOG_FILE_PERF_ON +" 2>&1" for y in PARAMS]
+#LOG_FILE_PERF_OFF="perf_off_run"
+LOG_FILE_PERF_ON_LVL1="perf_on_lvl1_run"
+LOG_FILE_PERF_ON_LVL2="perf_on_lvl2_run"
+LOG_FILE_PERF_ON_LVL3="perf_on_lvl3_run"
+commands_perf = ["./sort_demo_shadowed -h 1 -s 0 -b "+str(x)+" -a  --level 1 >> {}/"+LOG_FILE_PERF_ON_LVL1 +" 2>&1" for x in PARAMS] 
+commands_perf +=["./sort_demo_shadowed -h 1 -s 0 -b "+str(y)+" -a  --level 2 >> {}/"+LOG_FILE_PERF_ON_LVL2 +" 2>&1" for y in PARAMS]
+commands_perf +=["./sort_demo_shadowed -h 1 -s 0 -b "+str(y)+" -a  --level 3 >> {}/"+LOG_FILE_PERF_ON_LVL3 +" 2>&1" for y in PARAMS]
 
-
-FILES = [LOG_FILE_BASELINE, LOG_FILE_BASELINE_SH, LOG_FILE_REL_OFF, LOG_FILE_REL_ON]
 
 def downloadStuff(_bitstreamOrKernel):
     return subprocess.call([DOW, _bitstreamOrKernel])
@@ -107,15 +112,32 @@ def runBenchmark(_benchmarkTag, _telnetPasswd, _commands):
                 # test error code 
                 child.sendline('echo $?') 
                 #time.sleep(5)
-                response= child.expect(['echo \$\?\r\n0\r\n# ','echo \$\?\r\n[1-9][0-9]*\r\n# '],timeout=TIMEOUT_SEC)
-                print(child.before)
-                print(child.after)
+                response= child.expect(['echo \$\?\r\n0\r\n# ','echo \$\?\r\n[1-9][0-9]*\r\n# ', pexpect.TIMEOUT],timeout=TIMEOUT_SEC)
                 if response ==1: # On error return code
-                    log_file = cmd.format(_benchmarkTag).split(' ')[8]
+                    print(child.before)
+                    print(child.after)
+                    #log_file = cmd.format(_benchmarkTag).split(' ')[10]
+                    log_file = cmd.format(_benchmarkTag).split('>>',1)[1]
                     print ("Return Code {0} indicated error. Logging to {1}".format(child.after.split('\r\n')[1], log_file))
                     child.sendline('echo "PROGRAM ABORTED!  RETURNCODE INDICATED ERROR: {0}" >> '.format(child.after.split('\r\n')[1]) + log_file)
                     child.expect('# ',timeout=TIMEOUT_SEC)
                     continue
+                elif response == 2: # on timeout
+                    print(child.before)
+                    print(child.after)
+                    # abort programm via CTRL-C
+                    child.sendcontrol('c') # send 3 times just to be sure
+                    child.sendcontrol('c')
+                    child.sendcontrol('c')
+                    child.expect('# ',timeout=TIMEOUT_SEC)
+                    # insert abortion message into logfile
+                    log_file = cmd.format(_benchmarkTag).split('>>',1)[1]
+                    print ("Status query aborted due to timeout. Logging to {}".format(log_file))
+                    
+                    child.sendline('echo "STATUS QUERY FAILED!  TIMEOUT EXCEEDED!" >> ' + log_file)
+                    child.expect('# ',timeout=TIMEOUT_SEC)
+                    #child.sendline('echo -e "\tSort data    : -1 ms" >> '+ log_file)
+                    continue        
                 
                 tryAgain = False                        
     # Exit
@@ -147,37 +169,4 @@ if __name__ == "__main__":
     
     print("Done!")
     sys.exit(EXIT_SUCCESS)
-    
-    print("Downloading Bitstream...")
-    downloadStuff(BIT_SORT)
-    print("Downloading Kernel...")
-    downloadStuff(KERNEL)
-    print("Waiting for system boot...")
-    time.sleep(60)
-    print("Executing Benchmark...")
-    runBenchmark(benchmarkTagBase, telnetPasswd, commands_baseline)
-    
-    
-    
-    print("Downloading Bitstream...")
-    downloadStuff(BIT_SORT_REL)
-    print("Downloading Kernel...")
-    downloadStuff(KERNEL)
-    print("Waiting for system boot...")
-    time.sleep(60)
-    print("Executing Benchmark...")
-    runBenchmark(benchmarkTagBase, telnetPasswd, commands_rel)
- 
-    
-    
-    print("Downloading Bitstream...")
-    downloadStuff(BIT_SORT_PERF)
-    print("Downloading Kernel...")
-    downloadStuff(KERNEL)
-    print("Waiting for system boot...")
-    time.sleep(60)
-    print("Executing Benchmark...")
-    runBenchmark(benchmarkTagBase, telnetPasswd, commands_perf)
-    
-    print("Done!")
     
