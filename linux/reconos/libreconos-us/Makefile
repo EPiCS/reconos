@@ -1,4 +1,4 @@
-CFLAGS	=	-O2 -g -Wall -pthread
+CFLAGS	=	-O3 -g -Wall -pthread
 CC	=	microblaze-unknown-linux-gnu-gcc
 AR	=	microblaze-unknown-linux-gnu-ar
 
