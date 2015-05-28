@@ -7,6 +7,8 @@
 
 #include "sort_rq.h"
 
+#include "thread_shadowing_subs.h"
+
 #define DEBUG 1
 
 #ifdef DEBUG

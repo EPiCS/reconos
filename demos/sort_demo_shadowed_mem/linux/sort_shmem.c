@@ -6,6 +6,8 @@
  */
 #include "sort_shmem.h"
 
+#include "thread_shadowing_subs.h"
+
 //#define DEBUG 1
 
 #ifdef DEBUG
@@ -113,6 +115,7 @@ void sort_shmem_setup_resources(const struct parallel_sort_params_in * pin, stru
 
 void sort_shmem_put_data(const struct parallel_sort_params_in * pin){
 	for (int i = 0; i < TO_BLOCKS(pin->data_size_bytes, pin->block_size_bytes); i++) {
+		printf("SORT_SHMEM: 0x%p\n",  pin->data + (i * pin->block_size_bytes));
 		mbox_put(&sort_shmem_mb_start[i % pin->thread_count], TO_WORDS(pin->block_size_bytes));
 		mbox_put(&sort_shmem_mb_start[i % pin->thread_count], (unsigned int) pin->data + (i * pin->block_size_bytes));
 		//printf(" %i",i);fflush(stdout);
