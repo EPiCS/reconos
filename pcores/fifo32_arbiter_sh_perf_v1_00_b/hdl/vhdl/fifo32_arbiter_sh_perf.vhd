@@ -597,7 +597,7 @@ begin  -- of architecture ------------------------------------------------------
 
 	sh_buffer: fifo32
 	generic map(
-		C_FIFO32_DEPTH => 3072,
+		C_FIFO32_DEPTH => 3162,--8192,--16535,
 		C_ENABLE_ILA   => 0
 	)
 	port map(

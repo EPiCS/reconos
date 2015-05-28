@@ -340,9 +340,15 @@ begin
       
       -- Index 0 = Error checking on/off
       -- Index 3 downto 1 = size of maximum shadow buffer
+      -- 0->1KB, 1->2KB, 2->4KB, 3->8KB, 4-> 16KB, 5-> 32 KB, 6-> 64KB, 7-> 128KB
       -- Default is maximum shadow buffer, but error detection off
-      ARB_RUNTIME_OPTIONS <= X"000E";
-      
+      --ARB_RUNTIME_OPTIONS <= X"000E";
+
+      -- Index 0 = Error checking on/off
+      -- Index 3 downto 1 = size of maximum shadow buffer
+      -- Default for simulation:
+      ARB_RUNTIME_OPTIONS <= X"000"& "1111";
+
     elsif rising_edge(clk) then
       reconos_reset_dup <= '0';
       case bstate is

@@ -378,7 +378,7 @@ end component;
   -- This signal gives a human readable description of what the testbench is
   -- currently testing. Implemented as a signal, because Xilinx ISim can't
   -- track variables. 
-  type tb_phase_t is (READ1, WRITE1, READ128, WRITE128, REQUEST_ERROR, LENGTH_ERROR, DATA_ERROR, DONE);
+  type tb_phase_t is (READ1, WRITE1, READ8K_1, WRITE8K_1,READ8K_2, WRITE8K_2,READ8K_3, WRITE8K_4, REQUEST_ERROR, LENGTH_ERROR, DATA_ERROR, DONE);
   type tb_phase_vector_t is array  (natural range<>) of tb_phase_t;
   signal tb_phase : tb_phase_vector_t(0 to HWT_COUNT-1);
 
@@ -391,7 +391,8 @@ begin  -- of architecture ------------------------------------------------------
   fifos : for i in 0 to HWT_COUNT-1 generate
 
     -- for reading a word of data in hwt process
-    signal data : std_logic_vector(31 downto 0) := X"AAAAAAAA";
+    signal data_write : std_logic_vector(31 downto 0) := X"AAAAAAAA";
+    signal data_read : std_logic_vector(31 downto 0) := X"AAAAAAAA";
     
   begin
 
@@ -479,30 +480,30 @@ begin  -- of architecture ------------------------------------------------------
       type LENGTH_VECTOR is array (natural range<>) of natural range 1 to 2**16-1;
       type ADDRESS_VECTOR is array (natural range<>) of std_logic_vector(31 downto 0);
       
-      constant MAX_PACKETS  : natural                          := 7;
+      constant MAX_PACKETS  : natural                          := 11;
      
       variable PAUSE_LIST   : LENGTH_VECTOR(1 to MAX_PACKETS*2)  := (
-        20, 20, 20, 20,  -- TUO pauses
-        20, 20, 20,  
-        20, 20, 20, 20,  -- ST  pauses
-        20, 20, 20 );
+        2000, 20, 2000, 20, 2000, 20, 2000, 20,  -- TUO  pauses
+        2000, 20, 2000,
+        20, 2000, 20, 2000, 20, 2000, 20, 2000,  -- ST pauses
+        20, 2000, 20);
       
       variable MODE_LIST    : MODE_VECTOR(1 to MAX_PACKETS*2)    := (
-         READ, WRITE, READ, WRITE, -- TUO, all good
+         READ, WRITE, READ, WRITE,READ, WRITE,READ, WRITE, -- TUO, all good
          WRITE,READ, WRITE,                     -- TUO, intentional discrepancy to ST
-         READ, WRITE, READ, WRITE, -- ST, equal to TUO
+         READ, WRITE, READ, WRITE,READ, WRITE,READ, WRITE, -- ST, equal to TUO
          READ, READ, WRITE);                    -- ST,  intentional discrepancy to ST
          
       variable LENGTH_LIST  : LENGTH_VECTOR(1 to MAX_PACKETS*2)  := (
-        4, 4, 9000, 9000, -- TUO lengths
+        4, 4, 9000, 9000,9000, 9000,9000, 9000, -- TUO lengths
         128, 128, 128,
-        4, 4, 9000, 9000, -- ST  lengths
+        4, 4, 9000, 9000,9000, 9000,9000, 9000, -- ST  lengths
         128, 124, 128);
       
       variable ADDRESS_LIST : ADDRESS_VECTOR(1 to MAX_PACKETS*2) := (
-        X"DEADDEAD", X"DEADDEAD", X"AFFEAFFE", X"AFFEAFFE", -- TUO addresses
+        X"DEADDEAD", X"DEADDEAD", X"AFFEAFFE", X"AFFEAFFE",X"AFFEAFFE", X"AFFEAFFE",X"AFFEAFFE", X"AFFEAFFE", -- TUO addresses
         X"BEEFBEEF",X"BEEFBEEF", X"BEEFBEEF",
-        X"DEADDEAD", X"DEADDEAD", X"AFFEAFFE", X"AFFEAFFE", -- ST  addresses
+        X"DEADDEAD", X"DEADDEAD", X"AFFEAFFE", X"AFFEAFFE",X"AFFEAFFE", X"AFFEAFFE",X"AFFEAFFE", X"AFFEAFFE", -- ST  addresses
         X"BEEFBEEF", X"BEEFBEEF", X"BEEFBEEF");
 
       variable packet_nr     : natural := 0;
@@ -516,7 +517,9 @@ begin  -- of architecture ------------------------------------------------------
         -- init interface 
         memif_reset(H2F_MEMIF_OUT(i));
         done  := false;
-        data  <= std_logic_vector(get_rand_unsigned(0, 2**16-1, 32));
+        --data  <= std_logic_vector(get_rand_unsigned(0, 2**16-1, 32));
+        data_read <= (others => '0');
+        data_write <= (others => '0');
       elsif rising_edge(clk) then
         case state is
           when SET_PAUSE =>
@@ -564,17 +567,25 @@ begin  -- of architecture ------------------------------------------------------
             end case;
 
           when WRITE_DATA =>
-            data <= std_logic_vector(get_rand_unsigned(0, 2**16-1, 32));
-            if i = 0 and length_counter = 8 and packet_nr = 7 then
-              data <= X"DEADBEEF";
-            end if;
+            --data <= std_logic_vector(get_rand_unsigned(0, 2**16-1, 32));
+            
+            
+            --
+            -- Manual Error Injection. Adapt to your packet definitions!!!
+            --
+            --if i = 0 and length_counter = 8 and packet_nr = 7 then
+             -- data_write <= X"DEADBEEF";
+            --end if;
+            
+            
             memif_fifo_push (
               H2F_MEMIF_IN(i),
               H2F_MEMIF_OUT(i),
-              data,                     -- data
+              data_write,                     -- data
               done
               );
             if done then
+	          data_write <= std_logic_vector(unsigned(data_write)+1);
               length_counter := length_counter -4;
             end if;
             if length_counter = 0 then
@@ -585,7 +596,7 @@ begin  -- of architecture ------------------------------------------------------
             memif_fifo_pull (
               H2F_MEMIF_IN(i),
               H2F_MEMIF_OUT(i),
-              data,                     -- data
+              data_read,                     -- data
               done
               );
             if done then
