@@ -58,6 +58,9 @@ struct gengetopt_args_info
   int thread_interface_arg;	/**< @brief Which interface shall be used to communicate with worker threads? (default='0').  */
   char * thread_interface_orig;	/**< @brief Which interface shall be used to communicate with worker threads? original value given at command line.  */
   const char *thread_interface_help; /**< @brief Which interface shall be used to communicate with worker threads? help description.  */
+  int level_arg;	/**< @brief Shadowing level. Controls which error detection techniques are used. (default='3').  */
+  char * level_orig;	/**< @brief Shadowing level. Controls which error detection techniques are used. original value given at command line.  */
+  const char *level_help; /**< @brief Shadowing level. Controls which error detection techniques are used. help description.  */
   int shadow_flag;	/**< @brief Activates the shadowing subsystem. (default=off).  */
   const char *shadow_help; /**< @brief Activates the shadowing subsystem. help description.  */
   int shadow_schedule_arg;	/**< @brief Determines the algorithm of the shadow scheduler. (default='0').  */
@@ -86,6 +89,7 @@ struct gengetopt_args_info
   unsigned int blocks_given ;	/**< @brief Whether blocks was given.  */
   unsigned int blocksize_given ;	/**< @brief Whether blocksize was given.  */
   unsigned int thread_interface_given ;	/**< @brief Whether thread-interface was given.  */
+  unsigned int level_given ;	/**< @brief Whether level was given.  */
   unsigned int shadow_given ;	/**< @brief Whether shadow was given.  */
   unsigned int shadow_schedule_given ;	/**< @brief Whether shadow-schedule was given.  */
   unsigned int shadow_transmodal_given ;	/**< @brief Whether shadow-transmodal was given.  */
@@ -222,6 +226,7 @@ int cmdline_parser_required (struct gengetopt_args_info *args_info,
   const char *prog_name);
 
 extern const char *cmdline_parser_thread_interface_values[];  /**< @brief Possible values for thread-interface. */
+extern const char *cmdline_parser_level_values[];  /**< @brief Possible values for level. */
 extern const char *cmdline_parser_shadow_schedule_values[];  /**< @brief Possible values for shadow-schedule. */
 extern const char *cmdline_parser_shadow_arb_buf_size_values[];  /**< @brief Possible values for shadow-arb-buf-size. */
 

@@ -42,6 +42,7 @@ const char *gengetopt_args_info_detailed_help[] = {
   "  -l, --blocksize=number        Size of a block in bytes. Per default one block \n                                  is 8KB big.  (default=`8192')",
   "  -t, --thread-interface=number Which interface shall be used to communicate \n                                  with worker threads?  (possible values=\"0\", \n                                  \"1\", \"2\" default=`0')",
   "  0= SHMEM, 1= MBOX, 2= RQUEUE",
+  "      --level=number            Shadowing level. Controls which error detection \n                                  techniques are used.  (possible values=\"1\", \n                                  \"2\", \"3\" default=`3')",
   "\nShadowing Options:",
   "  Activate and configure the shadow subsystem",
   "  -a, --shadow                  Activates the shadowing subsystem.  \n                                  (default=off)",
@@ -79,11 +80,12 @@ init_help_array(void)
   gengetopt_args_info_help[17] = gengetopt_args_info_detailed_help[18];
   gengetopt_args_info_help[18] = gengetopt_args_info_detailed_help[19];
   gengetopt_args_info_help[19] = gengetopt_args_info_detailed_help[20];
-  gengetopt_args_info_help[20] = 0; 
+  gengetopt_args_info_help[20] = gengetopt_args_info_detailed_help[21];
+  gengetopt_args_info_help[21] = 0; 
   
 }
 
-const char *gengetopt_args_info_help[21];
+const char *gengetopt_args_info_help[22];
 
 typedef enum {ARG_NO
   , ARG_FLAG
@@ -103,6 +105,7 @@ static int
 cmdline_parser_required2 (struct gengetopt_args_info *args_info, const char *prog_name, const char *additional_error);
 
 const char *cmdline_parser_thread_interface_values[] = {"0", "1", "2", 0}; /*< Possible values for thread-interface. */
+const char *cmdline_parser_level_values[] = {"1", "2", "3", 0}; /*< Possible values for level. */
 const char *cmdline_parser_shadow_schedule_values[] = {"0", "1", 0}; /*< Possible values for shadow-schedule. */
 const char *cmdline_parser_shadow_arb_buf_size_values[] = {"0", "1", "2", "3", "4", "5", "6", "7", 0}; /*< Possible values for shadow-arb-buf-size. */
 
@@ -121,6 +124,7 @@ void clear_given (struct gengetopt_args_info *args_info)
   args_info->blocks_given = 0 ;
   args_info->blocksize_given = 0 ;
   args_info->thread_interface_given = 0 ;
+  args_info->level_given = 0 ;
   args_info->shadow_given = 0 ;
   args_info->shadow_schedule_given = 0 ;
   args_info->shadow_transmodal_given = 0 ;
@@ -143,6 +147,8 @@ void clear_args (struct gengetopt_args_info *args_info)
   args_info->blocksize_orig = NULL;
   args_info->thread_interface_arg = 0;
   args_info->thread_interface_orig = NULL;
+  args_info->level_arg = 3;
+  args_info->level_orig = NULL;
   args_info->shadow_flag = 0;
   args_info->shadow_schedule_arg = 0;
   args_info->shadow_schedule_orig = NULL;
@@ -169,13 +175,14 @@ void init_args_info(struct gengetopt_args_info *args_info)
   args_info->blocks_help = gengetopt_args_info_detailed_help[6] ;
   args_info->blocksize_help = gengetopt_args_info_detailed_help[7] ;
   args_info->thread_interface_help = gengetopt_args_info_detailed_help[8] ;
-  args_info->shadow_help = gengetopt_args_info_detailed_help[12] ;
-  args_info->shadow_schedule_help = gengetopt_args_info_detailed_help[13] ;
-  args_info->shadow_transmodal_help = gengetopt_args_info_detailed_help[14] ;
-  args_info->shadow_arb_err_det_help = gengetopt_args_info_detailed_help[15] ;
-  args_info->shadow_arb_buf_size_help = gengetopt_args_info_detailed_help[16] ;
-  args_info->error_type_help = gengetopt_args_info_detailed_help[19] ;
-  args_info->error_time_help = gengetopt_args_info_detailed_help[20] ;
+  args_info->level_help = gengetopt_args_info_detailed_help[10] ;
+  args_info->shadow_help = gengetopt_args_info_detailed_help[13] ;
+  args_info->shadow_schedule_help = gengetopt_args_info_detailed_help[14] ;
+  args_info->shadow_transmodal_help = gengetopt_args_info_detailed_help[15] ;
+  args_info->shadow_arb_err_det_help = gengetopt_args_info_detailed_help[16] ;
+  args_info->shadow_arb_buf_size_help = gengetopt_args_info_detailed_help[17] ;
+  args_info->error_type_help = gengetopt_args_info_detailed_help[20] ;
+  args_info->error_time_help = gengetopt_args_info_detailed_help[21] ;
   
 }
 
@@ -271,6 +278,7 @@ cmdline_parser_release (struct gengetopt_args_info *args_info)
   free_string_field (&(args_info->blocks_orig));
   free_string_field (&(args_info->blocksize_orig));
   free_string_field (&(args_info->thread_interface_orig));
+  free_string_field (&(args_info->level_orig));
   free_string_field (&(args_info->shadow_schedule_orig));
   free_string_field (&(args_info->shadow_arb_buf_size_orig));
   free_string_field (&(args_info->error_type_orig));
@@ -364,6 +372,8 @@ cmdline_parser_dump(FILE *outfile, struct gengetopt_args_info *args_info)
     write_into_file(outfile, "blocksize", args_info->blocksize_orig, 0);
   if (args_info->thread_interface_given)
     write_into_file(outfile, "thread-interface", args_info->thread_interface_orig, cmdline_parser_thread_interface_values);
+  if (args_info->level_given)
+    write_into_file(outfile, "level", args_info->level_orig, cmdline_parser_level_values);
   if (args_info->shadow_given)
     write_into_file(outfile, "shadow", 0, 0 );
   if (args_info->shadow_schedule_given)
@@ -693,6 +703,7 @@ cmdline_parser_internal (
         { "blocks",	1, NULL, 'b' },
         { "blocksize",	1, NULL, 'l' },
         { "thread-interface",	1, NULL, 't' },
+        { "level",	1, NULL, 0 },
         { "shadow",	0, NULL, 'a' },
         { "shadow-schedule",	1, NULL, 'c' },
         { "shadow-transmodal",	0, NULL, 'r' },
@@ -854,8 +865,22 @@ cmdline_parser_internal (
             exit (EXIT_SUCCESS);
           }
 
+          /* Shadowing level. Controls which error detection techniques are used..  */
+          if (strcmp (long_options[option_index].name, "level") == 0)
+          {
+          
+          
+            if (update_arg( (void *)&(args_info->level_arg), 
+                 &(args_info->level_orig), &(args_info->level_given),
+                &(local_args_info.level_given), optarg, cmdline_parser_level_values, "3", ARG_INT,
+                check_ambiguity, override, 0, 0,
+                "level", '-',
+                additional_error))
+              goto failure;
+          
+          }
           /* One-hot coded bitfield that specifies error types to apply..  */
-          if (strcmp (long_options[option_index].name, "error-type") == 0)
+          else if (strcmp (long_options[option_index].name, "error-type") == 0)
           {
           
           

@@ -30,6 +30,9 @@ option "thread-interface" t "Which interface shall be used to communicate with w
 	int typestr="number" default="0" optional values="0","1","2"
 	details="0= SHMEM, 1= MBOX, 2= RQUEUE"
 
+option "level" - "Shadowing level. Controls which error detection techniques are used." 
+	int typestr="number" default="3" optional values="1","2","3"
+
 section "Shadowing Options" sectiondesc="Activate and configure the shadow subsystem"
 option "shadow" a "Activates the shadowing subsystem." flag off
 option "shadow-schedule" c "Determines the algorithm of the shadow scheduler."
