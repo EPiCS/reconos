@@ -117,7 +117,13 @@ void reconos_cache_flush(void)
 
 
 void sh_mem_error_handler(uint8_t hwt, uint32_t err_type, uint32_t err_addr){
-  whine("Shadowing system memory error handler. Currently a stub; please complete me!\n");
+
+  whine("SH_MEM_ERR: HWT: %d,  Type: %s, Address: 0x%x\n", hwt,
+		  err_type == MEM_ERROR_TYP_NONE ? "NONE" : (
+		  err_type == MEM_ERROR_TYP_HEADER1 ? "HEADER1" : (
+		  err_type == MEM_ERROR_TYP_HEADER2 ? "HEADER2" :(
+		  err_type == MEM_ERROR_TYP_DATA ? "DATA": "UNKNOWN"))),
+		  err_addr);
   // reset the corresponding threads
 
   // update statistics about errors, so we know if they are permanent or transient
