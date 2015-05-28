@@ -210,6 +210,25 @@ timing_t func_call_timediff2_us(struct timeval * a, func_call_t * b)
  */
 int func_call_compare(func_call_t * a, func_call_t * b) {
 	FC_DEBUG("Entered func_call_compare \n");
+	int check_result;
+	// Checks...
+	check_result = func_call_compare_name(a,b);
+	if ( check_result != FC_ERR_NONE ){ return check_result; }
+
+	check_result = func_call_compare_param(a,b);
+	if ( check_result != FC_ERR_NONE ){ return check_result; }
+
+#if 0 /// @todo: maybe implement index checking. But does it have any use?
+	if (a->index != b->index){
+		return FC_ERR_INDEX_MATCH;
+	}
+#endif
+	FC_DEBUG("Leaving func_call_compare \n");
+	return FC_ERR_NONE;
+}
+
+int func_call_compare_name(func_call_t * a, func_call_t * b) {
+	FC_DEBUG("Entered func_call_compare_name \n");
 	// Checks...
 	if (a == NULL) {
 		return FC_ERR_A_NULL;
@@ -226,15 +245,29 @@ int func_call_compare(func_call_t * a, func_call_t * b) {
 	if (strcmp(a->function, b->function) != 0) {
 		return FC_ERR_FUNCTION_MATCH;
 	}
+	FC_DEBUG("Leaving func_call_compare_name \n");
+	return FC_ERR_NONE;
+}
+
+int func_call_compare_param(func_call_t * a, func_call_t * b) {
+	FC_DEBUG("Entered func_call_compare_param \n");
+	// Checks...
+	if (a == NULL) {
+		return FC_ERR_A_NULL;
+	}
+	if (b == NULL) {
+		return FC_ERR_B_NULL;
+	}
+	if (a->function == NULL) {
+		return FC_ERR_A_FUNCTION_NULL;
+	}
+	if (b->function == NULL) {
+		return FC_ERR_B_FUNCTION_NULL;
+	}
 	if (memcmp(a->params, b->params, FC_PARAM_SIZE) != 0) {
 		return FC_ERR_PARAMS_MATCH;
 	}
-#if 0 /// @todo: maybe implement index checking. But does it have any use?
-	if (a->index != b->index){
-		return FC_ERR_INDEX_MATCH;
-	}
-#endif
-	FC_DEBUG("Leaving func_call_compare \n");
+	FC_DEBUG("Leaving func_call_compare_param \n");
 	return FC_ERR_NONE;
 }
 

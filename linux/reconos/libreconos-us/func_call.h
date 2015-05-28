@@ -30,7 +30,7 @@ typedef struct func_call {
 	unsigned int index;
 	char *function; // not a function pointer, because it points to a __FUNCTION__ string
 	char params[FC_PARAM_SIZE]; // Size arbitrarily chosen
-	char params_length; // Used to automatically place severaö parameter into one array.
+	char params_length; // Used to automatically place severa�� parameter into one array.
 	char retval[FC_RETVAL_SIZE]; // Size choosen so that the biggest return value
 								 // of all calls will fit in this field.
 	void* retdata; // additional return data, used to store data which was transferred via parameters
@@ -54,6 +54,8 @@ void 			func_call_add_retdata	(func_call_t * func_call, void * retdata, unsigned
 unsigned int 	func_call_get_retval	(func_call_t * func_call, void * retval,  unsigned int retval_len);
 unsigned int  	func_call_get_retdata	(func_call_t * func_call, void * retdata, unsigned int retdata_len);
 int  			func_call_compare		(func_call_t * a, func_call_t * b);
+int  			func_call_compare_name	(func_call_t * a, func_call_t * b);
+int  			func_call_compare_param	(func_call_t * a, func_call_t * b);
 const char* 	func_call_strerror		(int error);
 timing_t		func_call_timediff_us	(func_call_t * a, func_call_t * b);
 timing_t		func_call_timediff2_us	(struct timeval * a, func_call_t * b);

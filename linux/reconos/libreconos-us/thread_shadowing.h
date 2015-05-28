@@ -20,6 +20,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <semaphore.h>
+#include <limits.h>
 #include <sys/time.h>
 #include "reconos.h"
 #include "fifo.h"
@@ -33,6 +34,14 @@
 #define TS_THREAD_NONE  0
 #define TS_THREAD_SW    1
 #define TS_THREAD_HW    2
+
+//
+// Definitions for different types of memory errors.
+//
+#define MEM_ERROR_TYP_NONE    0
+#define MEM_ERROR_TYP_HEADER1 1
+#define MEM_ERROR_TYP_HEADER2 2
+#define MEM_ERROR_TYP_DATA    3
 
 
 //
@@ -72,7 +81,9 @@ typedef struct shadowedthread {
 	// general configuration
 	//
 	uint32_t options; // MANUAL_SCHEDULE, SYNCHRONIZED
-
+	uint8_t  level; // Level1 = Func.name checking only
+					// Level2 = Level1 + Param. checking
+					// Level3 = Level2 + Mem. access checking
 	// Resources are semaphores, mailboxes etc.
 	struct reconos_resource *resources;
 	uint32_t resources_count;
@@ -150,6 +161,7 @@ int shadow_set_resources(shadowedthread_t *sh, struct reconos_resource * res,
 
 // Optional
 int shadow_set_options(shadowedthread_t *sh, uint32_t options);
+int shadow_set_level(shadowedthread_t *sh, uint8_t l);
 int shadow_set_threadcount(shadowedthread_t *sh, uint8_t hw, uint8_t sw);
 int shadow_set_hwslots(shadowedthread_t *sh, uint8_t hwt, uint8_t hwslot);
 int shadow_set_program(shadowedthread_t *sh, const char* progname);

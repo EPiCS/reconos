@@ -357,6 +357,10 @@ void shadow_init(shadowedthread_t *sh) {
 	assert(sh);
 	int error;
 
+	// Default shadowing level is highest level:
+	// use all available error checking mechanisms
+	sh->level = 3;
+
 	// Default is 0 for all fields.
 	memset(sh, 0, sizeof(shadowedthread_t));
 
@@ -368,7 +372,7 @@ void shadow_init(shadowedthread_t *sh) {
 
 	sh->sh_status = TS_INACTIVE;
 
-	fifo_init(&(sh->func_calls), 1, sizeof(func_call_t));
+	fifo_init(&(sh->func_calls), 512, sizeof(func_call_t));
 	sh->error_handler = shadow_error_abort;
 
 	sh->min_error_detection_latency = (timing_t){.tv_sec= LONG_MAX, .tv_usec = LONG_MAX};
@@ -486,11 +490,14 @@ void shadow_dump_cyclestats_all(){
 		shadow_dump_cyclestats(current);
 		current = current->next;
 	}
-
+	if (thread_count != 0){
 	printf("Cycle Stats Summary: inactive: %3f, preactive: %3f, active: %3f\n",
 			(double)inactive_cycles/(double)thread_count,
 			(double)preactive_cycles/(double)thread_count,
 			(double)active_cycles/(double)thread_count);
+	}else {
+		printf("Cycle Stats Summary: no threads!\n");
+	}
 }
 
 void shadow_dump_timestats(shadowedthread_t *sh){
@@ -498,10 +505,14 @@ void shadow_dump_timestats(shadowedthread_t *sh){
 	printf("Timestats (min,avg,max) in us of shadowed thread %p: dot %li, %li, %li , detlat: %li, %li, %li\n",
 			sh,
 			timer2us(&sh->min_error_detection_offline_time),
-			timer2us(&sh->sum_error_detection_offline_time)/sh->cnt_error_detection_offline_time,
+			sh->cnt_error_detection_offline_time!= 0?
+					timer2us(&sh->sum_error_detection_offline_time)/sh->cnt_error_detection_offline_time:
+					INT_MAX,
 			timer2us(&sh->max_error_detection_offline_time),
 			timer2us(&sh->min_error_detection_latency),
-			timer2us(&sh->sum_error_detection_latency)/sh->cnt_error_detection_latency,
+			sh->cnt_error_detection_latency != 0?
+					timer2us(&sh->sum_error_detection_latency)/sh->cnt_error_detection_latency:
+					INT_MAX,
 			timer2us(&sh->max_error_detection_latency));
 }
 
@@ -541,10 +552,14 @@ void shadow_dump_timestats_all(){
 	}
 	printf("Timestats summary (min/avg/max) in us: dot %li, %li, %li, detlat: %li, %li, %li\n",
 				min_error_detection_offline_time,
-				sum_error_detection_offline_time / cnt_error_detection_offline_time,
+				cnt_error_detection_offline_time != 0 ?
+						sum_error_detection_offline_time / cnt_error_detection_offline_time:
+						INT_MAX,
 				max_error_detection_offline_time,
 				min_error_detection_latency,
-				sum_error_detection_latency / cnt_error_detection_latency,
+				cnt_error_detection_latency != 0 ?
+						sum_error_detection_latency / cnt_error_detection_latency:
+						INT_MAX,
 				max_error_detection_latency);
 }
 
@@ -553,6 +568,7 @@ void shadow_dump(shadowedthread_t *sh) {
 	assert(sh);
 
 	printf("Dump of shadowed thread %p \n", sh);
+	printf("\tLevel: %hhd \n", sh->level);
 	printf("\tInit data: %p\n", sh->init_data);
 
 	for (i = 0; i < TS_MAX_REDUNDANT_THREADS; i++) {
@@ -591,6 +607,15 @@ void shadow_dump_all() {
 		shadow_dump(current);
 		current = current->next;
 	}
+}
+
+int shadow_set_level(shadowedthread_t *sh, uint8_t l) {
+	assert(sh);
+	// limit the level to allowed levels
+	if( l < 1 ){ l = 1;}
+	if( l > 3 ){ l = 3;}
+	sh->level = l;
+	return true;
 }
 
 int shadow_set_swthread(shadowedthread_t *sh, void* (*entry)(void*)) {
@@ -909,9 +934,10 @@ int shadow_join(shadowedthread_t * sh, void **value_ptr) {
 	int ret = 0;
 
 	assert(sh);
-	//for (i = 0; i < TS_MAX_REDUNDANT_THREADS; i++) {
-	for (i = 0; i < 1; i++) {
+	for (i = 0; i < TS_MAX_REDUNDANT_THREADS; i++) {
+	//for (i = 0; i < 1; i++) {
 		if (sh->threads_type[i] != TS_THREAD_NONE) {
+			TS_DEBUG1("Joining thread %8lu ...\n", sh->threads[i]);
 			ret = pthread_join(sh->threads[i], value_ptr);
 		}
 	}

@@ -89,7 +89,8 @@ extern shadowedthread_t *shadow_list_head;
 // Tell the Shadow Layer about parameters you want to be checked.
 //
 #define SHADOW_ADD_PARAM(name) \
-	if (is_shadowed){\
+	if (is_shadowed && sh->level > 1){\
+		SUBS_DEBUG2("Thread %8lu %s() adding parameter... \n", this, __FUNCTION__); \
 		func_call_add_param(&func_call_tuo, &(name), sizeof((name)));\
 	}\
 
@@ -113,7 +114,12 @@ extern shadowedthread_t *shadow_list_head;
     			timeradd(&sh->sum_error_detection_latency, &diff, &sh->sum_error_detection_latency);\
     			sh->cnt_error_detection_latency++;\
     		}\
-    		int error = func_call_compare(&func_call_tuo, &func_call_sh);\
+    		int error = FC_ERR_NONE;\
+    		switch (sh->level){\
+    			case 1:  error = func_call_compare_name(&func_call_tuo, &func_call_sh);break;\
+    			case 2: \
+    			case 3: error = func_call_compare(&func_call_tuo, &func_call_sh);break;\
+    		}\
     		if( error != FC_ERR_NONE) {\
     			shadow_error(sh, error, &func_call_tuo, &func_call_sh);\
     		}\
@@ -147,9 +153,11 @@ extern shadowedthread_t *shadow_list_head;
 //
 #define SHADOW_ADD_RETDATA(data, length) \
 	if ( is_shadowed && is_leading && status == TS_ACTIVE ){\
+		SUBS_DEBUG2("Thread %8lu %s() adding return data\n", this,__FUNCTION__);\
 		func_call_add_retdata(&func_call_tuo , (data), (length));\
 	}\
 	if ( is_shadowed && !is_leading){\
+		SUBS_DEBUG2("Thread %8lu %s() restoring return data\n", this,__FUNCTION__);\
 		func_call_get_retdata(&func_call_sh , (void*)(data), (length));\
 	}\
 
@@ -162,7 +170,7 @@ extern shadowedthread_t *shadow_list_head;
 		func_call_free(&func_call_sh);\
 	}\
 	if ( is_shadowed && is_leading && status == TS_ACTIVE){ \
-		SUBS_DEBUG2("Thread %8lu %s() pushing into fifo: ", this, __FUNCTION__); \
+		SUBS_DEBUG2("Thread %8lu %s() pushing into fifo...\n ", this, __FUNCTION__); \
 		/*func_call_dump(&func_call_tuo)*/;\
 		shadow_func_call_push(sh, &func_call_tuo); \
 	}\
@@ -211,8 +219,8 @@ void   ts_exit(void *retval){
         is_leading = is_leading_thread(sh, this);
         if ( is_leading ) {
         	// kill shadow thread
-        	pthread_cancel(sh->threads[1]);
-        	sem_post(&sh->sh_wait_sem);
+        	//pthread_cancel(sh->threads[1]);
+        	//sem_post(&sh->sh_wait_sem);
         	// exit us
         	SUBS_DEBUG2("Thread %8lu %s() is exiting\n", this,__FUNCTION__);
         	pthread_exit(retval);
