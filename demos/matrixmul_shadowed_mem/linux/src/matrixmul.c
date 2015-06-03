@@ -141,7 +141,10 @@ void sigsegv_handler(int sig, siginfo_t *siginfo, void * context) {
 	// Yeah, i know using printf in a signal context is not save.
 	// But with a SIGSEGV the programm is messed up anyway, so what?
 	printf(
-			"SIGSEGV: Programm killed at programm address %p, tried to access %p.\n",
+			"%s: Programm killed at programm address %p, tried to access %p.\n",
+						(sig == SIGSEGV ? "SIGSEGV":(
+						sig == SIGFPE  ? "SIGFPE": (
+						sig == SIGILL  ? "SIGILL": "Unkown Signal"))),
 #ifndef HOST_COMPILE
 			(void*)uc->uc_mcontext.regs.pc,
 #else
@@ -156,7 +159,7 @@ void sigsegv_handler(int sig, siginfo_t *siginfo, void * context) {
 		//shadow_dump(sh + i);
 	}
 #endif
-	exit(32);
+	exit(sig);
 }
 
 /*
@@ -170,6 +173,7 @@ void install_sighandlers(){
 	act.sa_flags = SA_SIGINFO;
 	sigaction(SIGSEGV, &act, NULL);
 	sigaction(SIGFPE, &act, NULL);
+	sigaction(SIGILL, &act, NULL);
 }
 
 /**
@@ -188,10 +192,13 @@ void handle_commandline(int argc, char** argv){
 	running_threads = args_info.hwt_arg + args_info.swt_arg + args_info.mt_arg;
 
 	uint16_t arb_options = 0;
-	if (args_info.shadow_arb_err_det_given || args_info.shadow_arb_buf_size_given)  {
+	if (args_info.shadow_arb_err_det_given || args_info.shadow_arb_buf_size_given || args_info.level_arg >2 )  {
+		printf("Activating arbiter error detection...\n");
 		arb_options = ARB_ERROR_DETECTION_ON | ((args_info.shadow_arb_buf_size_arg<<1) & ARB_SHADOW_BUFFER_MASK );
 	}
+#ifndef HOST_COMPILE
 	reconos_set_arb_runtime_opts(arb_options);
+#endif
 
 #ifdef SHADOWING
 	printf("matrixmul_shadowed build: %s %s\n", __DATE__, __TIME__);
@@ -200,7 +207,7 @@ void handle_commandline(int argc, char** argv){
 #endif
 	printf(
 			"Parameters: hwt: %2i, swt: %2i, matrix size: %i, thread interface: %s, shadowing: %s, schedule: %i, transmodal: %i, main threads: %i,"
-			"arb_error_det: %i, arb_buf_size: %i\n",
+			"arb_error_det: %i, arb_buf_size: %i, level: %d\n",
 			args_info.hwt_arg, args_info.swt_arg, args_info.matrix_size_arg,
 			(args_info.thread_interface_arg == TI_SHMEM ?
 					"SHMEM" :
@@ -211,7 +218,7 @@ void handle_commandline(int argc, char** argv){
 			((args_info.shadow_flag + 1) == 1 ? "off" : "on"),
 			args_info.shadow_schedule_arg, args_info.shadow_transmodal_flag,
 			args_info.mt_arg,
-			args_info.shadow_arb_err_det_flag, args_info.shadow_arb_buf_size_arg);
+			args_info.shadow_arb_err_det_flag, args_info.shadow_arb_buf_size_arg, args_info.level_arg);
 	printf("Reading matrice data from file: %s, writing matrice data to file: %s\n",
 			args_info.read_matrices_given ? "yes" : "no", args_info.write_matrices_given ? "yes" : "no");
 	printf("Main thread is pthread %lu\n", (unsigned long)pthread_self());
@@ -241,6 +248,7 @@ void prepare_threads_shadowing(int thread_count,
 	printf("Configuring %i shadowed threads: ", thread_count);
 	for (int i = 0; i < thread_count; i++) {
 		shadow_init( sh+i );
+		shadow_set_level(sh+i, args_info.level_arg);
 		shadow_set_resources( sh+i, res+i*reconos_resource_count, reconos_resource_count );
 		shadow_set_program( sh+i , worker_progname);
 		shadow_set_swthread( sh+i, actual_sort_thread );
@@ -256,7 +264,6 @@ void start_threads_shadowing_hw(int hwt_count,
 								int shadow_flag,
 								int shadow_transmodal_flag)
 {
-	reconos_init_autodetect();
 
 	printf("Creating %i shadowed hw-threads: ", hwt_count);
 	fflush(stdout);
@@ -336,8 +343,6 @@ void start_threads_hw(int hwt_count,
 						char * hwt_type,
 						char * const actual_slot_map[])
 {
-	// init reconos and communication resources
-	reconos_init_autodetect();
 
 	printf("Creating %i hw-threads: ", hwt_count);
 	fflush(stdout);
@@ -529,6 +534,7 @@ int main(int argc, char **argv) {
 								sh,
 								"SLOT_MATRIX",
 								matrixmul_thread);
+	init_hwt_time = time_ms();
 #ifndef HOST_COMPILE
 	start_threads_shadowing_hw(args_info.hwt_arg,
 								sh,
@@ -537,7 +543,9 @@ int main(int argc, char **argv) {
 								"SLOT_MATRIX",
 								args_info.shadow_flag,
 								args_info.shadow_transmodal_flag);
+	init_hwt_time = time_ms() - init_hwt_time;
 #endif // HOST_COMPILE
+	init_mt_time = time_ms();
 	start_threads_shadowing_host(args_info.mt_arg,
 									sh,
 									&sh_free_idx,
@@ -545,12 +553,14 @@ int main(int argc, char **argv) {
 									"SLOT_MATRIX",
 									args_info.shadow_flag,
 									args_info.shadow_transmodal_flag);
+	init_mt_time = time_ms() - init_mt_time;
 #else // not SHADOWING
 
+	init_hwt_time = time_ms();
 #ifndef HOST_COMPILE
 	// init hw-threads
 	INFO("Creating %i hw-thread(s).\n", hw_threads);
-	init_hwt_time = time_ms();
+
 	start_threads_hw(args_info.hwt_arg,
 						res,
 						2,
@@ -562,6 +572,7 @@ int main(int argc, char **argv) {
 
 	// init sw-threads
 	INFO("Creating %i main threads.\n", main_threads);
+	init_mt_time = time_ms();
 	start_threads_host(args_info.mt_arg,
 						res,
 						2,
