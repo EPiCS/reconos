@@ -1,5 +1,5 @@
 CC = microblaze-unknown-linux-gnu-gcc
-CFLAGS=-O0 -g -std=c99 -Wall -static
+CFLAGS=-O3 -g -std=c99 -Wall -static
 
 HOST_CC = gcc
 HOST_CFLAGS = -O0 -g -m32 -std=c99 -Wall  -DHOST_COMPILE -static
