@@ -436,8 +436,6 @@ void start_threads_hw(int hwt_count,
 						char * hwt_type,
 						char * const actual_slot_map[])
 {
-	// init reconos and communication resources
-	reconos_init_autodetect();
 
 	printf("Creating %i hw-threads: ", hwt_count);
 	fflush(stdout);
