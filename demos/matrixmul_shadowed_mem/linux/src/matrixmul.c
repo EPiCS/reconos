@@ -584,6 +584,12 @@ int main(int argc, char **argv) {
 
 #endif
 
+#ifndef HOST_COMPILE
+	// fault injection has to be here, because we need to first call reconos_init() ...
+	printf(" Activating fault injection: %x\n", 0); //args_info.error_type_arg);
+	//reconos_faultinject(0,args_info.error_type_arg,args_info.error_type_arg); // set  error injection
+	reconos_faultinject(0,0,0); // set  error injection
+#endif
 
 	// split input matrixes recursively (strassen algorithm part 1)
 	INFO("Running Strassen algorithm part 1 - split.\n");
@@ -602,7 +608,7 @@ int main(int argc, char **argv) {
 
 
 	for (i=0; i<mbox_size; ++i) {
-		//printf("Putting pointer to matrixes into mbox: %p, %p, %p\n", ptr->matrixes[0],ptr->matrixes[1],ptr->matrixes[2]);
+		printf("Putting pointer to matrixes into mbox: %p, %p, %p\n", ptr->matrixes[0],ptr->matrixes[1],ptr->matrixes[2]);
 		mbox_put(&mb_start,(unsigned int)(ptr->matrixes));
 		ptr = ptr->next;
 	}
@@ -687,6 +693,12 @@ int main(int argc, char **argv) {
 	INFO("========================\n");
 	INFO("Runtime Std. MMP:      %u ms\n", calculation_time_std);
 	INFO("Runtime Str. MMP:      %u ms\n", calculation_time_str);
+
+#ifdef SHADOWING
+	shadow_dump_timestats_all();
+	shadow_dump_cyclestats_all();
+	shadow_dump_func_stats();
+#endif
 
 	return 0;
 }
