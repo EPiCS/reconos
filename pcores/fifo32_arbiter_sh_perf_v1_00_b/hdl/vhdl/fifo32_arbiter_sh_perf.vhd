@@ -656,6 +656,27 @@ begin  -- of architecture ------------------------------------------------------
 			when others      => null;
 		end case;
 		
+		case state_tuo is
+			when WAIT_THREADS       => ila_signals(99 downto 96) <= "0000"; --0
+			when UPDATE_RUNTIME_OPTIONS =>ila_signals(99 downto 96) <= "0001"; --1
+			when READ_MODE_LENGTH   => ila_signals(99 downto 96) <= "0010"; --2
+			when READ_ADDRESS       => ila_signals(99 downto 96) <= "0011"; --3
+			when READ_MODE_LENGTH_SH=> ila_signals(99 downto 96) <= "1111"; --F - NOT UNIQUE
+			when READ_ADDRESS_SH    => ila_signals(99 downto 96) <= "1111"; --F - NOT UNIQUE
+			when WRITE_MODE_LENGTH  => ila_signals(99 downto 96) <= "0100"; --4			
+			when WRITE_ADDRESS      => ila_signals(99 downto 96) <= "0101"; --5
+			when COMPARE_REQ        => ila_signals(99 downto 96) <= "0110"; --6
+			when DATA_READ          => ila_signals(99 downto 96) <= "0111"; --7
+			when DATA_WRITE         => ila_signals(99 downto 96) <= "1000"; --8
+			when DELETE_REQUEST_TUO => ila_signals(99 downto 96) <= "1001"; --9
+			when DELETE_REQUEST_ST  => ila_signals(99 downto 96) <= "1010"; --A
+			when COMPLETE_WRITE     => ila_signals(99 downto 96) <= "1011"; --B
+			when REPORT_ERROR       => ila_signals(99 downto 96) <= "1100"; --C
+			when WAIT_ERROR_ACK     => ila_signals(99 downto 96) <= "1101"; --D
+			when WAIT_SH_BUFFER     => ila_signals(99 downto 96) <= "1110"; --E
+			when others      => null;
+		end case;
+		
 		-- shadow buffer 
 		ila_signals (19 downto 4) <= sh_fill; -- shadow buffer fill
 		ila_signals (35 downto 20) <= sh_rem; -- shadow buffer remaining
@@ -691,7 +712,7 @@ begin  -- of architecture ------------------------------------------------------
 --		ila_signals(130)            <= OUT_FIFO32_M_Wr;
 
 		-- 95 downto 72 used in process fsm_states_st_p
-		ila_signals(130 downto 96) <= (others => '0');
+		ila_signals(130 downto 100) <= (others => '0');
 		
 		-- defaults
 		IN_FIFO32_S_Rd(1)        <= '0';
@@ -1225,7 +1246,7 @@ begin  -- of architecture ------------------------------------------------------
           -- 7-> 128KBytes of shadow buffer used
           -- As sh_rem is given in words and the exponent is given in bytes, we need to convert it properly
 					if ( minimum( unsigned(sh_rem), to_unsigned( (2**to_integer(unsigned(sh_buffer_size_exp)))*(1024/4), 16) )  
-						>= unsigned(mode_length_reg(0)(15 downto 2)) ) 
+						> unsigned(mode_length_reg(0)(15 downto 2)) ) 
 					then
 						state_tuo <= WRITE_MODE_LENGTH;
 					end if;
