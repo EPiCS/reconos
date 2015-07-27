@@ -6,7 +6,7 @@
  */
 #include "sort_shmem.h"
 
-#include "thread_shadowing_subs.h"
+//#include "thread_shadowing_subs.h"
 
 //#define DEBUG 1
 

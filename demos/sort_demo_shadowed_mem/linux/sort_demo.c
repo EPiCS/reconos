@@ -66,7 +66,7 @@ char * actual_slot_map[] = {
 #endif
 
 char * actual_slot_map[] = {
-		"SLOT_SORT_SHMEM", "SLOT_SORT_SHMEM",
+		"SLOT_SORT_SHMEM", "SLOT_SORT_SHMEM", "SLOT_SORT_RQ", "SLOT_SORT_RQ",
 		NULL};
 
 #ifdef SHADOWING
@@ -734,6 +734,7 @@ if (args_info.error_type_arg == 2){
 	print_mmu_stats();
 #endif
 
+
 	printf("Running times (size: %d words, %d hw-threads, %d sw-threads):\n"
 			"\tGenerate data: %lu ms\n"
 			"\tSort data    : %lu ms\n"
@@ -747,6 +748,7 @@ if (args_info.error_type_arg == 2){
 #ifdef SHADOWING
 	shadow_dump_timestats_all();
 	shadow_dump_cyclestats_all();
+	shadow_dump_func_stats();
 #endif
 	free(data);
 	free(copy);
