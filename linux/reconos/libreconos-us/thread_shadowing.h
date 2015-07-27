@@ -43,6 +43,20 @@
 #define MEM_ERROR_TYP_HEADER2 2
 #define MEM_ERROR_TYP_DATA    3
 
+//
+// Indices for functions. Used to index arrays
+//
+#define IDX_TS_YIELD 		0
+#define IDX_TS_EXIT  		1
+#define IDX_TS_MBOX_INIT 	2
+#define IDX_TS_MBOX_DESTROY 3
+#define IDX_TS_MBOX_PUT 	4
+#define IDX_TS_MBOX_GET 	5
+#define IDX_TS_RQ_INIT 		6
+#define IDX_TS_RQ_CLOSE 	7
+#define IDX_TS_RQ_RECEIVE 	8
+#define IDX_TS_RQ_SEND 		9
+#define IDX_SIZE			10
 
 //
 // Shadow status
@@ -182,9 +196,13 @@ int is_leading_thread(shadowedthread_t *sh, pthread_t this);
 void shadow_wake_up_all(shadowedthread_t *sh);
 void ts_lock();
 void ts_unlock();
+int  ts_lock_status();
 void shadow_error_abort(shadowedthread_t * sh, int error, func_call_t * a, func_call_t * b);
 void* shadow_starter(void* data);
 
+void inline shadow_func_stat_inc_i(uint32_t idx);
+void inline shadow_func_stat_inc_s(uint32_t idx);
+void shadow_dump_func_stats();
 //
 // Debugging
 //

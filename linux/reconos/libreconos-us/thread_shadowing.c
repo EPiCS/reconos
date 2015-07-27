@@ -34,11 +34,12 @@
 #include "timing.h"
 
 //#define DEBUG 1
+#define OUTPUT stderr
 
 #ifdef DEBUG
-#define TS_DEBUG(message) printf("TS: " message)
-#define TS_DEBUG1(message, arg1) printf("TS: " message, (arg1))
-#define TS_DEBUG2(message, arg1, arg2) printf("TS: " message, (arg1), (arg2))
+#define TS_DEBUG(message) fprintf(OUTPUT, "TS: " message)
+#define TS_DEBUG1(message, arg1) fprintf(OUTPUT, "TS: " message, (arg1))
+#define TS_DEBUG2(message, arg1, arg2) fprintf(OUTPUT, "TS: " message, (arg1), (arg2))
 #else
 #define TS_DEBUG(message)
 #define TS_DEBUG1(message, arg1)
@@ -53,6 +54,11 @@ shadowedthread_t *shadow_list_head = NULL;
 static pthread_mutex_t ts_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_once_t shadow_system_is_initialized = PTHREAD_ONCE_INIT;
 static pthread_t shadow_watchdog;
+
+// For statistics
+static uint32_t function_intercepted[IDX_SIZE];
+static uint32_t function_shadowed[IDX_SIZE];
+
 //
 // Private functions
 //
@@ -70,26 +76,38 @@ void* shadow_watchdog_thread(void* data){
 	shadowedthread_t * sh;
 	func_call_t fc;
 	int fill_level;
+	int lock_status;
+	int sem_value;
 	timing_t now;
 	// Periodically check on runtime
 	while(1){
 		usleep(watchdog_time_us);
-		//printf("############################################## Start Run\n");
+		//fprintf(OUTPUT, "############################################## Start Run\n");
 		now = gettime();
+
+
+		lock_status = ts_lock_status();
+
+		//fill_level = fifo_peek(&shadow_list_head->func_calls, &fc);
+		//sem_getvalue(&shadow_list_head->sh_wait_sem , &sem_value);
+		//fprintf(OUTPUT, "WATCHDOG: FIFO %p, FILL_LEVEL %i, LOCK_STATUS %i, WAIT_SEMAPHORE %i\n", &shadow_list_head->func_calls, fill_level, lock_status, sem_value);
+		//func_call_dump(&fc);
+
 		for(sh = shadow_list_head; sh != NULL; sh = sh->next ){
 			//Version 1: Just print Fifo status
 			fill_level = fifo_peek(&sh->func_calls, &fc);
 
 			if (fill_level) {
+				sem_getvalue(&sh->sh_wait_sem , &sem_value);
 				delta = func_call_timediff2_us(&now, &fc);
 				if (timer2us(&delta) > watchdog_delta_us){
-					printf("WATCHDOG: FIFO %p, FILL_LEVEL %i", &sh->func_calls, fill_level);
-					printf(", DELAY(us) %10li\n",timer2us(&delta));
+					fprintf(OUTPUT, "WATCHDOG: FIFO %p, FILL_LEVEL %i, LOCK_STATUS %i, WAIT_SEMAPHORE %i", &sh->func_calls, fill_level, lock_status, sem_value);
+					fprintf(OUTPUT, ", DELAY(us) %10li\n",timer2us(&delta));
 					func_call_dump(&fc);
 				}
 			}
 		}
-		//printf("############################################## Stopp Run\n");
+		//fprintf(OUTPUT, "############################################## Stopp Run\n");
 	}
 	return NULL;
 }
@@ -104,18 +122,21 @@ static void shadow_system_init(){
 			TS_DEBUG("Watchdog thread created.\n");
 			break;
 		case EAGAIN:
-			printf("shadow_system_init: Not enough resources to create watchdog thread.");
+			fprintf(OUTPUT, "shadow_system_init: Not enough resources to create watchdog thread.");
 			exit(-1);
 			break;
 		case EINVAL:
-			printf("shadow_system_init: Invalid attr.");
+			fprintf(OUTPUT, "shadow_system_init: Invalid attr.");
 			exit(-1);
 			break;
 		case EPERM:
-			printf("shadow_system_init: No permission.");
+			fprintf(OUTPUT, "shadow_system_init: No permission.");
 			exit(-1);
 			break;
 		}
+	// reset global statistics
+	memset(function_intercepted, 0, IDX_SIZE*sizeof(uint32_t));
+	memset(function_shadowed, 0, IDX_SIZE*sizeof(uint32_t));
 }
 
 static void shadow_errors_init(error_stats_t *e) {
@@ -174,7 +195,7 @@ static int shadow_get_next_index(shadowedthread_t *sh, unsigned int index,
 
 static int shadow_add_hw_thread(shadowedthread_t *sh) {
 	int index;
-	printf("Adding HW Thread \n");
+	fprintf(OUTPUT, "Adding HW Thread \n");
 	TS_DEBUG1("Entering shadow_add_hw_thread with sh=%p\n", (void*)sh);
 	// Look for free stack and thread structure
 	index = shadow_get_next_index(sh, 0, TS_THREAD_NONE);
@@ -230,7 +251,7 @@ static int shadow_add_sw_thread(shadowedthread_t *sh) {
 
 	// Create thread
 	TS_DEBUG("Adding SW Thread \n");
-	printf("Adding SW Thread \n");
+	fprintf(OUTPUT, "Adding SW Thread \n");
 	pthread_attr_init(&(sh->sw_attr));
 	TS_DEBUG("Adding SW Thread: attributes initialized\n");
 	ret = pthread_create(&(sh->threads[index]), //handle
@@ -244,15 +265,15 @@ static int shadow_add_sw_thread(shadowedthread_t *sh) {
 		return true;
 		break;
 	case EAGAIN:
-		printf("shadow_add_sw_thread: Not enough resources.");
+		fprintf(OUTPUT, "shadow_add_sw_thread: Not enough resources.");
 		return false;
 		break;
 	case EINVAL:
-		printf("shadow_add_sw_thread: Invalid attr.");
+		fprintf(OUTPUT, "shadow_add_sw_thread: Invalid attr.");
 		return false;
 		break;
 	case EPERM:
-		printf("shadow_add_sw_thread: No permission.");
+		fprintf(OUTPUT, "shadow_add_sw_thread: No permission.");
 		return false;
 		break;
 	}
@@ -401,23 +422,23 @@ void shadow_sig_handler(int sig, siginfo_t *siginfo, void * context){
     // But with a SIGSEGV the programm is messed up anyway, so what?
 	switch( sig ){
 	case SIGKILL:
-		printf("SIGKILL: thread %lu killed at programm address %p, tried to access %p.\n",
+		fprintf(OUTPUT, "SIGKILL: thread %lu killed at programm address %p, tried to access %p.\n",
 		    		tid, prog_address, mem_address);
 		break;
 	case SIGABRT:
-		printf("SIGABRT: thread %lu killed at programm address %p, tried to access %p.\n",
+		fprintf(OUTPUT, "SIGABRT: thread %lu killed at programm address %p, tried to access %p.\n",
 		    		tid, prog_address, mem_address);
 		break;
 	case SIGFPE:
-		printf("SIGFPE: thread %lu killed at programm address %p, tried to access %p.\n",
+		fprintf(OUTPUT, "SIGFPE: thread %lu killed at programm address %p, tried to access %p.\n",
 		    		tid, prog_address, mem_address);
 		break;
 	case SIGILL:
-		printf("SIGILL: thread %lu killed at programm address %p, tried to access %p.\n",
+		fprintf(OUTPUT, "SIGILL: thread %lu killed at programm address %p, tried to access %p.\n",
 		    	tid, prog_address, mem_address);
 		break;
 	case SIGSEGV:
-		printf("SIGSEGV: thread %lu killed at programm address %p, tried to access %p.\n",
+		fprintf(OUTPUT, "SIGSEGV: thread %lu killed at programm address %p, tried to access %p.\n",
 				tid, prog_address, mem_address);
 		break;
 	}
@@ -467,7 +488,7 @@ void* shadow_starter(void* data){
 }
 void shadow_dump_cyclestats(shadowedthread_t *sh){
 	assert(sh);
-	printf("Cycle Stats of shadowed thread %p: inactive: %4lu, preactive: %4lu, active: %4lu\n",
+	fprintf(OUTPUT, "Cycle Stats of shadowed thread %p: inactive: %4lu, preactive: %4lu, active: %4lu\n",
 			sh,
 			(unsigned long) sh->ts_inactive_cycles,
 			(unsigned long) sh->ts_preactive_cycles,
@@ -491,18 +512,18 @@ void shadow_dump_cyclestats_all(){
 		current = current->next;
 	}
 	if (thread_count != 0){
-	printf("Cycle Stats Summary: inactive: %3f, preactive: %3f, active: %3f\n",
+	fprintf(OUTPUT, "Cycle Stats Summary: inactive: %3f, preactive: %3f, active: %3f\n",
 			(double)inactive_cycles/(double)thread_count,
 			(double)preactive_cycles/(double)thread_count,
 			(double)active_cycles/(double)thread_count);
 	}else {
-		printf("Cycle Stats Summary: no threads!\n");
+		fprintf(OUTPUT, "Cycle Stats Summary: no threads!\n");
 	}
 }
 
 void shadow_dump_timestats(shadowedthread_t *sh){
 	assert(sh);
-	printf("Timestats (min,avg,max) in us of shadowed thread %p: dot %li, %li, %li , detlat: %li, %li, %li\n",
+	fprintf(OUTPUT, "Timestats (min,avg,max) in us of shadowed thread %p: dot %li, %li, %li , detlat: %li, %li, %li\n",
 			sh,
 			timer2us(&sh->min_error_detection_offline_time),
 			sh->cnt_error_detection_offline_time!= 0?
@@ -550,7 +571,7 @@ void shadow_dump_timestats_all(){
 		shadow_dump_timestats(current);
 		current = current->next;
 	}
-	printf("Timestats summary (min/avg/max) in us: dot %li, %li, %li, detlat: %li, %li, %li\n",
+	fprintf(OUTPUT, "Timestats summary (min/avg/max) in us: dot %li, %li, %li, detlat: %li, %li, %li\n",
 				min_error_detection_offline_time,
 				cnt_error_detection_offline_time != 0 ?
 						sum_error_detection_offline_time / cnt_error_detection_offline_time:
@@ -567,12 +588,12 @@ void shadow_dump(shadowedthread_t *sh) {
 	int i;
 	assert(sh);
 
-	printf("Dump of shadowed thread %p \n", sh);
-	printf("\tLevel: %hhd \n", sh->level);
-	printf("\tInit data: %p\n", sh->init_data);
+	fprintf(OUTPUT, "Dump of shadowed thread %p \n", sh);
+	fprintf(OUTPUT, "\tLevel: %hhd \n", sh->level);
+	fprintf(OUTPUT, "\tInit data: %p\n", sh->init_data);
 
 	for (i = 0; i < TS_MAX_REDUNDANT_THREADS; i++) {
-		printf("\tThread %d: pthread %lu, Type %s \n", i, sh->threads[i],
+		fprintf(OUTPUT, "\tThread %d: pthread %lu, Type %s \n", i, sh->threads[i],
 				(sh->threads_type[i] == TS_THREAD_NONE) ?
 						"TS_THREAD_NONE" :
 						((sh->threads_type[i] == TS_THREAD_SW) ?
@@ -581,20 +602,20 @@ void shadow_dump(shadowedthread_t *sh) {
 										"TS_THREAD_HW" : "UNKNOWN")));
 	}
 
-	printf("\tScheduled Threads: %d/%d  Running Threads: %d/%d (SW/HW)\n",
+	fprintf(OUTPUT, "\tScheduled Threads: %d/%d  Running Threads: %d/%d (SW/HW)\n",
 			sh->num_sw_threads, sh->num_hw_threads, sh->running_num_sw_threads,
 			sh->running_num_hw_threads);
 
-	printf("\n\tSW thread entry address: %p \n", sh->sw_thread);
+	fprintf(OUTPUT, "\n\tSW thread entry address: %p \n", sh->sw_thread);
 	// Maybe add info about pthread attributes ...
 
 	for (i = 0; i < TS_MAX_REDUNDANT_THREADS; i++) {
-		printf(
+		fprintf(OUTPUT,
 				"\tHW thread %d control structure at %p and assigned slot: %d \n",
 				i, &(sh->hw_thread[i]), sh->hw_slot_nums[i]);
 	}
 
-	printf("\tCurrent os-call index: %i \n", sh->func_calls_idx);
+	fprintf(OUTPUT, "\tCurrent os-call index: %i \n", sh->func_calls_idx);
 
 	// Missing:
 	// - Error Printing
@@ -608,6 +629,31 @@ void shadow_dump_all() {
 		current = current->next;
 	}
 }
+
+
+void inline shadow_func_stat_inc_i(uint32_t idx){
+	function_intercepted[idx]++;
+}
+
+void inline shadow_func_stat_inc_s(uint32_t idx){
+	function_shadowed[idx]++;
+}
+
+void shadow_dump_func_stats(){
+	int i;
+	fprintf(OUTPUT, "Function stats legend: yield, exit, mbox_init, mbox_destroy, mbox_put, mbox_get, rq_init, rq_close, rq_receive, rq_send\n");
+	fprintf(OUTPUT, "Function stats intercepted: %d", function_intercepted[0]);
+	for (i=1; i< IDX_SIZE; i++){
+		fprintf(OUTPUT, ", %d", function_intercepted[i]);
+	}
+	fprintf(OUTPUT, "\n");
+	fprintf(OUTPUT, "Function stats shadowed: %d", function_shadowed[0]);
+	for (i=1; i< IDX_SIZE; i++){
+		fprintf(OUTPUT, ", %d", function_shadowed[i]);
+	}
+	fprintf(OUTPUT, "\n");
+}
+
 
 int shadow_set_level(shadowedthread_t *sh, uint8_t l) {
 	assert(sh);
@@ -774,6 +820,16 @@ void ts_unlock() {
 	pthread_mutex_unlock(&ts_mutex);
 }
 
+// Status of the shadow list management lock
+int ts_lock_status() {
+	int result = pthread_mutex_trylock(&ts_mutex);
+	if(result == 0){
+		pthread_mutex_unlock(&ts_mutex);
+		return 0;
+	} else {
+		return 1;
+	}
+}
 
 /**
  * @brief Returns true if the calling thread is the leading thread.
@@ -870,12 +926,12 @@ void shadow_error_abort(shadowedthread_t * sh, int error, func_call_t * a, func_
 {
 	pthread_t tid = pthread_self();
 	timing_t diff = func_call_timediff_us(a,b);
-	printf("\n#################################################\n");
-	printf("# ERROR: Thread ID %lu,  %s\n",tid, func_call_strerror(error));
-	printf("# a: "); func_call_dump(a);
-	printf("# b: "); func_call_dump(b);
-	printf("# Detected after: %ld us\n", timer2us(&diff));
-	printf("#################################################\n");
+	fprintf(OUTPUT, "\n#################################################\n");
+	fprintf(OUTPUT, "# ERROR: Thread ID %lu,  %s\n",tid, func_call_strerror(error));
+	fprintf(OUTPUT, "# a: "); func_call_dump(a);
+	fprintf(OUTPUT, "# b: "); func_call_dump(b);
+	fprintf(OUTPUT, "# Detected after: %ld us\n", timer2us(&diff));
+	fprintf(OUTPUT, "#################################################\n");
 	if ( error != FC_ERR_NONE){
 		exit(FC_EXIT_CODE);
 	}
@@ -937,7 +993,8 @@ int shadow_join(shadowedthread_t * sh, void **value_ptr) {
 	for (i = 0; i < TS_MAX_REDUNDANT_THREADS; i++) {
 	//for (i = 0; i < 1; i++) {
 		if (sh->threads_type[i] != TS_THREAD_NONE) {
-			TS_DEBUG1("Joining thread %8lu ...\n", sh->threads[i]);
+			//TS_DEBUG1("Joining thread %8lu ...\n", sh->threads[i]);
+			fprintf(OUTPUT, "TS: " "Joining thread %8lu ...\n", sh->threads[i]);
 			ret = pthread_join(sh->threads[i], value_ptr);
 		}
 	}

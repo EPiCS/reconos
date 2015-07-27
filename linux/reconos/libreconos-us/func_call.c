@@ -16,11 +16,12 @@
 #include "func_call.h"
 
 // #define DEBUG 1
+#define OUTPUT stderr
 
 #ifdef DEBUG
-#define FC_DEBUG(message) printf("FC: " message)
-#define FC_DEBUG1(message, arg1) printf("FC: " message, (arg1))
-#define FC_DEBUG2(message, arg1, arg2) printf("FC: " message, (arg1), (arg2))
+#define FC_DEBUG(message) fprintf(OUTPUT, "FC: " message)
+#define FC_DEBUG1(message, arg1) fprintf(OUTPUT, "FC: " message, (arg1))
+#define FC_DEBUG2(message, arg1, arg2) fprintf(OUTPUT, "FC: " message, (arg1), (arg2))
 #else
 #define FC_DEBUG(message)
 #define FC_DEBUG1(message, arg1)
@@ -115,9 +116,9 @@ void func_call_add_retdata(func_call_t * func_call , void *retdata, unsigned int
 	assert(temp_ptr);
 	func_call->retdata = temp_ptr;
 
-	//printf("SUBS: realloc returned: %8p, for size %8i\n", retdata, retdata_idx+msg_size);
+	//fprintf(OUTPUT, "SUBS: realloc returned: %8p, for size %8i\n", retdata, retdata_idx+msg_size);
 	memcpy(func_call->retdata + func_call->retdata_length_write, retdata, retdata_len);
-	//printf("SUBS: memcpy succeded\n");
+	//fprintf(OUTPUT, "SUBS: memcpy succeded\n");
 	func_call->retdata_length_write += retdata_len;
 
 	FC_DEBUG("Leaving func_call_add_retdata2\n");
@@ -277,17 +278,17 @@ int func_call_compare_param(func_call_t * a, func_call_t * b) {
 void func_call_dump(func_call_t * fc) {
 	int i;
 	if ( fc ) {
-		printf("Idx: %10u Func: %s ", fc->index, fc->function);
-		printf("Time: %10lu s %10lu us ", (unsigned long int)fc->timestamp.tv_sec,(unsigned long int)fc->timestamp.tv_usec);
-		printf("Params Length :%2hhi Params: ", fc->params_length);
+		fprintf(OUTPUT, "Idx: %10u Func: %s ", fc->index, fc->function);
+		fprintf(OUTPUT, "Time: %10lu s %10lu us ", (unsigned long int)fc->timestamp.tv_sec,(unsigned long int)fc->timestamp.tv_usec);
+		fprintf(OUTPUT, "Params Length :%2hhi Params: ", fc->params_length);
 		for (i = 0; i < FC_PARAM_SIZE; ++i) {
-			printf("%2.2hhx ", fc->params[i]);
+			fprintf(OUTPUT, "%2.2hhx ", fc->params[i]);
 		}
-		printf(" RetVal: ");
+		fprintf(OUTPUT, " RetVal: ");
 		for (i = 0; i < FC_RETVAL_SIZE; ++i) {
-			printf("%2.2hhx ", fc->retval[i]);
+			fprintf(OUTPUT, "%2.2hhx ", fc->retval[i]);
 		}
-		printf(" Add. RetVal: %ui", fc->retdata_length_write);
-		printf("\n");
+		fprintf(OUTPUT, " Add. RetVal: %ui", fc->retdata_length_write);
+		fprintf(OUTPUT, "\n");
 	}
 }

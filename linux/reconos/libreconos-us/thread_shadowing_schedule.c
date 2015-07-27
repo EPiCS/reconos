@@ -23,14 +23,15 @@
 //
 // Debugging
 //
-#define DEBUG 1
+//#define DEBUG 1
+#define OUTPUT stderr
 
 #ifdef DEBUG
-#define SCHED_DEBUG(message) printf("SCHED: " message)
-#define SCHED_DEBUG1(message, arg1) printf("SCHED: " message, (arg1))
-#define SCHED_DEBUG2(message, arg1, arg2) printf("SCHED: " message, (arg1), (arg2))
-#define SCHED_DEBUG3(message, arg1, arg2, arg3) printf("SCHED: " message, (arg1), (arg2), (arg3))
-#define SCHED_DEBUG4(message, arg1, arg2, arg3, arg4) printf("SCHED: " message, (arg1), (arg2), (arg3), (arg4))
+#define SCHED_DEBUG(message) fprintf(OUTPUT, "SCHED: " message)
+#define SCHED_DEBUG1(message, arg1) fprintf(OUTPUT, "SCHED: " message, (arg1))
+#define SCHED_DEBUG2(message, arg1, arg2) fprintf(OUTPUT, "SCHED: " message, (arg1), (arg2))
+#define SCHED_DEBUG3(message, arg1, arg2, arg3) fprintf(OUTPUT, "SCHED: " message, (arg1), (arg2), (arg3))
+#define SCHED_DEBUG4(message, arg1, arg2, arg3, arg4) fprintf(OUTPUT, "SCHED: " message, (arg1), (arg2), (arg3), (arg4))
 #else
 #define SCHED_DEBUG(message)
 #define SCHED_DEBUG1(message, arg1)
@@ -59,10 +60,10 @@ void shadow_schedule_dump(shadowedthread_t *shadow_list_head) {
 	shadowedthread_t *current = shadow_list_head;
 	int semval = 1337;
 	pthread_t this = pthread_self();
-	printf("SCHED Thread %8lu: ", this);
+	fprintf(OUTPUT, "SCHED Thread %8lu: ", this);
 	while (current) {
 		sem_getvalue(&current->sh_wait_sem, &semval);
-		printf("TID: %lu status:%s sem_cnt:%i; ",
+		fprintf(OUTPUT, "TID: %lu status:%s sem_cnt:%i; ",
 				current->threads[0],
 				current->sh_status == TS_INACTIVE ? "inactive" : (
 				current->sh_status == TS_PREACTIVE ? "pre-active":
@@ -70,7 +71,7 @@ void shadow_schedule_dump(shadowedthread_t *shadow_list_head) {
 				semval);
 		current = current->next;
 	}
-	printf("\n");
+	fprintf(OUTPUT, "\n");
 }
 
 //
@@ -167,10 +168,13 @@ void shadow_schedule(shadowedthread_t *this_shadow,  uint32 flags) {
 
 		shadow_set_state(this_shadow, TS_ACTIVE);
 		sem_getvalue(&this_shadow->sh_wait_sem, &semval);
-		if(semval < 1){sem_post(&this_shadow->sh_wait_sem);}
+		//if(semval < 1)
+		{sem_post(&this_shadow->sh_wait_sem);}
 		this_shadow->ts_active_cycles++;
 	}
+#ifdef DEBUG
 	shadow_schedule_dump(shadow_list_head);
+#endif //DEBUG
 
 	SCHED_DEBUG("Scheduler leaving...\n");
 }

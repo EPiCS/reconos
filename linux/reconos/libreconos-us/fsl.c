@@ -20,13 +20,14 @@
 #include "xutils.h"
 
 //#define DEBUG 1
+#define OUTPUT stderr
 
 #ifdef DEBUG
-    #define FSL_DEBUG(message) printf("FSL: " message)
-    #define FSL_DEBUG1(message, arg1) printf("FSL: " message, (arg1))
-    #define FSL_DEBUG2(message, arg1, arg2) printf("FSL: " message, (arg1), (arg2))
-	#define FSL_DEBUG3(message, arg1, arg2, arg3) printf("FSL: " message, (arg1), (arg2), (arg3))
-	#define FSL_DEBUG4(message, arg1, arg2, arg3, arg4) printf("FSL: " message, (arg1), (arg2), (arg3), (arg4))
+    #define FSL_DEBUG(message) fprintf(OUTPUT, "FSL: " message)
+    #define FSL_DEBUG1(message, arg1) fprintf(OUTPUT, "FSL: " message, (arg1))
+    #define FSL_DEBUG2(message, arg1, arg2) fprintf(OUTPUT, "FSL: " message, (arg1), (arg2))
+	#define FSL_DEBUG3(message, arg1, arg2, arg3) fprintf(OUTPUT, "FSL: " message, (arg1), (arg2), (arg3))
+	#define FSL_DEBUG4(message, arg1, arg2, arg3, arg4) fprintf(OUTPUT, "FSL: " message, (arg1), (arg2), (arg3), (arg4))
 #else
     #define FSL_DEBUG(message)
     #define FSL_DEBUG1(message, arg1)
@@ -78,7 +79,7 @@ void fsl_write(int num, uint32_t value)
 	fsl_within_range_assert(num);
 	if (!fsl_already_open(num))
 		fsl_open(num);
-	//printf("fsl_write: slot %i value 0x%x\n", num, value);
+	//fprintf(OUTPUT, "fsl_write: slot %i value 0x%x\n", num, value);
 	/* XXX: @aagne: what about checking return values? ---DB */
 	FSL_DEBUG3("Thread %8li Writing to FSL%2.2i: 0x%8.8x\n", pthread_self(), num, value);
 	ret = write(fsl_fd[num], &value, sizeof(value));
@@ -93,7 +94,7 @@ void fsl_write_block(int num, void * block_start, size_t byte_count)
 	fsl_within_range_assert(num);
 	if (!fsl_already_open(num))
 		fsl_open(num);
-	//printf("fsl_write: slot %i value 0x%x\n", num, value);
+	//fprintf(OUTPUT, "fsl_write: slot %i value 0x%x\n", num, value);
 	/* XXX: @aagne: what about checking return values? ---DB */
 	ret = write(fsl_fd[num], block_start, byte_count);
 	FSL_DEBUG3("Thread %8li Wrote Block from FSL%2.2i: %li bytes\n",pthread_self(), num, byte_count);
@@ -115,7 +116,7 @@ uint32_t fsl_read(int num)
 	FSL_DEBUG3("Thread %8li Read from FSL%2.2i: 0x%8.8x\n",pthread_self(), num, value);
 	if (ret < 0)
 		whine("fsl_read error: %s\n", strerror(errno));
-	//printf("fsl_read: slot %i value 0x%x\n", num, value);
+	//fprintf(OUTPUT, "fsl_read: slot %i value 0x%x\n", num, value);
 	return value;
 }
 
@@ -134,5 +135,5 @@ void fsl_read_block(int num, void * block_start, size_t byte_count)
 
 	if (ret < 0)
 		whine("fsl_read error: %s\n", strerror(errno));
-	//printf("fsl_read: slot %i value 0x%x\n", num, value);
+	//fprintf(OUTPUT, "fsl_read: slot %i value 0x%x\n", num, value);
 }

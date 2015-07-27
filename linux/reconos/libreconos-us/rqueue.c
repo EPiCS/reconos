@@ -47,6 +47,5 @@ ssize_t rq_receive(rqueue *rq, uint32_t *msg, size_t size)
 
 	__builtin_memcpy(msg, &clone[1], __size);
 	free(clone);
-
 	return __size;
 }

@@ -35,24 +35,28 @@ extern shadowedthread_t *shadow_list_head;
 //
 // Debugging
 //
-#define DEBUG 1
+//#define DEBUG 1
+#define OUTPUT stdout
 
 #ifdef DEBUG
-    #define SUBS_DEBUG(message) printf("SUBS: " message)
-    #define SUBS_DEBUG1(message, arg1) printf("SUBS: " message, (arg1))
-    #define SUBS_DEBUG2(message, arg1, arg2) printf("SUBS: " message, (arg1), (arg2))
-    #define SUBS_DEBUG3(message, arg1, arg2, arg3) printf("SUBS: " message, (arg1), (arg2), (arg3))
-    #define SUBS_DEBUG4(message, arg1, arg2, arg3, arg4) printf("SUBS: " message, (arg1), (arg2), (arg3), (arg4))
+    #define SUBS_DEBUG(message) fprintf(OUTPUT, "SUBS: " message)
+    #define SUBS_DEBUG1(message, arg1) fprintf(OUTPUT, "SUBS: " message, (arg1))
+    #define SUBS_DEBUG2(message, arg1, arg2) fprintf(OUTPUT, "SUBS: " message, (arg1), (arg2))
+    #define SUBS_DEBUG3(message, arg1, arg2, arg3) fprintf(OUTPUT, "SUBS: " message, (arg1), (arg2), (arg3))
+    #define SUBS_DEBUG4(message, arg1, arg2, arg3, arg4) fprintf(OUTPUT, "SUBS: " message, (arg1), (arg2), (arg3), (arg4))
+	#define SUBS_DEBUG7(message, arg1, arg2, arg3, arg4, arg5, arg6, arg7) fprintf(OUTPUT, "SUBS: " message, (arg1), (arg2), (arg3), (arg4), (arg5), (arg6), (arg7))
 #else
     #define SUBS_DEBUG(message)
     #define SUBS_DEBUG1(message, arg1)
     #define SUBS_DEBUG2(message, arg1, arg2)
     #define SUBS_DEBUG3(message, arg1, arg2, arg3)
     #define SUBS_DEBUG4(message, arg1, arg2, arg3, arg4)
+	#define SUBS_DEBUG7(message, arg1, arg2, arg3, arg4, arg5, arg6, arg7)
 #endif
 
 #define NONBLOCKING 0
 #define BLOCKING 	 1
+
 
 //
 // Shadow Layer initialization function
@@ -85,6 +89,16 @@ extern shadowedthread_t *shadow_list_head;
     	/* func_call_tuo is not initialized, because we get a valid one via shadow_func_call_pop. */\
     }\
 
+
+//
+// Tell the Shadow Layer about parameters you want to be checked.
+//
+#define SHADOW_FUNC_STAT(idx) \
+	shadow_func_stat_inc_i(idx);\
+	if (is_shadowed){\
+		shadow_func_stat_inc_s(idx);\
+	}\
+
 //
 // Tell the Shadow Layer about parameters you want to be checked.
 //
@@ -107,7 +121,7 @@ extern shadowedthread_t *shadow_list_head;
     		SUBS_DEBUG2("Thread %8lu %s() popped from fifo: \n", this, __FUNCTION__); \
     		/*func_call_dump(&func_call_sh)*/;\
     		timing_t diff = func_call_timediff_us(&func_call_sh, &func_call_tuo );\
-    		printf("Shadow %lu of thread %lu Latency of function %s : %ld s %ld us, waited for func_call_pop: %ld s %ld us\n", (unsigned long)this, sh->threads[0] ,__FUNCTION__, diff.tv_sec, diff.tv_usec, t_duration.tv_sec, t_duration.tv_usec); \
+    		SUBS_DEBUG7("Shadow %lu of thread %lu Latency of function %s : %ld s %ld us, waited for func_call_pop: %ld s %ld us\n", (unsigned long)this, sh->threads[0] ,__FUNCTION__, diff.tv_sec, diff.tv_usec, t_duration.tv_sec, t_duration.tv_usec); \
     		if (strcmp(__FUNCTION__, "ts_yield") != 0){\
     			if ( timercmp(&diff,&sh->max_error_detection_latency, >)) { sh->max_error_detection_latency = diff;}\
     			if ( timercmp(&diff,&sh->min_error_detection_latency, <)) { sh->min_error_detection_latency = diff;}\
@@ -188,9 +202,11 @@ extern shadowedthread_t *shadow_list_head;
  * Shadowing system uses this information to (de-)activate shadow threads.
  */
 void ts_yield(){
+
 	int retval;
 
 	SHADOW_INIT;
+	SHADOW_FUNC_STAT(IDX_TS_YIELD);
 	SHADOW_PROLOGUE;
 	SUBS_DEBUG1("Thread %8lu calling function pthread_yield()\n", pthread_self());
 
@@ -203,6 +219,7 @@ void ts_yield(){
 
 	SHADOW_EPILOGUE(BLOCKING);
 	SHADOW_END;
+
 }
 
 void   ts_exit(void *retval){
@@ -214,6 +231,7 @@ void   ts_exit(void *retval){
 
  	SUBS_DEBUG2("Thread %8lu %s() START \n", this, __FUNCTION__);
     is_shadowed = is_shadowed_in_parent(this, &sh);
+    SHADOW_FUNC_STAT(IDX_TS_EXIT);
     if( is_shadowed ){
         SUBS_DEBUG2("Thread %8lu %s() is shadowed\n", this,__FUNCTION__);
         is_leading = is_leading_thread(sh, this);
@@ -242,8 +260,9 @@ void   ts_exit(void *retval){
 int    ts_mbox_init(struct mbox * mb, int size){
 
     int retval;
-    
+
     SHADOW_INIT;
+    SHADOW_FUNC_STAT(IDX_TS_MBOX_INIT);
     SHADOW_ADD_PARAM(mb);
     SHADOW_ADD_PARAM(size);
     SHADOW_PROLOGUE;
@@ -259,6 +278,7 @@ void   ts_mbox_destroy(struct mbox * mb){
     int retval=0; //DUMMY
 
     SHADOW_INIT;
+    SHADOW_FUNC_STAT(IDX_TS_MBOX_DESTROY);
     SHADOW_ADD_PARAM(mb);
     SHADOW_PROLOGUE;
     SUBS_DEBUG2("Thread %8lu calling function mbox_destroy(%p)\n", pthread_self(), mb);
@@ -272,6 +292,7 @@ void   ts_mbox_put(struct mbox * mb, uint32 msg){
     int retval=0; //DUMMY
 
     SHADOW_INIT;
+    SHADOW_FUNC_STAT(IDX_TS_MBOX_PUT);
     SHADOW_ADD_PARAM(mb);
     SHADOW_ADD_PARAM(msg);
     SHADOW_PROLOGUE;
@@ -285,8 +306,9 @@ void   ts_mbox_put(struct mbox * mb, uint32 msg){
 
 uint32 ts_mbox_get(struct mbox * mb){
     uint32 retval;
-    
+
     SHADOW_INIT;
+    SHADOW_FUNC_STAT(IDX_TS_MBOX_GET);
     SHADOW_ADD_PARAM(mb);
     SHADOW_PROLOGUE;
     SUBS_DEBUG2("Thread %8lu calling function mbox_get(%p)\n", pthread_self(), mb);
@@ -298,7 +320,9 @@ uint32 ts_mbox_get(struct mbox * mb){
 
 int  ts_rq_init(rqueue * rq, int size){
 	int retval;
+
 	SHADOW_INIT;
+	SHADOW_FUNC_STAT(IDX_TS_RQ_INIT);
 	SHADOW_ADD_PARAM(rq);
 	SHADOW_ADD_PARAM(size);
 	SHADOW_PROLOGUE;
@@ -311,7 +335,9 @@ int  ts_rq_init(rqueue * rq, int size){
 
 void ts_rq_close(rqueue * rq){
 	int retval=0; //dummy
+
 	SHADOW_INIT;
+	SHADOW_FUNC_STAT(IDX_TS_RQ_CLOSE);
 	SHADOW_ADD_PARAM(rq);
 	SHADOW_PROLOGUE;
 	SUBS_DEBUG2("Thread %8lu calling function rq_close(%p)\n", pthread_self(), rq);
@@ -328,6 +354,7 @@ int  ts_rq_receive(rqueue * rq, uint32* msg, uint32 msg_size){
 	int retval=0;
 
 	SHADOW_INIT;
+	SHADOW_FUNC_STAT(IDX_TS_RQ_RECEIVE);
 	SHADOW_ADD_PARAM(rq);
 	// msg parameter will be different for every thread, as this is a pointer to a stack variable
 	//SHADOW_ADD_PARAM(msg);
@@ -348,6 +375,7 @@ void ts_rq_send(rqueue * rq, uint32* msg, uint32 msg_size){
 	int retval=0; //Dummy
 
 	SHADOW_INIT;
+	SHADOW_FUNC_STAT(IDX_TS_RQ_SEND);
 	SHADOW_ADD_PARAM(rq);
 	// msg parameter will be different for every thread, as this is a pointer to a stack variable
 	//SHADOW_ADD_PARAM(msg);
