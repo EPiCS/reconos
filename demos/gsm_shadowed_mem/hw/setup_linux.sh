@@ -2,19 +2,19 @@
 BASE_DESIGN="ml605_linux_14.2"
 TARGET_DIR="edk_linux"
 HWTS="hwt_short_term_synthesis_filtering_v0_01_a\
-      hwt_short_term_synthesis_filtering_v0_01_a\
-      hwt_short_term_synthesis_filtering_v0_01_a\
-      hwt_short_term_synthesis_filtering_v0_01_a\
-      hwt_short_term_synthesis_filtering_v0_01_a\
-      hwt_short_term_synthesis_filtering_v0_01_a\
-      hwt_short_term_synthesis_filtering_v0_01_a\
-      hwt_short_term_synthesis_filtering_v0_01_a\
-      hwt_short_term_synthesis_filtering_v0_01_a\
-      hwt_short_term_synthesis_filtering_v0_01_a\
-      hwt_short_term_synthesis_filtering_v0_01_a\
-      hwt_short_term_synthesis_filtering_v0_01_a\
-      hwt_short_term_synthesis_filtering_v0_01_a\
       hwt_short_term_synthesis_filtering_v0_01_a"
+#      hwt_short_term_synthesis_filtering_v0_01_a\
+#      hwt_short_term_synthesis_filtering_v0_01_a\
+#      hwt_short_term_synthesis_filtering_v0_01_a\
+#      hwt_short_term_synthesis_filtering_v0_01_a\
+#      hwt_short_term_synthesis_filtering_v0_01_a\
+#      hwt_short_term_synthesis_filtering_v0_01_a\
+#      hwt_short_term_synthesis_filtering_v0_01_a\
+#      hwt_short_term_synthesis_filtering_v0_01_a\
+#      hwt_short_term_synthesis_filtering_v0_01_a\
+#      hwt_short_term_synthesis_filtering_v0_01_a\
+#      hwt_short_term_synthesis_filtering_v0_01_a\
+#      hwt_short_term_synthesis_filtering_v0_01_a"
 
 if [ -z "$RECONOS" ]
 then
