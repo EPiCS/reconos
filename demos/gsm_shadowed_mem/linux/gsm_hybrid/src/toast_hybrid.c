@@ -15,13 +15,14 @@
  * details.  THERE IS ABSOLUTELY NO WARRANTY FOR THIS SOFTWARE.
  */
 
+#define  _GNU_SOURCE
 /*RECONOS HEADERFILES*/
 #include "reconos.h"
 #include "rqueue.h"
 
 #ifdef SHADOWING
 #include "thread_shadowing.h"
-#include "thread_shadowing_subs.h"
+//#include "thread_shadowing_subs.h"
 #endif
 
 /* MiBenchHybrid */
@@ -37,6 +38,14 @@
 #include <limits.h>
 #include <pthread.h>
 #include <sys/stat.h>
+#include <unistd.h>
+#include <getopt.h>
+
+// for signal handling
+#include <signal.h>
+#include <sys/ucontext.h>
+#include <sys/types.h>
+
 
 
 //Length of Reconosqueues
@@ -44,7 +53,7 @@
 #define OUTDATA_LEN 1
 
 //undefine to see more details on stderr
-#define _MIBENCHOUTPUT
+//#define _MIBENCHOUTPUT
 
 //define to see on opertational time on stderr
 #define _PRINT_TIMES
@@ -73,6 +82,7 @@ int f_hybrid   = 0;		/* Hybrid variant (-H)*/
 int f_transmodal = 0;   /* Not yet implemented, no commandline option specified*/
 int sw_threads = 0;		/* Number of Softwarethreads */
 int hw_threads = 0;		/* Number of Hardwarethreads */
+int running_threads = 0;			/*MiBenchHybrid*/
 //ReconOSqueues
 rqueue rq_SENDING;
 rqueue rq_RECIEVE;
@@ -84,8 +94,9 @@ struct reconos_resource res[2];
 // Thread shadowing
 
 int f_shadowing = 0; /* Flag set from commandline, (de-)activates shadowing */
+uint8_t f_shadowing_level = 0;		/* Sets the shadowing level, i.e. which techniques will be applied to detect errors */
 int f_shadowing_arb_err_det = 0; // per default, arbiter error detection is off
-int f_shadowing_arb_buf_size = 3; // default size of arbiter buffer is 8 KB
+int f_shadowing_arb_buf_size = 7; // default size of arbiter buffer is 128 KB (if implemented so big)
 
 shadowedthread_t sh[MAX_THREADS];
 unsigned int sh_free_idx=0;
@@ -692,7 +703,7 @@ static int process_decode P0()
 	res[1].ptr  = &rq_RECIEVE;
 	
 	reconos_init_autodetect();
-	
+
 	/*
 	 * Creating threads
 	 * Some explanation of wording:
@@ -701,11 +712,17 @@ static int process_decode P0()
 	 *   mt_thread/host -> functionality implemented on systems main processor, which also runs this programm
 	 */
 #ifdef SHADOWING
-	uint16_t arb_options = 0;
-		if ( f_shadowing_arb_err_det == 1)  {
-			arb_options = ARB_ERROR_DETECTION_ON | ((f_shadowing_arb_buf_size<<1) & ARB_SHADOW_BUFFER_MASK );
-		}
+	uint16_t arb_options = f_shadowing_arb_err_det | (f_shadowing_arb_buf_size<<1 & ARB_SHADOW_BUFFER_MASK);
+	if ( (f_shadowing_arb_err_det==1) ||
+			(f_shadowing_level >2 ))
+	{
+	    fprintf(stderr,"Activating arbiter error detection...\n");
+		arb_options = ARB_ERROR_DETECTION_ON | ((f_shadowing_arb_buf_size<<1) & ARB_SHADOW_BUFFER_MASK );
+	}
+#ifndef HOST_COMPILE
 	reconos_set_arb_runtime_opts(arb_options);
+#endif
+
 
 
 	prepare_threads_shadowing(running_threads,
@@ -714,7 +731,8 @@ static int process_decode P0()
 								sh,
 								NULL,
 								short_term_synthesis_filtering_swt,
-								f_hybrid);
+								0, // MANUAL SCHEDULE, no round robin
+								f_shadowing_level);
 #ifndef HOST_COMPILE
 	start_threads_shadowing_hw(hw_threads,
 								sh,
@@ -885,7 +903,14 @@ static int process_decode P0()
 		t_terminate_threads,
 		t_generate_threads+t_gsm_decode+t_terminate_threads
 	);
+
+#ifdef SHADOWING
+	shadow_dump_timestats_all();
+	shadow_dump_cyclestats_all();
+	shadow_dump_func_stats();
+#endif
 	#endif
+
 
 	if (cc < 0) {
 		perror(inname ? inname : "stdin" );
@@ -1009,6 +1034,9 @@ static void help P0()
 	fprintf(stderr," -H  Hybrid    Run the Hybridvariant\n");	/*MiBenchHybrid*/
 #ifdef SHADOWING
 	fprintf(stderr," -S  Shadowing Enables thread shadowing error detection\n");
+	fprintf(stderr," -E  Enable    Enables arbiter error detection\n");
+	fprintf(stderr," -B  <exponent> Sets the arbiters internal buffer size\n");
+	fprintf(stderr," -L  <Level>   Sets the shadowing level: which error detection measurements will be used?\n");
 #endif // SHADOWING
 	fprintf(stderr,"\n");
 
@@ -1037,17 +1065,72 @@ static void set_format P1((f), struct fmtdesc * f)
 	f_format = f;
 }
 
+/*
+ * Signal handler for SIGSEGV. Used for debugging on a microblaze processor.
+ * Get as much information to help in debugging as possible!
+ */
+void sigsegv_handler(int sig, siginfo_t *siginfo, void * context) {
+	ucontext_t* uc = (ucontext_t*) context;
+
+	// Yeah, i know using printf in a signal context is not save.
+	// But with a SIGSEGV the programm is messed up anyway, so what?
+	fprintf(stderr,
+			"%s: Programm killed at programm address %p, tried to access %p.\n",
+						(sig == SIGSEGV ? "SIGSEGV":(
+						sig == SIGFPE  ? "SIGFPE": (
+						sig == SIGILL  ? "SIGILL": (
+						sig == SIGINT  ? "SIGINT": (
+								"Unkown Signal"))))),
+#ifndef HOST_COMPILE
+			(void*)uc->uc_mcontext.regs.pc,
+#else
+			(void*) uc->uc_mcontext.gregs[14],
+#endif
+			(void*) siginfo->si_addr);
+
+#ifdef SHADOWING
+	// Print OS call lists for debugging
+	int i;
+	for (i=0; i < running_threads; i++) {
+		//shadow_dump(sh + i);
+	}
+#endif
+	exit(sig);
+}
+
+/*
+ * Install signal handler for segfaults, so that debug information can be printed
+ * from the sigsegv_handler().
+ */
+void install_sighandlers(){
+	struct sigaction act;
+	act.sa_sigaction = sigsegv_handler;
+	sigemptyset (&act.sa_mask);
+	act.sa_flags = SA_SIGINFO;
+	sigaction(SIGSEGV, &act, NULL);
+	sigaction(SIGFPE, &act, NULL);
+	sigaction(SIGILL, &act, NULL);
+
+	// if ctrl+c is pressed
+	sigaction(SIGINT, &act, NULL);
+}
+
+
 int main P2((ac, av), int ac, char **av)
 {
 	int  		opt;
 	extern int	optind;
-	
-	int running_threads;			/*MiBenchHybrid*/
 
+#ifdef SHADOWING
+	fprintf(stderr, "matrixmul_shadowed build: %s %s\n", __DATE__, __TIME__);
+#else
+	fprintf(stderr, "matrixmul build: %s %s\n", __DATE__, __TIME__);
+#endif
+	install_sighandlers();
 	parse_argv0( *av );
 
 #ifdef SHADOWING
-	while ((opt = getopt(ac, av, "fcdpvhuaslVFSEBH")) != EOF)
+	while ((opt = getopt(ac, av, "fcdpvhuaslVFHSEB:L:")) != EOF)
 #else
 	while ((opt = getopt(ac, av, "fcdpvhuaslVFH")) != EOF)
 #endif
@@ -1062,7 +1145,8 @@ int main P2((ac, av), int ac, char **av)
 #ifdef SHADOWING
 	case 'S': f_shadowing = 1; break;/*MiBenchHybrid*/
 	case 'E': f_shadowing_arb_err_det = 1; break;/*MiBenchHybrid*/
-	case 'B': f_shadowing_arb_buf_size = -1; break;/*MiBenchHybrid*/
+	case 'B': f_shadowing_arb_buf_size = atoi(optarg); break;/*MiBenchHybrid*/
+	case 'L': f_shadowing_level = atoi(optarg); break;/*MiBenchHybrid*/
 #endif
 
 #ifndef	NDEBUG
@@ -1136,17 +1220,17 @@ int main P2((ac, av), int ac, char **av)
 		}
 	}
 #ifdef SHADOWING
-	if (f_shadowing_arb_buf_size == -1){
-		/*get exponent of buffer size */
-		if(!string_is_number(*av))
-		{
-			help();
-			exit(0);
-		}
-		f_shadowing_arb_buf_size = atoi(*av);
-		av++;
-		ac--;
-	}
+//	if (f_shadowing_arb_buf_size == -1){
+//		/*get exponent of buffer size */
+//		if(!string_is_number(*av))
+//		{
+//			help();
+//			exit(0);
+//		}
+//		f_shadowing_arb_buf_size = atoi(*av);
+//		av++;
+//		ac--;
+//	}
 #endif
 	/* END: MiBenchHybrid get arguments */
 

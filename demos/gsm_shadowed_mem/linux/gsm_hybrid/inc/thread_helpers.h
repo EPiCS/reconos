@@ -32,7 +32,8 @@ void prepare_threads_shadowing(int thread_count,
 								shadowedthread_t * sh,
 								const char* worker_progname,
 								void *(*actual_sort_thread)(void* data),
-								int shadow_schedule);
+								int shadow_schedule,
+								uint8_t level);
 
 void start_threads_shadowing_hw(int hwt_count,
 								shadowedthread_t * sh,

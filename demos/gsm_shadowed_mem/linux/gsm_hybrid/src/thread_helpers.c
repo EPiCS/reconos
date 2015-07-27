@@ -23,7 +23,8 @@ void prepare_threads_shadowing(int thread_count,
 								shadowedthread_t * sh,
 								const char* worker_progname,
 								void *(*actual_sort_thread)(void* data),
-								int shadow_schedule)
+								int shadow_schedule,
+								uint8_t level)
 {
 	//
 	// Configure Threads
@@ -31,6 +32,7 @@ void prepare_threads_shadowing(int thread_count,
 	printf("Configuring %i shadowed threads: ", thread_count);
 	for (int i = 0; i < thread_count; i++) {
 		shadow_init( sh+i );
+		shadow_set_level(sh+i, level);
 		shadow_set_resources( sh+i, res+i*reconos_resource_count, reconos_resource_count );
 		shadow_set_program( sh+i , worker_progname);
 		shadow_set_swthread( sh+i, actual_sort_thread );
@@ -152,7 +154,6 @@ void join_threads_shadowing(shadowedthread_t * sh, unsigned int running_threads)
 	{
 		shadow_join(sh+i, NULL);
 	}
-	printf("\n");
 }
 
 //#endif //SHADOWING

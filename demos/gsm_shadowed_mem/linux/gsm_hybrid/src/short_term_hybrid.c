@@ -32,7 +32,7 @@
 
 #ifdef SHADOWING
 #include "thread_shadowing.h"
-#include "thread_shadowing_subs.h"
+//#include "thread_shadowing_subs.h"
 #endif
 
 
@@ -49,6 +49,8 @@
 //Length of Reconosqueues
 #define INDATA_LEN 5
 #define OUTDATA_LEN 1
+
+unsigned int rq_counter = 0;
 
 /*
  *  SHORT TERM ANALYSIS FILTERING SECTION
@@ -468,7 +470,7 @@ void *short_term_synthesis_filtering_swt(void* data)
 		
 		while(1)
 		{
-			//recieve incoming reconosqueue	
+			//recieve incoming reconosqueue
 			val = rq_receive(rq_start, indata, INDATA_LEN*sizeof(uint32)); 
 			if (indata[0] == UINT32_MAX)
 			{
@@ -737,7 +739,7 @@ void Gsm_Short_Term_Synthesis_Filter_hybrid P6((S, LARcr, wt, s, rq_sending, rq_
 	#ifndef _MIBENCHOUTPUT
 	fprintf(stderr, "PRE re_send: indata(%X, %X, %X, %X, %X)\n", indata[0], indata[1], indata[2], indata[3], indata[4]);
 	#endif
-	
+	fprintf(stderr,"%d rq_send(0x%x,0x%x,%d)\n", rq_counter++, rq_sending,indata,INDATA_LEN*sizeof(uint32));
 	rq_send(rq_sending, indata, INDATA_LEN*sizeof(uint32));
 	
 	#ifndef _MIBENCHOUTPUT
@@ -745,7 +747,7 @@ void Gsm_Short_Term_Synthesis_Filter_hybrid P6((S, LARcr, wt, s, rq_sending, rq_
 	
 	fprintf(stderr, "PRE re_receive: outdata(%X)\n", outdata[0]);
 	#endif
-	
+	//fprintf(stderr,"%d rq_receive(0x%x,0x%x,%d)\n", rq_counter++, rq_receiving,outdata,OUTDATA_LEN*sizeof(uint32));
 	ret = rq_receive(rq_receiving, outdata, OUTDATA_LEN*sizeof(uint32));
 	
 	#ifndef _MIBENCHOUTPUT
@@ -852,7 +854,7 @@ void Gsm_Short_Term_Synthesis_Filter_hybrid P6((S, LARcr, wt, s, rq_sending, rq_
 	#ifndef _MIBENCHOUTPUT
 	fprintf(stderr, "PRE re_send: indata(%X, %X, %X, %X, %X)\n", indata[0], indata[1], indata[2], indata[3], indata[4]);
 	#endif
-	
+	fprintf(stderr,"%d rq_send(0x%x,0x%x,%d)\n", rq_counter++, rq_sending,indata,INDATA_LEN*sizeof(uint32));
 	rq_send(rq_sending, indata, INDATA_LEN*sizeof(uint32));
 	
 	#ifndef _MIBENCHOUTPUT
@@ -860,7 +862,7 @@ void Gsm_Short_Term_Synthesis_Filter_hybrid P6((S, LARcr, wt, s, rq_sending, rq_
 	
 	fprintf(stderr, "PRE re_receive: outdata(%X)\n", outdata[0]);
 	#endif
-	
+	//fprintf(stderr,"%d rq_receive(0x%x,0x%x,%d)\n", rq_counter++, rq_receiving,outdata,OUTDATA_LEN*sizeof(uint32));
 	ret = rq_receive(rq_receiving, outdata, OUTDATA_LEN*sizeof(uint32));
 	
 	#ifndef _MIBENCHOUTPUT
@@ -966,7 +968,7 @@ void Gsm_Short_Term_Synthesis_Filter_hybrid P6((S, LARcr, wt, s, rq_sending, rq_
 	#ifndef _MIBENCHOUTPUT
 	fprintf(stderr, "PRE re_send: indata(%X, %X, %X, %X, %X)\n", indata[0], indata[1], indata[2], indata[3], indata[4]);
 	#endif
-	
+	fprintf(stderr,"%d rq_send(0x%x,0x%x,%d)\n", rq_counter++, rq_sending,indata,INDATA_LEN*sizeof(uint32));
 	rq_send(rq_sending, indata, INDATA_LEN*sizeof(uint32));
 	
 	#ifndef _MIBENCHOUTPUT
@@ -974,7 +976,7 @@ void Gsm_Short_Term_Synthesis_Filter_hybrid P6((S, LARcr, wt, s, rq_sending, rq_
 	
 	fprintf(stderr, "PRE re_receive: outdata(%X)\n", outdata[0]);
 	#endif
-	
+	//fprintf(stderr,"%d rq_receive(0x%x,0x%x,%d)\n", rq_counter++, rq_receiving,outdata,OUTDATA_LEN*sizeof(uint32));
 	ret = rq_receive(rq_receiving, outdata, OUTDATA_LEN*sizeof(uint32));
 	
 	#ifndef _MIBENCHOUTPUT
@@ -1082,7 +1084,7 @@ void Gsm_Short_Term_Synthesis_Filter_hybrid P6((S, LARcr, wt, s, rq_sending, rq_
 	#ifndef _MIBENCHOUTPUT
 	fprintf(stderr, "PRE re_send: indata(%X, %X, %X, %X, %X)\n", indata[0], indata[1], indata[2], indata[3], indata[4]);
 	#endif
-	
+	fprintf(stderr,"%d rq_send(0x%x,0x%x,%d)\n", rq_counter++, rq_sending,indata,INDATA_LEN*sizeof(uint32));
 	rq_send(rq_sending, indata, INDATA_LEN*sizeof(uint32));
 	
 	#ifndef _MIBENCHOUTPUT
@@ -1090,7 +1092,7 @@ void Gsm_Short_Term_Synthesis_Filter_hybrid P6((S, LARcr, wt, s, rq_sending, rq_
 	
 	fprintf(stderr, "PRE re_receive: outdata(%X)\n", outdata[0]);
 	#endif
-	
+	//fprintf(stderr,"%d rq_receive(0x%x,0x%x,%d)\n", rq_counter++, rq_receiving,outdata,OUTDATA_LEN*sizeof(uint32));
 	ret = rq_receive(rq_receiving, outdata, OUTDATA_LEN*sizeof(uint32));
 	
 	#ifndef _MIBENCHOUTPUT
