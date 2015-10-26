@@ -19,6 +19,7 @@
 
 #include "reconos.h"
 #include "mbox.h"
+#include "cpuusage.h"
 
 #ifdef SHADOWING
 #include "thread_shadowing.h"
@@ -448,6 +449,7 @@ void join_threads(){
 #endif
 
 int main(int argc, char **argv) {
+	cpuusage_init();
 	logging_init();
 
 	int i;
@@ -699,6 +701,6 @@ int main(int argc, char **argv) {
 	shadow_dump_cyclestats_all();
 	shadow_dump_func_stats();
 #endif
-
+	printf("CPU usage average: %f\n", cpuusage_average());
 	return 0;
 }

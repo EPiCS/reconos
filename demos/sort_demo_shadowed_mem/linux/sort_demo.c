@@ -27,6 +27,7 @@
 #include "data.h"
 #include "sort8k.h"
 #include "timing.h"
+#include "cpuusage.h"
 
 #include "parallel_sort_interface.h"
 #include "sort_mbox.h"
@@ -43,13 +44,14 @@ struct gengetopt_args_info args_info;
 int running_threads;
 int buffer_size = 0;
 
-#if 0
+
 char * actual_slot_map[] = {
 		"SLOT_SORT_SHMEM", "SLOT_SORT_SHMEM", "SLOT_SORT_SHMEM", "SLOT_SORT_SHMEM",
 		"SLOT_SORT_SHMEM", "SLOT_SORT_SHMEM", "SLOT_SORT_SHMEM", "SLOT_SORT_SHMEM",
 		"SLOT_SORT_SHMEM", "SLOT_SORT_SHMEM", "SLOT_SORT_SHMEM", "SLOT_SORT_SHMEM",
 		"SLOT_SORT_SHMEM", "SLOT_SORT_SHMEM",
 		NULL};
+#if 0
 char * actual_slot_map[] = {
 		"SLOT_WORKERCPU", "SLOT_WORKERCPU", "SLOT_WORKERCPU", "SLOT_WORKERCPU",
 		"SLOT_WORKERCPU", "SLOT_WORKERCPU", "SLOT_WORKERCPU",
@@ -63,11 +65,12 @@ char * actual_slot_map[] = {
 		"SLOT_SORT_RQ", "SLOT_SORT_RQ", "SLOT_SORT_RQ", "SLOT_SORT_RQ",
 		"SLOT_SORT_RQ", "SLOT_SORT_RQ", "SLOT_SORT_RQ",
 		NULL};
-#endif
+
 
 char * actual_slot_map[] = {
 		"SLOT_SORT_SHMEM", "SLOT_SORT_SHMEM", "SLOT_SORT_RQ", "SLOT_SORT_RQ",
 		NULL};
+#endif
 
 #ifdef SHADOWING
 // Thread shadowing
@@ -600,6 +603,8 @@ void join_threads(){
  * @brief Main function
  */
 int main(int argc, char ** argv) {
+	cpuusage_init();
+
 	struct parallel_sort_params_in pin;
 	struct parallel_sort_params_out pout;
 	struct parallel_sort_interface pinterface;
@@ -756,6 +761,8 @@ if (args_info.error_type_arg == 2){
 	pinterface.teardown_resources(&pin, &pout);
 
 	reconos_faultinject(0,0,0); // deactivate all errors on exit
+
+	printf("CPU usage average: %f\n", cpuusage_average());
 	exit(EXIT_SUCCESS);
 }
 

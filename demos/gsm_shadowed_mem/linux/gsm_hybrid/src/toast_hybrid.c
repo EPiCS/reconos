@@ -19,6 +19,7 @@
 /*RECONOS HEADERFILES*/
 #include "reconos.h"
 #include "rqueue.h"
+#include "cpuusage.h"
 
 #ifdef SHADOWING
 #include "thread_shadowing.h"
@@ -1118,6 +1119,7 @@ void install_sighandlers(){
 
 int main P2((ac, av), int ac, char **av)
 {
+	cpuusage_init();
 	int  		opt;
 	extern int	optind;
 
@@ -1239,5 +1241,6 @@ int main P2((ac, av), int ac, char **av)
 	if (ac <= 0) process( (char *)0 );
 	else while (ac--) process( *av++ );
 
+	fprintf(stderr, "CPU usage average: %f\n", cpuusage_average());
 	exit(0);
 }
