@@ -48,7 +48,7 @@ entity fifo32_burst_converter is
     clk : in std_logic;                  -- separate clock for control logic
 
     -- Debug
-    ila_signals : out std_logic_vector(205 downto 0)
+    ila_signals : out std_logic_vector(254 downto 0)
     );
 end entity;
 
@@ -180,6 +180,9 @@ begin  -- of architecture ------------------------------------------------------
       ila_signals(203)            <= IN_FIFO32_S_Rd_int;
       ila_signals(204)            <= OUT_FIFO32_S_Rd;
       ila_signals(205)            <= mux_sel;
+      ila_signals(221 downto 206) <= IN_FIFO32_M_Rem;
+      ila_signals(253 downto 222) <= OUT_FIFO32_M_Data;
+      ila_signals(254)            <= OUT_FIFO32_M_Wr;
       
       case state is
         when STATE_IDLE =>
