@@ -130,106 +130,6 @@ gsm_commands_perf +=["./bin/untoast_hybrid_shadowed -fps -c -S -L3 -H 0 1 data/"
 def downloadStuff(_bitstreamOrKernel):
     FNULL = open(os.devnull, 'w')
     return subprocess.call([DOW, _bitstreamOrKernel], stdout=FNULL, stderr=subprocess.STDOUT)
-    
-def startBenchmark(_benchmarkTag, _telnetPasswd):
-    child = pexpect.spawn ('telnet 192.168.35.2')
-    child.expect ('reconos login:.*')
-    child.sendline ('root')
-    child.expect ('Password:.*')
-    child.sendline (_telnetPasswd)
-    child.expect('# ')
-    child.sendline('cd /demos/sort_demo_shadowed_mem')
-    child.expect('# ')
-    child.sendline('./sh_mem_benchmark.sh ' + _benchmarkTag)
-    child.expect('# ', timeout=None) # benchmark can take a long time, so we deactivate the timeout
-    child.sendline('exit')
-
-class ReturnValueError(Exception):
-    def __init__(self, value):
-        self.value = value
-    def __str__(self):
-        return repr(self.value)
-
-def runBenchmark(_benchmarkTag, _telnetPasswd, _commands, _work_dir):
-
-    # LOGIN
-    child = pexpect.spawn ('telnet 192.168.35.2')
-    child.expect ('reconos login:.*')
-    child.sendline ('root')
-    child.expect ('Password:.*')
-    child.sendline (_telnetPasswd)
-    
-    # Preparations
-    child.expect('# ')
-    child.sendline('cd '+ _work_dir)
-    
-    child.expect('# ')
-    child.sendline('mkdir -p '+ _benchmarkTag)
-    child.expect('# ')
-    child.sendline('chmod o+rw '+ _benchmarkTag)
-    child.expect('# ')
-    
-    # Benchmarks
-    for i in xrange(REPEAT_COUNT):
-        for cmd in _commands:   
-            tryAgain = True;
-            while tryAgain:
-                print('I' + str(i) + ' ' + time.ctime()+ ' ' +cmd.format(_benchmarkTag))
-                child.sendline(cmd.format(_benchmarkTag))
-                  
-                response = child.expect(['# ', pexpect.TIMEOUT],timeout=TIMEOUT_SEC)
-                if response == 1: # on timeout
-                    # abort programm via CTRL-C
-                    child.sendcontrol('c') # send 3 times just to be sure
-                    child.sendcontrol('c')
-                    child.sendcontrol('c')
-                    child.expect('# ',timeout=TIMEOUT_SEC)
-                    # insert abortion message into logfile
-                    #log_file = cmd.format(_benchmarkTag).split('>>',1)[1]
-                    log_file = cmd.format(_benchmarkTag).split('_run')[0].split(' ')[-1]+"_run"
-                    print ("Program aborted due to timeout. Logging to {}".format(log_file))
-                    
-                    child.sendline('echo "PROGRAM ABORTED!  TIMEOUT EXCEEDED!" >> ' + log_file)
-                    child.expect('# ',timeout=TIMEOUT_SEC)
-                    #child.sendline('echo -e "\tSort data    : -1 ms" >> '+ log_file)
-                    continue
-                    
-                # test error code 
-                child.sendline('echo $?') 
-                #time.sleep(5)
-                response= child.expect(['echo \$\?\r\n0\r\n# ','echo \$\?\r\n[1-9][0-9]*\r\n# ', pexpect.TIMEOUT],timeout=TIMEOUT_SEC)
-                if response ==1: # On error return code
-                    print(child.before)
-                    print(child.after)
-                    #log_file = cmd.format(_benchmarkTag).split(' ')[10]
-                    #log_file = cmd.format(_benchmarkTag).split('>>',1)[1]
-                    log_file = cmd.format(_benchmarkTag).split('_run')[0].split(' ')[-1]+"_run"
-                    print ("Return Code {0} indicated error. Logging to {1}".format(child.after.split('\r\n')[1], log_file))
-                    child.sendline('echo "PROGRAM ABORTED!  RETURNCODE INDICATED ERROR: {0}" >> '.format(child.after.split('\r\n')[1]) + log_file)
-                    child.expect('# ',timeout=TIMEOUT_SEC)
-                    continue
-                elif response == 2: # on timeout
-                    print(child.before)
-                    print(child.after)
-                    # abort programm via CTRL-C
-                    child.sendcontrol('c') # send 3 times just to be sure
-                    child.sendcontrol('c')
-                    child.sendcontrol('c')
-                    child.expect('# ',timeout=TIMEOUT_SEC)
-                    # insert abortion message into logfile
-                    #log_file = cmd.format(_benchmarkTag).split('>>',1)[1]
-                    log_file = cmd.format(_benchmarkTag).split('_run')[0].split(' ')[-1]+"_run"
-                    print ("Status query aborted due to timeout. Logging to {}".format(log_file))
-                    
-                    child.sendline('echo "STATUS QUERY FAILED!  TIMEOUT EXCEEDED!" >> ' + log_file)
-                    child.expect('# ',timeout=TIMEOUT_SEC)
-                    #child.sendline('echo -e "\tSort data    : -1 ms" >> '+ log_file)
-                    continue        
-                
-                tryAgain = False                        
-    # Exit
-    child.sendline('exit')
-    child.expect('Connection closed by foreign host.')
 
 def reboot(_bitstream, _telnetPasswd, _work_dir):
     # do we need to logout properly?
@@ -257,7 +157,7 @@ def reboot(_bitstream, _telnetPasswd, _work_dir):
     
     return child
 
-def runErrInj(_benchmarkTag, _telnetPasswd, _bitstream, _commands, _work_dir, _half,_row,_column):
+def runErrInj(_benchmarkTag, _telnetPasswd, _bitstream, _commands, _work_dir, _start_address):
 
     # LOGIN
     child = pexpect.spawn ('telnet 192.168.35.2')
@@ -279,10 +179,16 @@ def runErrInj(_benchmarkTag, _telnetPasswd, _bitstream, _commands, _work_dir, _h
     pexpectLogging = False
     rebootNeeded = False
     
+    _half   = _start_address[1]
+    _row    = _start_address[2]
+    _column = _start_address[3]
+    _minor_start = _start_address[4]
+    _word_start  = _start_address[5]
+    _bit_start   = _start_address[6]
     # Benchmarks
-    for minor in xrange(MINOR_COUNT):
-        for word in xrange(WORD_COUNT):
-            for bit in xrange(BIT_COUNT):
+    for minor in xrange(_minor_start, MINOR_COUNT):
+        for word in xrange(_word_start, WORD_COUNT):
+            for bit in xrange(_bit_start, BIT_COUNT):
                 for cmd in _commands:   
                     log_file = cmd.format(_benchmarkTag).split('_run')[0].split(' ')[-1]+"_run"
                     child.sendline('echo -e "###########" >> ' + log_file)
@@ -373,11 +279,14 @@ def runErrInj(_benchmarkTag, _telnetPasswd, _bitstream, _commands, _work_dir, _h
                         child.expect('# ')
                         child.sendline('echo -e "' + faultInjCMD + '" >> ' + log_file)
                         child.expect('# ')
+            _bit_start = 0 #next loop run shall start from 0 again
+        _word_start = 0 #next loop run shall start from 0 again
+    _minor_start = 0 #next loop run shall start from 0 again
     # Exit
     child.sendline('exit')
     child.expect('Connection closed by foreign host.')
 
-def benchmark(_tagBase, _telnetPasswd, _bitstream, _commands, _work_dir):
+def fault_inject(_tagBase, _telnetPasswd, _bitstream, _commands, _work_dir, _start_address):
     print("Downloading Bitstream...")
     downloadStuff(_bitstream)
     print("Downloading Kernel...")
@@ -385,20 +294,26 @@ def benchmark(_tagBase, _telnetPasswd, _bitstream, _commands, _work_dir):
     print("Waiting for system boot...")
     time.sleep(60)
     print("Executing Benchmark...")
-    runBenchmark(_tagBase, _telnetPasswd, _commands, _work_dir)
-    
-    
-def fault_inject(_tagBase, _telnetPasswd, _bitstream, _commands, _work_dir, _half, _row, _column):
-    print("Downloading Bitstream...")
-    downloadStuff(_bitstream)
-    print("Downloading Kernel...")
-    downloadStuff(KERNEL)
-    print("Waiting for system boot...")
-    time.sleep(60)
-    print("Executing Benchmark...")
-    runErrInj(_tagBase, _telnetPasswd, _bitstream, _commands, _work_dir,  _half, _row, _column)
+    runErrInj(_tagBase, _telnetPasswd, _bitstream, _commands, _work_dir, _start_address)
 
+def parse_string_to_tuple(_string, _fallback_value):
+    list = _string.split(',');
+    if len(list) != 7:
+        return _fallback_value
+    try:
+        return [int(x) for x in list]
+    except:
+        return _fallback_value
+   
 if __name__ == "__main__":
+    
+    start_address=[0,0,2,17,0,0,0]
+    
+    if len(sys.argv) == 1:
+        pass
+    elif len(sys.argv) == 2:
+        start_address = parse_string_to_tuple(sys.argv[1], start_address)
+    
     telnetPasswd = getpass.getpass('telnet password: ')
     
     benchmarkTagBase = str(datetime.date(1,1,1).today())
@@ -406,7 +321,7 @@ if __name__ == "__main__":
     #
     # Benchmarks
     #
-    fault_inject(benchmarkTagBase, telnetPasswd, BIT_SORT_PERF, sort_commands_perf, SORT_DEMO_DIR, 0, 2, 17)
+    fault_inject(benchmarkTagBase, telnetPasswd, BIT_SORT_PERF, sort_commands_perf, SORT_DEMO_DIR, start_address)
 
     
     
