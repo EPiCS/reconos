@@ -1,9 +1,9 @@
 #!/usr/bin/python
 
-import sys, re, string, pexpect, subprocess, getpass, time, datetime
+import sys, re, string, pexpect, subprocess, getpass, time, datetime, os
 
 
-TIMEOUT_SEC = 60
+TIMEOUT_SEC = 30
 REPEAT_COUNT = 1 #10
 
 BIT_COUNT=32
@@ -128,7 +128,8 @@ gsm_commands_perf +=["./bin/untoast_hybrid_shadowed -fps -c -S -L3 -H 0 1 data/"
 
 
 def downloadStuff(_bitstreamOrKernel):
-    return subprocess.call([DOW, _bitstreamOrKernel])
+    FNULL = open(os.devnull, 'w')
+    return subprocess.call([DOW, _bitstreamOrKernel], stdout=FNULL, stderr=subprocess.STDOUT)
     
 def startBenchmark(_benchmarkTag, _telnetPasswd):
     child = pexpect.spawn ('telnet 192.168.35.2')
@@ -230,7 +231,33 @@ def runBenchmark(_benchmarkTag, _telnetPasswd, _commands, _work_dir):
     child.sendline('exit')
     child.expect('Connection closed by foreign host.')
 
-def runErrInj(_benchmarkTag, _telnetPasswd, _commands, _work_dir, _half,_row,_column):
+def reboot(_bitstream, _telnetPasswd, _work_dir):
+    # do we need to logout properly?
+    # what if command line hangs?
+    
+    # Reset HW and OS
+    print("Downloading Bitstream...")
+    downloadStuff(_bitstream)
+    print("Downloading Kernel...")
+    downloadStuff(KERNEL)
+    print("Waiting for system boot...")
+    time.sleep(60)
+    
+    # LOGIN
+    child = pexpect.spawn ('telnet 192.168.35.2')
+    child.expect ('reconos login:.*')
+    child.sendline ('root')
+    child.expect ('Password:.*')
+    child.sendline (_telnetPasswd)
+    
+    # Preparations
+    child.expect('# ')
+    child.sendline('cd '+ _work_dir)
+    child.expect('# ')
+    
+    return child
+
+def runErrInj(_benchmarkTag, _telnetPasswd, _bitstream, _commands, _work_dir, _half,_row,_column):
 
     # LOGIN
     child = pexpect.spawn ('telnet 192.168.35.2')
@@ -249,12 +276,14 @@ def runErrInj(_benchmarkTag, _telnetPasswd, _commands, _work_dir, _half,_row,_co
     child.sendline('chmod o+rw '+ _benchmarkTag)
     child.expect('# ')
     
+    pexpectLogging = False
+    rebootNeeded = False
+    
     # Benchmarks
     for minor in xrange(MINOR_COUNT):
         for word in xrange(WORD_COUNT):
             for bit in xrange(BIT_COUNT):
                 for cmd in _commands:   
-                    tryAgain = True;
                     log_file = cmd.format(_benchmarkTag).split('_run')[0].split(' ')[-1]+"_run"
                     child.sendline('echo -e "###########" >> ' + log_file)
                     child.expect('# ')
@@ -267,62 +296,83 @@ def runErrInj(_benchmarkTag, _telnetPasswd, _commands, _work_dir, _half,_row,_co
                     child.expect('# ')
                     
                     # Execute command to test if fault affect test programm
-                    while tryAgain:
-                        print("FA 0,{},{},{},{},{},{} ".format(_half,_row,_column,minor,word,bit) + time.ctime()+ ' ' +cmd.format(_benchmarkTag))
-                        child.sendline(cmd.format(_benchmarkTag))
-                          
-                        response = child.expect(['# ', pexpect.TIMEOUT],timeout=TIMEOUT_SEC)
-                        if response == 1: # on timeout
-                            # abort programm via CTRL-C
-                            child.sendcontrol('c') # send 3 times just to be sure
-                            child.sendcontrol('c')
-                            child.sendcontrol('c')
-                            child.expect('# ',timeout=TIMEOUT_SEC)
-                            # insert abortion message into logfile
-                            print ("Program aborted due to timeout. Logging to {}".format(log_file))
-                            
-                            child.sendline('echo "PROGRAM ABORTED!  TIMEOUT EXCEEDED!" >> ' + log_file)
-                            child.expect('# ',timeout=TIMEOUT_SEC)
-                            #child.sendline('echo -e "\tSort data    : -1 ms" >> '+ log_file)
-                            continue
-                            
+                    print("FA 0,{},{},{},{},{},{} ".format(_half,_row,_column,minor,word,bit) + time.ctime()+ ' ' +cmd.format(_benchmarkTag))
+                    child.sendline(cmd.format(_benchmarkTag))
+                    
+                    # Programm runs. Several possibilities now:
+                    # - timeout: program got stuck and did not terminate
+                    # - termination with error
+                    # - termination without error
+                    response = child.expect(['# ', pexpect.TIMEOUT],timeout=TIMEOUT_SEC)
+                    if response == 1: # on timeout
+                        # abort programm via CTRL-C
+                        child.sendcontrol('c')
+                        response=child.expect(['# ', pexpect.TIMEOUT],timeout=TIMEOUT_SEC)
+                        if response== 1: print("Timeout while controlling child. Continuing with reboot...") 
+                        # insert abortion message into logfile
+                        print ("Program aborted due to timeout. Logging to {}".format(log_file))
+                        
+                        child.sendline('echo "PROGRAM ABORTED!  TIMEOUT EXCEEDED!" >> ' + log_file)
+                        response=child.expect(['# ', pexpect.TIMEOUT],timeout=TIMEOUT_SEC)
+                        if response== 1: print("Timeout while writing error message to logfile. Continuing with reboot...") 
+                        rebootNeeded=True
+                    else:
                         # test error code 
                         child.sendline('echo $?') 
                         #time.sleep(5)
-                        response= child.expect(['echo \$\?\r\n0\r\n# ','echo \$\?\r\n[1-9][0-9]*\r\n# ', pexpect.TIMEOUT],timeout=TIMEOUT_SEC)
-                        if response ==1: # On error return code
+                        response= child.expect(['echo \$\?\r\n0\r\n# ', 'echo \$\?\r\n[1-9][0-9]*\r\n# ', pexpect.TIMEOUT],timeout=TIMEOUT_SEC)
+
+                        if response == 1: # On error return code
                             print(child.before)
                             print(child.after)
-                            #log_file = cmd.format(_benchmarkTag).split(' ')[10]
-                            #log_file = cmd.format(_benchmarkTag).split('>>',1)[1]
-                            log_file = cmd.format(_benchmarkTag).split('_run')[0].split(' ')[-1]+"_run"
+                            
+                            if pexpectLogging == False :
+                                child.logfile = file('telnet.log','w') #sys.stdout
+                                pexpectLogging = True
+                            
                             print ("Return Code {0} indicated error. Logging to {1}".format(child.after.split('\r\n')[1], log_file))
                             child.sendline('echo "PROGRAM ABORTED!  RETURNCODE INDICATED ERROR: {0}" >> '.format(child.after.split('\r\n')[1]) + log_file)
-                            child.expect('# ',timeout=TIMEOUT_SEC)
-                            continue
+                            response=child.expect(['# ', pexpect.TIMEOUT],timeout=TIMEOUT_SEC)
+                            if response== 1: print("Timeout while writing error message to logfile. Continuing with reboot...") 
+                            rebootNeeded=True
                         elif response == 2: # on timeout
+                            print("#######################################################################")
                             print(child.before)
+                            print("#")
                             print(child.after)
+                            print("#######################################################################")
+                            
                             # abort programm via CTRL-C
-                            child.sendcontrol('c') # send 3 times just to be sure
                             child.sendcontrol('c')
-                            child.sendcontrol('c')
-                            child.expect('# ',timeout=TIMEOUT_SEC)
+                            response=child.expect(['# ', pexpect.TIMEOUT],timeout=TIMEOUT_SEC)
+                            if response== 1: print("Timeout while controlling child. Continuing with reboot...") 
+                            
+                            print("#######################################################################")
+                            print(child.before)
+                            print("#")
+                            print(child.after)
+                            print("#######################################################################")
+                            
                             # insert abortion message into logfile
-                            #log_file = cmd.format(_benchmarkTag).split('>>',1)[1]
                             log_file = cmd.format(_benchmarkTag).split('_run')[0].split(' ')[-1]+"_run"
                             print ("Status query aborted due to timeout. Logging to {}".format(log_file))
                             
                             child.sendline('echo "STATUS QUERY FAILED!  TIMEOUT EXCEEDED!" >> ' + log_file)
-                            child.expect('# ',timeout=TIMEOUT_SEC)
-                            #child.sendline('echo -e "\tSort data    : -1 ms" >> '+ log_file)
-                            continue        
-                        
-                        tryAgain = False
-                        
+                            response=child.expect(['# ', pexpect.TIMEOUT],timeout=TIMEOUT_SEC)
+                            if response== 1: print("Timeout while writing error message to logfile. Continuing with reboot...")
+                            rebootNeeded=True
+                            #sys.exit(1)
+                            
                     # Revert Fault injection
-                    child.sendline(faultInjCMD)
-                    child.expect('# ')
+                    # either by reboot or by flipping the bit again
+                    if rebootNeeded:
+                    	child=reboot(_bitstream, _telnetPasswd, _work_dir)
+                    	rebootNeeded=False
+                    else:
+                        child.sendline(faultInjCMD)
+                        child.expect('# ')
+                        child.sendline('echo -e "' + faultInjCMD + '" >> ' + log_file)
+                        child.expect('# ')
     # Exit
     child.sendline('exit')
     child.expect('Connection closed by foreign host.')
@@ -346,7 +396,7 @@ def fault_inject(_tagBase, _telnetPasswd, _bitstream, _commands, _work_dir, _hal
     print("Waiting for system boot...")
     time.sleep(60)
     print("Executing Benchmark...")
-    runErrInj(_tagBase, _telnetPasswd, _commands, _work_dir,  _half, _row, _column)
+    runErrInj(_tagBase, _telnetPasswd, _bitstream, _commands, _work_dir,  _half, _row, _column)
 
 if __name__ == "__main__":
     telnetPasswd = getpass.getpass('telnet password: ')
