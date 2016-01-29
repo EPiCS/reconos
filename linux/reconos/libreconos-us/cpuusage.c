@@ -24,9 +24,8 @@ static cpustats_t cpustats_parse(FILE * f){
 }
 
 cpustats_t cpustats_get(){
-	FILE * cpustats_file;
+	FILE * cpustats_file = NULL;
 	cpustats_t c;
-
 
 	cpustats_file = fopen("/proc/stat","r");
 	if (cpustats_file == NULL){

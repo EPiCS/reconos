@@ -9,10 +9,12 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <pthread.h>
+#include <sys/ucontext.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <signal.h>
 
 #include "reconos.h"
 #include "fsl.h"
@@ -124,12 +126,49 @@ void sh_mem_error_handler(uint8_t hwt, uint32_t err_type, uint32_t err_addr){
 		  err_type == MEM_ERROR_TYP_HEADER2 ? "HEADER2" :(
 		  err_type == MEM_ERROR_TYP_DATA ? "DATA": "UNKNOWN"))),
 		  err_addr);
-  // reset the corresponding threads
+  exit(32+192);
+  // @TODO:reset the corresponding threads
 
-  // update statistics about errors, so we know if they are permanent or transient
+  // @TODO:update statistics about errors, so we know if they are permanent or transient
 
-  // notify application if an error handler was specified, else abort programm
+  // @TODO:notify application if an error handler was specified, else abort programm
 
+}
+
+void reconos_signal_handler(int sig, siginfo_t *siginfo, void * context) {
+	ucontext_t* uc = (ucontext_t*) context;
+
+	// Yeah, i know using printf in a signal context is not save.
+	// But with a SIGSEGV the programm is messed up anyway, so what?
+	fprintf(stderr,
+			"%s: proc_control_thread killed at program address %p, tried to access %p.\n",
+			(sig == SIGSEGV ? "SIGSEGV":(
+			sig == SIGFPE  ? "SIGFPE": (
+			sig == SIGILL  ? "SIGILL": "Unkown Signal"))),
+#ifndef HOST_COMPILE
+			(void*)uc->uc_mcontext.regs.pc,
+#else
+			(void*) uc->uc_mcontext.gregs[14],
+#endif
+			(void*) siginfo->si_addr);
+	if (sig == SIGILL){
+		switch(siginfo->si_code){
+		case ILL_ILLOPC: fprintf(stderr, "SIGILL Reason: illegal opcode\n"); break;
+		case ILL_ILLOPN: fprintf(stderr, "SIGILL Reason: illegal operand\n"); break;
+		case ILL_ILLADR: fprintf(stderr, "SIGILL Reason: illegal addressing mode\n"); break;
+		case ILL_ILLTRP: fprintf(stderr, "SIGILL Reason: illegal trap\n"); break;
+		case ILL_PRVOPC: fprintf(stderr, "SIGILL Reason: privileged opcode\n"); break;
+		case ILL_PRVREG: fprintf(stderr, "SIGILL Reason: privileged register\n"); break;
+		case ILL_COPROC: fprintf(stderr, "SIGILL Reason: coprocessor error\n"); break;
+		case ILL_BADSTK: fprintf(stderr, "SIGILL Reason: internal stack error\n"); break;
+		}
+	}
+#ifdef SHADOWING
+	// Print OS call lists for debugging
+	shadow_dump_all();
+#endif
+
+	exit(sig+192);
 }
 
 #define C_RETURN_ADDR      0x00000001
@@ -137,6 +176,15 @@ void sh_mem_error_handler(uint8_t hwt, uint32_t err_type, uint32_t err_addr){
 #define C_RETURN_ERROR     0x00000003
 static void *reconos_control_thread_entry(void *arg)
 {
+	// Install signal handler for segfaults, so wrong memory accesses of hardware threads can be handled
+	struct sigaction act;
+	act.sa_sigaction = reconos_signal_handler;
+	sigemptyset (&act.sa_mask);
+	act.sa_flags = SA_SIGINFO;
+	sigaction(SIGSEGV, &act, NULL);
+	sigaction(SIGFPE, &act, NULL);
+	sigaction(SIGILL, &act, NULL);
+
 	while (1) {
 		uint32_t cmd, ret, *addr;
 		uint32_t err_type, err_addr;

@@ -94,10 +94,12 @@ extern shadowedthread_t *shadow_list_head;
 // Tell the Shadow Layer about parameters you want to be checked.
 //
 #define SHADOW_FUNC_STAT(idx) \
+	ts_lock();\
 	shadow_func_stat_inc_i(idx);\
 	if (is_shadowed){\
 		shadow_func_stat_inc_s(idx);\
 	}\
+	ts_unlock();\
 
 //
 // Tell the Shadow Layer about parameters you want to be checked.

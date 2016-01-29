@@ -70,8 +70,8 @@ void* shadow_watchdog_thread(void* data){
 	//inputs? -> none needed!
 
 	// Setup
-	long watchdog_time_us  =  100000; //_us ^= microseconds
-	long watchdog_delta_us = 1000000; //watchdog_time_us * 10;
+	uint32_t watchdog_time_us  =  100000; //_us ^= microseconds
+	uint32_t watchdog_delta_us = 1000000; //watchdog_time_us * 10;
 	timing_t delta;
 	shadowedthread_t * sh;
 	func_call_t fc;
@@ -93,11 +93,12 @@ void* shadow_watchdog_thread(void* data){
 		//fprintf(OUTPUT, "WATCHDOG: FIFO %p, FILL_LEVEL %i, LOCK_STATUS %i, WAIT_SEMAPHORE %i\n", &shadow_list_head->func_calls, fill_level, lock_status, sem_value);
 		//func_call_dump(&fc);
 
+		ts_lock();
 		for(sh = shadow_list_head; sh != NULL; sh = sh->next ){
 			//Version 1: Just print Fifo status
 			fill_level = fifo_peek(&sh->func_calls, &fc);
 
-			if (fill_level) {
+			if (fill_level != 0) {
 				sem_getvalue(&sh->sh_wait_sem , &sem_value);
 				delta = func_call_timediff2_us(&now, &fc);
 				if (timer2us(&delta) > watchdog_delta_us){
@@ -107,6 +108,7 @@ void* shadow_watchdog_thread(void* data){
 				}
 			}
 		}
+		ts_unlock();
 		//fprintf(OUTPUT, "############################################## Stopp Run\n");
 	}
 	return NULL;
@@ -375,8 +377,9 @@ static void shadow_set_threads(shadowedthread_t *sh) {
 //
 
 void shadow_init(shadowedthread_t *sh) {
-	assert(sh);
 	int error;
+	assert(sh);
+
 
 	// Default shadowing level is highest level:
 	// use all available error checking mechanisms
@@ -441,6 +444,10 @@ void shadow_sig_handler(int sig, siginfo_t *siginfo, void * context){
 		fprintf(OUTPUT, "SIGSEGV: thread %lu killed at programm address %p, tried to access %p.\n",
 				tid, prog_address, mem_address);
 		break;
+	default:
+		fprintf(OUTPUT, "SIGUNKNOWN: thread %lu killed at programm address %p, tried to access %p.\n",
+						tid, prog_address, mem_address);
+				break;
 	}
 #ifdef SHADOWING
     // Print OS call lists for debugging
@@ -449,7 +456,7 @@ void shadow_sig_handler(int sig, siginfo_t *siginfo, void * context){
     	shadow_dump(sh + i);
     }
 #endif
-    exit(32);
+    exit(64+sig);
 }
 
 /**

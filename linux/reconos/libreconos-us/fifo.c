@@ -130,10 +130,12 @@ int fifo_peek ( fifo_t * f, void* obj ){
 	int retval;
 
 	pthread_mutex_lock(&f->mutex_read);
+	pthread_mutex_lock(&f->mutex_write);
 	sem_getvalue(&f->sem_read, &retval);
 	if ( retval > 0 && obj != NULL) {
 		memcpy(obj,f->data+f->re_idx, f->obj_size);
 	}
+	pthread_mutex_unlock(&f->mutex_write);
 	pthread_mutex_unlock(&f->mutex_read);
 	FIFO_DEBUG2("FIFO peeked data from FIFO at %p to %p\n",f, obj);
 	return retval;

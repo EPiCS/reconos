@@ -32,8 +32,9 @@ int mbox_init(struct mbox *mb, size_t size)
 	if (ret)
 		goto out_err;
 
-	mb->messages = xmalloc_aligned(mb->size * sizeof(*mb->messages),
-				       sizeof(void *) * 8);
+	mb->messages = malloc(mb->size * sizeof(*mb->messages));
+			//xmalloc_aligned(mb->size * sizeof(*mb->messages),
+			//	       sizeof(void *) * 8);
 	return 0;
 out_err:
 	return -EIO;
@@ -46,7 +47,12 @@ void mbox_destroy(struct mbox *mb)
 	sem_destroy(&mb->sem_write);
 	sem_destroy(&mb->sem_read);
 
+	// destroying locked mutexes couses undefined behaviour, so we lock them first
+	pthread_mutex_lock(&mb->mutex_read);
+	pthread_mutex_unlock(&mb->mutex_read);
 	pthread_mutex_destroy(&mb->mutex_read);
+	pthread_mutex_lock(&mb->mutex_write);
+	pthread_mutex_unlock(&mb->mutex_write);
 	pthread_mutex_destroy(&mb->mutex_write);
 }
 
