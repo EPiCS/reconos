@@ -90,13 +90,13 @@ def parseFile(_file):
                 # EXAMPLE: Return Code 203 indicated error. Logging to 2015-11-30/sort_perf_on_lvl3_run
                 errorCode =  int( line.split(" ")[2] )
                 _faultByErrorCode[errorCode] = _faultByErrorCode[errorCode] + 1 
-                _errorList.append(address)
+                _errorList.append((address,errorCode))
                 parseState = "SearchFaultInjection"
-            elif line.startswith("Program"):
+            elif line.startswith("Program") or line.startswith("Status query aborted"):
                 # EXAMPLE: Program aborted due to timeout. Logging to 2015-11-30/sort_perf_on_lvl3_run
                 errorCode = -1
                 _faultByErrorCode[errorCode] = _faultByErrorCode[errorCode] + 1
-                _errorList.append(address)
+                _errorList.append((address,errorCode))
                 parseState = "SearchFaultInjection"
             elif line.startswith("FA "):
                 # oops, should not happen! Emit debug info!
@@ -126,6 +126,7 @@ def printFaultByErrorCode(_faultByErrorCodeList):
     errorCodeToString[192+4]="PROC_CONTROL_THREAD_SIGILL"
     errorCodeToString[192+6]= "PROC_CONTROL_THREAD_SIGABORT"
     errorCodeToString[192+11]="PROC_CONTROL_THREAD_SIGSEGV"
+    errorCodeToString[192+32]="PROC_CONTROL_THREAD_MEMIF_ERROR"
     
     errorCodeToString[256]="TIMEOUT"
     print("faultByErrorCode:")
@@ -139,14 +140,30 @@ def printFaultByErrorCode(_faultByErrorCodeList):
 def errorListToHeatMap(_errorList, _filename):
     #format of pixels is [R,G,B, R,G,B, ...]
     pixels = [ [255 for word in xrange(128*3)] for minor in xrange(128) ]
+    
+    # sum up errors
     for error in errorList:
-        minor = error[4] #minor
-        word = error[5] #word
+        minor = error[0][4] #minor
+        word = error[0][5] #word
         if pixels[minor][word*3] == 255:
             pixels[minor][word*3] = 0
             pixels[minor][word*3+1] = 0
             pixels[minor][word*3+2] = 0
-        pixels[minor][word*3] =  pixels[minor][word*3] + 30
+        pixels[minor][word*3] =  pixels[minor][word*3] + 1
+        
+    # determine maximum error count
+    max = 0
+    for x in pixels:
+        for y in x:
+            if y !=255 and y > max: max = y;
+    print("Maximum pixel value: {}".format( max) )
+    
+    #scale colors in bitmap 
+    for x in xrange(len(pixels)):
+        for y in xrange(0,len(pixels[0]),3):
+            if pixels[x][y] != 255:
+                pixels[x][y]= pixels[x][y] * (255.0/(max+1)) 
+    # write out png image
     png.from_array(pixels, "RGB", {"height":128,"width":128}).save(_filename)
 
 def wordsWithoutErrors(_errorList):
@@ -154,8 +171,8 @@ def wordsWithoutErrors(_errorList):
     emptyWordCnt = 0
     unemptyWordCnt = 0
     for error in errorList:
-        minor = error[4] #minor
-        word = error[5] #word
+        minor = error[0][4] #minor
+        word = error[0][5] #word
         errorsPerWord[minor][word] =  errorsPerWord[minor][word] + 1
     for minor in errorsPerWord[0:8]:
         for word in minor:
@@ -165,6 +182,14 @@ def wordsWithoutErrors(_errorList):
                 unemptyWordCnt = unemptyWordCnt + 1
     #print(errorsPerWord)
     return  emptyWordCnt, unemptyWordCnt
+
+def myPrettyListPrint(l):
+    for item, index in zip(l, xrange(len(l))):
+        print(item, end="")
+        print(" ", end="")
+        if index % 4 == 3:
+            print("")
+    print("")
 
 if __name__ == "__main__":
     # open file from commandline
@@ -182,13 +207,14 @@ if __name__ == "__main__":
     print("totalFaultsInjected: {}\ntotalErrors: {}\nerrorDensity: {}\nlongestRunningNoError: {}\nlongestRunningNoErrorEndAddress: {}\nlongestRunningError: {}\nlongestRunningErrorEndAddress: {}".format(totalFaultsInjected,totalErrors, float(totalErrors)/float(totalFaultsInjected),longestRunningNoError,longestRunningNoErrorEndAddress,longestRunningError, longestRunningErrorEndAddress))
     printFaultByErrorCode(faultByErrorCode)
     print("errorList length: {}".format(len(errorList)))
-    print("errorList:")
-    for error, index in zip(errorList, xrange(len(errorList))):
-        print(error, end="")
-        print(" ", end="")
-        if index % 4 == 3:
-            print("")
-    print("")
+    
+    
+    print("errorList of FAULTY_RESULT:")
+    frList = [x[0] for x in errorList if x[1] == 4 ]
+    myPrettyListPrint(frList)
+
+    
+    
     #pprint.pprint(errorList)
     woE, wE = wordsWithoutErrors(errorList)
     print("Word with errors : {}, Words without Errors: {}, Percentage of words with errors: {}".format(wE, woE, float(wE)*100.0/(wE+woE)) )
