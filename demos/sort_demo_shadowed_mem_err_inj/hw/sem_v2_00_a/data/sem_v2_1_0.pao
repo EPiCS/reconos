@@ -1,0 +1,14 @@
+##############################################################################
+## Filename:          /upb/scratch/users/u/umair/sem_xps/pcores/sem_v2_00_a/data/sem_v2_1_0.pao
+## Description:       Peripheral Analysis Order
+## Date:              Mon Nov 10 11:53:26 2014 (by Create and Import Peripheral Wizard)
+##############################################################################
+
+lib proc_common_v3_00_a  all 
+lib plbv46_slave_single_v1_01_a  all 
+lib sem_v2_00_a user_logic vhdl
+lib sem_v2_00_a sem_v3_6_sem_mon vhdl
+lib sem_v2_00_a sem_v3_6_sem_mon_fifo vhdl
+lib sem_v2_00_a sem_v3_6_sem_mon_piso vhdl
+lib sem_v2_00_a sem_v3_6_sem_mon_sipo vhdl
+lib sem_v2_00_a sem vhdl

@@ -1,0 +1,213 @@
+ signal nop_cnt :			unsigned(7 downto 0) := x"00";
+  signal idle_cnt :			unsigned(7 downto 0) := x"00";
+  signal inj_cnt :			unsigned(7 downto 0) := x"00";
+  signal obs_cnt :			unsigned(7 downto 0) := x"00";
+  signal status_cnt :			unsigned(7 downto 0) := x"00";
+  signal reset_cnt :			unsigned(7 downto 0) := x"00";
+
+  signal nop_done_cnt :			unsigned(7 downto 0) := x"00";
+  signal idle_done_cnt :		unsigned(7 downto 0) := x"00";
+  signal inj_done_cnt :			unsigned(7 downto 0) := x"00";
+  signal obs_done_cnt :			unsigned(7 downto 0) := x"00";
+  signal status_done_cnt :		unsigned(7 downto 0) := x"00";
+  signal reset_done_cnt :		unsigned(7 downto 0) := x"00";
+
+SEM_UPDATE_CNTS_PROC: process(Bus2IP_Clk,Bus2IP_Reset,WrCE0_rcv) 	 
+   begin
+       if(Bus2IP_Reset = '1') then
+            nop_cnt <= x"00";
+	    idle_cnt <= x"00";
+	    inj_cnt <= x"00";
+	    status_cnt <= x"00";
+	    reset_cnt <= x"00";
+	    obs_cnt <= x"00";
+       elsif (Bus2IP_Clk'event and Bus2IP_Clk = '1' ) then     
+	 if WrCE0_rcv = '1' then     
+            case slv_reg0(0 to 4) is
+        	when "00000" => 
+			nop_cnt <= nop_cnt +1;
+       	 	when "10000" => 
+			idle_cnt <= idle_cnt +1;
+        	when "01000" => 
+			inj_cnt <= inj_cnt +1;
+        	when "00100" => 
+			status_cnt <= status_cnt +1;
+        	when "00010" => 
+			reset_cnt <= reset_cnt +1;
+        	when "00001" => 
+			obs_cnt <= obs_cnt +1;
+        	when others  => 
+			nop_cnt <= nop_cnt +1;
+      	    end case; 
+	 else 
+ 	    nop_cnt <= nop_cnt ;
+	    idle_cnt <= idle_cnt ;
+	    inj_cnt <= inj_cnt ;
+	    status_cnt <= status_cnt ;
+	    reset_cnt <= reset_cnt ;
+	    obs_cnt <= obs_cnt ;
+	 end if;
+       end if;
+end process SEM_UPDATE_CNTS_PROC; 
+
+
+when IDLE_EXE => 
+		load_cntr1 <= '0';
+	    if ( count_1 = x"00" or count_1 = x"01" ) then
+		inject_address   <= x"E00000000";
+		inject_strobe    <= '0';
+		main_next_state <= IDLE_EXE;  
+    	    elsif ( count_1 = x"04") then
+		inject_address   <= x"E00000000";	
+		inject_strobe <= '1';
+		main_next_state <= IDLE_EXE;  
+	    elsif (  count_1 = x"08") then
+		inject_address   <= x"E00000000";	
+		inject_strobe <= '0';
+		main_next_state <= IDLE_EXE;  
+	    elsif ( count_1 = x"0B") then	
+		inject_address <= x"000000000";
+		--main_next_state <= IDLE_EXE;  
+		cntr1_en <= '0';
+		idle_done_cnt <= idle_done_cnt +1;
+		slv_reg1 <= x"20000000";
+		main_next_state <= SEM_EXE; 
+	    else 
+		inject_address   <= x"E00000000";	
+		main_next_state <= IDLE_EXE;  
+	 	cntr1_en <= '1';
+	    end if;
+    when INJECTION_EXE => 		load_cntr1 <= '0';
+	    if ( count_1 = x"00" or count_1 = x"01" ) then
+		inject_address   <= inj_addr_36;
+		inject_strobe    <= '0';
+		main_next_state <= INJECTION_EXE;  
+    	    elsif ( count_1 = x"04") then
+		inject_address   <= inj_addr_36;	
+		inject_strobe <= '1';
+		main_next_state <= INJECTION_EXE;  
+	    elsif (  count_1 = x"08") then
+		inject_address   <= inj_addr_36;	
+		inject_strobe <= '0';
+		main_next_state <= INJECTION_EXE;  
+	    elsif ( count_1 = x"0B") then	
+		inject_address <= x"000000000";
+		--main_next_state <= IDLE_EXE;  
+		cntr1_en <= '0';
+		idle_done_cnt <= idle_done_cnt +1;
+		slv_reg1 <= x"20000000";
+		main_next_state <= SEM_EXE; 
+	    else 	
+		inject_address   <= inj_addr_36;	
+		main_next_state <= INJECTION_EXE;  
+	 	cntr1_en <= '1';
+	    end if;
+    when STATUS_EXE =>		load_cntr1 <= '0';
+	    if ( count_1 = x"00" or count_1 = x"01" ) then
+		inject_address   <= x"E00000000";
+		inject_strobe    <= '0';
+		main_next_state <= STATUS_EXE;  
+    	    elsif ( count_1 = x"04") then
+		inject_address   <= x"E00000000";	
+		inject_strobe <= '1';
+		main_next_state <= STATUS_EXE;  
+	    elsif (  count_1 = x"08") then
+		inject_address   <= x"E00000000";	
+		inject_strobe <= '0';
+		main_next_state <= STATUS_EXE;  
+	    elsif ( count_1 = x"0B") then	
+		inject_address <= x"000000000";
+		cntr1_en <= '0';
+		idle_done_cnt <= idle_done_cnt +1;
+		slv_reg1 <= x"20000000";
+		main_next_state <= SEM_EXE; 
+	    else 	
+		inject_address   <= x"E00000000";
+		main_next_state <= STATUS_EXE;  
+	 	cntr1_en <= '1';
+	    end if;	
+    when RESET_EXE =>		load_cntr1 <= '0';
+	    if ( count_1 = x"00" or count_1 = x"01" ) then
+		inject_address   <= x"B00000000";
+		inject_strobe    <= '0';
+		main_next_state <= RESET_EXE;  
+    	    elsif ( count_1 = x"04") then
+		inject_address   <= x"B00000000";	
+		inject_strobe <= '1';
+		main_next_state <= RESET_EXE;  
+	    elsif (  count_1 = x"08") then
+		inject_address   <= x"B00000000";	
+		inject_strobe <= '0';
+		main_next_state <= RESET_EXE;  
+	    elsif ( count_1 = x"0B") then	
+		inject_address <= x"000000000";
+		cntr1_en <= '0';
+		idle_done_cnt <= idle_done_cnt +1;
+		slv_reg1 <= x"20000000";
+		main_next_state <= SEM_EXE; 
+	    else 	
+		inject_address   <= x"B00000000";
+		main_next_state <= RESET_EXE;  
+	 	cntr1_en <= '1';
+	    end if;		
+    when OBSERVATION_EXE =>		load_cntr1 <= '0';
+	    if ( count_1 = x"00" or count_1 = x"01" ) then
+		inject_address   <= x"A00000000";
+		inject_strobe    <= '0';
+		main_next_state <= OBSERVATION_EXE;  
+    	    elsif ( count_1 = x"04") then
+		inject_address   <= x"A00000000";	
+		inject_strobe <= '1';
+		main_next_state <= OBSERVATION_EXE;  
+	    elsif (  count_1 = x"08") then
+		inject_address   <= x"A00000000";	
+		inject_strobe <= '0';
+		main_next_state <= OBSERVATION_EXE;  
+	    elsif ( count_1 = x"0B") then	
+		inject_address <= x"000000000";
+		cntr1_en <= '0';
+		idle_done_cnt <= idle_done_cnt +1;
+		slv_reg1 <= x"20000000";
+		main_next_state <= SEM_EXE; 
+
+
+
+
+
+
+
+
+void sem_inj_addr()
+{
+	*(sem_base+2) = 0x00000001;
+	*(sem_base+3) = 0x00000000;
+}
+void ipif_reset()
+{
+	*sem_rst = 0x0000000A;
+}
+void sem_nop()
+{
+	*sem_base = 0x00000000;
+}
+void sem_reset()
+{
+	*sem_base = 0x10000000;
+}
+void sem_idle()
+{
+	*sem_base = 0x20000000;
+}
+void sem_inj()
+{
+	*sem_base = 0x40000000;
+}
+void sem_obs()
+{
+	*sem_base = 0x08000000;
+}
+void sem_status()
+{
+	*sem_base = 0x80000000;
+}
+
