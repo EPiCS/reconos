@@ -35,10 +35,11 @@ if [ "$ARCH" = "ppc" ]; then
 elif [ "$ARCH" = "mb" ]; then
     if [ -z $2 ]; then 
         echo "Programming master CPU."
-        DOWCMD="connect mb mdm\ndow $ELF\nrun\n"
+        DOWCMD="fpga_isconfigured -cable type xilinx_platformusb frequency 12000000\nconnect mb mdm\ndow $ELF\nrun\n"
     else
         echo "Programming slave CPU nr. $2."
-        DOWCMD="connect mb mdm -debugdevice cpunr $2 \n\
+        DOWCMD="fpga_isconfigured -cable type xilinx_platformusb frequency 12000000\n
+ connect mb mdm -debugdevice cpunr $2 \n\
  debugconfig -reset_on_data_dow processor enable \n\
  debugconfig -reset_on_run processor enable \n\
  rst -processor \n\

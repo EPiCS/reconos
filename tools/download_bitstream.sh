@@ -39,7 +39,7 @@ if [ -z $IMPACT_REMOTE ]; then
 
 echo "
 setMode -bs
-setCable -port auto
+setCable -port usb1 -b 12000000
 Identify
 IdentifyMPM
 assignFile -p $POS -file \"$1\"
