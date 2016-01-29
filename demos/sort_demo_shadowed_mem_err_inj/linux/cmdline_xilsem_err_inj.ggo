@@ -1,0 +1,26 @@
+package "xilsem_err_inj"
+version "0.9"
+purpose "Fault injection for Xilinx FPGAs. Needs corresponding SEM hardware module."
+#usage "<usage>"
+#description "<description>"
+#versiontext "Copyright 2013 Sebastian Meisner and others"
+
+args "-F cmdline_xilsem_err_inj" # arguments to gengetopt itself
+
+#option <long> <short> "<desc>"
+#    {details="<detailed description>"}
+#    {argtype} {typestr="<type descr>"}
+#    {values="<value1>","<value2>",...}
+#    {default="<default value>"}
+#    {dependon="<other option>"}
+#    {required} {argoptional} {multiple}
+#    {hidden}
+
+option "paddress" p "Physical address to inject fault to. Format: <blockType 0-3>, <halfAddress 0-1>, <rowAddress 0-31>, <columnAddress 0-255>,<minorAddress 0-127>, <wordAddress 0-127>,<bitAddress 0-31>" 
+	int typestr="number" multiple(7) optional
+option "saddress" s "Slice area to inject fault to. Unspecified part will be choosen randomly. Format: <bottomLeftX>,<bottomLeftY>, <topRightX>,<topRightY>" 
+	int typestr="number" multiple(4) optional
+option "ptranslate" t "Translate slice address to physical address." 
+	int typestr="number" multiple(2) optional
+option "full-word" w "Ignores the bit part of the address and instead injects errors to all bits of the given word of an address." flag off
+option "verbose" v "Spits out detailed information about what's going on." flag off
