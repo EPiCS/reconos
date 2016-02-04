@@ -208,11 +208,19 @@ if __name__ == "__main__":
     printFaultByErrorCode(faultByErrorCode)
     print("errorList length: {}".format(len(errorList)))
     
+    if False:
+        print("errorList of FAULTY_RESULT:")
+        frList = [x[0] for x in errorList if x[1] == 4 ]
+        myPrettyListPrint(frList)
     
-    print("errorList of FAULTY_RESULT:")
-    frList = [x[0] for x in errorList if x[1] == 4 ]
-    myPrettyListPrint(frList)
-
+    if True:
+        print("errorList of errors outside implemented addresses:")
+        # address: type, half, row, column, minor, word, bit
+        # implemented addresses: minor from 0 to 35, words from 0 to 80
+        outsidersList = [x for x in errorList if x[0][4] > 35 or x[0][5] > 80 ]
+        myPrettyListPrint(outsidersList)
+        print("outsidersList length: {}".format(len(outsidersList)))
+    
     
     
     #pprint.pprint(errorList)
