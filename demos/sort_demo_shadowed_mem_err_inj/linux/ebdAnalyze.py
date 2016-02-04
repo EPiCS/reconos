@@ -190,7 +190,7 @@ def fileToFaultList(_file):
     return faultList
         
 
-def extractColumn(_addr, _imageFPGA):
+def extractColumnFromImage(_addr, _imageFPGA):
     
     addrType = _addr[0]
     addrHalf = _addr[1]
@@ -218,6 +218,17 @@ def extractColumn(_addr, _imageFPGA):
     print(list)
     print("Column image height: {}, width: {}".format( len(list), len(list[0]) ))
     return list
+
+
+def countEssentialBitsInColumn(_faultList, _address):
+    # Address = [type, half, row, column, minor, word, bit]
+    errorCount = 0
+    for error in _faultList:
+        if _address[:4] == error[:4]:
+            errorCount += 1
+    
+    return errorCount
+    
 
 if __name__ == '__main__':
     
@@ -248,6 +259,11 @@ if __name__ == '__main__':
     faultList = fileToFaultList(file)
     print("Length of faultList: {}".format(len(faultList)))
     
+    for i in xrange(15,22):
+        print("Essential bits in colum {}: {} bits".format([0,0,2,i,0,0,0], countEssentialBitsInColumn(faultList, [0,0,2,i,0,0,0])))
+    
+    sys.exit()
+    
     imageFPGApath = "ebdHeatmapFPGA.png"
     print("Creating image ...")
     imageFPGA = faultListToHeatMapFPGA(faultList, imageFPGApath)
@@ -255,12 +271,12 @@ if __name__ == '__main__':
     png.from_array(imageFPGA, "RGB").save(imageFPGApath)
     
     imageColumnPath = "ebdHeatmapColumnHWT0_0.png"
-    imageColumn= extractColumn([0,0,2,17,0,0,0], imageFPGA)
+    imageColumn= extractColumnFromImage([0,0,2,17,0,0,0], imageFPGA)
     print("Saving image to {}...".format(imageColumnPath))
     png.from_array(imageColumn, "RGB").save(imageColumnPath)
     
     imageColumnPath = "ebdHeatmapColumnHWT1_0.png"
-    imageColumn= extractColumn([0,0,1,17,0,0,0], imageFPGA)
+    imageColumn= extractColumnFromImage([0,0,1,17,0,0,0], imageFPGA)
     print("Saving image to {}...".format(imageColumnPath))
     png.from_array(imageColumn, "RGB").save(imageColumnPath)
     #print(faultList)
