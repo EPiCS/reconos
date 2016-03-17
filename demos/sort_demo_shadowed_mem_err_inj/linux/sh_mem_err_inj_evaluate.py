@@ -8,7 +8,6 @@ import sys, pprint, png
 
 
 totalFaultsInjected = 0
-totalErrors = 0
 faultByErrorCode = [0 for x in xrange(-1, 256)]
 longestRunningNoError = 0
 longestRunningError = 0
@@ -38,7 +37,6 @@ def parseFile(_file):
     
     # Statistics
     _totalFaultsInjected = 0
-    _totalErrors = 0
     _faultByErrorCode = [0 for x in xrange(-1, 256)]
     _longestRunningNoError = 0
     _longestRunningNoErrorEndAddress= [-1 for x in xrange(7)]
@@ -82,7 +80,6 @@ def parseFile(_file):
                 #if longestRunningNoErrorCounter == 1: # 
                 longestRunningErrorCounter = longestRunningErrorCounter + 1
                 
-                _totalErrors = _totalErrors + 1
                 parseState = "SearchErrorDescription"
                 
         if parseState == "SearchErrorDescription":
@@ -104,7 +101,7 @@ def parseFile(_file):
                 print(line)
                 sys.exit(2)
                 
-    return _totalFaultsInjected, _totalErrors, _faultByErrorCode, _longestRunningNoError,_longestRunningNoErrorEndAddress, _longestRunningError,_longestRunningErrorEndAddress, _errorList
+    return _totalFaultsInjected, _faultByErrorCode, _longestRunningNoError,_longestRunningNoErrorEndAddress, _longestRunningError,_longestRunningErrorEndAddress, _errorList
     
 def printFaultByErrorCode(_faultByErrorCodeList):
     errorCodeToString = [ "UNKNOWN_ERROR" for x in xrange(-1, 256)]
@@ -137,7 +134,7 @@ def printFaultByErrorCode(_faultByErrorCodeList):
 # Assumes _errorList to contain only errors from one row and generates an image
 # of 128x 128 Pixels (Minors x Words), with the amount of faults in a word determining
 # its color value
-def errorListToHeatMap(_errorList, _filename):
+def errorListToHeatMap(_errorList, _filename, _maxErrorCount=None):
     #format of pixels is [R,G,B, R,G,B, ...]
     pixels = [ [255 for word in xrange(128*3)] for minor in xrange(128) ]
     
@@ -149,7 +146,7 @@ def errorListToHeatMap(_errorList, _filename):
             pixels[minor][word*3] = 0
             pixels[minor][word*3+1] = 0
             pixels[minor][word*3+2] = 0
-        pixels[minor][word*3] =  pixels[minor][word*3] + 1
+        pixels[minor][word*3] += 1
         
     # determine maximum error count
     max = 0
@@ -158,11 +155,16 @@ def errorListToHeatMap(_errorList, _filename):
             if y !=255 and y > max: max = y;
     print("Maximum pixel value: {}".format( max) )
     
+    if _maxErrorCount != None: 
+        max=_maxErrorCount
+        print("Maximum pixel value overruled to : {}".format( max) )
+    
     #scale colors in bitmap 
     for x in xrange(len(pixels)):
-        for y in xrange(0,len(pixels[0]),3):
+        for y in xrange(0,len(pixels[x]), 3):
             if pixels[x][y] != 255:
-                pixels[x][y]= pixels[x][y] * (255.0/(max+1)) 
+                pixels[x][y] = int( pixels[x][y]*(255.0/(max)) ) 
+                
     # write out png image
     png.from_array(pixels, "RGB", {"height":128,"width":128}).save(_filename)
 
@@ -186,7 +188,7 @@ def wordsWithoutErrors(_errorList):
 def myPrettyListPrint(l):
     for item, index in zip(l, xrange(len(l))):
         print(item, end="")
-        print(" ", end="")
+        print(",", end="")
         if index % 4 == 3:
             print("")
     print("")
@@ -201,19 +203,19 @@ if __name__ == "__main__":
         sys.exit(1)
     
     print("Parsing file ...")
-    totalFaultsInjected,totalErrors, faultByErrorCode, longestRunningNoError, longestRunningNoErrorEndAddress,longestRunningError, longestRunningErrorEndAddress,errorList = parseFile(fp)
+    totalFaultsInjected, faultByErrorCode, longestRunningNoError, longestRunningNoErrorEndAddress,longestRunningError, longestRunningErrorEndAddress,errorList = parseFile(fp)
     
     print("Statistics\n----------")
-    print("totalFaultsInjected: {}\ntotalErrors: {}\nerrorDensity: {}\nlongestRunningNoError: {}\nlongestRunningNoErrorEndAddress: {}\nlongestRunningError: {}\nlongestRunningErrorEndAddress: {}".format(totalFaultsInjected,totalErrors, float(totalErrors)/float(totalFaultsInjected),longestRunningNoError,longestRunningNoErrorEndAddress,longestRunningError, longestRunningErrorEndAddress))
+    print("totalFaultsInjected: {}\nerrorDensity: {}\nlongestRunningNoError: {}\nlongestRunningNoErrorEndAddress: {}\nlongestRunningError: {}\nlongestRunningErrorEndAddress: {}".format(totalFaultsInjected, float(len(errorList))/float(totalFaultsInjected),longestRunningNoError,longestRunningNoErrorEndAddress,longestRunningError, longestRunningErrorEndAddress))
     printFaultByErrorCode(faultByErrorCode)
     print("errorList length: {}".format(len(errorList)))
     
-    if False:
+    if True:
         print("errorList of FAULTY_RESULT:")
         frList = [x[0] for x in errorList if x[1] == 4 ]
         myPrettyListPrint(frList)
     
-    if True:
+    if False:
         print("errorList of errors outside implemented addresses:")
         # address: type, half, row, column, minor, word, bit
         # implemented addresses: minor from 0 to 35, words from 0 to 80
@@ -226,6 +228,6 @@ if __name__ == "__main__":
     #pprint.pprint(errorList)
     woE, wE = wordsWithoutErrors(errorList)
     print("Word with errors : {}, Words without Errors: {}, Percentage of words with errors: {}".format(wE, woE, float(wE)*100.0/(wE+woE)) )
-    errorListToHeatMap(errorList, "Heatmaptest.png")
+    errorListToHeatMap(errorList, "Heatmaptest.png", _maxErrorCount=15)
     
     sys.exit()
