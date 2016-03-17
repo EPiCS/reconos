@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-import sys, pprint, png
+import sys, pprint, png, pickle
 
     
 
@@ -230,6 +230,15 @@ def countEssentialBitsInColumn(_faultList, _address):
     return errorCount
     
 
+def getColumnFromList(_faultList, _address):
+    filteredList = []
+    
+    for error in _faultList:
+        if _address[:4] == error[:4]:
+            filteredList.append(error)
+    
+    return filteredList
+
 if __name__ == '__main__':
     
     # open file from commandline
@@ -253,11 +262,16 @@ if __name__ == '__main__':
     
     # Parse file and emit list of fault injection addresses
     # Input file is just stream of ASCII '0's and '1's; 
-    # Output ist list in the format "<Type>, <Half>, <Row>, <Column>, <Minor>, <Word>, <Bit>" 
+    # Output is list in the format "<Type>, <Half>, <Row>, <Column>, <Minor>, <Word>, <Bit>" 
     print("Parsing faults from {}...".format(sys.argv[1]))
     file.seek(0)
     faultList = fileToFaultList(file)
     print("Length of faultList: {}".format(len(faultList)))
+    
+    print("Writing faultLists to pickle files ...")
+    for i in xrange(17,20):
+        pickle.dump(getColumnFromList(faultList, [0,0,2,i,0,0,0]), open("ebdFaultList_0_0_2_{}_0_0_0.pickle".format(i), "w"))
+    
     
     for i in xrange(15,22):
         print("Essential bits in colum {}: {} bits".format([0,0,2,i,0,0,0], countEssentialBitsInColumn(faultList, [0,0,2,i,0,0,0])))
@@ -279,6 +293,4 @@ if __name__ == '__main__':
     imageColumn= extractColumnFromImage([0,0,1,17,0,0,0], imageFPGA)
     print("Saving image to {}...".format(imageColumnPath))
     png.from_array(imageColumn, "RGB").save(imageColumnPath)
-    #print(faultList)
-    #hwt0FaultList = filter(lambda x: x[1]==0 and x[2]==2 and x[3]==17 , faultList)
-    #print("Length of hwt0FaultList: {}".format(len(hwt0FaultList)))
+
