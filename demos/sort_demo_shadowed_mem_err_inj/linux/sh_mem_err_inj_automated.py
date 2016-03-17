@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-import sys, re, string, pexpect, subprocess, getpass, time, datetime, os
+import sys, re, string, pexpect, subprocess, getpass, time, datetime, os, pickle
 
 
 TIMEOUT_SEC = 30
@@ -12,12 +12,17 @@ MINOR_COUNT=128
 COLUMN_COUNT=256
 ROW_COUNT=32
 HALF_COUNT=2
+TYPE_COUNT=4
+ADDRESS_MAX_VALUES = [TYPE_COUNT-1, HALF_COUNT-1, ROW_COUNT-1, COLUMN_COUNT-1, MINOR_COUNT-1, WORD_COUNT-1, BIT_COUNT-1]
 
 EXPORT_DIR= "/exports/rootfs_mb"
 RECONOS= "/home/meise/git/reconos_epics"
 DOW = RECONOS+"/tools/dow"
-KERNEL = "/home/meise/git/linux-2.6-xlnx/arch/microblaze/boot/simpleImage.ml605_epics"
+KERNEL = ["/home/meise/git/linux-2.6-xlnx/arch/microblaze/boot/simpleImage.ml605_epics_first_board",
+          "/home/meise/git/linux-2.6-xlnx/arch/microblaze/boot/simpleImage.ml605_epics_second_board"]
+IP_ADDRESS = ["192.168.35.2", "192.168.35.3"]
 
+ESN = ["0000145B17DE01", "0000145B185501"]
 
 # Log files must end in "_run"
 LOG_FILE_BASELINE_OLD= "baseline_old_run"
@@ -131,25 +136,25 @@ def cleanCableLock():
     FNULL = open(os.devnull, 'w')
     return subprocess.call('echo -e "cleancablelock\nquit\n" | impact -batch', shell=True, stdout=FNULL, stderr=subprocess.STDOUT)
 
-def downloadStuff(_bitstreamOrKernel):
+def downloadStuff(_bitstreamOrKernel, _esn=""):
     FNULL = open(os.devnull, 'w')
-    return subprocess.call([DOW, _bitstreamOrKernel], stdout=FNULL, stderr=subprocess.STDOUT)
+    return subprocess.call([DOW, _bitstreamOrKernel, _esn], stdout=FNULL, stderr=subprocess.STDOUT)
 
-def reboot(_bitstream, _telnetPasswd, _work_dir, _benchmarkTag, _silent=False):
+def reboot(_bitstream, _telnetPasswd, _work_dir, _benchmarkTag, _boardNr, _silent=False):
     # do we need to logout properly?
     # what if command line hangs?
     
     # Reset HW and OS
     cleanCableLock();
     if not _silent: print("Downloading Bitstream...")
-    downloadStuff(_bitstream)
+    downloadStuff(_bitstream, ESN[_boardNr])
     if not _silent: print("Downloading Kernel...")
-    downloadStuff(KERNEL)
+    downloadStuff(KERNEL[_boardNr], ESN[_boardNr])
     if not _silent: print("Waiting for system boot...")
-    time.sleep(60)
+    time.sleep(90)
     
     # LOGIN
-    child = pexpect.spawn ('telnet 192.168.35.2')
+    child = pexpect.spawn ('telnet '+IP_ADDRESS[_boardNr])
     child.expect ('reconos login:.*')
     child.sendline ('root')
     child.expect ('Password:.*')
@@ -167,7 +172,7 @@ def reboot(_bitstream, _telnetPasswd, _work_dir, _benchmarkTag, _silent=False):
     child.expect('# ')
     return child
 
-def executeCommands(_child, _benchmarkTag, _telnetPasswd, _bitstream, _commands, _work_dir, _faultAddress, _blockedFI=False):
+def executeCommands(_child, _benchmarkTag, _telnetPasswd, _bitstream, _commands, _work_dir, _faultAddress, _boardNr, _blockedFI=False):
     child = _child
     pexpectLogging = False
     rebootNeeded = False
@@ -179,17 +184,18 @@ def executeCommands(_child, _benchmarkTag, _telnetPasswd, _bitstream, _commands,
         # Fault injection
         if _blockedFI:
             # Blocked Fault injection: flip complete block 
-            faultInjCMD = "./xilsem_err_inj -p0,{},{},{},{},{},{} -w".format(*_faultAddress)
+            faultInjCMD = "./xilsem_err_inj -p{},{},{},{},{},{},{} -w".format(*_faultAddress)
         else:
-            faultInjCMD = "./xilsem_err_inj -p0,{},{},{},{},{},{}".format(*_faultAddress)
+            faultInjCMD = "./xilsem_err_inj -p{},{},{},{},{},{},{}".format(*_faultAddress)
             
         child.sendline(faultInjCMD)
+
         #child.expect('# ')
         child.sendline('echo -e "' + faultInjCMD + '" >> ' + log_file)
         #child.expect('# ')
         
         # Execute command to test if fault affect test programm
-        print("FA 0,{},{},{},{},{},{} ".format(*_faultAddress) + time.ctime()+ ' ' +cmd.format(_benchmarkTag))
+        print("FA {},{},{},{},{},{},{} ".format(*_faultAddress) + time.ctime()+ ' ' +cmd.format(_benchmarkTag))
         child.sendline(cmd.format(_benchmarkTag))
         
         # Programm runs. Several possibilities now:
@@ -253,26 +259,23 @@ def executeCommands(_child, _benchmarkTag, _telnetPasswd, _bitstream, _commands,
         # Revert Fault injection
         # either by reboot or by flipping the bit again
         if rebootNeeded:
-            child=reboot(_bitstream, _telnetPasswd, _work_dir, _benchmarkTag)
+            child=reboot(_bitstream, _telnetPasswd, _work_dir, _benchmarkTag, _boardNr)
             rebootNeeded=False
         else:
             child.sendline(faultInjCMD)
             #child.expect('# ')
             child.sendline('echo -e "' + faultInjCMD + '" >> ' + log_file)
             child.expect('# ')
+            pass
     
     return child
 
-def runFaultInject(_benchmarkTag, _telnetPasswd, _bitstream, _commands, _work_dir, _start_address, _blockedFaultInject=False):
+def runFaultInject(_benchmarkTag, _telnetPasswd, _bitstream, _commands, _work_dir, _faultList, _boardNr, _blockedFaultInject=False):
+    """ _blockeFaultInject=True flips complete words instead of single bits. Please prepare the _faultList such, that it contains
+    every word address only once.""" 
     done = False
     exceptionCounter = 0
-    _half   = _start_address[1]
-    _row    = _start_address[2]
-    _column = _start_address[3]
-    _minor_start = _start_address[4]
-    _word_start  = _start_address[5]
-    _bit_start   = _start_address[6]
-    checkpoint_address = (_minor_start, _word_start, _bit_start)
+    checkpoint_address = 0
     
     while not done:
         try:
@@ -280,31 +283,22 @@ def runFaultInject(_benchmarkTag, _telnetPasswd, _bitstream, _commands, _work_di
             #print("A")
             #print(exceptionCounter)
             #print(_bitstream, _telnetPasswd, _work_dir, _benchmarkTag)
-            child = reboot(_bitstream, _telnetPasswd, _work_dir, _benchmarkTag, _silent=True)
+            child = reboot(_bitstream, _telnetPasswd, _work_dir, _benchmarkTag, _boardNr, _silent=False)
             #print("B")
             
             # Benchmarks
-            for minor in xrange(_minor_start, MINOR_COUNT):
-                for word in xrange(_word_start, WORD_COUNT):
-                    for bit in xrange(_bit_start, BIT_COUNT):
-                        
-                        checkpoint_address = (minor,word, bit)
-                        if _blockedFaultInject:
-                            bit = 0
-                        # Due to reboots of system under tests, child might change inside the function.
-                        # Therefore we return it back to caller
-                        #print("Executing commands")
-                        #print(child, _benchmarkTag, _telnetPasswd, _bitstream, 
-                        #                _commands, _work_dir, [_half,_row,_column,_minor_start,_word_start, _bit_start], _blockedFaultInject)
-                        child = executeCommands(child, _benchmarkTag, _telnetPasswd, _bitstream, 
-                                        _commands, _work_dir, [_half,_row,_column,minor,word, bit], 
-                                        _blockedFI=_blockedFaultInject)
-                        
-                        if _blockedFaultInject:
-                            break
-                    _bit_start = 0 #next loop run shall start from 0 again
-                _word_start = 0 #next loop run shall start from 0 again
-            _minor_start = 0 #next loop run shall start from 0 again
+            for address in _faultList[checkpoint_address:] :
+                # Due to reboots of system under tests, child might change inside the function.
+                # Therefore we return it back to caller
+                #print("Executing commands")
+                #print(child, _benchmarkTag, _telnetPasswd, _bitstream, 
+                #                _commands, _work_dir, [_half,_row,_column,_minor_start,_word_start, _bit_start], _blockedFaultInject)
+                child = executeCommands(child, _benchmarkTag, _telnetPasswd, _bitstream, 
+                                _commands, _work_dir, address, _boardNr,
+                                _blockedFI=_blockedFaultInject)
+                
+                checkpoint_address += 1
+            
             # Exit
             child.sendline('exit')
             child.expect('Connection closed by foreign host.')
@@ -317,11 +311,8 @@ def runFaultInject(_benchmarkTag, _telnetPasswd, _bitstream, _commands, _work_di
         except pexpect.ExceptionPexpect as e:
             print(e)
             exceptionCounter = exceptionCounter +1
-            _minor_start = checkpoint_address[0]
-            _word_start  = checkpoint_address[1]
-            _bit_start   = checkpoint_address[2]
     
-def parse_string_to_tuple(_string, _fallback_value):
+def parse_string_to_address(_string, _fallback_value):
     list = _string.split(',');
     if len(list) != 7:
         return _fallback_value
@@ -330,23 +321,72 @@ def parse_string_to_tuple(_string, _fallback_value):
     except:
         return _fallback_value
    
+def incAddress(_address):
+    """ address = [type, half, row, column, minor, word, bit] """
+    carry = False
+    for idx in reversed( xrange( len(_address) ) ):
+        if _address[idx] == ADDRESS_MAX_VALUES[idx]:
+            _address[idx] = 0;
+            carry = True;
+        else:
+            _address[idx] += 1
+            break
+        
+def cmpAddress(_address_a, _address_b):
+    """Returns -1 if a<b , 0 if a==b and 1 if a>b"""
+    for a,b in zip(_address_a, _address_b ):
+        if a < b: return -1
+        elif a > b: return 1
+    return 0
+
+def addressGeneratorColumn(_startAddress):
+    currentAddress= _startAddress
+    while(currentAddress[-3:] != [127,127,31]):
+        yield currentAddress
+        
+   
 if __name__ == "__main__":
-    
+    ''' Performs fault injection tests. First command line argument specifies starting column address. Second argument specifies which board to use [0,1]
+        Fault injection is performed until all essential bits in address have been tested.
+    '''
+    boardNr = 0
     start_address=[0,0,2,17,0,0,0]
     
-    if len(sys.argv) == 1:
-        pass
-    elif len(sys.argv) == 2:
-        start_address = parse_string_to_tuple(sys.argv[1], start_address)
+    if len(sys.argv) >= 2:
+        start_address = parse_string_to_address(sys.argv[1], start_address)
+    if len(sys.argv) >= 3:
+	addressFile = sys.argv[2]
+    if len(sys.argv) >= 4:
+        boardNr = int(sys.argv[3])
+        
+    print("Using board {}, file {}  and start address {}".format(boardNr,addressFile, start_address) )
     
     telnetPasswd = getpass.getpass('telnet password: ')
     
     benchmarkTagBase = str(datetime.date(1,1,1).today())
     
+    # Loads addresses of essential bits
+#    column = start_address[3]
+    try:
+        addressList = pickle.load(open(addressFile, "r"))
+        print("Address count in file {}: {}".format(addressFile,len(addressList)))
+    except:
+        print("Error reading file: {}".format(addressFile))
+	print(sys.exc_info()[0:2])
+        sys.exit()
+    
     #
-    # Benchmarks
+    # Fast forward essential bit list to address given on command line 
     #
-    runFaultInject(benchmarkTagBase, telnetPasswd, BIT_SORT_PERF, sort_commands_perf, SORT_DEMO_DIR, start_address)
+    for addr, i in zip(addressList, xrange(len(addressList))):
+        if cmpAddress(start_address, addr) <= 0:
+             addressList = addressList[i:]
+             break
+    
+    #
+    # Fault injection
+    #
+    runFaultInject(benchmarkTagBase, telnetPasswd, BIT_SORT_PERF, sort_commands_perf, SORT_DEMO_DIR, addressList, boardNr)
     
     print("Done!")
     sys.exit()
