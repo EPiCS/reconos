@@ -1,14 +1,7 @@
 #!/usr/bin/python
 
-import sys, pprint, png, pickle
+import sys, pprint, png, pickle, virtex6
 
-    
-
-layout = [(1,"IO"),(4, "CLB"), (1, "BRAM"), (2, "CLB"), (1, "DSP"), (4, "CLB"), (1, "DSP"), (2, "CLB"), (1, "BRAM"), (8, "CLB"), (1, "BRAM"), (2, "CLB"), (1, "DSP"), (4, "CLB"), (1, "DSP"), (2, "CLB"), (1, "BRAM"), (4, "CLB"), (1, "IO"), (10, "CLB"), (1, "MMCM"),
- (4, "CLB"), (1, "IO"), (4, "CLB"), (1, "BRAM"), (2, "CLB"), (1, "DSP"), (4, "CLB"), (1, "DSP"), (2, "CLB"), (1, "BRAM"), (8, "CLB"), (1, "BRAM"), (2, "CLB"), (1, "DSP"), (4, "CLB"), (1, "DSP"), (2, "CLB"), (1, "BRAM"), (7, "CLB"), (1, "BRAM"), (1, "GTX")]
-maxMinorPerType = {"IO": 44,"CLB":36,"DSP":28,"BRAM":28,"MMCM":38,"GTX":32}
-WordsPerMinor = 81
-RowsPerFPGA = 6
 
 def ListToHeatMap(_list, _filename):
     """Gets a linear list of error counts (one element is one word of bitstream) and 
@@ -69,7 +62,7 @@ def physAddr2y(half, row, minor):
     return y
 
 def physAddr2x(column, word):
-    maxColumns = sum(map(lambda x: x[0], layout))
+    maxColumns = sum(map(lambda x: x[0], virtex6Layout))
     x = (column * WordsPerMinor) + word
     return x
 
@@ -79,7 +72,7 @@ def faultListToHeatMapFPGA(_list, _filename):
     This data is then converted into an image that shows the physically correct position of the essential bits on the FPGA ASIC."""
     
     # Creates a plain white image. Format of pixels is [R,G,B, R,G,B, ...]
-    maxColumns = sum(map(lambda x: x[0], layout))
+    maxColumns = sum(map(lambda x: x[0], virtex6Layout))
     maxMinor = max(maxMinorPerType.values())
     pixels = [ [255 for width in xrange(maxColumns * WordsPerMinor * 3)] for height in xrange( maxMinor * RowsPerFPGA ) ]
     
@@ -170,14 +163,14 @@ def fileToFaultList(_file):
             if addrWord == 81:
                 addrWord = 0
                 addrMinor = addrMinor + 1
-                if addrMinor == maxMinorPerType[layout[layoutIdx][1]]:
+                if addrMinor == maxMinorPerType[virtex6Layout[layoutIdx][1]]:
                     addrMinor = 0
                     addrColumn = addrColumn + 1
-                    if addrColumn >= sum(map(lambda x: x[0], layout[:layoutIdx+1])):
-                        #print("{}/{}".format(addrColumn, sum(map(lambda x: x[0], layout[:layoutIdx])) ))
+                    if addrColumn >= sum(map(lambda x: x[0], virtex6Layout[:layoutIdx+1])):
+                        #print("{}/{}".format(addrColumn, sum(map(lambda x: x[0], virtex6Layout[:layoutIdx])) ))
                         layoutIdx = layoutIdx + 1
                         
-                    if addrColumn == sum(map(lambda x: x[0], layout)):
+                    if addrColumn == sum(map(lambda x: x[0], virtex6Layout)):
                         layoutIdx = 0
                         addrColumn = 0
                         addrRow = addrRow + 1

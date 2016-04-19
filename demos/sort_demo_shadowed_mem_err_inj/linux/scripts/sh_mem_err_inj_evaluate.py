@@ -105,20 +105,36 @@ def parseFile(_file):
     
 def printFaultByErrorCode(_faultByErrorCodeList):
     errorCodeToString = [ "UNKNOWN_ERROR" for x in xrange(-1, 256)]
-    errorCodeToString[1]="CMD_LINE_PARSE"
-    errorCodeToString[2]="MALLOC"
-    errorCodeToString[4]="FAULTY_RESULT"
-    errorCodeToString[16]="FC_EXIT_CODE"
-    errorCodeToString[24]="FAULTY_RQRECV"
-    errorCodeToString[32]="SEGFAULT"
     
-    errorCodeToString[64+4]="SHADOW_THREAD_SIGILL"
-    errorCodeToString[64+6]="SHADOW_THREAD_SIGABORT"
-    errorCodeToString[64+11]="SHADOW_THREAD_SIGSEGV"
+    #
+    # Application error codes
+    #
+    errorCodeToString[2]="MALLOC"
+    errorCodeToString[3]="CMD_LINE_PARSE"
+    errorCodeToString[4]="FAULTY_RESULT"
+    errorCodeToString[5]="FAULTY_RQ_RECV"
+    errorCodeToString[6]="SEGFAULT"
     
     errorCodeToString[128+4]="MAIN_THREAD_SIGILL"
     errorCodeToString[128+6]="MAIN_THREAD_SIGABORT"
     errorCodeToString[128+11]="MAIN_THREAD_SIGSEGV"
+        
+    #
+    # Thread shadowing error codes
+    #
+    
+    errorCodeToString[16]="FUNC_ERROR"
+    errorCodeToString[17]="WATCHDOG"
+    errorCodeToString[18]="OSIF_NR_ILLEGAL"
+    errorCodeToString[19]="OSIF_PARAM_ILLEGAL"
+    errorCodeToString[20]="FILE_OPEN_ERORR"
+    errorCodeToString[21]="FILE_READWRITE_ERROR"
+    errorCodeToString[22]="GENERIC_ERROR"
+    errorCodeToString[23]="MALLOC_ERROR"
+    
+    errorCodeToString[64+4]="SHADOW_THREAD_SIGILL"
+    errorCodeToString[64+6]="SHADOW_THREAD_SIGABORT"
+    errorCodeToString[64+11]="SHADOW_THREAD_SIGSEGV"
     
     errorCodeToString[192+4]="PROC_CONTROL_THREAD_SIGILL"
     errorCodeToString[192+6]= "PROC_CONTROL_THREAD_SIGABORT"
@@ -209,11 +225,46 @@ if __name__ == "__main__":
     print("totalFaultsInjected: {}\nerrorDensity: {}\nlongestRunningNoError: {}\nlongestRunningNoErrorEndAddress: {}\nlongestRunningError: {}\nlongestRunningErrorEndAddress: {}".format(totalFaultsInjected, float(len(errorList))/float(totalFaultsInjected),longestRunningNoError,longestRunningNoErrorEndAddress,longestRunningError, longestRunningErrorEndAddress))
     printFaultByErrorCode(faultByErrorCode)
     print("errorList length: {}".format(len(errorList)))
+
+    if False:
+        print("errorList of CMD_LINE_PARSE:")
+        clList = [x[0] for x in errorList if x[1] == 1 ]
+        myPrettyListPrint(clList)
     
-    if True:
+    if False:
+        print("errorList of MALLOC:")
+        maList = [x[0] for x in errorList if x[1] == 2 ]
+        myPrettyListPrint(maList)
+        
+    if False:
         print("errorList of FAULTY_RESULT:")
         frList = [x[0] for x in errorList if x[1] == 4 ]
         myPrettyListPrint(frList)
+        
+    if False:
+        print("errorList of FC_EXIT_CODE:")
+        fcList = [x[0] for x in errorList if x[1] == 16 ]
+        myPrettyListPrint(fcList)
+        
+    if False:
+        print("errorList of MAIN_THREAD_SIGSEGV:")
+        mtssList = [x[0] for x in errorList if x[1] == 139 ]
+        myPrettyListPrint(mtssList)
+        
+    if False:
+        print("errorList of PROC_CONTROL_THREAD_SIGSEGV:")
+        pcssList = [x[0] for x in errorList if x[1] == 203 ]
+        myPrettyListPrint(pcssList)
+        
+    if False:
+        print("errorList of PROC_CONTROL_THREAD_MEMIF_ERROR:")
+        meList = [x[0] for x in errorList if x[1] == 224 ]
+        myPrettyListPrint(meList)
+        
+    if True:
+        print("errorList of TIMEOUTS:")
+        toList = [x[0] for x in errorList if x[1] == -1 ]
+        myPrettyListPrint(toList)
     
     if False:
         print("errorList of errors outside implemented addresses:")

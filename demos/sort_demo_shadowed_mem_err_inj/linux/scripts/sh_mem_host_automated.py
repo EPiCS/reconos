@@ -1,17 +1,12 @@
 #!/usr/bin/python
 
 import sys, re, string, pexpect, subprocess, getpass, time, datetime
+from virtex6 import *
 
 
 TIMEOUT_SEC = 60
 REPEAT_COUNT = 1 #10
 
-BIT_COUNT=32
-WORD_COUNT=128
-MINOR_COUNT=128
-COLUMN_COUNT=256
-ROW_COUNT=32
-HALF_COUNT=2
 
 EXPORT_DIR= "/exports/rootfs_mb"
 RECONOS= "/home/meise/git/reconos_epics"

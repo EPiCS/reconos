@@ -1,19 +1,13 @@
 #!/usr/bin/python
 
-import sys, re, string, pexpect, subprocess, getpass, time, datetime, os, pickle
+import sys, re, string, pexpect, subprocess, getpass, time, datetime, os, pickle 
+from virtex6 import *
+from addressGenerator import *
 
 
 TIMEOUT_SEC = 30
 REPEAT_COUNT = 1 #10
 
-BIT_COUNT=32
-WORD_COUNT=128
-MINOR_COUNT=128
-COLUMN_COUNT=256
-ROW_COUNT=32
-HALF_COUNT=2
-TYPE_COUNT=4
-ADDRESS_MAX_VALUES = [TYPE_COUNT-1, HALF_COUNT-1, ROW_COUNT-1, COLUMN_COUNT-1, MINOR_COUNT-1, WORD_COUNT-1, BIT_COUNT-1]
 
 EXPORT_DIR= "/exports/rootfs_mb"
 RECONOS= "/home/meise/git/reconos_epics"
@@ -47,7 +41,13 @@ BIT_SORT = RECONOS+"/demos/sort_demo_shadowed_mem/hw/edk/implementation/system.b
 BIT_SORT_REL = RECONOS+"/demos/sort_demo_shadowed_mem/hw/edk_mem_rel/implementation/system.bit"
 #BIT_SORT_PERF = RECONOS+"/demos/sort_demo_shadowed_mem/hw/edk_mem_perf/implementation/system.bit"
 #BIT_SORT_PERF = "/home/meise/Desktop/system_arb_perf_8192.bit"
+
+
+
 BIT_SORT_PERF = "/home/meise/git/reconos_epics/demos/sort_demo_shadowed_mem_err_inj/hw/BIT_SORT_PERF_system.bit"
+#BIT_SORT_PERF = "/home/meise/git/reconos_epics/demos/sort_demo_shadowed_mem_err_inj/hw/BIT_SORT_PERF_NEW_LAYOUT_system.bit"
+
+
 
 SORT_DEMO_DIR="/demos/sort_demo_shadowed_mem_err_inj"
 
@@ -311,38 +311,6 @@ def runFaultInject(_benchmarkTag, _telnetPasswd, _bitstream, _commands, _work_di
         except pexpect.ExceptionPexpect as e:
             print(e)
             exceptionCounter = exceptionCounter +1
-    
-def parse_string_to_address(_string, _fallback_value):
-    list = _string.split(',');
-    if len(list) != 7:
-        return _fallback_value
-    try:
-        return [int(x) for x in list]
-    except:
-        return _fallback_value
-   
-def incAddress(_address):
-    """ address = [type, half, row, column, minor, word, bit] """
-    carry = False
-    for idx in reversed( xrange( len(_address) ) ):
-        if _address[idx] == ADDRESS_MAX_VALUES[idx]:
-            _address[idx] = 0;
-            carry = True;
-        else:
-            _address[idx] += 1
-            break
-        
-def cmpAddress(_address_a, _address_b):
-    """Returns -1 if a<b , 0 if a==b and 1 if a>b"""
-    for a,b in zip(_address_a, _address_b ):
-        if a < b: return -1
-        elif a > b: return 1
-    return 0
-
-def addressGeneratorColumn(_startAddress):
-    currentAddress= _startAddress
-    while(currentAddress[-3:] != [127,127,31]):
-        yield currentAddress
         
    
 if __name__ == "__main__":
@@ -372,7 +340,7 @@ if __name__ == "__main__":
         print("Address count in file {}: {}".format(addressFile,len(addressList)))
     except:
         print("Error reading file: {}".format(addressFile))
-	print(sys.exc_info()[0:2])
+        print(sys.exc_info()[0:2])
         sys.exit()
     
     #
