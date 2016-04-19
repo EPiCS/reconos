@@ -29,6 +29,7 @@
 #include "reconos.h"
 #include "max_covering_intervals.h"
 #include "thread_shadowing.h"
+#include "thread_shadowing_error_handler.h"
 #include "thread_shadowing_schedule.h"
 #include "glist.h"
 #include "timing.h"
@@ -105,6 +106,7 @@ void* shadow_watchdog_thread(void* data){
 					fprintf(OUTPUT, "WATCHDOG: FIFO %p, FILL_LEVEL %i, LOCK_STATUS %i, WAIT_SEMAPHORE %i", &sh->func_calls, fill_level, lock_status, sem_value);
 					fprintf(OUTPUT, ", DELAY(us) %10li\n",timer2us(&delta));
 					func_call_dump(&fc);
+					sh_watchdog_error_handler(timer2us(&delta));
 				}
 			}
 		}
@@ -397,7 +399,7 @@ void shadow_init(shadowedthread_t *sh) {
 	sh->sh_status = TS_INACTIVE;
 
 	fifo_init(&(sh->func_calls), 512, sizeof(func_call_t));
-	sh->error_handler = shadow_error_abort;
+	sh->error_callback = NULL; // User supplied call back function
 
 	sh->min_error_detection_latency = (timing_t){.tv_sec= LONG_MAX, .tv_usec = LONG_MAX};
 	sh->min_error_detection_offline_time = (timing_t){.tv_sec= LONG_MAX, .tv_usec = LONG_MAX};
@@ -740,6 +742,12 @@ int shadow_set_initdata(shadowedthread_t *sh, void* init_data) {
 	return true;
 }
 
+int shadow_set_errorhandler(shadowedthread_t *sh, void (*eh)(sh_err_t error)){
+	assert(sh);
+	sh->error_callback = eh;
+	return true;
+}
+
 extern int pthread_getattr_np(pthread_t thread, pthread_attr_t *attr);
 
 #ifndef HOST_COMPILE
@@ -926,29 +934,6 @@ void shadow_func_call_pop(shadowedthread_t *sh, func_call_t * func_call){
 }
 
 
-/**
- * @brief Error handler called when function calls do not match. Aborts program.
- */
-void shadow_error_abort(shadowedthread_t * sh, int error, func_call_t * a, func_call_t * b)
-{
-	pthread_t tid = pthread_self();
-	timing_t diff = func_call_timediff_us(a,b);
-	fprintf(OUTPUT, "\n#################################################\n");
-	fprintf(OUTPUT, "# ERROR: Thread ID %lu,  %s\n",tid, func_call_strerror(error));
-	fprintf(OUTPUT, "# a: "); func_call_dump(a);
-	fprintf(OUTPUT, "# b: "); func_call_dump(b);
-	fprintf(OUTPUT, "# Detected after: %ld us\n", timer2us(&diff));
-	fprintf(OUTPUT, "#################################################\n");
-	if ( error != FC_ERR_NONE){
-		exit(FC_EXIT_CODE);
-	}
-}
-
-void shadow_error(shadowedthread_t * sh, int error, func_call_t * a, func_call_t * b)
-{
-	assert(sh);
-	sh->error_handler(sh, error, a, b);
-}
 
 //
 // Shadowed thread creation.

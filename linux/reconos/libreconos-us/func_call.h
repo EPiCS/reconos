@@ -15,7 +15,6 @@
 //
 #define FC_PARAM_SIZE 20 // via char type of params_length limited to 255
 #define FC_RETVAL_SIZE 8
-#define FC_EXIT_CODE 16
 
 #define FC_ERR_NONE   0 // In case all went fine :-)
 #define FC_ERR_A_NULL 1

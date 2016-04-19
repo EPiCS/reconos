@@ -27,6 +27,7 @@
 #include "timing.h"
 #include "func_call.h"
 #include "thread_shadowing_schedule.h"
+#include "thread_shadowing_error_handler.h"
 #include "thread_shadowing.h"
 
 extern shadowedthread_t *shadow_list_head;
@@ -137,7 +138,7 @@ extern shadowedthread_t *shadow_list_head;
     			case 3: error = func_call_compare(&func_call_tuo, &func_call_sh);break;\
     		}\
     		if( error != FC_ERR_NONE) {\
-    			shadow_error(sh, error, &func_call_tuo, &func_call_sh);\
+    			sh_func_error_handler(error, &func_call_tuo, &func_call_sh);\
     		}\
 			goto Epilogue; /* jumps to SHADOW_EPILOGUE */ \
     }\

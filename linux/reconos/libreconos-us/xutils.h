@@ -39,22 +39,6 @@ extern int slprintf(char *dst, size_t size, const char *fmt, ...);
 extern int open_or_die(const char *file, int flags);
 extern void *xmalloc_aligned(size_t size, size_t alignment);
 
-static inline void die(void)
-{
-	exit(EXIT_FAILURE);
-}
-
-static inline void panic(char *msg, ...)
-{
-	va_list vl;
-
-	va_start(vl, msg);
-	vfprintf(stderr, msg, vl);
-	va_end(vl);
-
-	fflush(stderr);
-	die();
-}
 
 static inline void whine(char *msg, ...)
 {

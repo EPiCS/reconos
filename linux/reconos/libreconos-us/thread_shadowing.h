@@ -36,14 +36,6 @@
 #define TS_THREAD_HW    2
 
 //
-// Definitions for different types of memory errors.
-//
-#define MEM_ERROR_TYP_NONE    0
-#define MEM_ERROR_TYP_HEADER1 1
-#define MEM_ERROR_TYP_HEADER2 2
-#define MEM_ERROR_TYP_DATA    3
-
-//
 // Indices for functions. Used to index arrays
 //
 #define IDX_TS_YIELD 		0
@@ -89,11 +81,12 @@ void shadow_error_inc(error_stats_t *e, unsigned int n);
 // - needs information about both hw and sw threads.
 //
 struct shadowedthread;
+struct sh_err;
 //forward declaration
 typedef struct shadowedthread {
 	//
 	// general configuration
-	//
+	////#include "thread_shadowing_error_handler.h"
 	uint32_t options; // MANUAL_SCHEDULE, SYNCHRONIZED
 	uint8_t  level; // Level1 = Func.name checking only
 					// Level2 = Level1 + Param. checking
@@ -135,7 +128,7 @@ typedef struct shadowedthread {
 	//
 	// error handling
 	//
-	void (*error_handler)(struct shadowedthread * sh, int error, func_call_t * a, func_call_t * b);
+	void (*error_callback)(struct sh_err err);
 	error_stats_t errors;
 
 	//
@@ -180,6 +173,7 @@ int shadow_set_threadcount(shadowedthread_t *sh, uint8_t hw, uint8_t sw);
 int shadow_set_hwslots(shadowedthread_t *sh, uint8_t hwt, uint8_t hwslot);
 int shadow_set_program(shadowedthread_t *sh, const char* progname);
 int shadow_set_initdata(shadowedthread_t *sh, void* init_data);
+int shadow_set_errorhandler(shadowedthread_t *sh, void (*eh)(struct sh_err error));
 int shadow_check_configuration(shadowedthread_t *sh);
 
 int shadow_get_stack(shadowedthread_t *sh, unsigned int thread_idx, void ** stackaddr, size_t *stacksize);

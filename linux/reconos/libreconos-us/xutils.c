@@ -12,6 +12,7 @@
 #include <fcntl.h>
 
 #include "xutils.h"
+#include "thread_shadowing_error_handler.h"
 
 size_t strlcpy(char *dest, const char *src, size_t size)
 {
@@ -44,7 +45,8 @@ int open_or_die(const char *file, int flags)
 {
 	int ret = open(file, flags);
 	if (ret < 0)
-		panic("Cannot open file %s!\n", file);
+		//panic("Cannot open file %s!\n", file);
+		sh_file_open_error_handler(file, flags);
 
 	return ret;
 }
@@ -55,12 +57,12 @@ void *xmalloc_aligned(size_t size, size_t alignment)
 	void *ptr;
 
 	if (unlikely(size == 0))
-		panic("xmalloc_aligned: zero size\n");
+		sh_generic_error_handler("xmalloc_aligned: zero size\n");
 
 	ret = posix_memalign(&ptr, alignment, size);
 	if (unlikely(ret != 0))
-		panic("xmalloc_aligned: out of memory (allocating %zu "
-		      "bytes)\n", size);
+		sh_generic_error_handler("%s:%d xmalloc_aligned: out of memory (allocating %zu "
+		      "bytes)\n", __FILE__, __LINE__, size);
 
 	return ptr;
 }

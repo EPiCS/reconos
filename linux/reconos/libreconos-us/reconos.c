@@ -22,6 +22,7 @@
 #include "rqueue.h"
 #include "xutils.h"
 #include "thread_shadowing.h"
+#include "thread_shadowing_error_handler.h"
 #include "thread_shadowing_subs.h"
 
 static struct reconos_process reconos_proc;
@@ -54,8 +55,10 @@ static uint32_t reconos_getpgd(void)
 	fd = open_or_die("/dev/getpgd", O_RDONLY);
 
 	res = read(fd, &pgd, sizeof(pgd));
-	if (res != sizeof(pgd))
-		panic("Read error from /dev/getpgd!\n");
+	if (res != sizeof(pgd)){
+		//panic("Read error from /dev/getpgd!\n");
+		sh_file_readwrite_error_handler("/dev/getpgd",res, sizeof(pgd), 0,0 );
+	}
 
 	close(fd);
 	return pgd;
@@ -98,6 +101,9 @@ extern void reconos_set_arb_runtime_opts(uint16_t arb_options){
 
 }
 
+/*
+ * Unused function?
+ */
 void reconos_proc_control_selftest(void)
 {
 	uint32_t res, expect = 0x5E1F7E57;
@@ -117,26 +123,15 @@ void reconos_cache_flush(void)
 	write(reconos_proc.fd_cache, &one, sizeof(one));
 }
 
-
-void sh_mem_error_handler(uint8_t hwt, uint32_t err_type, uint32_t err_addr){
-
-  whine("SH_MEM_ERR: HWT: %d,  Type: %s, Address: 0x%x\n", hwt,
-		  err_type == MEM_ERROR_TYP_NONE ? "NONE" : (
-		  err_type == MEM_ERROR_TYP_HEADER1 ? "HEADER1" : (
-		  err_type == MEM_ERROR_TYP_HEADER2 ? "HEADER2" :(
-		  err_type == MEM_ERROR_TYP_DATA ? "DATA": "UNKNOWN"))),
-		  err_addr);
-  exit(32+192);
-  // @TODO:reset the corresponding threads
-
-  // @TODO:update statistics about errors, so we know if they are permanent or transient
-
-  // @TODO:notify application if an error handler was specified, else abort programm
-
-}
-
 void reconos_signal_handler(int sig, siginfo_t *siginfo, void * context) {
 	ucontext_t* uc = (ucontext_t*) context;
+	void * code_address;
+
+#ifndef HOST_COMPILE
+	code_address = (void*)uc->uc_mcontext.regs.pc,
+#else
+	code_address = (void*) uc->uc_mcontext.gregs[14],
+#endif
 
 	// Yeah, i know using printf in a signal context is not save.
 	// But with a SIGSEGV the programm is messed up anyway, so what?
@@ -144,12 +139,8 @@ void reconos_signal_handler(int sig, siginfo_t *siginfo, void * context) {
 			"%s: proc_control_thread killed at program address %p, tried to access %p.\n",
 			(sig == SIGSEGV ? "SIGSEGV":(
 			sig == SIGFPE  ? "SIGFPE": (
-			sig == SIGILL  ? "SIGILL": "Unkown Signal"))),
-#ifndef HOST_COMPILE
-			(void*)uc->uc_mcontext.regs.pc,
-#else
-			(void*) uc->uc_mcontext.gregs[14],
-#endif
+			sig == SIGILL  ? "SIGILL": "Unknown Signal"))),
+			code_address,
 			(void*) siginfo->si_addr);
 	if (sig == SIGILL){
 		switch(siginfo->si_code){
@@ -168,7 +159,7 @@ void reconos_signal_handler(int sig, siginfo_t *siginfo, void * context) {
 	shadow_dump_all();
 #endif
 
-	exit(sig+192);
+	sh_signal_error_handler("proc_control", sig, code_address, (void*) siginfo->si_addr);
 }
 
 #define C_RETURN_ADDR      0x00000001
@@ -187,7 +178,6 @@ static void *reconos_control_thread_entry(void *arg)
 
 	while (1) {
 		uint32_t cmd, ret, *addr;
-		uint32_t err_type, err_addr;
 
 		/* Receive page fault address */
 		cmd = fsl_read(reconos_proc.proc_control_fsl_a);
@@ -210,12 +200,11 @@ static void *reconos_control_thread_entry(void *arg)
 		if (cmd == C_RETURN_SELFTEST)
 			whine("proc_control selftest part 2 success\n");
 		if (cmd == C_RETURN_ERROR){
-		  // What do we actually do here?
-		  // Maybe call the shadowing error handler?
-		  err_type =  fsl_read(reconos_proc.proc_control_fsl_a);
-		  err_addr =  fsl_read(reconos_proc.proc_control_fsl_a);
-		 
-		  sh_mem_error_handler(0xFF, err_type, err_addr);		  
+			// What do we actually do here?
+			// Maybe call the shadowing error handler?
+			uint32_t err_type =  fsl_read(reconos_proc.proc_control_fsl_a);
+			uint32_t err_addr =  fsl_read(reconos_proc.proc_control_fsl_a);
+			sh_mem_error_handler(0xFF, err_type, err_addr);
 		}
 	}
 	return NULL;
@@ -301,15 +290,25 @@ void reconos_hwt_setinitdata(struct reconos_hwt *hwt, void *init_data)
 static inline void reconos_assert_type_and_res(struct reconos_hwt *hwt,
 					       uint32_t handle, uint32_t type)
 {
-	if(handle >= hwt->num_resources)
+	if(handle >= hwt->num_resources){
+		/*
 		panic("wtf ... slot %d: resource id %d out of range, "
 		      "must be lesser than %d\n", hwt->slot, handle,
 		      hwt->num_resources);
+		*/
+		sh_osif_param_error_handler(hwt->slot, handle, hwt->num_resources, RECONOS_TYPE_INVALID, RECONOS_TYPE_INVALID);
+	}
 
-	if (hwt->resources[handle].type != type)
+	if (hwt->resources[handle].type != type){
+		/*
 		panic("wtf ... slot %d: resource type 0x%08X expected, "
 		      "found 0x%08X\n", hwt->slot, type,
 		      hwt->resources[handle].type);
+		*/
+		sh_osif_param_error_handler(hwt->slot, handle, hwt->num_resources, hwt->resources[handle].type, type);
+	}
+
+
 }
 
 static void reconos_delegate_process_mbox_get(struct reconos_hwt *hwt)
@@ -449,9 +448,9 @@ static void reconos_delegate_process_rqueue_receive(struct reconos_hwt *hwt)
 
 	res = rq_receive(hwt->resources[params.handle].ptr, msg+1, msg_size);
 	if (res <= 0 || res > msg_size) {
-		whine("rq_receive screwed up: %zd\n", res);
 		fsl_write(hwt->slot, 0);
-		goto out;
+		free(msg);
+		sh_generic_error_handler("Error in rq_receive()\n");
 	}
 
 	fsl_write_block(hwt->slot, msg, msg_size+sizeof(uint32_t));
@@ -459,7 +458,7 @@ static void reconos_delegate_process_rqueue_receive(struct reconos_hwt *hwt)
 	///* FIXME: write data to hw thread */
 	//for (i = 0; i < res / sizeof(uint32_t); ++i)
 	//	fsl_write(hwt->slot, msg[i]);
-out:
+
 	free(msg);
 }
 
@@ -512,39 +511,39 @@ static void reconos_delegate_process_load_program(struct reconos_hwt *hwt){
 	uint32_t * program_buffer = NULL;
 
 	if (error){
-		whine("couldn't find program file %s\n", hwt->program_path);
-		goto cleanup;
+		free(program_buffer);
+		sh_generic_error_handler("couldn't find program file %s\n", hwt->program_path);
 	}
 	program_size = stats.st_size;
 
 	program_file = fopen(hwt->program_path, "r");
 	if (!program_file){
-		whine("couldn't find program file %s\n", hwt->program_path);
-		goto cleanup;
+		free(program_buffer);
+		sh_generic_error_handler("couldn't find program file %s\n", hwt->program_path);
 	}
 
 	program_buffer = malloc(program_size-PROGRAM_FILE_OFFSET);
 	if(!program_buffer){
-		whine("couldn't allocate buffer for program file %s of size %i\n", hwt->program_path, program_size);
-		goto cleanup;
+		free(program_buffer);
+		sh_generic_error_handler("couldn't allocate buffer for program file %s of size %i\n", hwt->program_path, program_size);
 	}
 
 	error = fseek(program_file, PROGRAM_FILE_OFFSET , SEEK_SET);
 	if (error){
-		whine("couldn't seek in program file %s to %i \n", hwt->program_path, error);
-		goto cleanup;
+		free(program_buffer);
+		sh_generic_error_handler("couldn't seek in program file %s to %i \n", hwt->program_path, error);
 	}
 
 	elements_read = fread(program_buffer, program_size - PROGRAM_FILE_OFFSET, 1, program_file);
 	if (elements_read != 1){
-		whine("couldn't read program file %s. Tried to read %i bytes. fread() read %i elements.\n", hwt->program_path,program_size - PROGRAM_FILE_OFFSET, elements_read);
-		goto cleanup;
+		free(program_buffer);
+		sh_generic_error_handler("couldn't read program file %s. Tried to read %i bytes. fread() read %i elements.\n", hwt->program_path,program_size - PROGRAM_FILE_OFFSET, elements_read);
 	}
 
 	fsl_write(hwt->slot, program_size-PROGRAM_FILE_OFFSET);
 	fsl_write_block(hwt->slot, program_buffer, program_size-PROGRAM_FILE_OFFSET);
 	printf("Loaded program %s\n", hwt->program_path);
-cleanup:
+
 	free(program_buffer);
 }
 
@@ -611,7 +610,7 @@ static void *reconos_delegate_thread_entry(void *arg)
 		case RECONOS_CMD_THREAD_EXIT:
 			return NULL;
 		default:
-			die();
+			sh_osif_function_error_handler(hwt->slot, cmd);
 			break;
 		}
 	}
