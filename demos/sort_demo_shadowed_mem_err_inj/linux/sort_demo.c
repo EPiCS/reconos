@@ -21,10 +21,13 @@
 #include "reconos.h"
 #include "mbox.h"
 #include "rqueue.h"
+
 #ifdef SHADOWING
 #include "thread_shadowing.h"
+#include "thread_shadowing_error_handler.h"
 //#include "thread_shadowing_subs.h"
 #endif
+
 #include "config.h"
 #include "merge.h"
 #include "data.h"
@@ -212,7 +215,7 @@ void sigsegv_handler(int sig, siginfo_t *siginfo, void * context) {
 #endif
 
 
-	exit(sig+128);
+	exit(sig+EXIT_SIGNAL_BASE);
 }
 
 //extern int pthread_attr_getstack(pthread_attr_t *attr, void **stackaddr, size_t *stacksize);
@@ -329,6 +332,7 @@ struct parallel_sort_interface choose_implementation (int interface){
 
 
 #ifdef SHADOWING
+
 /*
 args_info.hwt_arg
 args_info.swt_arg
@@ -356,6 +360,7 @@ void prepare_threads_shadowing(int thread_count,
 		shadow_set_resources( sh+i, res+i*reconos_resource_count, reconos_resource_count );
 		shadow_set_program( sh+i , worker_progname);
 		shadow_set_swthread( sh+i, actual_sort_thread );
+//		shadow_set_errorhandler(sh+i, error_handler);
 		if(args_info.shadow_schedule_arg==0) {shadow_set_options(sh+i, TS_MANUAL_SCHEDULE);}
 	}
 	printf("\n");
