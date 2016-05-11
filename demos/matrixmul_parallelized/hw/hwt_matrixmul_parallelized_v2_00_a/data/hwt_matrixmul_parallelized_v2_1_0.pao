@@ -1,0 +1,10 @@
+##############################################################################
+## Filename:          /home/aloesch/reconos/demos/sort_demo/hw/edk_xilkernel/pcores/hwt_matrixmul_v2_00_a/data/hwt_matrixmul_v2_1_0.pao
+## Description:       Peripheral Analysis Order
+## Date:              Wed May 22 14:17:20 2013 (by Create and Import Peripheral Wizard)
+##############################################################################
+
+lib proc_common_v3_00_a  proc_common_pkg vhdl
+lib reconos_v3_00_b reconos_pkg vhdl
+lib hwt_matrixmul_parallelized_v2_00_a matrixmultiplier vhdl
+lib hwt_matrixmul_parallelized_v2_00_a hwt_matrixmul_parallelized vhdl
