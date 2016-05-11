@@ -712,7 +712,8 @@ begin  -- of architecture ------------------------------------------------------
 --		ila_signals(130)            <= OUT_FIFO32_M_Wr;
 
 		-- 95 downto 72 used in process fsm_states_st_p
-		ila_signals(130 downto 100) <= (others => '0');
+		-- 123 downto 100 used in process fsm_states_tuo_p
+		ila_signals(130 downto 124) <= (others => '0');
 		
 		-- defaults
 		IN_FIFO32_S_Rd(1)        <= '0';
@@ -1053,6 +1054,7 @@ begin  -- of architecture ------------------------------------------------------
 					if ( unsigned(IN_FIFO32_M_Rem(31 downto 16)) >= 1 and 
 						  unsigned(sh_fill) >= 1 )
 					then
+						assert transfer_size >0 report "Transfer size becomes less than zero!" severity error;
 						transfer_size := transfer_size-4;
 					end if;
 					if transfer_size = 0 then
@@ -1070,8 +1072,9 @@ begin  -- of architecture ------------------------------------------------------
 						  (error_detection_on_reg = '1' and  						
 						  unsigned(IN_FIFO32_S_Fill(31 downto 16)) >= 1 and 
 						  unsigned(sh_fill) >= 1) 
-					    ) 
-				    then
+						) 
+					then
+						assert transfer_size >0 report "Transfer size becomes less than zero!" severity error;
 						transfer_size := transfer_size-4;
 						if transfer_size = 0 then
 							state_st <= WAIT_THREADS;
@@ -1085,7 +1088,12 @@ begin  -- of architecture ------------------------------------------------------
 						then
 							error_typ_reg <= ERROR_TYP_DATA;
 							error_adr_reg <= std_logic_vector(unsigned(mode_length_reg(0)(23 downto 0)) - transfer_size+ unsigned(address_reg(0))-4);
-							state_st <= COMPLETE_WRITE;
+							if transfer_size = 0 then
+								state_st <= REPORT_ERROR;
+							else
+								state_st <= COMPLETE_WRITE;
+							end if;
+							
 						end if;
 					end if;
 
@@ -1100,6 +1108,7 @@ begin  -- of architecture ------------------------------------------------------
 
 					if (unsigned(sh_fill) >= 1)
 					then
+						assert transfer_size >0 report "Transfer size becomes less than zero!" severity error;
 						transfer_size              := transfer_size-4;
 					end if;
 
@@ -1113,6 +1122,7 @@ begin  -- of architecture ------------------------------------------------------
 					if (unsigned(IN_FIFO32_S_Fill((16 * (1 + 1))-1 downto 16 * 1)) >= 1 and mode_length_reg(1)(31) = '1') or
 						(unsigned(IN_FIFO32_M_Rem((16 * (1 + 1))-1 downto 16 * 1)) >= 1 and mode_length_reg(1)(31) = '0')
 					then
+						assert transfer_size >0 report "Transfer size becomes less than zero!" severity error;
 						transfer_size              := transfer_size-4;
 					end if;
 
@@ -1128,9 +1138,11 @@ begin  -- of architecture ------------------------------------------------------
 					-- When we arrive here, headers have been the same (length, address, type).
 					-- We just read out data from sh_buffer and ST to discard the request and then 
 					-- report the error.
-					if ( (unsigned(IN_FIFO32_S_Fill((16 * (1 + 1))-1 downto 16 * 1)) > 0 and mode_length_reg(1)(31) = '1') and 
+					if ( (unsigned(IN_FIFO32_S_Fill((16 * (1 + 1))-1 downto 16 * 1)) > 0 
+							and mode_length_reg(1)(31) = '1') and 
 							(unsigned(sh_fill) > 0) )
 					then
+						assert transfer_size >0 report "Transfer size becomes less than zero!" severity error;
 						transfer_size := transfer_size-4;
 					end if;
 					if transfer_size = 0 then
@@ -1182,6 +1194,7 @@ begin  -- of architecture ------------------------------------------------------
 			transfer_mode := transfer_mode;
 			transfer_size := transfer_size;
 
+			ila_signals(123 downto 100) <= std_logic_vector(to_unsigned(transfer_size, 24));
 			-----------------------------------------------------------------------
 			-- INFO: We expect TUO to be connected to port 0 and ST to be connected
 			-- to port 1. No other ports are served.
@@ -1269,6 +1282,7 @@ begin  -- of architecture ------------------------------------------------------
 
 				when DATA_READ =>
 					if OUT_FIFO32_M_Wr = '1' then
+						assert transfer_size >0 report "Transfer size becomes less than zero!" severity error;
 						transfer_size := transfer_size-4;
 					end if;
 					if transfer_size = 0 then
@@ -1280,6 +1294,7 @@ begin  -- of architecture ------------------------------------------------------
 					-- zeros? Special Marker?
 					-- TODO: What about forever stalling thread?
 					if OUT_FIFO32_S_Rd = '1' then
+						assert transfer_size >0 report "Transfer size becomes less than zero!" severity error;
 						transfer_size := transfer_size-4;
 					end if;
 					if transfer_size = 0 then

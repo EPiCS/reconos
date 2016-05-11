@@ -385,6 +385,46 @@ end component;
 
   signal transfer_size_sig    : natural range 0 to 2**24;
 
+
+	procedure memif_fifo_push_fast (
+		signal i_memif : in  i_memif_t;
+		signal o_memif : out o_memif_t;
+		signal data : in std_logic_vector(31 downto 0);
+		variable done : out boolean
+	) is begin
+		o_memif.m_wr <= '0';
+		o_memif.s_rd <= '0';
+		done := False;
+		
+		if unsigned(i_memif.m_remainder) > 0 then
+			o_memif.m_wr <= '1';
+			o_memif.m_data <= data;
+			done := True;
+		end if;
+-- 		case i_memif.step is
+-- 			when 0 =>
+-- 				if unsigned(i_memif.m_remainder) > 0 then
+-- 					o_memif.step <= 1;
+-- 				end if;
+-- 			when 1 =>
+-- 				o_memif.m_wr <= '1';
+-- 				o_memif.m_data <= data;
+-- 				o_memif.step <= 2;
+-- 			when others =>
+-- 				o_memif.step <= 0;
+-- 				done := True;
+-- 		end case;
+	end procedure;
+
+	procedure memif_fifo_end_fast (
+		signal i_memif : in  i_memif_t;
+		signal o_memif : out o_memif_t
+	) is begin
+		o_memif.m_wr <= '0';
+		o_memif.s_rd <= '0';
+		o_memif.m_data <= (others => '0');
+	end procedure;
+
 begin  -- of architecture -------------------------------------------------------
 
   
@@ -409,7 +449,7 @@ begin  -- of architecture ------------------------------------------------------
 
     master_fifo32_i : fifo32
       generic map(
-        C_FIFO32_DEPTH => 16
+        C_FIFO32_DEPTH => 10000
         )
       port map(
         Rst           => rst,
@@ -425,7 +465,7 @@ begin  -- of architecture ------------------------------------------------------
 
     slave_fifo32_i : fifo32
       generic map(
-        C_FIFO32_DEPTH => 16
+        C_FIFO32_DEPTH => 10000
         )
       port map(
         Rst           => rst,
@@ -477,7 +517,7 @@ begin  -- of architecture ------------------------------------------------------
 
       type MODE is (READ, WRITE);
       type MODE_VECTOR is array (natural range<>) of MODE;
-      type LENGTH_VECTOR is array (natural range<>) of natural range 1 to 2**16-1;
+      type LENGTH_VECTOR is array (natural range<>) of natural range 0 to 2**16-1;
       type ADDRESS_VECTOR is array (natural range<>) of std_logic_vector(31 downto 0);
       
       constant MAX_PACKETS  : natural                          := 11;
@@ -485,13 +525,14 @@ begin  -- of architecture ------------------------------------------------------
       variable PAUSE_LIST   : LENGTH_VECTOR(1 to MAX_PACKETS*2)  := (
         2000, 20, 2000, 20, 2000, 20, 2000, 20,  -- TUO  pauses
         2000, 20, 2000,
-        20, 2000, 20, 2000, 20, 2000, 20, 2000,  -- ST pauses
+        20, 2000, 20, 2000, 0, 2000, 20, 2000,  -- ST pauses
         20, 2000, 20);
       
       variable MODE_LIST    : MODE_VECTOR(1 to MAX_PACKETS*2)    := (
          READ, WRITE, READ, WRITE,READ, WRITE,READ, WRITE, -- TUO, all good
          WRITE,READ, WRITE,                     -- TUO, intentional discrepancy to ST
-         READ, WRITE, READ, WRITE,READ, WRITE,READ, WRITE, -- ST, equal to TUO
+         --READ, WRITE, READ, WRITE, READ, WRITE,READ, WRITE, -- ST, equal to TUO
+         READ, WRITE, READ, WRITE, WRITE, WRITE,READ, WRITE, -- ST, equal to TUO
          READ, READ, WRITE);                    -- ST,  intentional discrepancy to ST
          
       variable LENGTH_LIST  : LENGTH_VECTOR(1 to MAX_PACKETS*2)  := (
@@ -523,6 +564,10 @@ begin  -- of architecture ------------------------------------------------------
       elsif rising_edge(clk) then
         case state is
           when SET_PAUSE =>
+          	memif_fifo_end_fast (
+				H2F_MEMIF_IN(i),
+				H2F_MEMIF_OUT(i)
+				);					
             packet_nr := packet_nr + 1;
             tb_phase(i) <= tb_phase_t'val(packet_nr-1);
             if packet_nr > MAX_PACKETS then
@@ -570,15 +615,10 @@ begin  -- of architecture ------------------------------------------------------
             --data <= std_logic_vector(get_rand_unsigned(0, 2**16-1, 32));
             
             
-            --
-            -- Manual Error Injection. Adapt to your packet definitions!!!
-            --
-            --if i = 0 and length_counter = 8 and packet_nr = 7 then
-             -- data_write <= X"DEADBEEF";
-            --end if;
+
             
             
-            memif_fifo_push (
+            memif_fifo_push_fast (
               H2F_MEMIF_IN(i),
               H2F_MEMIF_OUT(i),
               data_write,                     -- data
@@ -586,6 +626,17 @@ begin  -- of architecture ------------------------------------------------------
               );
             if done then
 	          data_write <= std_logic_vector(unsigned(data_write)+1);
+	          
+	        --
+            -- Manual Error Injection. Adapt to your packet definitions!!!
+            --
+            --if i = 0 and length_counter = 8 and packet_nr = 7 then
+            --if i = 0 and length_counter = 4 and packet_nr = 1 then
+            if i = 0 and length_counter = 8 and packet_nr = 4 then
+              data_write <= X"DEADBEEF";
+              report "Inserting DATA error!" severity note;
+            end if;
+	          
               length_counter := length_counter -4;
             end if;
             if length_counter = 0 then
@@ -613,6 +664,12 @@ begin  -- of architecture ------------------------------------------------------
     end process;
 
   end generate;
+
+silence: for i in HWT_COUNT to ARB_PORT_COUNT-1 generate
+begin
+    F2A_FIFO32_S_Fill(16*(i+1)-1 downto 16*i) <= (others => '0');
+end generate;
+
 
 -- Instantiate proc_control, which communicates error data to the main system
   FSLA_M_Full <= '0'; -- let proc_control think we always accept incoming data
