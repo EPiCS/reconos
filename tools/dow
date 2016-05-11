@@ -9,13 +9,20 @@ DOW_BIT=$RECONOS/tools/download_bitstream.sh
 DOW_ELF=$RECONOS/tools/download_executable.sh
 
 if [ -z $1 ]; then
-	echo "USAGE: dow bitstream.bit [jtag_chain_position]"
+	echo "USAGE: dow bitstream.bit [esn] [jtag_chain_position]"
 	echo "             OR"
-	echo "       dow executable.elf [cpu nr]"
+	echo "       dow executable.elf [esn] [cpu nr]"
 	echo ""
 	echo "Standard jtag chain position is 3 (XUP)"
 	exit 1
 fi
+
+if [ ! -z $2 ]; then
+  ESN="$2"
+else
+  ESN="0"
+fi
+
 if [ -z $RECONOS_BOARD ]; then
 	RECONOS_BOARD=xup
 fi
@@ -29,18 +36,18 @@ else
 	echo "Unsupported board or no board specified."
 	exit 1
 fi
-if [ ! -z $2 ]; then
-	POS=$2
+if [ ! -z $3 ]; then
+	POS=$3
 fi
 
 echo "Using JTAG chain position $POS."
 
 if [ "`file $1 | grep \"BIT\"`" ]; then
 	echo "It's a bitfile!"
-	$DOW_BIT $1 $POS
+	$DOW_BIT $1 $ESN $POS
 elif [ "`file $1 | grep \"ELF\"`" ]; then
 	echo "It's an executable!"
-	$DOW_ELF $1 $2
+	$DOW_ELF $1 $ESN $3
 else
 	echo "Neither an executable nor a bitfile!"
 	exit 1

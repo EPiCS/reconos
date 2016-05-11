@@ -2,8 +2,10 @@
 #
 # Program for downloading bitstreams.
 #
-# Usage: download_bitstream.sh <bitfile> [jtag chain pos]
-#        - jtag chain pos defaults to 3 (XUP)
+# Usage: download_bitstream.sh <bitfile> [esn] [jtag chain pos]
+#        - the esn (electronic serial number) specifies which board to program.
+#          A 0 here choose auto selection of a board
+#        - jtag chain pos defaults to 2 (ML605)
 #
 # if $RECONOS_BOARD is set, jtag chain position is determined
 # from there, if not specified
@@ -30,16 +32,32 @@ else
     exit 1
 fi
 
-if [ $# -eq 2 ]
+# determine which programming adapter or board to use
+if [  -n "$2"  -a  "0" != "$2"  ]
 then
-	POS=$2
+    ESN="$2"
+    PORT_SPEC="-port usb21 -esn $ESN"
+    echo "Using programming adapter/board with ESN= $ESN."
+else
+    ESN="0"
+    PORT_SPEC="-port usb21"
+    echo "Using auto-detection for programming adapter/board."
 fi
+
+# set non default jtag chain position from command line argument
+if [ -n "$3" ]
+then
+	POS=$3
+fi
+
+
+
 
 if [ -z $IMPACT_REMOTE ]; then
 
 echo "
 setMode -bs
-setCable -port usb1 -b 12000000
+setCable $PORT_SPEC -b 12000000
 Identify
 IdentifyMPM
 assignFile -p $POS -file \"$1\"
@@ -48,6 +66,7 @@ quit
 " | impact -batch
 
 else
+
 echo "Using remote cs_server at ${IMPACT_REMOTE}"
 echo "
 setMode -bs

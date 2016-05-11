@@ -1,7 +1,10 @@
 #!/bin/bash -i
 
 # Called from $RECONOS/tools/dow
-# Parameters: download_executable.sh <elf file> [cpu nr]
+# Parameters: download_executable.sh <elf file> [esn] [cpu nr]
+#        - the esn (electronic serial number) specifies which board to program.
+#          A 0 here choose auto selection of a board
+#        - cpu nr specifies which cpu to program, if there are several in your design
 
 LAST_ELF_FILE="/tmp/.xmd_download_last"
 
@@ -10,7 +13,7 @@ if [ -z "$ARCH" ]; then
     ARCH="mb"
 fi
 
-
+# ELF file handling
 if [ "$1" ]; then		# ELF provided on command line
 	RETVAL="$1"
 else
@@ -30,16 +33,28 @@ else
   ELF=$RETVAL
 fi
 
+# determine which programming adapter or board to use
+if [  -n "$2"  -a  "0" != "$2"  ]
+then
+    ESN="$2"
+    PORT_SPEC="-cable type xilinx_platformusb esn $ESN frequency 12000000"
+    echo "Using programming adapter/board with ESN= $ESN."
+else
+    ESN="0"
+    PORT_SPEC="-cable type xilinx_platformusb port usb21 frequency 12000000"
+    echo "Using auto-detection for programming adapter/board."
+fi
+
+
 if [ "$ARCH" = "ppc" ]; then
     DOWCMD="ppccon\ndow $ELF\nrun\n"
 elif [ "$ARCH" = "mb" ]; then
-    if [ -z $2 ]; then 
+    if [ -z $3 ]; then 
         echo "Programming master CPU."
-        DOWCMD="fpga_isconfigured -cable type xilinx_platformusb frequency 12000000\nconnect mb mdm\ndow $ELF\nrun\n"
+        DOWCMD="connect mb mdm $PORT_SPEC \ndow $ELF\nrun\n"
     else
-        echo "Programming slave CPU nr. $2."
-        DOWCMD="fpga_isconfigured -cable type xilinx_platformusb frequency 12000000\n
- connect mb mdm -debugdevice cpunr $2 \n\
+        echo "Programming slave CPU nr. $3."
+        DOWCMD="connect mb mdm $PORT_SPEC -debugdevice cpunr $3 \n\
  debugconfig -reset_on_data_dow processor enable \n\
  debugconfig -reset_on_run processor enable \n\
  rst -processor \n\
