@@ -172,8 +172,9 @@ def errorListToHeatMap(_errorList, _filename, _maxErrorCount=None):
     print("Maximum pixel value: {}".format( max) )
     
     if _maxErrorCount != None: 
-        max=_maxErrorCount
-        print("Maximum pixel value overruled to : {}".format( max) )
+        if max < _maxErrorCount:
+            max=_maxErrorCount
+            print("Maximum pixel value overruled to : {}".format( max) )
     
     #scale colors in bitmap 
     for x in xrange(len(pixels)):
@@ -236,7 +237,7 @@ if __name__ == "__main__":
         maList = [x[0] for x in errorList if x[1] == 2 ]
         myPrettyListPrint(maList)
         
-    if False:
+    if True:
         print("errorList of FAULTY_RESULT:")
         frList = [x[0] for x in errorList if x[1] == 4 ]
         myPrettyListPrint(frList)
@@ -261,7 +262,7 @@ if __name__ == "__main__":
         meList = [x[0] for x in errorList if x[1] == 224 ]
         myPrettyListPrint(meList)
         
-    if True:
+    if False:
         print("errorList of TIMEOUTS:")
         toList = [x[0] for x in errorList if x[1] == -1 ]
         myPrettyListPrint(toList)
@@ -279,6 +280,6 @@ if __name__ == "__main__":
     #pprint.pprint(errorList)
     woE, wE = wordsWithoutErrors(errorList)
     print("Word with errors : {}, Words without Errors: {}, Percentage of words with errors: {}".format(wE, woE, float(wE)*100.0/(wE+woE)) )
-    errorListToHeatMap(errorList, "Heatmaptest.png", _maxErrorCount=15)
+    errorListToHeatMap(errorList, "Heatmaptest.png", _maxErrorCount=20)
     
     sys.exit()

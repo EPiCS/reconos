@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
-import sys, pprint, png, pickle, virtex6
-
+import sys, pprint, png, json
+from virtex6 import *
 
 def ListToHeatMap(_list, _filename):
     """Gets a linear list of error counts (one element is one word of bitstream) and 
@@ -261,9 +261,9 @@ if __name__ == '__main__':
     faultList = fileToFaultList(file)
     print("Length of faultList: {}".format(len(faultList)))
     
-    print("Writing faultLists to pickle files ...")
+    print("Writing faultLists to files ...")
     for i in xrange(17,20):
-        pickle.dump(getColumnFromList(faultList, [0,0,2,i,0,0,0]), open("ebdFaultList_0_0_2_{}_0_0_0.pickle".format(i), "w"))
+        json.dump(getColumnFromList(faultList, [0,0,2,i,0,0,0]), open("ebdFaultList_0_0_2_{}_0_0_0.json".format(i), "w"), separators=(',', ':'))
     
     
     for i in xrange(15,22):

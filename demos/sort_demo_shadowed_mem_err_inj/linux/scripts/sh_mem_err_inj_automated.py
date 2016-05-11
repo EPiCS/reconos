@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-import sys, re, string, pexpect, subprocess, getpass, time, datetime, os, pickle 
+import sys, re, string, pexpect, subprocess, getpass, time, datetime, os, json 
 from virtex6 import *
 from addressGenerator import *
 
@@ -336,7 +336,7 @@ if __name__ == "__main__":
     # Loads addresses of essential bits
 #    column = start_address[3]
     try:
-        addressList = pickle.load(open(addressFile, "r"))
+        addressList = json.load(open(addressFile, "r"))
         print("Address count in file {}: {}".format(addressFile,len(addressList)))
     except:
         print("Error reading file: {}".format(addressFile))
