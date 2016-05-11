@@ -1,0 +1,49 @@
+ 
+BEGIN hwt_workercpu_mb
+
+## Peripheral Options
+OPTION IPTYPE = PERIPHERAL
+OPTION IMP_NETLIST = TRUE
+OPTION HDL = MIXED
+OPTION STYLE = MIX
+OPTION RUN_NGCBUILD = TRUE
+
+## Bus Interfaces
+BUS_INTERFACE BUS=OS_SFSL, BUS_STD=FSL, BUS_TYPE=SLAVE
+BUS_INTERFACE BUS=OS_MFSL, BUS_STD=FSL, BUS_TYPE=MASTER
+BUS_INTERFACE BUS=SFIFO32, BUS_STD=SFIFO32_STD, BUS_TYPE=TARGET
+BUS_INTERFACE BUS=MFIFO32, BUS_STD=MFIFO32_STD, BUS_TYPE=TARGET
+BUS_INTERFACE BUS = MBDEBUG, BUS_STD = XIL_MBDEBUG3, BUS_TYPE = TARGET
+
+#PARAMETER C_ENABLE_ILA = 0, DT = integer, RANGE = (0:1)
+
+## Peripheral ports
+PORT o_FSL_S_Read = FSL_S_Read, DIR=O, BUS=OS_SFSL
+PORT o_FSL_S_Data = FSL_S_Data, DIR=I, VEC=[0:31], BUS=OS_SFSL
+PORT o_FSL_S_Control = FSL_S_Control, DIR=I, BUS=OS_SFSL
+PORT o_FSL_S_Exists = FSL_S_Exists, DIR=I, BUS=OS_SFSL
+PORT o_FSL_M_Write = FSL_M_Write, DIR=O, BUS=OS_MFSL
+PORT o_FSL_M_Data = FSL_M_Data, DIR=O, VEC=[0:31], BUS=OS_MFSL
+PORT o_FSL_M_Control = FSL_M_Control, DIR=O, BUS=OS_MFSL
+PORT o_FSL_M_Full = FSL_M_Full, DIR=I, BUS=OS_MFSL
+
+PORT fsl2fifo_ex_ports_0_FIFO32_S_Data_pin = FIFO32_S_Data, DIR=I, VEC=[0:31], BUS=SFIFO32
+PORT fsl2fifo_ex_ports_0_FIFO32_S_Rd_pin   = FIFO32_S_Rd,   DIR=O,             BUS=SFIFO32
+PORT fsl2fifo_ex_ports_0_FIFO32_S_Fill_pin = FIFO32_S_Fill, DIR=I, VEC=[0:15], BUS=SFIFO32
+PORT fsl2fifo_ex_ports_0_FIFO32_M_Data_pin = FIFO32_M_Data, DIR=O, VEC=[0:31], BUS=MFIFO32
+PORT fsl2fifo_ex_ports_0_FIFO32_M_Wr_pin   = FIFO32_M_Wr,   DIR=O,             BUS=MFIFO32
+PORT fsl2fifo_ex_ports_0_FIFO32_M_Rem_pin  = FIFO32_M_Rem,  DIR=I, VEC=[0:15], BUS=MFIFO32
+
+PORT mb_debug_ex_ports_0_o_Dbg_Clk_0_pin = Dbg_Clk, DIR = I, SIGIS = CLK, BUS=MBDEBUG
+PORT mb_debug_ex_ports_0_o_Dbg_TDI_0_pin = Dbg_TDI, DIR = I, SIGIS = CLK, BUS=MBDEBUG
+PORT mb_debug_ex_ports_0_o_Dbg_TDO_0_pin = Dbg_TDO, DIR = O, SIGIS = CLK, BUS=MBDEBUG
+PORT mb_debug_ex_ports_0_o_Dbg_Reg_En_0_pin = Dbg_Reg_En, DIR = I, VEC = [0:7], SIGIS = CLK, BUS=MBDEBUG
+PORT mb_debug_ex_ports_0_o_Dbg_Capture_0_pin = Dbg_Capture, DIR = I, SIGIS = CLK, BUS=MBDEBUG
+PORT mb_debug_ex_ports_0_o_Dbg_Shift_0_pin = Dbg_Shift, DIR = I, SIGIS = CLK, BUS=MBDEBUG
+PORT mb_debug_ex_ports_0_o_Dbg_Update_0_pin = Dbg_Update, DIR = I, SIGIS = CLK, BUS=MBDEBUG
+PORT mb_debug_ex_ports_0_o_Dbg_Rst_0_pin = Debug_Rst, DIR = I, SIGIS = RST, SIGIS = CLK, BUS=MBDEBUG
+
+PORT Rst = "", DIR=I, SIGIS=Rst
+PORT Clk = "", DIR=I, SIGIS=Clk
+
+END
