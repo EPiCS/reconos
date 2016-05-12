@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- IMPORTANT: This is an internal file that has been generated
+     by the Xilinx ISE software.  Any direct editing or
+     changes made to this file may result in unpredictable
+     behavior or data corruption.  It is strongly advised that
+     users do not edit the contents of this file. -->
+<messages>
+<msg type="error" file="HDLCompiler" num="1314" delta="unknown" >"/home/meise/temp/hwt_sort_demo_rq_hwif_v1_00_c/devl/../../hwif/pcores/plb2hwif_v1_00_a/hdl/vhdl/tb_user_logic.vhd" Line 59: Formal port/generic &lt;<arg fmt="%s" index="1">c_num_reg</arg>&gt; is not declared in &lt;<arg fmt="%s" index="2">user_logic</arg>&gt;
+</msg>
+
+<msg type="error" file="HDLCompiler" num="1314" delta="unknown" >"/home/meise/temp/hwt_sort_demo_rq_hwif_v1_00_c/devl/../../hwif/pcores/plb2hwif_v1_00_a/hdl/vhdl/tb_user_logic.vhd" Line 177: Formal port/generic &lt;<arg fmt="%s" index="1">bus2ip_resetn</arg>&gt; is not declared in &lt;<arg fmt="%s" index="2">user_logic</arg>&gt;
+</msg>
+
+<msg type="error" file="HDLCompiler" num="432" delta="unknown" >"/home/meise/temp/hwt_sort_demo_rq_hwif_v1_00_c/devl/../../hwif/pcores/plb2hwif_v1_00_a/hdl/vhdl/tb_user_logic.vhd" Line 57: Formal &lt;<arg fmt="%s" index="1">bus2ip_reset</arg>&gt; has no actual or default value.
+</msg>
+
+<msg type="error" file="HDLCompiler" num="854" delta="unknown" >"/home/meise/temp/hwt_sort_demo_rq_hwif_v1_00_c/devl/../../hwif/pcores/plb2hwif_v1_00_a/hdl/vhdl/tb_user_logic.vhd" Line 14: Unit &lt;<arg fmt="%s" index="1">behavior</arg>&gt; ignored due to previous errors.
+</msg>
+
+</messages>
+

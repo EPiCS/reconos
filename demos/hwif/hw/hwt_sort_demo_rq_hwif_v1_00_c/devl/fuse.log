@@ -1,0 +1,15 @@
+Running: /opt/Xilinx/14.7/ISE_DS/ISE/bin/lin64/unwrapped/fuse -intstyle ise -incremental -lib secureip -o /home/meise/temp/hwt_sort_demo_rq_hwif_v1_00_c/devl/tb_user_logic_isim_beh.exe -prj /home/meise/temp/hwt_sort_demo_rq_hwif_v1_00_c/devl/tb_user_logic_beh.prj work.tb_user_logic 
+ISim P.20131013 (signature 0xfbc00daa)
+Number of CPUs detected in this system: 8
+Turning on mult-threading, number of parallel sub-compilation jobs: 16 
+Determining compilation order of HDL files
+Parsing VHDL file "/home/meise/temp/hwt_sort_demo_rq_hwif_v1_00_c/devl/../../../../../opt/Xilinx/14.2/ISE_DS/EDK/hw/XilinxProcessorIPLib/pcores/proc_common_v3_00_a/hdl/vhdl/proc_common_pkg.vhd" into library proc_common_v3_00_a
+Parsing VHDL file "/home/meise/temp/hwt_sort_demo_rq_hwif_v1_00_c/devl/../../../../../opt/Xilinx/14.2/ISE_DS/EDK/hw/XilinxProcessorIPLib/pcores/proc_common_v3_00_a/hdl/vhdl/ipif_pkg.vhd" into library proc_common_v3_00_a
+Parsing VHDL file "/home/meise/temp/hwt_sort_demo_rq_hwif_v1_00_c/devl/../../hwif/pcores/plb2hwif_v1_00_a/hdl/vhdl/hwif_pck.vhd" into library work
+Parsing VHDL file "/home/meise/temp/hwt_sort_demo_rq_hwif_v1_00_c/devl/../../hwif/pcores/plb2hwif_v1_00_a/hdl/vhdl/user_logic.vhd" into library work
+Parsing VHDL file "/home/meise/temp/hwt_sort_demo_rq_hwif_v1_00_c/devl/../../hwif/pcores/plb2hwif_v1_00_a/hdl/vhdl/tb_user_logic.vhd" into library work
+ERROR:HDLCompiler:1314 - "/home/meise/temp/hwt_sort_demo_rq_hwif_v1_00_c/devl/../../hwif/pcores/plb2hwif_v1_00_a/hdl/vhdl/tb_user_logic.vhd" Line 59: Formal port/generic <c_num_reg> is not declared in <user_logic>
+ERROR:HDLCompiler:1314 - "/home/meise/temp/hwt_sort_demo_rq_hwif_v1_00_c/devl/../../hwif/pcores/plb2hwif_v1_00_a/hdl/vhdl/tb_user_logic.vhd" Line 177: Formal port/generic <bus2ip_resetn> is not declared in <user_logic>
+ERROR:HDLCompiler:432 - "/home/meise/temp/hwt_sort_demo_rq_hwif_v1_00_c/devl/../../hwif/pcores/plb2hwif_v1_00_a/hdl/vhdl/tb_user_logic.vhd" Line 57: Formal <bus2ip_reset> has no actual or default value.
+ERROR:HDLCompiler:854 - "/home/meise/temp/hwt_sort_demo_rq_hwif_v1_00_c/devl/../../hwif/pcores/plb2hwif_v1_00_a/hdl/vhdl/tb_user_logic.vhd" Line 14: Unit <behavior> ignored due to previous errors.
+VHDL file /home/meise/temp/hwt_sort_demo_rq_hwif_v1_00_c/devl/../../hwif/pcores/plb2hwif_v1_00_a/hdl/vhdl/tb_user_logic.vhd ignored due to errors
