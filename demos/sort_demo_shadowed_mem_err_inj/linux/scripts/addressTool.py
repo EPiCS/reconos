@@ -78,6 +78,30 @@ def splitArray(a, n):
     k, m = len(a) / n, len(a) % n
     return [a[i * k + min(i, m):(i + 1) * k + min(i + 1, m)] for i in xrange(n)]
 
+def countAddresses(_argv):
+    ''' Counts the addresses in a json file.'''
+
+    #
+    # Parse command line
+    #
+    if len(_argv) >= 1:
+        addressFile = _argv[0]
+    else:
+        print("Too few arguments!")
+        print("Syntax: "+ sys.argv[0] +"<filename>")
+        sys.exit(1)
+    
+    #
+    # Open file
+    #
+    try:
+        addressList = json.load(open(addressFile, "r"))
+        print("Address count in file {}: {}".format(addressFile,len(addressList)))
+    except:
+        print("Error reading file: {}".format(addressFile))
+        print(sys.exc_info()[0:2])
+        sys.exit(1)
+
 def splitAddressFile(_argv):
     ''' Given a json file with fault injection addresses, this function reads 
     it in and writes out the first half of addresses to file one and the second 
@@ -124,8 +148,9 @@ if __name__ == '__main__':
     help='''
     Usage:
     ./addressGenerator.py -g <address> <outfile>  # generate a column of addresses
-    ./addressGenerator.py -s <parts> <infile>    # split a given address file
-    ./addressGenerator.py -h                    # print this help message
+    ./addressGenerator.py -s <parts> <infile>     # split a given address file
+    ./addressGenerator.py -l <infile>             # outputs number of addresses in file
+    ./addressGenerator.py -h                      # print this help message
     '''
     
     #
@@ -141,6 +166,8 @@ if __name__ == '__main__':
         genFullColumn(sys.argv[2:])
     elif option == "-s":
         splitAddressFile(sys.argv[2:])
+    elif option == "-l":
+        countAddresses(sys.argv[2:])
     elif option == "-h":
         print(help)
     else:
