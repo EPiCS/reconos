@@ -1,0 +1,28 @@
+#Please do not modify this file by hand
+XmpVersion: 14.2
+VerMgmt: 14.2
+IntStyle: default
+Flow: ise
+MHS File: test.mhs
+Architecture: virtex6
+Device: xc6vlx240t
+Package: ff1156
+SpeedGrade: -1
+UserCmd1: 
+UserCmd1Type: 0
+UserCmd2: 
+UserCmd2Type: 0
+GenSimTB: 0
+SdkExportBmmBit: 1
+SdkExportDir: SDK/SDK_Export
+InsertNoPads: 0
+WarnForEAArch: 1
+HdlLang: VHDL
+SimModel: BEHAVIORAL
+ExternalMemSim: 0
+UcfFile: data/test.ucf
+EnableParTimingError: 1
+ShowLicenseDialog: 1
+Processor: microblaze_0
+ElfImp: 
+ElfSim: 

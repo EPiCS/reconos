@@ -1,0 +1,5 @@
+connect mb mdm -debugdevice cpunr 2
+debugconfig -reset_on_run processor enable
+debugconfig -reset_on_data_dow processor enable
+dow /home/meise/git/reconos_epics/demos/sort_demo_workercpu/hw/sdk_workspace/empty_application_0/Debug/empty_application_0.elf
+
