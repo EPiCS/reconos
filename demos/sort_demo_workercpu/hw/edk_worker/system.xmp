@@ -1,6 +1,6 @@
 #Please do not modify this file by hand
-XmpVersion: 14.2
-VerMgmt: 14.2
+XmpVersion: 14.7
+VerMgmt: 14.7
 IntStyle: default
 Flow: ise
 MHS File: system.mhs
@@ -23,6 +23,7 @@ ExternalMemSim: 0
 UcfFile: data/system.ucf
 EnableParTimingError: 0
 ShowLicenseDialog: 1
+BInfo: 
 ICacheAddr: DDR3_SDRAM,
 DCacheAddr: DDR3_SDRAM,
 Processor: microblaze_0

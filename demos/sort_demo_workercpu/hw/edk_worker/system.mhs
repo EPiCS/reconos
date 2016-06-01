@@ -55,7 +55,7 @@ BEGIN microblaze
  PARAMETER C_DCACHE_HIGHADDR = 0x0fffffff
  PARAMETER C_DCACHE_BYTE_SIZE = 16384
  PARAMETER C_DCACHE_ALWAYS_USED = 1
- PARAMETER HW_VER = 8.40.a
+ PARAMETER HW_VER = 8.50.c
  PARAMETER C_USE_ICACHE = 1
  PARAMETER C_USE_DCACHE = 0
  PARAMETER C_PVR = 2
@@ -270,7 +270,7 @@ BEGIN xps_intc
  PARAMETER C_HIGHADDR = 0x8180ffff
  PARAMETER C_NUM_INTR_INPUTS = 6
  BUS_INTERFACE SPLB = mb_plb
- PORT Intr = fpga_0_Ethernet_MAC_MDINT_pin & xps_timer_0_Interrupt & RS232_Uart_1_Interrupt & Ethernet_MAC_IP2INTC_Irpt & fsl_v20_2a_FSL_Has_Data & fsl_v20_1a_FSL_Has_Data & fsl_v20_0a_FSL_Has_Data
+ PORT Intr = fpga_0_Ethernet_MAC_MDINT_pin & xps_timer_0_Interrupt & RS232_Uart_1_Interrupt & Ethernet_MAC_IP2INTC_Irpt & gnd2int_0_gnd15 & gnd2int_0_gnd14 & gnd2int_0_gnd13 & gnd2int_0_gnd12 & gnd2int_0_gnd11 & gnd2int_0_gnd10 & gnd2int_0_gnd9 & gnd2int_0_gnd8 & gnd2int_0_gnd7 & gnd2int_0_gnd6 & gnd2int_0_gnd5 & gnd2int_0_gnd4 & gnd2int_0_gnd3 & fsl_v20_2a_FSL_Has_Data & fsl_v20_1a_FSL_Has_Data & fsl_v20_0a_FSL_Has_Data
  PORT Irq = microblaze_0_Interrupt
 END
 
@@ -294,7 +294,7 @@ END
 
 BEGIN fsl_v20
  PARAMETER INSTANCE = fsl_v20_0a
- PARAMETER HW_VER = 2.11.e
+ PARAMETER HW_VER = 2.11.f
  PARAMETER C_USE_CONTROL = 0
  PORT FSL_Clk = clk_100_0000MHzMMCM0
  PORT SYS_Rst = proc_control_0_reconos_reset
@@ -303,7 +303,7 @@ END
 
 BEGIN fsl_v20
  PARAMETER INSTANCE = fsl_v20_0b
- PARAMETER HW_VER = 2.11.e
+ PARAMETER HW_VER = 2.11.f
  PARAMETER C_USE_CONTROL = 0
  PORT FSL_Clk = clk_100_0000MHzMMCM0
  PORT SYS_Rst = proc_control_0_reconos_reset
@@ -311,7 +311,7 @@ END
 
 BEGIN fsl_v20
  PARAMETER INSTANCE = fsl_v20_1b
- PARAMETER HW_VER = 2.11.e
+ PARAMETER HW_VER = 2.11.f
  PARAMETER C_USE_CONTROL = 0
  PORT FSL_Clk = clk_100_0000MHzMMCM0
  PORT SYS_Rst = proc_control_0_reconos_reset
@@ -319,7 +319,7 @@ END
 
 BEGIN fsl_v20
  PARAMETER INSTANCE = fsl_v20_1a
- PARAMETER HW_VER = 2.11.e
+ PARAMETER HW_VER = 2.11.f
  PARAMETER C_USE_CONTROL = 0
  PORT FSL_Clk = clk_100_0000MHzMMCM0
  PORT SYS_Rst = proc_control_0_reconos_reset
@@ -328,7 +328,7 @@ END
 
 BEGIN fsl_v20
  PARAMETER INSTANCE = fsl_v20_2a
- PARAMETER HW_VER = 2.11.e
+ PARAMETER HW_VER = 2.11.f
  PARAMETER C_USE_CONTROL = 0
  PORT FSL_Clk = clk_100_0000MHzMMCM0
  PORT SYS_Rst = proc_control_0_reconos_reset
@@ -337,7 +337,7 @@ END
 
 BEGIN fsl_v20
  PARAMETER INSTANCE = fsl_v20_2b
- PARAMETER HW_VER = 2.11.e
+ PARAMETER HW_VER = 2.11.f
  PARAMETER C_USE_CONTROL = 0
  PORT FSL_Clk = clk_100_0000MHzMMCM0
  PORT SYS_Rst = proc_control_0_reconos_reset
@@ -467,7 +467,7 @@ END
 
 BEGIN microblaze
  PARAMETER INSTANCE = worker_0
- PARAMETER HW_VER = 8.40.a
+ PARAMETER HW_VER = 8.50.c
  PARAMETER C_DEBUG_ENABLED = 1
  PARAMETER C_FSL_LINKS = 2
  PARAMETER C_PVR = 2
@@ -489,7 +489,7 @@ END
 
 BEGIN lmb_bram_if_cntlr
  PARAMETER INSTANCE = worker_0_bram_cntlr_0
- PARAMETER HW_VER = 3.10.a
+ PARAMETER HW_VER = 3.10.c
  PARAMETER C_BASEADDR = 0x00000000
  PARAMETER C_HIGHADDR = 0x0000FFFF
  PARAMETER C_NUM_LMB = 1
@@ -520,7 +520,7 @@ END
 
 BEGIN lmb_bram_if_cntlr
  PARAMETER INSTANCE = worker_0_bram_cntlr_1
- PARAMETER HW_VER = 3.10.a
+ PARAMETER HW_VER = 3.10.c
  PARAMETER C_BASEADDR = 0x00000000
  PARAMETER C_HIGHADDR = 0x0000FFFF
  BUS_INTERFACE SLMB = worker_0_lmb_v10_1
