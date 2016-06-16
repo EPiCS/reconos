@@ -18,7 +18,8 @@ entity shadowing is
     FIFO32_PORTS     : integer := 16;   --! 1 to 16 allowed
     SHADOW_UNITS : integer := 1;
     FIFO_DEPTH       : integer := 8192 -- should be big enough to hold biggest request of a HWT. 
-											-- Around 32000 synthesis tools have a hard time implementing it.
+                                       -- Around 32000 bytes synthesis tools have a hard time implementing it,
+                                       -- because currently it's implemented in distributed memory. @TODO
     );
   port (
     -- Multiple FIFO32 Inputs
@@ -44,7 +45,7 @@ entity shadowing is
     START_OF_NEW_PACKET : in std_logic;
     
     -- Run-time options
-    RUNTIME_OPTIONS : in std_logic_vector(15 downto 0);
+    RUNTIME_OPTIONS : in std_logic_vector(2 downto 0);
     SHADOWING_OPTIONS: in std_logic_vector(55 downto 0);
     
     -- Error reporting
@@ -87,6 +88,7 @@ architecture synth of shadowing is
   signal INT_OUT_FIFO32_M_Wr   : std_logic_vector((SHADOW_UNITS+1)-1 downto 0);
 
   signal TUO_NOT_ST : std_logic_vector(SHADOW_UNITS-1 downto 0);
+  signal START_OF_NEW_PACKET_ARRAY : std_logic_vector(SHADOW_UNITS downto 0);
 
   -- mux and demux control signals
   signal sel2mux : std_logic_vector(clog2(SHADOW_UNITS+1)-1 downto 0);
@@ -119,20 +121,33 @@ begin
   
   
   
-  control: process (HWT_INDEX, SHADOWING_OPTIONS) is
+  control: process (HWT_INDEX, SHADOWING_OPTIONS, START_OF_NEW_PACKET) is
+      variable shadow_port: integer range 0 to 7;
   begin
     -- Shadowing options is divided into 14 fields with 4 bit width.
     -- Every fields highest bit indicates TUO ('1') or ST('0') status.
-    -- The remaining 3 bit select one of up to 7 shadow units or the bypass.
+    -- The remaining 3 bit select one of up to 7 shadow units(0-6) or the 
+    -- bypass (7).
+    shadow_port := to_integer(unsigned(SHADOWING_OPTIONS(to_integer(HWT_INDEX)*4+2 downto
+                                     to_integer(HWT_INDEX)*4)));
+    -- Limit to highest available port
+    if shadow_port=7 then shadow_port := SHADOW_UNITS; end if;
+    
+    -- This broadcasts the current selected threads status to every shadow unit
     for i in TUO_NOT_ST'LENGTH-1 downto 0 loop
       TUO_NOT_ST(i)<= SHADOWING_OPTIONS(4*to_integer(HWT_INDEX)+3);
     end loop;
 
+    -- This selects the current shadowing unit based on the configuration
+    -- Here, we copy the appropiate number of bits to the sel2mux signal. 
     for i in sel2mux'LENGTH-1 downto 0 loop
       sel2mux(i) <= SHADOWING_OPTIONS(to_integer(HWT_INDEX)*4+i);
     end loop;
     
+    START_OF_NEW_PACKET_ARRAY <= (shadow_port => START_OF_NEW_PACKET, others => '0');
+    
   end process;
+  
 --------------------------------------------------------------------------------
 -- Instantiations
 --------------------------------------------------------------------------------
@@ -183,7 +198,7 @@ sh_units: for i in SHADOW_UNITS-1 downto 0 generate
       OUT_FIFO32_M_Wr   => INT_OUT_FIFO32_M_Wr(i),
 
       TUO_NOT_ST          => TUO_NOT_ST(i),
-      START_OF_NEW_PACKET => START_OF_NEW_PACKET,
+      START_OF_NEW_PACKET => START_OF_NEW_PACKET_ARRAY(i),
 
       -- Run-time options
       RUNTIME_OPTIONS => RUNTIME_OPTIONS, -- same for all

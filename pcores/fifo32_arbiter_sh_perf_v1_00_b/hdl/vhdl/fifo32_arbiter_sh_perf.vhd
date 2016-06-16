@@ -172,9 +172,8 @@ entity fifo32_arbiter_sh_perf is
 -- 		DEC2HWIF_WrAck : out std_logic;
 
     	-- Run-time options
-    	RUNTIME_OPTIONS : in std_logic_vector(15 downto 0 );
-    	SHADOWING_OPTIONS: in std_logic_vector(55 downto 0);
-
+    	RUNTIME_OPTIONS : in std_logic_vector(59 downto 0 );
+    	
 		-- Error reporting
 		ERROR_REQ : out std_logic;
 		ERROR_ACK : in  std_logic;
@@ -226,7 +225,7 @@ architecture behavioural of fifo32_arbiter_sh_perf is
 begin  -- of architecture -------------------------------------------------------
 
 
-	ila_signals <= INT_ILA_SIGNALS(0) when RUNTIME_OPTIONS(15) = '1' else
+	ila_signals <= INT_ILA_SIGNALS(0) when RUNTIME_OPTIONS(0) = '1' else
 					INT_ILA_SIGNALS(1);
 
 	-- connect separate entity ports to internal signal vectors
@@ -460,8 +459,8 @@ my_shadowing : entity work.shadowing
 		
 		HWT_INDEX        => HWT_INDEX,
 		START_OF_NEW_PACKET => START_OF_NEW_PACKET,
-		RUNTIME_OPTIONS  => RUNTIME_OPTIONS,
-		SHADOWING_OPTIONS => SHADOWING_OPTIONS,
+		RUNTIME_OPTIONS  => RUNTIME_OPTIONS(3 downto 1),
+		SHADOWING_OPTIONS => RUNTIME_OPTIONS(59 downto 4),
 		
 		ERROR_PRT		 => ERROR_PRT,
 		ERROR_REQ        => ERROR_REQ,

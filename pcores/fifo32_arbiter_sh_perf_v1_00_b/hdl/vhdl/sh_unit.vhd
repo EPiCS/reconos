@@ -37,7 +37,7 @@ entity sh_unit is
     START_OF_NEW_PACKET : in std_logic;
 
     -- Run-time options
-    RUNTIME_OPTIONS : in std_logic_vector(15 downto 0);
+    RUNTIME_OPTIONS : in std_logic_vector(2 downto 0);
 
     -- Error reporting
     ERROR_REQ : out std_logic;

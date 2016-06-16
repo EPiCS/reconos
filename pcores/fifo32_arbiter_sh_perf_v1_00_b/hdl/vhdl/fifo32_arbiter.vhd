@@ -120,6 +120,14 @@ architecture behavioural of fifo32_arbiter is
   signal INT_OUT_FIFO32_S_Fill : std_logic_vector(15 downto 0);
   signal INT_OUT_FIFO32_M_Rem  : std_logic_vector(15 downto 0);
   
+  --! State Machine Signals 
+  type FSM_STATE_T is (MODE_LENGTH, ADDRESS, DATA_READ, DATA_WRITE);
+  signal state : FSM_STATE_T;
+
+  type TRANSFER_MODE_T is (READ, WRITE);
+  signal transfer_mode : TRANSFER_MODE_T;
+  signal transfer_size : natural range 0 to 2**24;
+  
 begin  -- of architecture -------------------------------------------------------
 
   OUT_FIFO32_S_Data <= INT_OUT_FIFO32_S_Data;
@@ -171,18 +179,11 @@ begin  -- of architecture ------------------------------------------------------
   end process;
 
   fsm_p : process (clk, rst, sel2fsm) is
-    type FSM_STATE_T is (MODE_LENGTH, ADDRESS, DATA_READ, DATA_WRITE);
-    variable state : FSM_STATE_T;
-
-    type TRANSFER_MODE_T is (READ, WRITE);
-    variable transfer_mode : TRANSFER_MODE_T;
-    variable transfer_size : natural range 0 to 2**24;
-
   begin
     if rst = '1' then
-      state         := MODE_LENGTH;
+      state         <= MODE_LENGTH;
       sel2mux       <= (others => '0');
-      transfer_mode := READ;
+      transfer_mode <= READ;
     elsif clk'event and clk = '1' then
       -- for ILA debug
 
@@ -221,39 +222,39 @@ begin  -- of architecture ------------------------------------------------------
       case state is
         when MODE_LENGTH =>
           if OUT_FIFO32_S_Rd = '1' then
-            state := ADDRESS;
-            START_OF_NEW_PACKET <= '1'; --@BUG: Maybe too late?
+            state <= ADDRESS;
+            START_OF_NEW_PACKET <= '1'; --@TODO: Maybe too late?
           end if;
           sel2mux <= sel2fsm;
           case INT_OUT_FIFO32_S_DATA(31) is
-            when '0'    => transfer_mode := READ;
-            when others => transfer_mode := WRITE;
+            when '0'    => transfer_mode <= READ;
+            when others => transfer_mode <= WRITE;
                            
           end case;
           -- lower 24 bits of first word are defined to be the length
           -- of the transfer.
-          transfer_size := to_integer(unsigned(INT_OUT_FIFO32_S_DATA(23 downto 0)));
+          transfer_size <= to_integer(unsigned(INT_OUT_FIFO32_S_DATA(23 downto 0)));
         when ADDRESS =>
           case transfer_mode is
-            when READ  => state := DATA_READ;
-            when WRITE => state := DATA_WRITE;
+            when READ  => state <= DATA_READ;
+            when WRITE => state <= DATA_WRITE;
           end case;
         when DATA_READ =>
           if OUT_FIFO32_M_Wr = '1' then
-            transfer_size := transfer_size-4;
+            transfer_size <= transfer_size-4;
           end if;
           if transfer_size = 0 then
-            state := MODE_LENGTH;
+            state <= MODE_LENGTH;
           end if;
         when DATA_WRITE =>
           if OUT_FIFO32_S_Rd = '1' then
-            transfer_size := transfer_size-4;
+            transfer_size <= transfer_size-4;
           end if;
           if transfer_size = 0 then
-            state := MODE_LENGTH;
+            state <= MODE_LENGTH;
           end if;
         when others =>
-          state := MODE_LENGTH;
+          state <= MODE_LENGTH;
       end case;
     end if;
   end process;

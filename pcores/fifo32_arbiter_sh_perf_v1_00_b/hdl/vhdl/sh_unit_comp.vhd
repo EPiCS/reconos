@@ -49,7 +49,7 @@ entity sh_unit_comp is
 		OUT_FIFO32_M_Wr   : in  std_logic;
 		
     	-- Run-time options
-    	RUNTIME_OPTIONS : in std_logic_vector(15 downto 0 );
+    	RUNTIME_OPTIONS : in std_logic_vector( 2 downto 0 );
 
 		-- Error reporting
 		ERROR_REQ : out std_logic;
@@ -148,7 +148,7 @@ architecture behavioural of sh_unit_comp is
 	signal INT_OUT_FIFO32_M_Rem  : std_logic_vector(15 downto 0);
 
   	-- run-time options registers
-  	signal error_detection_on_reg: std_logic;
+  	signal sh_buffer_size_exp_reg: std_logic_vector(2 downto 0);
 
 	-- Signals for internal data buffers
 	-- SHadow buffer
@@ -162,8 +162,8 @@ architecture behavioural of sh_unit_comp is
 --------------------------------------------------------------------------------
 -- Aliases
 --------------------------------------------------------------------------------
-  alias error_detection_on : std_logic is RUNTIME_OPTIONS(0);
-  alias sh_buffer_size_exp : std_logic_vector(2 downto 0) is RUNTIME_OPTIONS(3 downto 1);
+
+  alias sh_buffer_size_exp : std_logic_vector(2 downto 0) is RUNTIME_OPTIONS(2 downto 0);
 --------------------------------------------------------------------------------
 -- Functions
 --------------------------------------------------------------------------------
@@ -262,7 +262,7 @@ begin  -- of architecture ------------------------------------------------------
 			OUT_FIFO32_M_Data, OUT_FIFO32_M_Wr, OUT_FIFO32_S_Rd,
 			IN_FIFO32_S_Data, IN_FIFO32_S_Fill,in_fifo32_s_rd,requests,
 			sh_read, sh_read_data, sh_rem, sh_fill,sh_write,in_fifo32_m_wr,
-			error_detection_on_reg,
+			sh_buffer_size_exp_reg,
 			-- debug:
 			int_out_fifo32_s_data, INT_OUT_FIFO32_S_Fill,INT_OUT_FIFO32_M_Rem)
 		is
@@ -373,19 +373,12 @@ begin  -- of architecture ------------------------------------------------------
 			when DATA_WRITE =>
 				-- fill the shadow buffer
 				-- TODO: suppress more than one write to it
-				if ( (error_detection_on_reg = '0' and  						
-					  unsigned(IN_FIFO32_S_Fill(31 downto 16)) >= 1)
-					  OR
-					  (error_detection_on_reg = '1' and  						
-					  unsigned(IN_FIFO32_S_Fill(31 downto 16)) >= 1 and 
-					  unsigned(sh_fill) >= 1) 
+				if (  unsigned(IN_FIFO32_S_Fill(31 downto 16)) >= 1 and 
+					  unsigned(sh_fill) >= 1 
 				    ) 
 				then					
 					IN_FIFO32_S_Rd(1) <= '1';
-					-- onyl read from shadow buffer, when error detection is on
-					if (error_detection_on_reg = '1') then 
-						sh_read <= '1';
-					end if;
+					sh_read <= '1';
 				end if;
 
 			-----------------
@@ -434,7 +427,7 @@ begin  -- of architecture ------------------------------------------------------
 
 
 	fsm_outputs_tuo_p: process (state_tuo, IN_FIFO32_M_Rem, mode_length_reg, address_reg,
-			OUT_FIFO32_M_Data, OUT_FIFO32_M_Wr, OUT_FIFO32_S_Rd, error_detection_on_reg,
+			OUT_FIFO32_M_Data, OUT_FIFO32_M_Wr, OUT_FIFO32_S_Rd, sh_buffer_size_exp_reg,
 			IN_FIFO32_S_Data, IN_FIFO32_S_Fill)
 	is
 	begin
@@ -469,7 +462,7 @@ begin  -- of architecture ------------------------------------------------------
 			when WRITE_MODE_LENGTH =>
 				-- fill the shadow buffer with request
 				-- if error detection is on, but always on a read request
-				if (error_detection_on_reg = '1' or mode_length_reg(0)(31) = '0') then
+				if (mode_length_reg(0)(31) = '0') then
 					sh_write_data <=     mode_length_reg(0);
 					sh_write      <=  OUT_FIFO32_S_Rd;
 				end if;
@@ -482,7 +475,7 @@ begin  -- of architecture ------------------------------------------------------
 			when WRITE_ADDRESS =>
 				-- fill the shadow buffer with request
 				-- if error detection is on, but always on a read request
-				if (error_detection_on_reg = '1' or mode_length_reg(0)(31) = '0') then
+				if (mode_length_reg(0)(31) = '0') then
 					sh_write_data <=     address_reg(0);
 					sh_write      <=  OUT_FIFO32_S_Rd;
 				end if;
@@ -506,10 +499,8 @@ begin  -- of architecture ------------------------------------------------------
 			when DATA_WRITE =>
 				-- fill the shadow buffer
 				-- TODO: suppress more than one write to it
-				if (error_detection_on_reg = '1') then
-					sh_write_data <=     IN_FIFO32_S_Data(31 downto 0);
-					sh_write      <=  OUT_FIFO32_S_Rd;
-				end if;
+				sh_write_data <=     IN_FIFO32_S_Data(31 downto 0);
+				sh_write      <=  OUT_FIFO32_S_Rd;
 
 				IN_FIFO32_S_Rd(0)     <= OUT_FIFO32_S_Rd;
 				INT_OUT_FIFO32_S_DATA <= IN_FIFO32_S_Data(31 downto 0);
@@ -592,8 +583,7 @@ begin  -- of architecture ------------------------------------------------------
 				when READ_ADDRESS =>
 					-- TODO: fill_level handling!
 					address_reg(1) <= IN_FIFO32_S_Data(63 downto 32);
-					if ((error_detection_on_reg = '1') or 
-						transfer_mode = READ)
+					if (transfer_mode = READ)
 					then
 						state_st          <= WAIT_SH_BUFFER;
 					else 
@@ -618,9 +608,8 @@ begin  -- of architecture ------------------------------------------------------
 					-- TODO: fill_level handling!
 					-- Compare both headers. If same, continue normally, if not, go to
 					-- error handling.
-					if( (error_detection_on_reg = '0') OR -- override error checks if runtime options says so
-						((mode_length_reg(2) = mode_length_reg(1))AND
-						(address_reg(2)     = address_reg(1)))  )
+					if( (mode_length_reg(2) = mode_length_reg(1))AND
+						(address_reg(2)     = address_reg(1))  )
 					then
 						case transfer_mode is
 							when READ =>
@@ -665,13 +654,8 @@ begin  -- of architecture ------------------------------------------------------
 					-- TODO: What about forever stalling thread?
 					-- Read data from sh_buffer and ST and compare them.
 					-- On error jump to error handling.
-					if ( (error_detection_on_reg = '0' and  						
-						  unsigned(IN_FIFO32_S_Fill(31 downto 16)) >= 1)
-						  OR
-						  (error_detection_on_reg = '1' and  						
-						  unsigned(IN_FIFO32_S_Fill(31 downto 16)) >= 1 and 
-						  unsigned(sh_fill) >= 1) 
-						) 
+					if ( unsigned(IN_FIFO32_S_Fill(31 downto 16)) >= 1 and 
+						 unsigned(sh_fill) >= 1 ) 
 					then
 						assert transfer_size >0 report "Transfer size becomes less than zero!" severity error;
 						transfer_size := transfer_size-4;
@@ -682,8 +666,7 @@ begin  -- of architecture ------------------------------------------------------
 						--
 						-- ERROR HANDLING
 						--
-						if (error_detection_on_reg = '1' and  
-							sh_read_data /= IN_FIFO32_S_Data(63 downto 32) )
+						if ( sh_read_data /= IN_FIFO32_S_Data(63 downto 32) )
 						then
 							error_typ_reg <= ERROR_TYP_DATA;
 							error_adr_reg <= std_logic_vector(unsigned(mode_length_reg(0)(23 downto 0)) - transfer_size+ unsigned(address_reg(0))-4);
@@ -784,7 +767,7 @@ begin  -- of architecture ------------------------------------------------------
 			transfer_mode   := READ;
 			transfer_size   := 0;
 
-			error_detection_on_reg <= '1';
+			sh_buffer_size_exp_reg <= "111"; -- default is biggest buffer size allowed
 			
 		elsif clk'event and clk = '1' then
 
@@ -810,7 +793,7 @@ begin  -- of architecture ------------------------------------------------------
 					end if;
 
 				when UPDATE_RUNTIME_OPTIONS =>
-					error_detection_on_reg <= error_detection_on;		    
+					sh_buffer_size_exp_reg <= sh_buffer_size_exp;		    
 		    		state_tuo <= READ_MODE_LENGTH;
 		    		
 				------------------
@@ -839,7 +822,7 @@ begin  -- of architecture ------------------------------------------------------
 					address_reg(0) <= IN_FIFO32_S_Data(31 downto 0);
 					-- Only wait when we actually want to write something into the shadow buffer
 					-- When is that? When error detection is on and when we have a write re
-					if (error_detection_on_reg = '1' or transfer_mode = READ) then
+					if (transfer_mode = READ) then
 						state_tuo          <= WAIT_SH_BUFFER;
 					else 
 						state_tuo          <= WRITE_MODE_LENGTH;
@@ -857,7 +840,7 @@ begin  -- of architecture ------------------------------------------------------
                   -- ...
                   -- 7-> 128KBytes of shadow buffer used
                   -- As sh_rem is given in words and the exponent is given in bytes, we need to convert it properly
-					if ( minimum( unsigned(sh_rem), to_unsigned( (2**to_integer(unsigned(sh_buffer_size_exp)))*(1024/4), 16) )  
+					if ( minimum( unsigned(sh_rem), to_unsigned( (2**to_integer(unsigned(sh_buffer_size_exp_reg)))*(1024/4), 16) )  
 						> unsigned(mode_length_reg(0)(15 downto 2)) ) 
 					then
 						state_tuo <= WRITE_MODE_LENGTH;
