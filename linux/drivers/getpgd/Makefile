@@ -1,6 +1,6 @@
 ARCH		=	microblaze
 CROSS_COMPILE	=	microblaze-unknown-linux-gnu-
-KDIR		?=	~/linux-2.6-xlnx
+KDIR		?=	~/git/linux-2.6-xlnx
 
 export ARCH CROSS_COMPILE
 
