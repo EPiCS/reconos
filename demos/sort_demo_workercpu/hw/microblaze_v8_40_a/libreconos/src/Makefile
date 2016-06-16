@@ -1,4 +1,4 @@
-CFLAGS	=	-O2 -g -Wall -I../../workercpu_thread/microblaze_1/include
+CFLAGS	=	-O2 -g -Wall -I../../standalone_bsp_0/worker_0/include
 CC	=	mb-gcc
 AR	=	mb-ar
 

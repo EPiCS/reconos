@@ -1,0 +1,3 @@
+PROCESSOR=worker_0
+REPOSITORIES=
+HWSPEC=../edk_worker_hw_platform_0/system.xml

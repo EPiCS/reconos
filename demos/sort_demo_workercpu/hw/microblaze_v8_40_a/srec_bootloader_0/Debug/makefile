@@ -8,8 +8,8 @@ RM := rm -rf
 
 # All of the sources participating in the build are defined here
 -include sources.mk
--include subdir.mk
 -include src/subdir.mk
+-include subdir.mk
 -include objects.mk
 
 ifneq ($(MAKECMDGOALS),clean)
@@ -36,22 +36,22 @@ all: srec_bootloader_0.elf secondary-outputs
 
 # Tool invocations
 srec_bootloader_0.elf: $(OBJS) ../src/lscript.ld $(USER_OBJS)
-	@echo Building target: $@
-	@echo Invoking: MicroBlaze gcc linker
-	mb-gcc -Wl,--no-relax -Wl,-T -Wl,../src/lscript.ld -L../../workercpu_thread/microblaze_1/lib -mxl-barrel-shift -mxl-pattern-compare -mno-xl-soft-div -mcpu=v8.40.a -mno-xl-soft-mul -o"srec_bootloader_0.elf" $(OBJS) $(USER_OBJS) $(LIBS)
-	@echo Finished building target: $@
+	@echo 'Building target: $@'
+	@echo 'Invoking: MicroBlaze gcc linker'
+	mb-gcc -Wl,-T -Wl,../src/lscript.ld -L../../standalone_bsp_0/worker_0/lib -mxl-barrel-shift -mxl-pattern-compare -mno-xl-soft-div -mcpu=v8.50.c -mno-xl-soft-mul -Wl,--no-relax -Wl,--gc-sections -o "srec_bootloader_0.elf" $(OBJS) $(USER_OBJS) $(LIBS)
+	@echo 'Finished building target: $@'
 	@echo ' '
 
 srec_bootloader_0.elf.size: srec_bootloader_0.elf
-	@echo Invoking: MicroBlaze Print Size
+	@echo 'Invoking: MicroBlaze Print Size'
 	mb-size srec_bootloader_0.elf  |tee "srec_bootloader_0.elf.size"
-	@echo Finished building: $@
+	@echo 'Finished building: $@'
 	@echo ' '
 
 srec_bootloader_0.elf.elfcheck: srec_bootloader_0.elf
-	@echo Invoking: Xilinx ELF Check
-	elfcheck srec_bootloader_0.elf -hw ../../edk_worker_hw_platform/system.xml -pe microblaze_1  |tee "srec_bootloader_0.elf.elfcheck"
-	@echo Finished building: $@
+	@echo 'Invoking: Xilinx ELF Check'
+	elfcheck srec_bootloader_0.elf -hw ../../edk_worker_hw_platform_0/system.xml -pe worker_0  |tee "srec_bootloader_0.elf.elfcheck"
+	@echo 'Finished building: $@'
 	@echo ' '
 
 # Other Targets

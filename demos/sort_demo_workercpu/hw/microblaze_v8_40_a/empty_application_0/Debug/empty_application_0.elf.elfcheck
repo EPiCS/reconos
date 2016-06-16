@@ -1,9 +1,0 @@
-elfcheck
-Xilinx EDK 14.2 Build EDK_P.28xd
-Copyright (c) 1995-2012 Xilinx, Inc.  All rights reserved.
-
-Command Line: elfcheck -hw ../../edk_worker_hw_platform/system.xml -pe
-microblaze_1 empty_application_0.elf 
-
-ELF file	: empty_application_0.elf
-elfcheck passed.
