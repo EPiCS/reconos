@@ -59,6 +59,9 @@ modules.builtin
 !.metadata
 !.plugins
 
+*.log
+*.sc
+*.pdom
 
 #
 # editor crap
