@@ -54,6 +54,11 @@ modules.builtin
 #
 !.gitignore
 !.mailmap
+!.cproject
+!.project
+!.metadata
+!.plugins
+
 
 #
 # editor crap
