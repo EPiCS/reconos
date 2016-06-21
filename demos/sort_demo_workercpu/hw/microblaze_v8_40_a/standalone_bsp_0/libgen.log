@@ -2,8 +2,8 @@ Release 14.7 - libgen Xilinx EDK 14.7 Build EDK_P.20131013
  (lin64)
 Copyright (c) 1995-2013 Xilinx, Inc.  All rights reserved.
 
-Command Line: libgen -hw ../edk_worker_hw_platform_0/system.xml -pe worker_0
--log libgen.log system.mss 
+Command Line: libgen -hw ../edk_worker_hw_platform/system.xml -pe worker_0 -log
+libgen.log system.mss 
 
 
 Staging source files.

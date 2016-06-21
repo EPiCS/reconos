@@ -1,56 +1,47 @@
-14:35:48.469 INFO  - Resetting C/C++ perspective as the workspace is found to be created before 14.3 
-14:38:23.979 ERROR - Unexpected error while reading linker script. org.eclipse.core.internal.resources.ResourceException: Resource is out of sync with the file system: '/bootloader/src/lscript.ld'.
-	at org.eclipse.core.internal.localstore.FileSystemResourceManager.read(FileSystemResourceManager.java:793)
-	at org.eclipse.core.internal.resources.File.getContents(File.java:289)
-
-14:38:30.188 ERROR - Unexpected error while reading linker script. org.eclipse.core.internal.resources.ResourceException: Resource is out of sync with the file system: '/sort_demo_shmem/src/lscript.ld'.
-	at org.eclipse.core.internal.localstore.FileSystemResourceManager.read(FileSystemResourceManager.java:793)
-	at org.eclipse.core.internal.resources.File.getContents(File.java:289)
-
-14:39:21.889 ERROR - Unexpected error while reading linker script. org.eclipse.core.internal.resources.ResourceException: Resource is out of sync with the file system: '/sort_demo_shmem/src/lscript.ld'.
-	at org.eclipse.core.internal.localstore.FileSystemResourceManager.read(FileSystemResourceManager.java:793)
-	at org.eclipse.core.internal.resources.File.getContents(File.java:289)
-
-14:39:36.933 ERROR - Unexpected error while reading linker script. org.eclipse.core.internal.resources.ResourceException: Resource is out of sync with the file system: '/sort_demo_shmem/src/lscript.ld'.
-	at org.eclipse.core.internal.localstore.FileSystemResourceManager.read(FileSystemResourceManager.java:793)
-	at org.eclipse.core.internal.resources.File.getContents(File.java:289)
-
-15:12:38.288 INFO  - Settings changed on project workercpu_thread. Triggering a rebuild... 
-15:12:38.386 INFO  - Refreshed build settings on project bootloader 
-15:12:38.407 INFO  - Refreshed build settings on project libreconos_test 
-15:12:38.419 INFO  - Refreshed build settings on project sort_demo_shmem 
-15:12:38.425 INFO  - Refreshed build settings on project srec_bootloader_0 
-15:43:09.051 INFO  - Project 'edk_worker_hw_platform_0' created. You can now create BSPs and application projects targeting this hardware platform. 
-15:46:55.396 INFO  - Project workercpu_thread was a BSP project. Please update references. 
-15:46:55.396 ERROR - SDK has detected that project workercpu_thread has been deleted (or renamed).
-If this project was a BSP referenced by other C/C++ applications, then those applications will fail to build now. Please right click on those applications and click 'Change Referenced BSP' to update those projects' BSP references. 
-15:47:18.301 INFO  - Project hello_world_bsp_0 was a BSP project. Please update references. 
-15:47:18.304 ERROR - SDK has detected that project hello_world_bsp_0 has been deleted (or renamed).
-If this project was a BSP referenced by other C/C++ applications, then those applications will fail to build now. Please right click on those applications and click 'Change Referenced BSP' to update those projects' BSP references. 
-15:47:27.807 ERROR - SDK has detected that project edk_worker_hw_platform has been deleted (or renamed).
-This project was referenced by a BSP project, which will now fail to compile properly.
-
-We recommend that you create a new BSP project pointing to a valid hardware project. Alternatively, you can fix the project references in the BSP, and update the path to the hardware specification file in 'libgen.options', and in ELF check options in dependant applications. 
-15:47:31.562 ERROR - Unexpected error while obtaining referenced H/W project {} org.eclipse.core.internal.resources.ResourceException: Resource '/edk_worker_hw_platform' does not exist.
-	at org.eclipse.core.internal.resources.Resource.checkExists(Resource.java:341)
-	at org.eclipse.core.internal.resources.Resource.checkAccessible(Resource.java:215)
-
-16:31:16.640 WARN  - The current launch is configured to reset the entire system. However, the design contains multiple processors, and resetting the system will reset the other processors as well. If you would like to avoid this, please update the launch configuration to reset the processor only. 
-16:31:28.432 ERROR - Unexpected error while launching program. java.lang.RuntimeException: Error in Resetting Target
-MicroBlaze is under RESET. Check if the Reset input to MicroBlaze and its Bus Interfaces are connected properly
-    
-
-	at com.xilinx.sdk.targetmanager.internal.TM.doSystemReset(Unknown Source)
+18:53:02.369 INFO  - Project 'edk_worker_hw_platform' created. You can now create BSPs and application projects targeting this hardware platform. 
+20:07:36.356 INFO  - Processor reset is completed for worker_0 
+20:08:24.107 INFO  - Processor reset is completed for worker_0 
+20:14:32.827 INFO  - Processor reset is completed for worker_0 
+20:16:18.554 INFO  - Processor reset is completed for worker_0 
+20:16:40.704 ERROR - Unexpected error while launching program. java.lang.RuntimeException: Target request failed: Target is not responding (timed out).
 	at com.xilinx.sdk.debug.core.XilinxAppLaunchConfigurationDelegate.debugApplication(Unknown Source)
+	at com.xilinx.sdk.debug.core.XilinxAppLaunchConfigurationDelegate.launch(Unknown Source)
 
-16:32:01.783 ERROR - Unexpected error while launching program. com.xilinx.sdk.targetmanager.TMException: MicroBlaze is under RESET. Check if the Reset input to MicroBlaze and its Bus Interfaces are connected properly
+20:16:52.513 INFO  - Processor reset is completed for worker_0 
+08:49:43.794 ERROR - Unexpected error while launching program. com.xilinx.sdk.targetmanager.TMException: MicroBlaze is under RESET. Check if the Reset input to MicroBlaze and its Bus Interfaces are connected properly
     UNABLE to STOP MicroBlaze
 
 	at com.xilinx.sdk.targetmanager.internal.TM.connectToProcessor(Unknown Source)
 	at com.xilinx.sdk.debug.core.XilinxAppLaunchConfigurationDelegate.debugApplication(Unknown Source)
 
-16:39:56.170 INFO  - Processor reset is completed for worker_0 
-16:40:38.109 INFO  - Processor reset is completed for worker_0 
-16:41:16.719 INFO  - Processor reset is completed for worker_0 
-17:26:37.442 INFO  - Processor reset is completed for worker_0 
-17:35:16.896 INFO  - Processor reset is completed for worker_0 
+08:50:19.527 INFO  - Processor reset is completed for worker_0 
+09:18:37.518 INFO  - Processor reset is completed for worker_0 
+09:29:27.712 INFO  - Settings changed on project standalone_bsp_0. Triggering a rebuild... 
+09:29:28.057 INFO  - Refreshed build settings on project bootloader 
+09:29:28.062 INFO  - Refreshed build settings on project libreconos 
+09:29:28.068 INFO  - Refreshed build settings on project srec_bootloader 
+09:30:24.485 INFO  - Settings changed on project standalone_bsp_0. Triggering a rebuild... 
+09:30:32.430 INFO  - Refreshed build settings on project bootloader 
+09:30:32.438 INFO  - Refreshed build settings on project libreconos 
+09:30:32.445 INFO  - Refreshed build settings on project srec_bootloader 
+09:36:16.034 INFO  - worker_0 Processor is in use. Please stop existing Run or Debug sessions before launching. 
+09:36:18.840 INFO  - Processor reset is completed for worker_0 
+09:38:14.141 INFO  - Processor reset is completed for worker_0 
+09:50:37.773 INFO  - worker_0 Processor is in use. Please stop existing Run or Debug sessions before launching. 
+10:06:03.875 ERROR - Checking FPGA configuration failed..Connection to Board Failed
+
+
+    Failed to lock the JTAG cable for exclusive access
+
+ 
+10:06:32.960 ERROR - Checking FPGA configuration failed..Connection to Board Failed
+
+
+    Failed to lock the JTAG cable for exclusive access
+
+ 
+11:13:45.470 ERROR - Unable to disconnect from existing targets java.lang.NullPointerException
+	at com.xilinx.sdk.targetmanager.internal.json.XMDJSONProcess.issueCommand(Unknown Source)
+	at com.xilinx.sdk.targetmanager.internal.TM.disconnectTarget(Unknown Source)
+
+11:13:45.472 ERROR - Unexpected error while parsing XMD response ?: com.google.gson.JsonSyntaxException: com.google.gson.stream.MalformedJsonException: invalid number or unquoted string near  

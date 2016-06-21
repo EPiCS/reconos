@@ -35,10 +35,10 @@ libreconos_test.elf.elfcheck \
 all: libreconos_test.elf secondary-outputs
 
 # Tool invocations
-libreconos_test.elf: $(OBJS) ../src/lscript.ld $(USER_OBJS)
+libreconos_test.elf: $(OBJS)  $(USER_OBJS)
 	@echo 'Building target: $@'
 	@echo 'Invoking: MicroBlaze gcc linker'
-	mb-gcc -L"/home/meise/git/reconos_epics/demos/sort_demo_workercpu/hw/microblaze_v8_40_a/libreconos/src" -Wl,-T -Wl,../src/lscript.ld -L../../standalone_bsp_0/worker_0/lib -mxl-barrel-shift -mxl-pattern-compare -mno-xl-soft-div -mcpu=v8.50.c -mno-xl-soft-mul -Wl,--no-relax -Wl,--gc-sections -o "libreconos_test.elf" $(OBJS) $(USER_OBJS) $(LIBS)
+	mb-gcc -L"/home/meise/git/reconos_epics/demos/sort_demo_workercpu/hw/microblaze_v8_40_a_backup/libreconos/Debug" -mxl-soft-mul -o "libreconos_test.elf" $(OBJS) $(USER_OBJS) $(LIBS)
 	@echo 'Finished building target: $@'
 	@echo ' '
 
@@ -50,7 +50,7 @@ libreconos_test.elf.size: libreconos_test.elf
 
 libreconos_test.elf.elfcheck: libreconos_test.elf
 	@echo 'Invoking: Xilinx ELF Check'
-	elfcheck libreconos_test.elf -hw ../../edk_worker_hw_platform_0/system.xml -pe worker_0  |tee "libreconos_test.elf.elfcheck"
+	elfcheck libreconos_test.elf  |tee "libreconos_test.elf.elfcheck"
 	@echo 'Finished building: $@'
 	@echo ' '
 

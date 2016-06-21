@@ -4,5 +4,5 @@
 
 USER_OBJS :=
 
-LIBS := -llibreconos
+LIBS :=
 

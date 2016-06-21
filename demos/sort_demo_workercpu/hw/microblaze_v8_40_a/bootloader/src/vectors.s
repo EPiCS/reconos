@@ -2,7 +2,7 @@
 	.ent _vectors_reset
 	.section .vectors.reset
 _vectors_reset:
-	brai    _init      # 50 <_start1>
+	brai    _start      # 50 <_start1>
 	.end _vectors_reset
 
 	.globl _vectors_sw_exception

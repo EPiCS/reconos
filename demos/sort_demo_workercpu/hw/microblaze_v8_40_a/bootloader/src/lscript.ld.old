@@ -1,0 +1,121 @@
+
+_STACK_SIZE = DEFINED(_STACK_SIZE) ? _STACK_SIZE : 0x100;
+
+/* Define all the memory regions in the system */
+MEMORY
+{
+bram_cntlr_1_bram_cntlr_0 : ORIGIN = 0x00000050, LENGTH = 0x7ff
+}
+
+/*
+* Specify the default entry point to the program
+*/
+ENTRY(_init)
+
+/*
+* Define the sections, and where they are mapped in memory
+*/
+SECTIONS
+{
+
+	.vectors.reset 0x00000000 : {
+	  *(.vectors.reset)
+	}
+	
+	.vectors.sw_exception 0x00000008 : {
+	   *(.vectors.sw_exception)
+	} 
+	
+	.vectors.interrupt 0x00000010 : {
+	   *(.vectors.interrupt)
+	} 
+	
+	.vectors.hw_exception 0x00000020 : {
+	   *(.vectors.hw_exception)
+	}
+
+  .text : {
+/*  	. = 0x0;
+  	*(.vectors.reset)
+  	. = 0x08;
+  	*(.vectors.sw_exception)
+  	. = 0x10;
+  	*(.vectors.interrupt)
+  	. = 0x20;
+  	*(.vectors.hw_exception) 	
+ 
+ 	. = 0x50;
+ */
+ 	*(.init)    
+    _ftext = .;
+    *(.text)
+    *(.text.*)
+    *(.gnu.linkonce.t*)
+    _etext = .;
+  } > bram_cntlr_1_bram_cntlr_0
+
+  .rodata : {
+    _frodata = .;
+    *(.rodata)
+    *(.gnu.linkonce.r*)
+    _erodata = .;
+  } > bram_cntlr_1_bram_cntlr_0
+
+  /* Alignments by 8 to ensure that _SDA2_BASE_ on a word boundary */
+  .sdata2 : {
+    . = ALIGN(8);
+    _sdata2_start = .;
+    *(.sdata2)
+    . = ALIGN(8);
+    _sdata2_end = .;
+  } > bram_cntlr_1_bram_cntlr_0
+  _sdata2_size = _sdata2_end - _sdata2_start;
+  PROVIDE (_SDA2_BASE_ =  _sdata2_start + (_sdata2_size / 2 ));
+
+  .data : {
+    . = ALIGN(4);
+    _fdata = .;
+    *(.data)
+    *(.gnu.linkonce.d*)
+    _edata = .;
+  } > bram_cntlr_1_bram_cntlr_0
+
+  /* Alignments by 8 to ensure that _SDA_BASE_ on a word boundary */
+  /* Note that .sdata and .sbss must be contiguous */
+
+  .sdata : { 
+    . = ALIGN(8);
+    _ssro = .;
+    *(.sdata)
+  } > bram_cntlr_1_bram_cntlr_0
+  .sbss : { 
+    . = ALIGN(4); 
+    PROVIDE (__sbss_start = .);  
+    *(.sbss)
+    . = ALIGN(8);
+    _essro = .;
+  } > bram_cntlr_1_bram_cntlr_0
+  PROVIDE (__sbss_end = _essro);
+  _ssro_size = _essro - _ssro;
+  PROVIDE (_SDA_BASE_ = _ssro + (_ssro_size / 2 ));
+
+  .bss : {
+    . = ALIGN(4);
+    PROVIDE (__bss_start = .);
+    *(.bss)
+    *(COMMON)
+    . = ALIGN(4);  
+    PROVIDE (__bss_end = .);
+  } > bram_cntlr_1_bram_cntlr_0
+
+  .bss_stack : {
+     . = ALIGN(8);
+     _heap = .;
+     _heap_start = _heap;
+     . += _STACK_SIZE;
+     . = ALIGN(8);
+     _stack = .;
+     __stack = _stack;
+  } > bram_cntlr_1_bram_cntlr_0
+}
+
