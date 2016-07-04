@@ -161,6 +161,7 @@ if __name__ == '__main__':
     else:
         print("Too few arguments!")
         print(help)
+        sys.exit(1)
     
     if option == "-g":
         genFullColumn(sys.argv[2:])
