@@ -16,7 +16,8 @@ KERNEL = ["/home/meise/git/linux-2.6-xlnx/arch/microblaze/boot/simpleImage.ml605
           "/home/meise/git/linux-2.6-xlnx/arch/microblaze/boot/simpleImage.ml605_epics_second_board"]
 IP_ADDRESS = ["192.168.35.2", "192.168.35.3"]
 
-ESN = ["0000145B17DE01", "0000145B185501"]
+#ESN = ["0000145B17DE01", "0000145B185501"]
+ESN = ["000013C81F0B01", "0000145B185501"]
 
 # Log files must end in "_run"
 LOG_FILE_BASELINE_OLD= "baseline_old_run"
