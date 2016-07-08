@@ -3,8 +3,9 @@
 import sys, re, string, pexpect, subprocess, getpass, time, datetime, os, json 
 from virtex6 import *
 from addressGenerator import *
+from LockManager import *
 
-
+SYSTEM_BOOT_TIME=45 # Measured boot time is around 34 seconds
 TIMEOUT_SEC = 30
 REPEAT_COUNT = 1 #10
 
@@ -139,20 +140,27 @@ def cleanCableLock():
 
 def downloadStuff(_bitstreamOrKernel, _esn=""):
     FNULL = open(os.devnull, 'w')
-    return subprocess.call([DOW, _bitstreamOrKernel, _esn], stdout=FNULL, stderr=subprocess.STDOUT)
+    returncode = subprocess.call([DOW, _bitstreamOrKernel, _esn], stdout=FNULL, stderr=subprocess.STDOUT)
+    if returncode != 0:
+        print ("Download of {} via cable {} failed. Returncode: {}".format(_bitstreamOrKernel, _esn, returncode))
+    return returncode
 
-def reboot(_bitstream, _telnetPasswd, _work_dir, _benchmarkTag, _boardNr, _silent=False):
+def reboot(_bitstream, _telnetPasswd, _work_dir, _benchmarkTag, _boardNr, _cableLock, _silent=False):
     # do we need to logout properly?
     # what if command line hangs?
     
+    _cableLock.acquire()
     # Reset HW and OS
     cleanCableLock();
     if not _silent: print("Downloading Bitstream...")
     downloadStuff(_bitstream, ESN[_boardNr])
     if not _silent: print("Downloading Kernel...")
     downloadStuff(KERNEL[_boardNr], ESN[_boardNr])
+    
+    _cableLock.release()
+    
     if not _silent: print("Waiting for system boot...")
-    time.sleep(90)
+    time.sleep(SYSTEM_BOOT_TIME)
     
     # LOGIN
     child = pexpect.spawn ('telnet '+IP_ADDRESS[_boardNr])
@@ -173,7 +181,7 @@ def reboot(_bitstream, _telnetPasswd, _work_dir, _benchmarkTag, _boardNr, _silen
     child.expect('# ')
     return child
 
-def executeCommands(_child, _benchmarkTag, _telnetPasswd, _bitstream, _commands, _work_dir, _faultAddress, _boardNr, _blockedFI=False):
+def executeCommands(_child, _benchmarkTag, _telnetPasswd, _bitstream, _commands, _work_dir, _faultAddress, _boardNr, _cableLock, _currentFaultIdx, _totalFaults, _blockedFI=False):
     child = _child
     pexpectLogging = False
     rebootNeeded = False
@@ -196,7 +204,9 @@ def executeCommands(_child, _benchmarkTag, _telnetPasswd, _bitstream, _commands,
         #child.expect('# ')
         
         # Execute command to test if fault affect test programm
-        print("FA {},{},{},{},{},{},{} ".format(*_faultAddress) + time.ctime()+ ' ' +cmd.format(_benchmarkTag))
+        print("FA {},{},{},{},{},{},{} ".format(*_faultAddress) + time.ctime()+
+               ' ' +cmd.format(_benchmarkTag) + ' ' + str(_currentFaultIdx) +
+               '/' + str(_totalFaults))
         child.sendline(cmd.format(_benchmarkTag))
         
         # Programm runs. Several possibilities now:
@@ -260,7 +270,7 @@ def executeCommands(_child, _benchmarkTag, _telnetPasswd, _bitstream, _commands,
         # Revert Fault injection
         # either by reboot or by flipping the bit again
         if rebootNeeded:
-            child=reboot(_bitstream, _telnetPasswd, _work_dir, _benchmarkTag, _boardNr)
+            child=reboot(_bitstream, _telnetPasswd, _work_dir, _benchmarkTag, _boardNr, _cableLock)
             rebootNeeded=False
         else:
             child.sendline(faultInjCMD)
@@ -271,12 +281,13 @@ def executeCommands(_child, _benchmarkTag, _telnetPasswd, _bitstream, _commands,
     
     return child
 
-def runFaultInject(_benchmarkTag, _telnetPasswd, _bitstream, _commands, _work_dir, _faultList, _boardNr, _blockedFaultInject=False):
+def runFaultInject(_benchmarkTag, _telnetPasswd, _bitstream, _commands, _work_dir, _faultList, _boardNr, _cableLock, _blockedFaultInject=False):
     """ _blockeFaultInject=True flips complete words instead of single bits. Please prepare the _faultList such, that it contains
     every word address only once.""" 
     done = False
     exceptionCounter = 0
     checkpoint_address = 0
+    faultListLength = len(_faultList)
     
     while not done:
         try:
@@ -284,7 +295,7 @@ def runFaultInject(_benchmarkTag, _telnetPasswd, _bitstream, _commands, _work_di
             #print("A")
             #print(exceptionCounter)
             #print(_bitstream, _telnetPasswd, _work_dir, _benchmarkTag)
-            child = reboot(_bitstream, _telnetPasswd, _work_dir, _benchmarkTag, _boardNr, _silent=False)
+            child = reboot(_bitstream, _telnetPasswd, _work_dir, _benchmarkTag, _boardNr,_cableLock, _silent=False)
             #print("B")
             
             # Benchmarks
@@ -295,7 +306,7 @@ def runFaultInject(_benchmarkTag, _telnetPasswd, _bitstream, _commands, _work_di
                 #print(child, _benchmarkTag, _telnetPasswd, _bitstream, 
                 #                _commands, _work_dir, [_half,_row,_column,_minor_start,_word_start, _bit_start], _blockedFaultInject)
                 child = executeCommands(child, _benchmarkTag, _telnetPasswd, _bitstream, 
-                                _commands, _work_dir, address, _boardNr,
+                                _commands, _work_dir, address, _boardNr, _cableLock,checkpoint_address,faultListLength,
                                 _blockedFI=_blockedFaultInject)
                 
                 checkpoint_address += 1
@@ -320,6 +331,11 @@ if __name__ == "__main__":
     '''
     boardNr = 0
     start_address=[0,0,2,17,0,0,0]
+    
+    # Deactivate buffering in outputs. When piping output of this script 
+    # through 'tee', standard io buffering prevents outputs until 4096 bytes 
+    # are ready to be output.
+    sys.stdout = os.fdopen(sys.stdout.fileno(), 'w', 0)
     
     if len(sys.argv) >= 2:
         start_address = parse_string_to_address(sys.argv[1], start_address)
@@ -355,8 +371,9 @@ if __name__ == "__main__":
     #
     # Fault injection
     #
-    runFaultInject(benchmarkTagBase, telnetPasswd, BIT_SORT_PERF, sort_commands_perf, SORT_DEMO_DIR, addressList, boardNr)
-    
+    cableLock = LockManager("/tmp/sh_mem_err_inj_cable_lock")
+    runFaultInject(benchmarkTagBase, telnetPasswd, BIT_SORT_PERF, sort_commands_perf, SORT_DEMO_DIR, addressList, boardNr, cableLock)
+    cableLock.shutdown()
     print("Done!")
     sys.exit()
     
