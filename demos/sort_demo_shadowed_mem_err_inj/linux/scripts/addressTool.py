@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-import sys, pprint, png, virtex6, json, os.path
+import sys, pprint, png, virtex6, json, os.path, random
 
 
 
@@ -142,14 +142,47 @@ def splitAddressFile(_argv):
         saveAddresses(al, base+ext)
     
 
+def shuffleAddressFile(_argv):
+    ''' Given a json file with fault injection addresses, this function reads 
+    it in and shuffles the order of the list and writes it out again.'''
+    
+    
+    #
+    # Parse command line
+    #
+    if len(_argv) >= 2:
+        infile  = _argv[0]
+        outfile = _argv[1]
+    else:
+        print("Too few arguments!")
+        print("Syntax: "+ sys.argv[0] +"<infile> <outfile>")
+        sys.exit(1)
+    
+    #
+    # Open file
+    #
+    try:
+        addressList = json.load(open(infile, "r"))
+        print("Address count in file {}: {}".format(infile,len(addressList)))
+    except:
+        print("Error reading file: {}".format(infile))
+        print(sys.exc_info()[0:2])
+        sys.exit(1)
+    
+    #
+    # Shuffle file
+    
+    random.shuffle(addressList)
+    saveAddresses(addressList, outfile)
 
 
 if __name__ == '__main__':
     help='''
     Usage:
+    ./addressGenerator.py -l <infile>             # outputs number of addresses in file
     ./addressGenerator.py -g <address> <outfile>  # generate a column of addresses
     ./addressGenerator.py -s <parts> <infile>     # split a given address file
-    ./addressGenerator.py -l <infile>             # outputs number of addresses in file
+    ./addressGenerator.py -x <infile> <outfile>   # reads infile, shuffles order of addresses and writes outfile
     ./addressGenerator.py -h                      # print this help message
     '''
     
@@ -169,6 +202,8 @@ if __name__ == '__main__':
         splitAddressFile(sys.argv[2:])
     elif option == "-l":
         countAddresses(sys.argv[2:])
+    elif option == "-x":
+        shuffleAddressFile(sys.argv[2:])
     elif option == "-h":
         print(help)
     else:
