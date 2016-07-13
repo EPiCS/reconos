@@ -141,6 +141,43 @@ def splitAddressFile(_argv):
         base +="_{}".format(i) 
         saveAddresses(al, base+ext)
     
+def joinAddressFile(_argv):
+    ''' Given a list of json <infiles> with fault injection addresses, this function reads 
+    them in and joins them in the order given writes out a single json address file
+    to <outfile>.'''
+    
+    
+    #
+    # Parse command line
+    #
+    if len(_argv) >= 3:
+        
+        infiles = _argv[:-1] # All but last filesnames on commandline
+        outfile = _argv[-1]  # Last filename on commandline 
+    else:
+        print("Too few arguments!")
+        print("Syntax: "+ sys.argv[0] +"<parts> <filename>")
+        sys.exit(1)
+    
+    #
+    # Open file
+    #
+    addressList = []
+    for file in infiles:
+        try:
+            fileList = json.load(open(file, "r"))
+            addressList += fileList
+            print("Address count in infile {}: {}".format(file,len(fileList)))
+        except:
+            print("Error reading file: {}".format(file))
+            print(sys.exc_info()[0:2])
+            sys.exit(1)
+    
+    #
+    # save file
+    #
+    print("Total address count in outfile {}: {}".format(outfile,len(addressList)))
+    saveAddresses(addressList, outfile)
 
 def shuffleAddressFile(_argv):
     ''' Given a json file with fault injection addresses, this function reads 
@@ -179,11 +216,12 @@ def shuffleAddressFile(_argv):
 if __name__ == '__main__':
     help='''
     Usage:
-    ./addressGenerator.py -l <infile>             # outputs number of addresses in file
-    ./addressGenerator.py -g <address> <outfile>  # generate a column of addresses
-    ./addressGenerator.py -s <parts> <infile>     # split a given address file
-    ./addressGenerator.py -x <infile> <outfile>   # reads infile, shuffles order of addresses and writes outfile
-    ./addressGenerator.py -h                      # print this help message
+    ./addressGenerator.py -l <infile>                           # outputs number of addresses in file
+    ./addressGenerator.py -g <address> <outfile>                # generate a column of addresses
+    ./addressGenerator.py -j <infile0> ... <infileN> <outfile>  # join a given set of address files into <outfile>
+    ./addressGenerator.py -s <parts> <infile>                   # split a given address file
+    ./addressGenerator.py -x <infile> <outfile>                 # reads infile, shuffles order of addresses and writes outfile
+    ./addressGenerator.py -h                                    # print this help message
     '''
     
     #
@@ -200,6 +238,8 @@ if __name__ == '__main__':
         genFullColumn(sys.argv[2:])
     elif option == "-s":
         splitAddressFile(sys.argv[2:])
+    elif option == "-j":
+        joinAddressFile(sys.argv[2:])
     elif option == "-l":
         countAddresses(sys.argv[2:])
     elif option == "-x":
