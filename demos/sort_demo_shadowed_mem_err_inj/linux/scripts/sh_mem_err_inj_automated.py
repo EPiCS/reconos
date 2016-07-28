@@ -4,8 +4,9 @@ import sys, re, string, pexpect, subprocess, getpass, time, datetime, os, json
 from virtex6 import *
 from addressGenerator import *
 from LockManager import *
+from ml605ResetManager import *
 
-SYSTEM_BOOT_TIME=45 # Measured boot time is around 34 seconds
+SYSTEM_BOOT_TIME=35 #was 25
 TIMEOUT_SEC = 30
 REPEAT_COUNT = 1 #10
 
@@ -145,7 +146,7 @@ def downloadStuff(_bitstreamOrKernel, _esn=""):
         print ("Download of {} via cable {} failed. Returncode: {}".format(_bitstreamOrKernel, _esn, returncode))
     return returncode
 
-def reboot(_bitstream, _telnetPasswd, _work_dir, _benchmarkTag, _boardNr, _cableLock, _silent=False):
+def rebootOld(_bitstream, _telnetPasswd, _work_dir, _benchmarkTag, _boardNr, _cableLock, _silent=False):
     # do we need to logout properly?
     # what if command line hangs?
     
@@ -158,6 +159,37 @@ def reboot(_bitstream, _telnetPasswd, _work_dir, _benchmarkTag, _boardNr, _cable
     downloadStuff(KERNEL[_boardNr], ESN[_boardNr])
     
     _cableLock.release()
+    
+    if not _silent: print("Waiting for system boot...")
+    time.sleep(SYSTEM_BOOT_TIME)
+    
+    # LOGIN
+    child = pexpect.spawn ('telnet '+IP_ADDRESS[_boardNr])
+    child.expect ('reconos login:.*')
+    child.sendline ('root')
+    child.expect ('Password:.*')
+    child.sendline (_telnetPasswd)
+    
+    child.delaybeforesend = 0
+    
+    # Preparations
+    child.expect('# ')
+    child.sendline('cd '+ _work_dir)
+    child.expect('# ')
+    child.sendline('mkdir -p '+ _benchmarkTag)
+    child.expect('# ')
+    child.sendline('chmod o+rw '+ _benchmarkTag)
+    child.expect('# ')
+    return child
+
+def reboot(_bitstream, _telnetPasswd, _work_dir, _benchmarkTag, _boardNr, _cableLock, _silent=False):
+    # do we need to logout properly?
+    # what if command line hangs?
+    
+    # Reset the ML605 board and let it reload bitstream and linux kernel from compact flash 
+    # we are reusing the _cablelock parameter here for reset
+    if not _silent: print("Resetting ML605 board...")
+    _cableLock.reset(_boardNr)
     
     if not _silent: print("Waiting for system boot...")
     time.sleep(SYSTEM_BOOT_TIME)
@@ -340,13 +372,11 @@ if __name__ == "__main__":
     if len(sys.argv) >= 2:
         start_address = parse_string_to_address(sys.argv[1], start_address)
     if len(sys.argv) >= 3:
-	addressFile = sys.argv[2]
+        addressFile = sys.argv[2]
     if len(sys.argv) >= 4:
         boardNr = int(sys.argv[3])
         
     print("Using board {}, file {}  and start address {}".format(boardNr,addressFile, start_address) )
-    
-    telnetPasswd = getpass.getpass('telnet password: ')
     
     benchmarkTagBase = str(datetime.date(1,1,1).today())
     
@@ -363,17 +393,26 @@ if __name__ == "__main__":
     #
     # Fast forward essential bit list to address given on command line 
     #
-    for addr, i in zip(addressList, xrange(len(addressList))):
-        if cmpAddress(start_address, addr) <= 0:
-             addressList = addressList[i:]
-             break
+    if cmpAddress(start_address, "0,0,0,0,0,0,0") != 0:
+        for addr, i in zip(addressList, xrange(len(addressList))):
+            if cmpAddress(start_address, addr) == 0:
+                 addressList = addressList[i:]
+                 break
+    print("Address count after fast forwarding: {}".format(len(addressList)))
     
+    
+    telnetPasswd = getpass.getpass('telnet password: ')
     #
     # Fault injection
     #
-    cableLock = LockManager("/tmp/sh_mem_err_inj_cable_lock")
-    runFaultInject(benchmarkTagBase, telnetPasswd, BIT_SORT_PERF, sort_commands_perf, SORT_DEMO_DIR, addressList, boardNr, cableLock)
-    cableLock.shutdown()
+    #cableLock = LockManager("/tmp/sh_mem_err_inj_cable_lock")
+    #runFaultInject(benchmarkTagBase, telnetPasswd, BIT_SORT_PERF, sort_commands_perf, SORT_DEMO_DIR, addressList, boardNr, cableLock)
+    #cableLock.shutdown()
+    
+    ml605ResetMgr = ml605ResetManager("/tmp/sh_mem_err_inj_reset")
+    runFaultInject(benchmarkTagBase, telnetPasswd, BIT_SORT_PERF, sort_commands_perf, SORT_DEMO_DIR, addressList, boardNr, ml605ResetMgr)
+    ml605ResetMgr.shutdown()
+    
     print("Done!")
     sys.exit()
     
