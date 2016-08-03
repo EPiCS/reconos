@@ -144,8 +144,9 @@ begin
       sel2mux(i) <= SHADOWING_OPTIONS(to_integer(HWT_INDEX)*4+i);
     end loop;
     
-    START_OF_NEW_PACKET_ARRAY <= (shadow_port => START_OF_NEW_PACKET, others => '0');
-    
+    --START_OF_NEW_PACKET_ARRAY <= (shadow_port => START_OF_NEW_PACKET, others => '0');
+    START_OF_NEW_PACKET_ARRAY <= (others => '0');
+    START_OF_NEW_PACKET_ARRAY(shadow_port) <= START_OF_NEW_PACKET;
   end process;
   
 --------------------------------------------------------------------------------
