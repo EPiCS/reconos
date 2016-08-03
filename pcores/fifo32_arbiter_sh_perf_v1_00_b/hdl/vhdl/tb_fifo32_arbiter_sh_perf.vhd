@@ -260,12 +260,14 @@ begin  -- of architecture ------------------------------------------------------
             else
               pause_counter := PAUSE_LIST((MAX_PACKETS*i)+packet_nr);
               state         := PAUSE;
+              report "HWT " & i'image(i) & " Packet " & packet_nr'image(packet_nr) & " pausing " & pause_counter'image(pause_counter) & " cycles" severity note;
             end if;
             
           when PAUSE =>
             pause_counter    := pause_counter - 1;
             if pause_counter <= 0 then
               state := WRITE_HEADER;
+              report "HWT " & i'image(i) & " Packet " & packet_nr'image(packet_nr) & " START packet with " & integer'image(LENGTH_LIST((MAX_PACKETS*i)+packet_nr)) & " bytes" severity note;
             end if;
             
           when WRITE_HEADER =>
@@ -326,6 +328,7 @@ begin  -- of architecture ------------------------------------------------------
             end if;
             if length_counter = 0 then
               state := SET_PAUSE;
+              report "HWT " & i'image(i) & " Packet " & packet_nr'image(packet_nr) & " STOP" severity note;
             end if;
             
           when READ_DATA =>
@@ -340,10 +343,11 @@ begin  -- of architecture ------------------------------------------------------
             end if;
             if length_counter = 0 then
               state := SET_PAUSE;
+              report "HWT " & i'image(i) & " Packet " & packet_nr'image(packet_nr) & " STOP" severity note;
             end if;
             
           when REPORT_END_STATE =>
-            report "Packet generation done!" severity note;
+            report "HWT " & i'image(i) & " Packet generation done!" severity note;
             state := END_STATE;
             
           when END_STATE =>
@@ -581,6 +585,7 @@ begin
           a2m_memif_out.m_wr <= '0';
           if to_integer(unsigned(a2m_memif_in.s_fill)) > 1 then
             mem_state              <= MODE_LENGTH;
+            report "    MEM Packet Start" severity note;
             a2m_memif_out.s_rd <= '1';
           end if;
           
@@ -592,9 +597,12 @@ begin
             when others => transfer_mode <= WRITE;
           end case;
           transfer_size <= to_integer(unsigned(a2m_memif_in.s_data(23 downto 0)));
+          report "    MEM Packet Mode " & std_logic'image(a2m_memif_in.s_data(31)) & 
+                 " size: " & integer'image(to_integer(unsigned(a2m_memif_in.s_data(23 downto 0)))) & " bytes," severity note;
           
         when ADDRESS =>
           transfer_address <= a2m_memif_in.s_data;
+          report "    MEM address: " & integer'image(to_integer(unsigned(a2m_memif_in.s_data))) severity note;
           case transfer_mode is
             when READ =>
               mem_state              <= DATA_READ;
@@ -618,6 +626,7 @@ begin
             transfer_size <= transfer_size - 4;
             if transfer_size = 4 then
               mem_state <= IDLE;
+              report "    MEM Packet Stop" severity note;
             end if;
           end if;
           
@@ -635,6 +644,7 @@ begin
               mem_state                <= IDLE;
               a2m_memif_out.m_wr   <= '0';
               a2m_memif_out.m_data <= X"00000000";
+              report "    MEM Packet Stop" severity note;
             end if;
           end if;
           
