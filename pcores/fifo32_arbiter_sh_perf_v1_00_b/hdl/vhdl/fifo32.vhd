@@ -214,6 +214,7 @@ begin
       FIFO32_S_Data_out <= mem(CONV_INTEGER(rdptr));
       if FIFO32_S_Rd = '1' then
         rdptr <= incptr(rdptr);
+        FIFO32_S_Data_out <= mem(CONV_INTEGER(incptr(rdptr)));
       end if;
     end if;
   end process;
