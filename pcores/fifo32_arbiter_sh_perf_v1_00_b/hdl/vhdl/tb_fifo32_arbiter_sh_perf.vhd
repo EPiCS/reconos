@@ -14,6 +14,273 @@ end entity;
 
 architecture testbench of tb_fifo32_arbiter_sh_perf is
 --------------------------------------------------------------------------------
+-- Components
+--------------------------------------------------------------------------------
+  component fifo32
+    generic (
+      C_FIFO32_DEPTH : integer := 16
+      );
+    port (
+      Rst           : in  std_logic;
+      FIFO32_S_Clk  : in  std_logic;
+      FIFO32_M_Clk  : in  std_logic;
+      FIFO32_S_Data : out std_logic_vector(31 downto 0);
+      FIFO32_M_Data : in  std_logic_vector(31 downto 0);
+      FIFO32_S_Fill : out std_logic_vector(15 downto 0);
+      FIFO32_M_Rem  : out std_logic_vector(15 downto 0);
+      FIFO32_S_Rd   : in  std_logic;
+      FIFO32_M_Wr   : in  std_logic
+      );
+  end component;
+
+component proc_control is
+  generic (
+    C_ENABLE_ILA          : integer := 0
+    );
+  port (
+    clk : in std_logic;
+    rst : in std_logic;
+
+    -- Request FSL
+    FSLA_Rst       : in  std_logic;
+    FSLA_S_Read    : out std_logic;  -- Read signal, requiring next available input to be read
+    FSLA_S_Data    : in  std_logic_vector(0 to 31);  -- Input data
+    FSLA_S_Control : in  std_logic;  -- Control Bit, indicating the input data are control word
+    FSLA_S_Exists  : in  std_logic;  -- Data Exist Bit, indicating data exist in the input FSL bus
+    FSLA_M_Write   : out std_logic;  -- Write signal, enabling writing to output FSL bus
+    FSLA_M_Data    : out std_logic_vector(0 to 31);  -- Output data
+    FSLA_M_Control : out std_logic;  -- Control Bit, indicating the output data are contol word
+    FSLA_M_Full    : in  std_logic;  -- Full Bit, indicating output FSL bus is full
+
+    -- Reply FSL
+    FSLB_Rst       : in  std_logic;
+    FSLB_S_Read    : out std_logic;  -- Read signal, requiring next available input to be read
+    FSLB_S_Data    : in  std_logic_vector(0 to 31);  -- Input data
+    FSLB_S_Control : in  std_logic;  -- Control Bit, indicating the input data are control word
+    FSLB_S_Exists  : in  std_logic;  -- Data Exist Bit, indicating data exist in the input FSL bus
+    FSLB_M_Write   : out std_logic;  -- Write signal, enabling writing to output FSL bus
+    FSLB_M_Data    : out std_logic_vector(0 to 31);  -- Output data
+    FSLB_M_Control : out std_logic;  -- Control Bit, indicating the output data are contol word
+    FSLB_M_Full    : in  std_logic;  -- Full Bit, indicating output FSL bus is full
+
+
+    -- 16 individual reset outputs (mhs does not support vector indexing)
+    reset0 : out std_logic;
+    reset1 : out std_logic;
+    reset2 : out std_logic;
+    reset3 : out std_logic;
+    reset4 : out std_logic;
+    reset5 : out std_logic;
+    reset6 : out std_logic;
+    reset7 : out std_logic;
+    reset8 : out std_logic;
+    reset9 : out std_logic;
+    resetA : out std_logic;
+    resetB : out std_logic;
+    resetC : out std_logic;
+    resetD : out std_logic;
+    resetE : out std_logic;
+    resetF : out std_logic;
+
+    -- MMU related ports
+    page_fault : in  std_logic;
+    fault_addr : in  std_logic_vector(31 downto 0);
+    retry      : out std_logic;
+    pgd        : out std_logic_vector(31 downto 0);
+    tlb_hits   : in  std_logic_vector(31 downto 0);
+    tlb_misses : in  std_logic_vector(31 downto 0);
+
+    -- Fault injection related ports
+    fault_sa0 : out std_logic_vector(31 downto 0);
+    fault_sa1 : out std_logic_vector(31 downto 0);
+    
+    -- Arbiter run-time options
+	ARB_RUNTIME_OPTIONS: out std_logic_vector(15 downto 0);
+
+    -- Error signals from arbiter
+    ERROR_REQ : in  std_logic;
+    ERROR_ACK : out std_logic;
+    ERROR_TYP : in  std_logic_vector(7 downto 0);
+    ERROR_ADR : in  std_logic_vector(31 downto 0);
+
+    -- ReconOS reset
+    reconos_reset : out std_logic
+    );
+end component;
+  
+  component fifo32_arbiter_sh_perf
+    generic (
+      C_SLV_DWIDTH     : integer := 32;
+      FIFO32_PORTS     : integer := 16;  --! 1 to 16 allowed
+      ARBITRATION_ALGO : integer := 0  --! 0= Round Robin, others not available atm.
+      );
+    port (
+      -- Multiple FIFO32 Inputs
+      IN_FIFO32_S_Data_A : in  std_logic_vector(31 downto 0);
+      IN_FIFO32_S_Fill_A : in  std_logic_vector(15 downto 0);
+      IN_FIFO32_S_Rd_A   : out std_logic;
+
+      IN_FIFO32_M_Data_A : out std_logic_vector(31 downto 0);
+      IN_FIFO32_M_Rem_A  : in  std_logic_vector(15 downto 0);
+      IN_FIFO32_M_Wr_A   : out std_logic;
+
+      IN_FIFO32_S_Data_B : in  std_logic_vector(31 downto 0);
+      IN_FIFO32_S_Fill_B : in  std_logic_vector(15 downto 0);
+      IN_FIFO32_S_Rd_B   : out std_logic;
+
+      IN_FIFO32_M_Data_B : out std_logic_vector(31 downto 0);
+      IN_FIFO32_M_Rem_B  : in  std_logic_vector(15 downto 0);
+      IN_FIFO32_M_Wr_B   : out std_logic;
+
+      IN_FIFO32_S_Data_C : in  std_logic_vector(31 downto 0);
+      IN_FIFO32_S_Fill_C : in  std_logic_vector(15 downto 0);
+      IN_FIFO32_S_Rd_C   : out std_logic;
+
+      IN_FIFO32_M_Data_C : out std_logic_vector(31 downto 0);
+      IN_FIFO32_M_Rem_C  : in  std_logic_vector(15 downto 0);
+      IN_FIFO32_M_Wr_C   : out std_logic;
+
+      IN_FIFO32_S_Data_D : in  std_logic_vector(31 downto 0);
+      IN_FIFO32_S_Fill_D : in  std_logic_vector(15 downto 0);
+      IN_FIFO32_S_Rd_D   : out std_logic;
+
+      IN_FIFO32_M_Data_D : out std_logic_vector(31 downto 0);
+      IN_FIFO32_M_Rem_D  : in  std_logic_vector(15 downto 0);
+      IN_FIFO32_M_Wr_D   : out std_logic;
+
+      IN_FIFO32_S_Data_E : in  std_logic_vector(31 downto 0);
+      IN_FIFO32_S_Fill_E : in  std_logic_vector(15 downto 0);
+      IN_FIFO32_S_Rd_E   : out std_logic;
+
+      IN_FIFO32_M_Data_E : out std_logic_vector(31 downto 0);
+      IN_FIFO32_M_Rem_E  : in  std_logic_vector(15 downto 0);
+      IN_FIFO32_M_Wr_E   : out std_logic;
+
+      IN_FIFO32_S_Data_F : in  std_logic_vector(31 downto 0);
+      IN_FIFO32_S_Fill_F : in  std_logic_vector(15 downto 0);
+      IN_FIFO32_S_Rd_F   : out std_logic;
+
+      IN_FIFO32_M_Data_F : out std_logic_vector(31 downto 0);
+      IN_FIFO32_M_Rem_F  : in  std_logic_vector(15 downto 0);
+      IN_FIFO32_M_Wr_F   : out std_logic;
+
+      IN_FIFO32_S_Data_G : in  std_logic_vector(31 downto 0);
+      IN_FIFO32_S_Fill_G : in  std_logic_vector(15 downto 0);
+      IN_FIFO32_S_Rd_G   : out std_logic;
+
+      IN_FIFO32_M_Data_G : out std_logic_vector(31 downto 0);
+      IN_FIFO32_M_Rem_G  : in  std_logic_vector(15 downto 0);
+      IN_FIFO32_M_Wr_G   : out std_logic;
+
+      IN_FIFO32_S_Data_H : in  std_logic_vector(31 downto 0);
+      IN_FIFO32_S_Fill_H : in  std_logic_vector(15 downto 0);
+      IN_FIFO32_S_Rd_H   : out std_logic;
+
+      IN_FIFO32_M_Data_H : out std_logic_vector(31 downto 0);
+      IN_FIFO32_M_Rem_H  : in  std_logic_vector(15 downto 0);
+      IN_FIFO32_M_Wr_H   : out std_logic;
+
+      IN_FIFO32_S_Data_I : in  std_logic_vector(31 downto 0);
+      IN_FIFO32_S_Fill_I : in  std_logic_vector(15 downto 0);
+      IN_FIFO32_S_Rd_I   : out std_logic;
+
+      IN_FIFO32_M_Data_I : out std_logic_vector(31 downto 0);
+      IN_FIFO32_M_Rem_I  : in  std_logic_vector(15 downto 0);
+      IN_FIFO32_M_Wr_I   : out std_logic;
+
+      IN_FIFO32_S_Data_J : in  std_logic_vector(31 downto 0);
+      IN_FIFO32_S_Fill_J : in  std_logic_vector(15 downto 0);
+      IN_FIFO32_S_Rd_J   : out std_logic;
+
+      IN_FIFO32_M_Data_J : out std_logic_vector(31 downto 0);
+      IN_FIFO32_M_Rem_J  : in  std_logic_vector(15 downto 0);
+      IN_FIFO32_M_Wr_J   : out std_logic;
+
+      IN_FIFO32_S_Data_K : in  std_logic_vector(31 downto 0);
+      IN_FIFO32_S_Fill_K : in  std_logic_vector(15 downto 0);
+      IN_FIFO32_S_Rd_K   : out std_logic;
+
+      IN_FIFO32_M_Data_K : out std_logic_vector(31 downto 0);
+      IN_FIFO32_M_Rem_K  : in  std_logic_vector(15 downto 0);
+      IN_FIFO32_M_Wr_K   : out std_logic;
+
+      IN_FIFO32_S_Data_L : in  std_logic_vector(31 downto 0);
+      IN_FIFO32_S_Fill_L : in  std_logic_vector(15 downto 0);
+      IN_FIFO32_S_Rd_L   : out std_logic;
+
+      IN_FIFO32_M_Data_L : out std_logic_vector(31 downto 0);
+      IN_FIFO32_M_Rem_L  : in  std_logic_vector(15 downto 0);
+      IN_FIFO32_M_Wr_L   : out std_logic;
+
+      IN_FIFO32_S_Data_M : in  std_logic_vector(31 downto 0);
+      IN_FIFO32_S_Fill_M : in  std_logic_vector(15 downto 0);
+      IN_FIFO32_S_Rd_M   : out std_logic;
+
+      IN_FIFO32_M_Data_M : out std_logic_vector(31 downto 0);
+      IN_FIFO32_M_Rem_M  : in  std_logic_vector(15 downto 0);
+      IN_FIFO32_M_Wr_M   : out std_logic;
+
+      IN_FIFO32_S_Data_N : in  std_logic_vector(31 downto 0);
+      IN_FIFO32_S_Fill_N : in  std_logic_vector(15 downto 0);
+      IN_FIFO32_S_Rd_N   : out std_logic;
+
+      IN_FIFO32_M_Data_N : out std_logic_vector(31 downto 0);
+      IN_FIFO32_M_Rem_N  : in  std_logic_vector(15 downto 0);
+      IN_FIFO32_M_Wr_N   : out std_logic;
+
+      IN_FIFO32_S_Data_O : in  std_logic_vector(31 downto 0);
+      IN_FIFO32_S_Fill_O : in  std_logic_vector(15 downto 0);
+      IN_FIFO32_S_Rd_O   : out std_logic;
+
+      IN_FIFO32_M_Data_O : out std_logic_vector(31 downto 0);
+      IN_FIFO32_M_Rem_O  : in  std_logic_vector(15 downto 0);
+      IN_FIFO32_M_Wr_O   : out std_logic;
+
+      IN_FIFO32_S_Data_P : in  std_logic_vector(31 downto 0);
+      IN_FIFO32_S_Fill_P : in  std_logic_vector(15 downto 0);
+      IN_FIFO32_S_Rd_P   : out std_logic;
+
+      IN_FIFO32_M_Data_P : out std_logic_vector(31 downto 0);
+      IN_FIFO32_M_Rem_P  : in  std_logic_vector(15 downto 0);
+      IN_FIFO32_M_Wr_P   : out std_logic;
+
+      -- Single FIFO32 Output
+      OUT_FIFO32_S_Data : out std_logic_vector(31 downto 0);
+      OUT_FIFO32_S_Fill : out std_logic_vector(15 downto 0);
+      OUT_FIFO32_S_Rd   : in  std_logic;
+
+      OUT_FIFO32_M_Data : in  std_logic_vector(31 downto 0);
+      OUT_FIFO32_M_Rem  : out std_logic_vector(15 downto 0);
+      OUT_FIFO32_M_Wr   : in  std_logic;
+
+      -- Hardware Interface HWIF
+      HWIF2DEC_Addr  : in  std_logic_vector(0 to 31);
+      HWIF2DEC_Data  : in  std_logic_vector(C_SLV_DWIDTH-1 downto 0);
+      HWIF2DEC_RdCE  : in  std_logic;
+      HWIF2DEC_WrCE  : in  std_logic;
+      DEC2HWIF_Data  : out std_logic_vector(C_SLV_DWIDTH-1 downto 0);
+      DEC2HWIF_RdAck : out std_logic;
+      DEC2HWIF_WrAck : out std_logic;
+
+      -- Run-time options
+      RUNTIME_OPTIONS : in std_logic_vector(15 downto 0 );
+
+      -- Error reporting
+      ERROR_REQ : out std_logic;
+      ERROR_ACK : in  std_logic;
+      ERROR_TYP : out std_logic_vector(7 downto 0);
+      ERROR_ADR : out std_logic_vector(31 downto 0);
+
+      -- Misc
+      Rst : in std_logic;
+      clk : in std_logic;               -- separate clock for control logic
+
+      -- Debug signals to ILA
+      ila_signals : out std_logic_vector(3 downto 0)
+      );
+  end component;
+
+--------------------------------------------------------------------------------
 -- Constants
 --------------------------------------------------------------------------------
   constant half_cycle : time := 5 ns;
@@ -53,8 +320,40 @@ architecture testbench of tb_fifo32_arbiter_sh_perf is
   signal A2M_FIFO32_M_Rem  : std_logic_vector(15 downto 0);
   signal A2M_FIFO32_M_Wr   : std_logic;
 
+  -- FIFO32 interface to proc_control
+  signal FSLA_Rst       : std_logic;   
+  signal FSLA_S_Read    : std_logic;
+  signal FSLA_S_Data    : std_logic_vector(31 downto 0);
+  signal FSLA_S_Control : std_logic;
+  signal FSLA_S_Exists  : std_logic;
+  signal FSLA_M_Write   : std_logic;
+  signal FSLA_M_Data    : std_logic_vector(31 downto 0);
+  signal FSLA_M_Control : std_logic;
+  signal FSLA_M_Full    : std_logic;
+                       
+  signal FSLB_Rst       : std_logic;
+  signal FSLB_S_Read    : std_logic;
+  signal FSLB_S_Data    : std_logic_vector(31 downto 0);
+  signal FSLB_S_Control : std_logic;
+  signal FSLB_S_Exists  : std_logic;
+  signal FSLB_M_Write   : std_logic;
+  signal FSLB_M_Data    : std_logic_vector(31 downto 0);
+  signal FSLB_M_Control : std_logic;
+  signal FSLB_M_Full    : std_logic;
+
+
+  
+  -- Hardware Interface HWIF
+  signal HWIF2DEC_Addr  : std_logic_vector(0 to 31);
+  signal HWIF2DEC_Data  : std_logic_vector(C_SLV_DWIDTH-1 downto 0);
+  signal HWIF2DEC_RdCE  : std_logic;
+  signal HWIF2DEC_WrCE  : std_logic;
+  signal DEC2HWIF_Data  : std_logic_vector(C_SLV_DWIDTH-1 downto 0);
+  signal DEC2HWIF_RdAck : std_logic;
+  signal DEC2HWIF_WrAck : std_logic;
+
   -- Run-time options
-  signal RUNTIME_OPTIONS: std_logic_vector(59 downto 0);
+  signal RUNTIME_OPTIONS: std_logic_vector(15 downto 0);
 
   -- Error reporting
   signal ERROR_REQ : std_logic;
@@ -74,6 +373,8 @@ architecture testbench of tb_fifo32_arbiter_sh_perf is
   signal Rst           : std_logic;
   signal clk           : std_logic;
 
+  signal test_desc : string(1 to 16) := "None            ";
+
   -- This signal gives a human readable description of what the testbench is
   -- currently testing. Implemented as a signal, because Xilinx ISim can't
   -- track variables. 
@@ -81,7 +382,10 @@ architecture testbench of tb_fifo32_arbiter_sh_perf is
   type tb_phase_vector_t is array  (natural range<>) of tb_phase_t;
   signal tb_phase : tb_phase_vector_t(0 to HWT_COUNT-1);
 
-	-- A fast memif write function, capable of writing 1 word per clock cycle 
+
+  signal transfer_size_sig    : natural range 0 to 2**24;
+
+
 	procedure memif_fifo_push_fast (
 		signal i_memif : in  i_memif_t;
 		signal o_memif : out o_memif_t;
@@ -97,10 +401,21 @@ architecture testbench of tb_fifo32_arbiter_sh_perf is
 			o_memif.m_data <= data;
 			done := True;
 		end if;
+-- 		case i_memif.step is
+-- 			when 0 =>
+-- 				if unsigned(i_memif.m_remainder) > 0 then
+-- 					o_memif.step <= 1;
+-- 				end if;
+-- 			when 1 =>
+-- 				o_memif.m_wr <= '1';
+-- 				o_memif.m_data <= data;
+-- 				o_memif.step <= 2;
+-- 			when others =>
+-- 				o_memif.step <= 0;
+-- 				done := True;
+-- 		end case;
 	end procedure;
 
-	-- Complements memif_fifo_push_fast function. Has to be called at end of
-	-- transfer
 	procedure memif_fifo_end_fast (
 		signal i_memif : in  i_memif_t;
 		signal o_memif : out o_memif_t
@@ -132,7 +447,7 @@ begin  -- of architecture ------------------------------------------------------
       H2F_FIFO32_M_Wr(i)
       );
 
-    master_fifo32_i : entity work.fifo32
+    master_fifo32_i : fifo32
       generic map(
         C_FIFO32_DEPTH => 10000
         )
@@ -148,7 +463,7 @@ begin  -- of architecture ------------------------------------------------------
         FIFO32_M_Wr   => H2F_FIFO32_M_Wr(i)
         );
 
-    slave_fifo32_i : entity work.fifo32
+    slave_fifo32_i : fifo32
       generic map(
         C_FIFO32_DEPTH => 10000
         )
@@ -165,7 +480,7 @@ begin  -- of architecture ------------------------------------------------------
         );
 
 
-    hwt_process : process(rst, clk, H2F_MEMIF_IN)
+    hwt_process : process(clk, H2F_MEMIF_IN)
       is
       --! @brief First of two global variables needed for random number functions,
       --!        e.g. get_rand_unsigned      
@@ -197,7 +512,7 @@ begin  -- of architecture ------------------------------------------------------
         return to_unsigned(rand_int, bitwidth);
       end function;
 
-      type state_t is (SET_PAUSE, PAUSE, WRITE_HEADER, WRITE_DATA, READ_DATA, REPORT_END_STATE, END_STATE);
+      type state_t is (SET_PAUSE, PAUSE, WRITE_HEADER, WRITE_DATA, READ_DATA, END_STATE);
       variable state : state_t;
 
       type MODE is (READ, WRITE);
@@ -256,18 +571,16 @@ begin  -- of architecture ------------------------------------------------------
             packet_nr := packet_nr + 1;
             tb_phase(i) <= tb_phase_t'val(packet_nr-1);
             if packet_nr > MAX_PACKETS then
-              state := REPORT_END_STATE;
+              state := END_STATE;
             else
               pause_counter := PAUSE_LIST((MAX_PACKETS*i)+packet_nr);
               state         := PAUSE;
-              report "HWT " & i'image(i) & " Packet " & packet_nr'image(packet_nr) & " pausing " & pause_counter'image(pause_counter) & " cycles" severity note;
             end if;
             
           when PAUSE =>
             pause_counter    := pause_counter - 1;
             if pause_counter <= 0 then
               state := WRITE_HEADER;
-              report "HWT " & i'image(i) & " Packet " & packet_nr'image(packet_nr) & " START packet with " & integer'image(LENGTH_LIST((MAX_PACKETS*i)+packet_nr)) & " bytes" severity note;
             end if;
             
           when WRITE_HEADER =>
@@ -328,7 +641,6 @@ begin  -- of architecture ------------------------------------------------------
             end if;
             if length_counter = 0 then
               state := SET_PAUSE;
-              report "HWT " & i'image(i) & " Packet " & packet_nr'image(packet_nr) & " STOP" severity note;
             end if;
             
           when READ_DATA =>
@@ -343,15 +655,10 @@ begin  -- of architecture ------------------------------------------------------
             end if;
             if length_counter = 0 then
               state := SET_PAUSE;
-              report "HWT " & i'image(i) & " Packet " & packet_nr'image(packet_nr) & " STOP" severity note;
             end if;
             
-          when REPORT_END_STATE =>
-            report "HWT " & i'image(i) & " Packet generation done!" severity note;
-            state := END_STATE;
-            
           when END_STATE =>
-            null;
+            report "Packet generation done!" severity note;
         end case;
       end if;
     end process;
@@ -363,30 +670,81 @@ begin
     F2A_FIFO32_S_Fill(16*(i+1)-1 downto 16*i) <= (others => '0');
 end generate;
 
-  proc_control_process: process(rst, clk) is
-  begin
-	
-	if rst = '1' then
-	    ERROR_ACK <= '0';
-	elsif clk'event and clk = '1' then 
-        -- Set Shadowing configuration
-        --RUNTIME_OPTIONS(  3 downto  0 ) <= "1110"; -- Set shadow buffer size and debug mux
-        --RUNTIME_OPTIONS(  7 downto  4 ) <= "1000"; -- Set first  thread to TUO and first sh unit
-        --RUNTIME_OPTIONS( 11 downto  8 ) <= "0000"; -- Set second thread to ST  and first sh unit
-        --RUNTIME_OPTIONS( 59 downto 12 ) <= (others => '1');-- All others operate normal
-    
-        RUNTIME_OPTIONS <= (others => '1');-- Shadowing off
-        -- Error signals from arbiter
-        if ERROR_REQ = '1' then
-            ERROR_ACK <= '1';
-        else
-            ERROR_ACK <= '0';
-        end if;
 
-	end if;
-  end process;
+-- Instantiate proc_control, which communicates error data to the main system
+  FSLA_M_Full <= '0'; -- let proc_control think we always accept incoming data
+proc_control_i: proc_control 
+  port map(
+    clk => clk,
+    rst => rst,
+
+    -- Request FSL
+    FSLA_Rst       => FSLA_Rst,      
+    FSLA_S_Read    => FSLA_S_Read,   
+    FSLA_S_Data    => FSLA_S_Data,   
+    FSLA_S_Control => FSLA_S_Control,
+    FSLA_S_Exists  => FSLA_S_Exists, 
+    FSLA_M_Write   => FSLA_M_Write,  
+    FSLA_M_Data    => FSLA_M_Data,   
+    FSLA_M_Control => FSLA_M_Control,
+    FSLA_M_Full    => FSLA_M_Full,   
+                                     
+    -- Reply FSL                     
+    FSLB_Rst       => FSLB_Rst,      
+    FSLB_S_Read    => FSLB_S_Read,   
+    FSLB_S_Data    => FSLB_S_Data,   
+    FSLB_S_Control => FSLB_S_Control,
+    FSLB_S_Exists  => FSLB_S_Exists, 
+    FSLB_M_Write   => FSLB_M_Write,  
+    FSLB_M_Data    => FSLB_M_Data,   
+    FSLB_M_Control => FSLB_M_Control,
+    FSLB_M_Full    => FSLB_M_Full,   
+
+
+    -- 16 individual reset outputs (mhs does not support vector indexing)
+    reset0 => open,
+    reset1 => open,
+    reset2 => open,
+    reset3 => open,
+    reset4 => open,
+    reset5 => open,
+    reset6 => open,
+    reset7 => open,
+    reset8 => open,
+    reset9 => open,
+    resetA => open,
+    resetB => open,
+    resetC => open,
+    resetD => open,
+    resetE => open,
+    resetF => open,
+
+    -- MMU related ports
+    page_fault => '0',
+    fault_addr => (others =>'0'),
+    retry      => open,
+    pgd        => open,
+    tlb_hits   => (others =>'0'),
+    tlb_misses => (others =>'0'),
+
+    -- Fault injection related ports
+    fault_sa0 => open,
+    fault_sa1 => open,
+
+    -- Arbiter run-time options
+	ARB_RUNTIME_OPTIONS => RUNTIME_OPTIONS,
+
+    -- Error signals from arbiter
+    ERROR_REQ  => ERROR_REQ,
+    ERROR_ACK  => ERROR_ACK,
+    ERROR_TYP  => ERROR_TYP,
+    ERROR_ADR  => ERROR_ADR,
+
+    -- ReconOS reset
+    reconos_reset => open
+    );
   
-  fifo32_arbiter_sh_perf_i : entity work.fifo32_arbiter_sh_perf
+  fifo32_arbiter_sh_perf_i : fifo32_arbiter_sh_perf
     generic map(
       FIFO32_PORTS     => ARB_PORT_COUNT,  -- setting it to something else than
                                            -- 16 breaks it at the moment:
@@ -533,6 +891,15 @@ end generate;
       OUT_FIFO32_M_Rem  => A2M_FIFO32_M_Rem,
       OUT_FIFO32_M_Wr   => A2M_FIFO32_M_Wr,
 
+      -- Hardware Interface HWIF
+      HWIF2DEC_Addr  => HWIF2DEC_Addr,
+      HWIF2DEC_Data  => HWIF2DEC_Data,
+      HWIF2DEC_RdCE  => HWIF2DEC_RdCE,
+      HWIF2DEC_WrCE  => HWIF2DEC_WrCE,
+      DEC2HWIF_Data  => DEC2HWIF_Data,
+      DEC2HWIF_RdAck => DEC2HWIF_RdAck,
+      DEC2HWIF_WrAck => DEC2HWIF_WrAck,
+
 	  -- Run-time options	  
 	  RUNTIME_OPTIONS => RUNTIME_OPTIONS,
 	  
@@ -561,58 +928,60 @@ end generate;
     A2M_FIFO32_M_Wr
     );
 
-mem_ctrl_generate: if True generate
-    type MEM_FSM_STATE_T is (IDLE, MODE_LENGTH, ADDRESS, DATA_READ, DATA_WRITE);
-    signal mem_state : MEM_FSM_STATE_T;    
+  mem_ctrl : process(clk, rst, a2m_memif_in)
+    is
+    type FSM_STATE_T is (IDLE, MODE_LENGTH, ADDRESS, DATA_READ, DATA_WRITE);
+    variable state : FSM_STATE_T;
+
     type mode_t is (READ, WRITE);
-    signal transfer_mode    : mode_t := READ;
-    signal transfer_size    : natural range 0 to 2**24;
-    signal transfer_address : std_logic_vector(31 downto 0);
-begin
-  mem_ctrl : process(clk, rst, a2m_memif_in) is
+    variable transfer_mode    : mode_t := READ;
+    variable transfer_size    : natural range 0 to 2**24;
+    variable transfer_address : std_logic_vector(31 downto 0);
   begin
     if rst = '1' then
-      mem_state                <= IDLE;
-      transfer_mode        <= READ;
+      state                := IDLE;
+      transfer_mode        := READ;
       a2m_memif_out.s_rd   <= '0';
       a2m_memif_out.m_wr   <= '0';
       a2m_memif_out.m_data <= X"00000000";
     elsif rising_edge(clk) then
-      case mem_state is
+      -- default is to hold all outputs.
+      state              := state;
+      a2m_memif_out.s_rd <= a2m_memif_out.s_rd;
+      a2m_memif_out.m_wr <= a2m_memif_out.m_wr;
+      transfer_mode      := transfer_mode;
+      transfer_size      := transfer_size;
+      case state is
         
         when IDLE =>
           a2m_memif_out.s_rd <= '0';
           a2m_memif_out.m_wr <= '0';
           if to_integer(unsigned(a2m_memif_in.s_fill)) > 1 then
-            mem_state              <= MODE_LENGTH;
-            report "    MEM Packet Start" severity note;
+            state              := MODE_LENGTH;
             a2m_memif_out.s_rd <= '1';
           end if;
           
           
         when MODE_LENGTH =>
-          mem_state <= ADDRESS;
+          state := ADDRESS;
           case a2m_memif_in.s_data(31) is
-            when '0'    => transfer_mode <= READ;
-            when others => transfer_mode <= WRITE;
+            when '0'    => transfer_mode := READ;
+            when others => transfer_mode := WRITE;
           end case;
-          transfer_size <= to_integer(unsigned(a2m_memif_in.s_data(23 downto 0)));
-          report "    MEM Packet Mode " & std_logic'image(a2m_memif_in.s_data(31)) & 
-                 " size: " & integer'image(to_integer(unsigned(a2m_memif_in.s_data(23 downto 0)))) & " bytes," severity note;
+          transfer_size := to_integer(unsigned(a2m_memif_in.s_data(23 downto 0)));
           
         when ADDRESS =>
-          transfer_address <= a2m_memif_in.s_data;
-          report "    MEM address: " & integer'image(to_integer(unsigned(a2m_memif_in.s_data))) severity note;
+          transfer_address := a2m_memif_in.s_data;
           case transfer_mode is
             when READ =>
-              mem_state              <= DATA_READ;
+              state              := DATA_READ;
               a2m_memif_out.s_rd <= '0';
               a2m_memif_out.m_wr <= '1';
-              a2m_memif_out.m_data <= a2m_memif_in.s_data;
+              a2m_memif_out.m_data <= transfer_address;
             when WRITE =>
-              mem_state <= DATA_WRITE;
+              state := DATA_WRITE;
               a2m_memif_out.s_rd <= '0';
-              --transfer_size <= transfer_size - 4;
+              --transfer_size := transfer_size - 4;
             when others => null;
           end case;
           
@@ -623,11 +992,12 @@ begin
             a2m_memif_out.s_rd <= '0';
           else
 	        a2m_memif_out.s_rd <= '1';
-            transfer_size <= transfer_size - 4;
-            if transfer_size = 4 then
-              mem_state <= IDLE;
-              report "    MEM Packet Stop" severity note;
-            end if;
+            transfer_size := transfer_size - 4;
+          end if;
+          
+          if transfer_size = 0 then
+            state              := IDLE;
+            --a2m_memif_out.s_rd <= '0';
           end if;
           
         when DATA_READ =>
@@ -639,23 +1009,61 @@ begin
 			a2m_memif_out.m_wr <= '0';
           else
             a2m_memif_out.m_wr <= '1';
-            transfer_size      <= transfer_size - 4;
-            if transfer_size = 4 then
-              mem_state                <= IDLE;
-              a2m_memif_out.m_wr   <= '0';
-              a2m_memif_out.m_data <= X"00000000";
-              report "    MEM Packet Stop" severity note;
-            end if;
+            transfer_size      := transfer_size - 4;	          
+          end if;
+
+          if transfer_size = 0 then
+            state                := IDLE;
+            a2m_memif_out.m_wr   <= '0';
+            a2m_memif_out.m_data <= X"00000000";
           end if;
           
         when others =>
-          mem_state <= IDLE;
+          state := IDLE;
       end case;
+      transfer_size_sig <= transfer_size;
     end if;
   end process;
 
-end generate;
+  hwif_proc : process is
+    procedure hwif_write(addr, data : std_logic_vector(31 downto 0))
+    is
 
+    begin
+      HWIF2DEC_Addr <= addr;
+      HWIF2DEC_Data <= data;
+      HWIF2DEC_WrCE <= '1';
+      wait for full_cycle;
+      HWIF2DEC_Addr <= (others => '0');
+      HWIF2DEC_Data <= (others => '0');
+      HWIF2DEC_WrCE <= '0';
+      wait for full_cycle;
+    end procedure;
+  begin
+    -- set Defaults
+    HWIF2DEC_Addr <= (others => '0');
+    HWIF2DEC_Data <= (others => '0');
+    HWIF2DEC_RdCE <= '0';
+    HWIF2DEC_WrCE <= '0';
+    wait for 200 ns;
+
+    test_desc <= "enable chksum rd";
+    hwif_write(X"00000070", X"FFFFFFFF");
+
+    test_desc <= "enable chksum wr";
+    hwif_write(X"000000F0", X"FFFFFFFF");
+    wait for 50*full_cycle;
+
+    test_desc <= "reset  chksum   ";
+    hwif_write(X"000000EC", X"FFFFFFFF");
+    wait for 10*full_cycle;
+
+    test_desc <= "enable chksum   ";
+    hwif_write(X"000000F0", X"FFFFFFFF");
+    wait for 50*full_cycle;
+    test_desc <= "end of testbench";
+    wait;
+  end process;
 
   reset : process is
   begin
