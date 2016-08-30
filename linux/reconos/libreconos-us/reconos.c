@@ -175,12 +175,13 @@ static void *reconos_control_thread_entry(void *arg)
 	sigaction(SIGSEGV, &act, NULL);
 	sigaction(SIGFPE, &act, NULL);
 	sigaction(SIGILL, &act, NULL);
-
+	fprintf(stderr, "PROC_CONTROL_THREAD: started\n");
 	while (1) {
 		uint32_t cmd, ret, *addr;
 
 		/* Receive page fault address */
 		cmd = fsl_read(reconos_proc.proc_control_fsl_a);
+		fprintf(stderr, "PROC_CONTROL_THREAD: cmd 0x%x\n", cmd);
 		if (cmd == C_RETURN_ADDR) {	
 			addr = (uint32_t *) fsl_read(reconos_proc.proc_control_fsl_a);
 			reconos_proc.page_faults++;
