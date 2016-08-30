@@ -182,64 +182,65 @@ def rebootOld(_bitstream, _telnetPasswd, _work_dir, _benchmarkTag, _boardNr, _ca
     child.expect('# ')
     return child
 
-def reboot(_bitstream, _telnetPasswd, _work_dir, _benchmarkTag, _boardNr, _cableLock, _silent=False):
+def reboot(_config, _silent=False):
     # do we need to logout properly?
     # what if command line hangs?
     
     # Reset the ML605 board and let it reload bitstream and linux kernel from compact flash 
     # we are reusing the _cablelock parameter here for reset
     if not _silent: print("Resetting ML605 board...")
-    _cableLock.reset(_boardNr)
+    _config['ml605ResetMgr'].reset(_config['boardNr'])
     
     if not _silent: print("Waiting for system boot...")
     time.sleep(SYSTEM_BOOT_TIME)
     
     # LOGIN
-    child = pexpect.spawn ('telnet '+IP_ADDRESS[_boardNr])
+    child = pexpect.spawn ('telnet '+IP_ADDRESS[_config['boardNr']])
     child.expect ('reconos login:.*')
     child.sendline ('root')
     child.expect ('Password:.*')
-    child.sendline (_telnetPasswd)
+    child.sendline (_config['telnetPasswd'])
     
     child.delaybeforesend = 0
     
     # Preparations
     child.expect('# ')
-    child.sendline('cd '+ _work_dir)
+    child.sendline('cd '+ _config['work_dir'])
     child.expect('# ')
-    child.sendline('mkdir -p '+ _benchmarkTag)
+    child.sendline('mkdir -p '+ _config['benchmarkTag'])
     child.expect('# ')
-    child.sendline('chmod o+rw '+ _benchmarkTag)
+    child.sendline('chmod o+rw '+ _config['benchmarkTag'])
     child.expect('# ')
     return child
 
-def executeCommands(_child, _benchmarkTag, _telnetPasswd, _bitstream, _commands, _work_dir, _faultAddress, _boardNr, _cableLock, _currentFaultIdx, _totalFaults, _blockedFI=False):
+def executeCommands(_config, _child, _faultAddress, _currentFaultIdx, _totalFaults):
+                    #_child, _benchmarkTag, _telnetPasswd, _bitstream, _commands, _work_dir, _faultAddress, _boardNr, _cableLock, _currentFaultIdx, _totalFaults, _blockedFI=False):
     child = _child
     pexpectLogging = False
     rebootNeeded = False
-    for cmd in _commands:   
-        log_file = cmd.format(_benchmarkTag).split('_run')[0].split(' ')[-1]+"_run"
+    for cmd in _config['commands']:   
+        log_file = cmd.format(_config['benchmarkTag']).split('_run')[0].split(' ')[-1]+"_run"
         child.sendline('echo -e "###########" >> ' + log_file)
         #child.expect('# ')
         
         # Fault injection
-        if _blockedFI:
+        if _config['blockedFaultInject']:
             # Blocked Fault injection: flip complete block 
             faultInjCMD = "./xilsem_err_inj -p{},{},{},{},{},{},{} -w".format(*_faultAddress)
         else:
             faultInjCMD = "./xilsem_err_inj -p{},{},{},{},{},{},{}".format(*_faultAddress)
             
-        child.sendline(faultInjCMD)
-
-        #child.expect('# ')
-        child.sendline('echo -e "' + faultInjCMD + '" >> ' + log_file)
-        #child.expect('# ')
+        if not config['dry_run']:
+            child.sendline(faultInjCMD)
+            #child.expect('# ')
+            child.sendline('echo -e "' + faultInjCMD + '" >> ' + log_file)
+            #child.expect('# ')
         
         # Execute command to test if fault affect test programm
         print("FA {},{},{},{},{},{},{} ".format(*_faultAddress) + time.ctime()+
-               ' ' +cmd.format(_benchmarkTag) + ' ' + str(_currentFaultIdx) +
+               ' ' +cmd.format(_config['benchmarkTag']) + ' ' + str(_currentFaultIdx) +
                '/' + str(_totalFaults))
-        child.sendline(cmd.format(_benchmarkTag))
+        child.sendline(cmd.format(_config['benchmarkTag']))
         
         # Programm runs. Several possibilities now:
         # - timeout: program got stuck and did not terminate
@@ -248,8 +249,8 @@ def executeCommands(_child, _benchmarkTag, _telnetPasswd, _bitstream, _commands,
         response = child.expect(['# ', pexpect.TIMEOUT],timeout=TIMEOUT_SEC)
         if response == 1: # on timeout
             print ("Program aborted due to timeout. Logging to {}".format(log_file))
-            child.sendcontrol(c)
-            child.sendcontrol(z)
+            child.sendcontrol('c')
+            child.sendcontrol('z')
             child.sendline('echo "PROGRAM ABORTED!  TIMEOUT EXCEEDED!" >> ' + log_file)
             response=child.expect(['# ', pexpect.TIMEOUT],timeout=TIMEOUT_SEC)
             if response== 1: print("Timeout while writing error message to logfile. Continuing with reboot...") 
@@ -290,7 +291,7 @@ def executeCommands(_child, _benchmarkTag, _telnetPasswd, _bitstream, _commands,
                 print("#######################################################################")
                 
                 # insert abortion message into logfile
-                log_file = cmd.format(_benchmarkTag).split('_run')[0].split(' ')[-1]+"_run"
+                log_file = cmd.format(_config['benchmarkTag']).split('_run')[0].split(' ')[-1]+"_run"
                 print ("Status query aborted due to timeout. Logging to {}".format(log_file))
                 
                 child.sendline('echo "STATUS QUERY FAILED!  TIMEOUT EXCEEDED!" >> ' + log_file)
@@ -302,44 +303,41 @@ def executeCommands(_child, _benchmarkTag, _telnetPasswd, _bitstream, _commands,
         # Revert Fault injection
         # either by reboot or by flipping the bit again
         if rebootNeeded:
-            child=reboot(_bitstream, _telnetPasswd, _work_dir, _benchmarkTag, _boardNr, _cableLock)
+            child=reboot(_config)
             rebootNeeded=False
         else:
-            child.sendline(faultInjCMD)
-            #child.expect('# ')
-            child.sendline('echo -e "' + faultInjCMD + '" >> ' + log_file)
-            child.expect('# ')
-            pass
+            if not config['dry_run']:
+                child.sendline(faultInjCMD)
+                #child.expect('# ')
+                child.sendline('echo -e "' + faultInjCMD + '" >> ' + log_file)
+                child.expect('# ')
+                pass
     
     return child
 
-def runFaultInject(_benchmarkTag, _telnetPasswd, _bitstream, _commands, _work_dir, _faultList, _boardNr, _cableLock, _blockedFaultInject=False):
+def runFaultInject(_config):
+                   #_benchmarkTag, _telnetPasswd, _bitstream, _commands, _work_dir, _faultList, _boardNr, _cableLock, _blockedFaultInject=False):
     """ _blockeFaultInject=True flips complete words instead of single bits. Please prepare the _faultList such, that it contains
     every word address only once.""" 
     done = False
     exceptionCounter = 0
     checkpoint_address = 0
-    faultListLength = len(_faultList)
+    addressListLength = len(_config['addressList'])
     
     while not done:
         try:
             # LOGIN
-            #print("A")
-            #print(exceptionCounter)
-            #print(_bitstream, _telnetPasswd, _work_dir, _benchmarkTag)
-            child = reboot(_bitstream, _telnetPasswd, _work_dir, _benchmarkTag, _boardNr,_cableLock, _silent=False)
+            child = reboot(_config, _silent=False)
             #print("B")
             
             # Benchmarks
-            for address in _faultList[checkpoint_address:] :
+            for address in _config['addressList'][checkpoint_address:] :
                 # Due to reboots of system under tests, child might change inside the function.
                 # Therefore we return it back to caller
                 #print("Executing commands")
                 #print(child, _benchmarkTag, _telnetPasswd, _bitstream, 
                 #                _commands, _work_dir, [_half,_row,_column,_minor_start,_word_start, _bit_start], _blockedFaultInject)
-                child = executeCommands(child, _benchmarkTag, _telnetPasswd, _bitstream, 
-                                _commands, _work_dir, address, _boardNr, _cableLock,checkpoint_address,faultListLength,
-                                _blockedFI=_blockedFaultInject)
+                child = executeCommands( _config, child, address, checkpoint_address,addressListLength )
                 
                 checkpoint_address += 1
             
@@ -361,47 +359,69 @@ if __name__ == "__main__":
     ''' Performs fault injection tests. First command line argument specifies starting column address. Second argument specifies which board to use [0,1]
         Fault injection is performed until all essential bits in address have been tested.
     '''
-    boardNr = 0
-    start_address=[0,0,2,17,0,0,0]
+    
+    config = {
+        'boardNr':0,
+        'start_address': [0,0,2,17,0,0,0],
+        'noFaultInjection': False,
+        'blockedFaultInject': False,
+        'addressFile': "",
+        'benchmarkTag': str(datetime.date(1,1,1).today()),
+        'addressList': [],
+        'telnetPasswd': "",
+        'ml605ResetMgr': None,
+        
+        'dry_run':False,
+        
+        'bitstream': BIT_SORT_PERF,
+        'commands': sort_commands_perf,
+        'work_dir': SORT_DEMO_DIR
+        
+    }
+    
+    ###boardNr = 0
+    ###start_address=[0,0,2,17,0,0,0]
+    ###noFaultInjection=False
     
     # Deactivate buffering in outputs. When piping output of this script 
     # through 'tee', standard io buffering prevents outputs until 4096 bytes 
     # are ready to be output.
     sys.stdout = os.fdopen(sys.stdout.fileno(), 'w', 0)
-    
-    if len(sys.argv) >= 2:
-        start_address = parse_string_to_address(sys.argv[1], start_address)
-    if len(sys.argv) >= 3:
-        addressFile = sys.argv[2]
+    if len(sys.argv) < 4:
+        print('Usage: {} <startAddress> <addressFilePath> <boardNr> [--dry-run]'.format(sys.argv[0]))
+        sys.exit(1)
     if len(sys.argv) >= 4:
-        boardNr = int(sys.argv[3])
+        config['start_address'] = parse_string_to_address(sys.argv[1], config['start_address'])
+        config['addressFile'] = sys.argv[2]
+        config['boardNr'] = int(sys.argv[3])
+    if len(sys.argv) >= 5 and sys.argv[4] == "--dry-run":
+        config['dry_run'] = True
         
-    print("Using board {}, file {}  and start address {}".format(boardNr,addressFile, start_address) )
+    print("Using board {}, file {}  and start address {}".format(config['boardNr'],config['addressFile'], config['start_address']) )
     
-    benchmarkTagBase = str(datetime.date(1,1,1).today())
     
     # Loads addresses of essential bits
 #    column = start_address[3]
     try:
-        addressList = json.load(open(addressFile, "r"))
-        print("Address count in file {}: {}".format(addressFile,len(addressList)))
+        config['addressList'] = json.load(open(config['addressFile'], "r"))
+        print("Address count in file {}: {}".format(config['addressFile'],len(config['addressList'])))
     except:
-        print("Error reading file: {}".format(addressFile))
+        print("Error reading file: {}".format(config['addressFile']))
         print(sys.exc_info()[0:2])
         sys.exit()
     
     #
     # Fast forward essential bit list to address given on command line 
     #
-    if cmpAddress(start_address, "0,0,0,0,0,0,0") != 0:
-        for addr, i in zip(addressList, xrange(len(addressList))):
-            if cmpAddress(start_address, addr) == 0:
-                 addressList = addressList[i:]
+    if cmpAddress(config['start_address'], "0,0,0,0,0,0,0") != 0:
+        for addr, i in zip(config['addressList'], xrange(len(config['addressList']))):
+            if cmpAddress(config['start_address'], addr) == 0:
+                 config['ahttp://www.spiegel.de/ddressList'] = config['addressList'][i:]
                  break
-    print("Address count after fast forwarding: {}".format(len(addressList)))
+    print("Address count after fast forwarding: {}".format(len(config['addressList'])))
     
     
-    telnetPasswd = getpass.getpass('telnet password: ')
+    config['telnetPasswd'] = getpass.getpass('telnet password: ')
     #
     # Fault injection
     #
@@ -409,10 +429,14 @@ if __name__ == "__main__":
     #runFaultInject(benchmarkTagBase, telnetPasswd, BIT_SORT_PERF, sort_commands_perf, SORT_DEMO_DIR, addressList, boardNr, cableLock)
     #cableLock.shutdown()
     
-    ml605ResetMgr = ml605ResetManager("/tmp/sh_mem_err_inj_reset")
-    runFaultInject(benchmarkTagBase, telnetPasswd, BIT_SORT_PERF, sort_commands_perf, SORT_DEMO_DIR, addressList, boardNr, ml605ResetMgr)
-    ml605ResetMgr.shutdown()
-    
+    config['ml605ResetMgr'] = ml605ResetManager("/tmp/sh_mem_err_inj_reset")
+    runFaultInject(config)
     print("Done!")
+    
+    # Wait for input from user before exiting.
+    # Other ml605ResetMgr clients might be connected to us, so we don't shut 
+    # down automatically.
+    raw_input("Press any key to exit.")
+    config['ml605ResetMgr'].shutdown()
     sys.exit()
     
