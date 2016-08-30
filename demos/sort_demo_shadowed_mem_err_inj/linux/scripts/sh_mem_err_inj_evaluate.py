@@ -139,12 +139,12 @@ def printFaultByErrorCode(_faultByErrorCodeList):
     errorCodeToString[192+4]="PROC_CONTROL_THREAD_SIGILL"
     errorCodeToString[192+6]= "PROC_CONTROL_THREAD_SIGABORT"
     errorCodeToString[192+11]="PROC_CONTROL_THREAD_SIGSEGV"
-    errorCodeToString[192+32]="PROC_CONTROL_THREAD_MEMIF_ERROR"
+    errorCodeToString[192+32]="PROC_CONTROL_THREAD_MEMIF_ERR"
     
     errorCodeToString[256]="TIMEOUT"
     print("faultByErrorCode:")
     for errorCnt, errorCode in zip(_faultByErrorCodeList, xrange(len(_faultByErrorCodeList))):
-        if errorCnt != 0:
+        if ( errorCnt != 0 ) or ( errorCodeToString[errorCode] != "UNKNOWN_ERROR" ) :
             print("\t{}\t{}:\t{}".format(errorCode,errorCodeToString[errorCode].ljust(30), errorCnt))
 
 # Assumes _errorList to contain only errors from one row and generates an image
