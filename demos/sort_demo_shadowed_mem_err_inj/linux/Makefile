@@ -49,8 +49,9 @@ clean:
 	rm -f *.o sort_demo sort_demo_shadowed fault_injection xilsem_err_inj cmdline.c cmdline.h
 
 install:
-	./genBenchmark.py benchmark.sh
+	./scripts/genBenchmark.py benchmark.sh
 	cp sort_demo sort_demo_shadowed benchmark.sh  fault_injection xilsem_err_inj /exports/rootfs_mb/demos/sort_demo_shadowed_mem_err_inj/
+	cp sort_demo sort_demo_shadowed benchmark.sh  fault_injection xilsem_err_inj /exports/rootfs_mb2/demos/sort_demo_shadowed_mem_err_inj/
 
 %.o: %.c
 	$(CC) -c $(CFLAGS) $(LIBPATH) $(INCLUDEPATH) -o $@ $<
