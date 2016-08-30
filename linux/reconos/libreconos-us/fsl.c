@@ -20,7 +20,7 @@
 #include "xutils.h"
 #include "thread_shadowing_error_handler.h"
 
-#define DEBUG 1
+//#define DEBUG 1
 #define OUTPUT stderr
 
 #ifdef DEBUG
