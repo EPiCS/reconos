@@ -16,6 +16,9 @@ use proc_common_v3_00_a.proc_common_pkg.all;
 library plb2hwif_v1_00_a;
 use plb2hwif_v1_00_a.hwif_pck.all;
 
+library work;
+use work.pck_string.all;
+
 --library fifo32_v1_00_b;
 --use fifo32_v1_00_b.fifo32;
 
@@ -196,71 +199,6 @@ end entity;
 --! packet was transmitted. As we don't have any signals telling us the end or
 --! start of a packet, we have to track the protocol to decide when to switch.
 architecture behavioural of fifo32_arbiter_sh_perf is
-
---------------------------------------------------------------------------------
--- Components
---------------------------------------------------------------------------------
-	component hwif_subsystem is
-		generic(
-			C_HWT_ID                : std_logic_vector(31 downto 0) := X"DEADDEAD";  -- Unique ID number of this module
-			C_VERSION               : std_logic_vector(31 downto 0) := X"00000100";  -- Version Identifier
-			C_CAPABILITIES          : std_logic_vector(31 downto 0) := X"00000001";  --Every Bit specifies a capability like performance monitoring etc.
-			C_Perf_Counters_Num     : integer                       := 8;  -- How many performance counters do you want?
-			C_CHECKSUM_NUM_CHANNELS : integer                       := 32;
-			C_CHECKSUM_ALGO         : integer                       := 0;
-			C_SLV_DWIDTH            : integer                       := 32
-		);
-		port (
-			-- HWIF interface
-			HWIF2DEC_Addr  : in  std_logic_vector(0 to 31);
-			HWIF2DEC_Data  : in  std_logic_vector(C_SLV_DWIDTH-1 downto 0);
-			HWIF2DEC_RdCE  : in  std_logic;
-			HWIF2DEC_WrCE  : in  std_logic;
-			DEC2HWIF_Data  : out std_logic_vector(C_SLV_DWIDTH-1 downto 0);
-			DEC2HWIF_RdAck : out std_logic;
-			DEC2HWIF_WrAck : out std_logic;
-
-			-- In-/outputs of internal submodules
-			-- Performance Monitors custom signals
-			increments : in std_logic_vector (C_Perf_Counters_Num-1 downto 0);
-
-			-- Checksum generators custom signals
-			read_data       : in std_logic_vector(31 downto 0);
-			read_data_valid : in std_logic;
-			read_channel    : in std_logic_vector(clog2(C_CHECKSUM_NUM_CHANNELS)-1 downto 0);
-
-			write_data       : in std_logic_vector(31 downto 0);
-			write_data_valid : in std_logic;
-			write_channel    : in std_logic_vector(clog2(C_CHECKSUM_NUM_CHANNELS)-1 downto 0);
-
-			-- GPIO
-			write_inhibit : in std_logic_vector(31 downto 0);
-
-			-- other
-			debug : out std_logic_vector(109 downto 0);
-
-			clk : in std_logic;
-			rst : in std_logic);
-	end component;
-
-	component fifo32 is
-		generic (
-			C_FIFO32_DEPTH  : integer := 2048;
-			C_ENABLE_ILA    : integer := 0
-		);
-		port (
-			Rst : in std_logic;
-			FIFO32_S_Clk : in std_logic;
-			FIFO32_M_Clk : in std_logic;
-			FIFO32_S_Data : out std_logic_vector(31 downto 0);
-			FIFO32_M_Data : in std_logic_vector(31 downto 0);
-			FIFO32_S_Fill : out std_logic_vector(15 downto 0);
-			FIFO32_M_Rem : out std_logic_vector(15 downto 0);
-			FIFO32_S_Rd : in std_logic;
-			FIFO32_M_Wr : in std_logic
-		);
-	end component;
-
 --------------------------------------------------------------------------------
 -- Constants
 --------------------------------------------------------------------------------
@@ -351,6 +289,13 @@ architecture behavioural of fifo32_arbiter_sh_perf is
 --------------------------------------------------------------------------------
 -- Functions
 --------------------------------------------------------------------------------
+    function debug (mode_length:std_logic_vector; address:std_logic_vector )
+        return string is
+    begin
+        return "mode: " & to_hstring(unsigned(mode_length(31 downto 24))) & 
+                " length " & to_string(to_integer(unsigned(mode_length(23 downto 0)))) & 
+                " address " & to_hstring(unsigned(address)); 
+    end function;
 
 	function minimum (a : unsigned; b : unsigned)
 		return unsigned is
@@ -550,7 +495,7 @@ begin  -- of architecture ------------------------------------------------------
 -- Instantiation
 --------------------------------------------------------------------------------
 
-	hwif : hwif_subsystem
+	hwif : entity work.hwif_subsystem
 	generic map(
 		C_HWT_ID                => C_ID_ARBITER,  -- Unique ID number of this module
 		C_VERSION               => X"00000100",   -- Version Identifier
@@ -595,7 +540,7 @@ begin  -- of architecture ------------------------------------------------------
 
 
 
-	sh_buffer: fifo32
+	sh_buffer: entity work.fifo32
 	generic map(
 		C_FIFO32_DEPTH => 8192,--4096,--3162,--8192,--16384, --32768,
 		C_ENABLE_ILA   => 0
@@ -612,6 +557,9 @@ begin  -- of architecture ------------------------------------------------------
 		FIFO32_M_Wr   => sh_write
 	);
 
+    assert not (sh_write = '1' and sh_rem  = X"0000") report "SH_BUFFER overrun!" severity failure;
+    assert not (sh_read  ='1'  and sh_fill = X"0000") report "SH_BUFFER underrun!" severity failure;
+    
 	-- Analyzes all fill levels of input FIFOS and sets the request vector accordingly.
 	request_p : process (clk, rst, in_fifo32_s_fill) is
 	begin
@@ -809,7 +757,8 @@ begin  -- of architecture ------------------------------------------------------
 						end if;
 
 					when others =>
-						report "Request mode undefined!" severity ERROR;
+						report "ST DELETE_REQUEST_ST: Request mode undefined!"  & debug(mode_length_reg(0), address_reg(0))
+						 severity failure;
 				end case;
 
 			when COMPLETE_WRITE =>
@@ -1054,7 +1003,9 @@ begin  -- of architecture ------------------------------------------------------
 					if ( unsigned(IN_FIFO32_M_Rem(31 downto 16)) >= 1 and 
 						  unsigned(sh_fill) >= 1 )
 					then
-						assert transfer_size >0 report "Transfer size becomes less than zero!" severity error;
+						assert transfer_size >0 
+						report "ST DATA_READ: Transfer size becomes less than zero!"  & debug(mode_length_reg(2), address_reg(2))
+						severity failure;
 						transfer_size := transfer_size-4;
 					end if;
 					if transfer_size = 0 then
@@ -1074,7 +1025,9 @@ begin  -- of architecture ------------------------------------------------------
 						  unsigned(sh_fill) >= 1) 
 						) 
 					then
-						assert transfer_size >0 report "Transfer size becomes less than zero!" severity error;
+						assert transfer_size >0 
+						report "ST DATA_WRITE: Transfer size becomes less than zero! " & debug(mode_length_reg(2), address_reg(2))
+						severity failure;
 						transfer_size := transfer_size-4;
 						if transfer_size = 0 then
 							state_st <= WAIT_THREADS;
@@ -1108,7 +1061,9 @@ begin  -- of architecture ------------------------------------------------------
 
 					if (unsigned(sh_fill) >= 1)
 					then
-						assert transfer_size >0 report "Transfer size becomes less than zero!" severity error;
+						assert transfer_size >0 
+						report "ST DELETE_REQUEST_TUO: Transfer size becomes less than zero!"  & debug(mode_length_reg(2), address_reg(2))
+						severity failure;
 						transfer_size              := transfer_size-4;
 					end if;
 
@@ -1122,7 +1077,9 @@ begin  -- of architecture ------------------------------------------------------
 					if (unsigned(IN_FIFO32_S_Fill((16 * (1 + 1))-1 downto 16 * 1)) >= 1 and mode_length_reg(1)(31) = '1') or
 						(unsigned(IN_FIFO32_M_Rem((16 * (1 + 1))-1 downto 16 * 1)) >= 1 and mode_length_reg(1)(31) = '0')
 					then
-						assert transfer_size >0 report "Transfer size becomes less than zero!" severity error;
+						assert transfer_size >0 
+						report "ST DELETE_REQUEST_ST: Transfer size becomes less than zero!"  & debug(mode_length_reg(2), address_reg(2))
+						severity failure;
 						transfer_size              := transfer_size-4;
 					end if;
 
@@ -1142,7 +1099,9 @@ begin  -- of architecture ------------------------------------------------------
 							and mode_length_reg(1)(31) = '1') and 
 							(unsigned(sh_fill) > 0) )
 					then
-						assert transfer_size >0 report "Transfer size becomes less than zero!" severity error;
+						assert transfer_size >0 
+						report "ST COMPLETE_WRITE: Transfer size becomes less than zero!"  & debug(mode_length_reg(2), address_reg(2))
+						severity failure;
 						transfer_size := transfer_size-4;
 					end if;
 					if transfer_size = 0 then
@@ -1282,7 +1241,9 @@ begin  -- of architecture ------------------------------------------------------
 
 				when DATA_READ =>
 					if OUT_FIFO32_M_Wr = '1' then
-						assert transfer_size >0 report "Transfer size becomes less than zero!" severity error;
+						assert transfer_size >0 
+						report "TUO DATA_READ: Transfer size becomes less than zero!"  & debug(mode_length_reg(0), address_reg(0))
+						severity failure;
 						transfer_size := transfer_size-4;
 					end if;
 					if transfer_size = 0 then
@@ -1294,7 +1255,9 @@ begin  -- of architecture ------------------------------------------------------
 					-- zeros? Special Marker?
 					-- TODO: What about forever stalling thread?
 					if OUT_FIFO32_S_Rd = '1' then
-						assert transfer_size >0 report "Transfer size becomes less than zero!" severity error;
+						assert transfer_size >0 
+						report "TUO DATA_WRITE: Transfer size becomes less than zero!"  & debug(mode_length_reg(0), address_reg(0))
+						severity failure;
 						transfer_size := transfer_size-4;
 					end if;
 					if transfer_size = 0 then

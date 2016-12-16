@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<projectDescription>
+	<name>fifo32_arbiter_sh_perf_v1_00_b</name>
+	<comment></comment>
+	<projects>
+	</projects>
+	<buildSpec>
+		<buildCommand>
+			<name>ro.amiq.dvt.MixedLangBuilder</name>
+			<arguments>
+			</arguments>
+		</buildCommand>
+	</buildSpec>
+	<natures>
+		<nature>ro.amiq.vhdldt.VhdlNature</nature>
+	</natures>
+</projectDescription>

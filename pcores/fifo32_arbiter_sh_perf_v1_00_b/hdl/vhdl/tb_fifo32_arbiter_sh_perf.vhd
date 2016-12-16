@@ -9,277 +9,14 @@ use proc_common_v3_00_a.proc_common_pkg.all;
 library reconos_v3_00_b;
 use reconos_v3_00_b.reconos_pkg.all;
 
+library work;
+use work.pck_packets.all;
+use work.pck_string.all;
+
 entity tb_fifo32_arbiter_sh_perf is
 end entity;
 
 architecture testbench of tb_fifo32_arbiter_sh_perf is
---------------------------------------------------------------------------------
--- Components
---------------------------------------------------------------------------------
-  component fifo32
-    generic (
-      C_FIFO32_DEPTH : integer := 16
-      );
-    port (
-      Rst           : in  std_logic;
-      FIFO32_S_Clk  : in  std_logic;
-      FIFO32_M_Clk  : in  std_logic;
-      FIFO32_S_Data : out std_logic_vector(31 downto 0);
-      FIFO32_M_Data : in  std_logic_vector(31 downto 0);
-      FIFO32_S_Fill : out std_logic_vector(15 downto 0);
-      FIFO32_M_Rem  : out std_logic_vector(15 downto 0);
-      FIFO32_S_Rd   : in  std_logic;
-      FIFO32_M_Wr   : in  std_logic
-      );
-  end component;
-
-component proc_control is
-  generic (
-    C_ENABLE_ILA          : integer := 0
-    );
-  port (
-    clk : in std_logic;
-    rst : in std_logic;
-
-    -- Request FSL
-    FSLA_Rst       : in  std_logic;
-    FSLA_S_Read    : out std_logic;  -- Read signal, requiring next available input to be read
-    FSLA_S_Data    : in  std_logic_vector(0 to 31);  -- Input data
-    FSLA_S_Control : in  std_logic;  -- Control Bit, indicating the input data are control word
-    FSLA_S_Exists  : in  std_logic;  -- Data Exist Bit, indicating data exist in the input FSL bus
-    FSLA_M_Write   : out std_logic;  -- Write signal, enabling writing to output FSL bus
-    FSLA_M_Data    : out std_logic_vector(0 to 31);  -- Output data
-    FSLA_M_Control : out std_logic;  -- Control Bit, indicating the output data are contol word
-    FSLA_M_Full    : in  std_logic;  -- Full Bit, indicating output FSL bus is full
-
-    -- Reply FSL
-    FSLB_Rst       : in  std_logic;
-    FSLB_S_Read    : out std_logic;  -- Read signal, requiring next available input to be read
-    FSLB_S_Data    : in  std_logic_vector(0 to 31);  -- Input data
-    FSLB_S_Control : in  std_logic;  -- Control Bit, indicating the input data are control word
-    FSLB_S_Exists  : in  std_logic;  -- Data Exist Bit, indicating data exist in the input FSL bus
-    FSLB_M_Write   : out std_logic;  -- Write signal, enabling writing to output FSL bus
-    FSLB_M_Data    : out std_logic_vector(0 to 31);  -- Output data
-    FSLB_M_Control : out std_logic;  -- Control Bit, indicating the output data are contol word
-    FSLB_M_Full    : in  std_logic;  -- Full Bit, indicating output FSL bus is full
-
-
-    -- 16 individual reset outputs (mhs does not support vector indexing)
-    reset0 : out std_logic;
-    reset1 : out std_logic;
-    reset2 : out std_logic;
-    reset3 : out std_logic;
-    reset4 : out std_logic;
-    reset5 : out std_logic;
-    reset6 : out std_logic;
-    reset7 : out std_logic;
-    reset8 : out std_logic;
-    reset9 : out std_logic;
-    resetA : out std_logic;
-    resetB : out std_logic;
-    resetC : out std_logic;
-    resetD : out std_logic;
-    resetE : out std_logic;
-    resetF : out std_logic;
-
-    -- MMU related ports
-    page_fault : in  std_logic;
-    fault_addr : in  std_logic_vector(31 downto 0);
-    retry      : out std_logic;
-    pgd        : out std_logic_vector(31 downto 0);
-    tlb_hits   : in  std_logic_vector(31 downto 0);
-    tlb_misses : in  std_logic_vector(31 downto 0);
-
-    -- Fault injection related ports
-    fault_sa0 : out std_logic_vector(31 downto 0);
-    fault_sa1 : out std_logic_vector(31 downto 0);
-    
-    -- Arbiter run-time options
-	ARB_RUNTIME_OPTIONS: out std_logic_vector(15 downto 0);
-
-    -- Error signals from arbiter
-    ERROR_REQ : in  std_logic;
-    ERROR_ACK : out std_logic;
-    ERROR_TYP : in  std_logic_vector(7 downto 0);
-    ERROR_ADR : in  std_logic_vector(31 downto 0);
-
-    -- ReconOS reset
-    reconos_reset : out std_logic
-    );
-end component;
-  
-  component fifo32_arbiter_sh_perf
-    generic (
-      C_SLV_DWIDTH     : integer := 32;
-      FIFO32_PORTS     : integer := 16;  --! 1 to 16 allowed
-      ARBITRATION_ALGO : integer := 0  --! 0= Round Robin, others not available atm.
-      );
-    port (
-      -- Multiple FIFO32 Inputs
-      IN_FIFO32_S_Data_A : in  std_logic_vector(31 downto 0);
-      IN_FIFO32_S_Fill_A : in  std_logic_vector(15 downto 0);
-      IN_FIFO32_S_Rd_A   : out std_logic;
-
-      IN_FIFO32_M_Data_A : out std_logic_vector(31 downto 0);
-      IN_FIFO32_M_Rem_A  : in  std_logic_vector(15 downto 0);
-      IN_FIFO32_M_Wr_A   : out std_logic;
-
-      IN_FIFO32_S_Data_B : in  std_logic_vector(31 downto 0);
-      IN_FIFO32_S_Fill_B : in  std_logic_vector(15 downto 0);
-      IN_FIFO32_S_Rd_B   : out std_logic;
-
-      IN_FIFO32_M_Data_B : out std_logic_vector(31 downto 0);
-      IN_FIFO32_M_Rem_B  : in  std_logic_vector(15 downto 0);
-      IN_FIFO32_M_Wr_B   : out std_logic;
-
-      IN_FIFO32_S_Data_C : in  std_logic_vector(31 downto 0);
-      IN_FIFO32_S_Fill_C : in  std_logic_vector(15 downto 0);
-      IN_FIFO32_S_Rd_C   : out std_logic;
-
-      IN_FIFO32_M_Data_C : out std_logic_vector(31 downto 0);
-      IN_FIFO32_M_Rem_C  : in  std_logic_vector(15 downto 0);
-      IN_FIFO32_M_Wr_C   : out std_logic;
-
-      IN_FIFO32_S_Data_D : in  std_logic_vector(31 downto 0);
-      IN_FIFO32_S_Fill_D : in  std_logic_vector(15 downto 0);
-      IN_FIFO32_S_Rd_D   : out std_logic;
-
-      IN_FIFO32_M_Data_D : out std_logic_vector(31 downto 0);
-      IN_FIFO32_M_Rem_D  : in  std_logic_vector(15 downto 0);
-      IN_FIFO32_M_Wr_D   : out std_logic;
-
-      IN_FIFO32_S_Data_E : in  std_logic_vector(31 downto 0);
-      IN_FIFO32_S_Fill_E : in  std_logic_vector(15 downto 0);
-      IN_FIFO32_S_Rd_E   : out std_logic;
-
-      IN_FIFO32_M_Data_E : out std_logic_vector(31 downto 0);
-      IN_FIFO32_M_Rem_E  : in  std_logic_vector(15 downto 0);
-      IN_FIFO32_M_Wr_E   : out std_logic;
-
-      IN_FIFO32_S_Data_F : in  std_logic_vector(31 downto 0);
-      IN_FIFO32_S_Fill_F : in  std_logic_vector(15 downto 0);
-      IN_FIFO32_S_Rd_F   : out std_logic;
-
-      IN_FIFO32_M_Data_F : out std_logic_vector(31 downto 0);
-      IN_FIFO32_M_Rem_F  : in  std_logic_vector(15 downto 0);
-      IN_FIFO32_M_Wr_F   : out std_logic;
-
-      IN_FIFO32_S_Data_G : in  std_logic_vector(31 downto 0);
-      IN_FIFO32_S_Fill_G : in  std_logic_vector(15 downto 0);
-      IN_FIFO32_S_Rd_G   : out std_logic;
-
-      IN_FIFO32_M_Data_G : out std_logic_vector(31 downto 0);
-      IN_FIFO32_M_Rem_G  : in  std_logic_vector(15 downto 0);
-      IN_FIFO32_M_Wr_G   : out std_logic;
-
-      IN_FIFO32_S_Data_H : in  std_logic_vector(31 downto 0);
-      IN_FIFO32_S_Fill_H : in  std_logic_vector(15 downto 0);
-      IN_FIFO32_S_Rd_H   : out std_logic;
-
-      IN_FIFO32_M_Data_H : out std_logic_vector(31 downto 0);
-      IN_FIFO32_M_Rem_H  : in  std_logic_vector(15 downto 0);
-      IN_FIFO32_M_Wr_H   : out std_logic;
-
-      IN_FIFO32_S_Data_I : in  std_logic_vector(31 downto 0);
-      IN_FIFO32_S_Fill_I : in  std_logic_vector(15 downto 0);
-      IN_FIFO32_S_Rd_I   : out std_logic;
-
-      IN_FIFO32_M_Data_I : out std_logic_vector(31 downto 0);
-      IN_FIFO32_M_Rem_I  : in  std_logic_vector(15 downto 0);
-      IN_FIFO32_M_Wr_I   : out std_logic;
-
-      IN_FIFO32_S_Data_J : in  std_logic_vector(31 downto 0);
-      IN_FIFO32_S_Fill_J : in  std_logic_vector(15 downto 0);
-      IN_FIFO32_S_Rd_J   : out std_logic;
-
-      IN_FIFO32_M_Data_J : out std_logic_vector(31 downto 0);
-      IN_FIFO32_M_Rem_J  : in  std_logic_vector(15 downto 0);
-      IN_FIFO32_M_Wr_J   : out std_logic;
-
-      IN_FIFO32_S_Data_K : in  std_logic_vector(31 downto 0);
-      IN_FIFO32_S_Fill_K : in  std_logic_vector(15 downto 0);
-      IN_FIFO32_S_Rd_K   : out std_logic;
-
-      IN_FIFO32_M_Data_K : out std_logic_vector(31 downto 0);
-      IN_FIFO32_M_Rem_K  : in  std_logic_vector(15 downto 0);
-      IN_FIFO32_M_Wr_K   : out std_logic;
-
-      IN_FIFO32_S_Data_L : in  std_logic_vector(31 downto 0);
-      IN_FIFO32_S_Fill_L : in  std_logic_vector(15 downto 0);
-      IN_FIFO32_S_Rd_L   : out std_logic;
-
-      IN_FIFO32_M_Data_L : out std_logic_vector(31 downto 0);
-      IN_FIFO32_M_Rem_L  : in  std_logic_vector(15 downto 0);
-      IN_FIFO32_M_Wr_L   : out std_logic;
-
-      IN_FIFO32_S_Data_M : in  std_logic_vector(31 downto 0);
-      IN_FIFO32_S_Fill_M : in  std_logic_vector(15 downto 0);
-      IN_FIFO32_S_Rd_M   : out std_logic;
-
-      IN_FIFO32_M_Data_M : out std_logic_vector(31 downto 0);
-      IN_FIFO32_M_Rem_M  : in  std_logic_vector(15 downto 0);
-      IN_FIFO32_M_Wr_M   : out std_logic;
-
-      IN_FIFO32_S_Data_N : in  std_logic_vector(31 downto 0);
-      IN_FIFO32_S_Fill_N : in  std_logic_vector(15 downto 0);
-      IN_FIFO32_S_Rd_N   : out std_logic;
-
-      IN_FIFO32_M_Data_N : out std_logic_vector(31 downto 0);
-      IN_FIFO32_M_Rem_N  : in  std_logic_vector(15 downto 0);
-      IN_FIFO32_M_Wr_N   : out std_logic;
-
-      IN_FIFO32_S_Data_O : in  std_logic_vector(31 downto 0);
-      IN_FIFO32_S_Fill_O : in  std_logic_vector(15 downto 0);
-      IN_FIFO32_S_Rd_O   : out std_logic;
-
-      IN_FIFO32_M_Data_O : out std_logic_vector(31 downto 0);
-      IN_FIFO32_M_Rem_O  : in  std_logic_vector(15 downto 0);
-      IN_FIFO32_M_Wr_O   : out std_logic;
-
-      IN_FIFO32_S_Data_P : in  std_logic_vector(31 downto 0);
-      IN_FIFO32_S_Fill_P : in  std_logic_vector(15 downto 0);
-      IN_FIFO32_S_Rd_P   : out std_logic;
-
-      IN_FIFO32_M_Data_P : out std_logic_vector(31 downto 0);
-      IN_FIFO32_M_Rem_P  : in  std_logic_vector(15 downto 0);
-      IN_FIFO32_M_Wr_P   : out std_logic;
-
-      -- Single FIFO32 Output
-      OUT_FIFO32_S_Data : out std_logic_vector(31 downto 0);
-      OUT_FIFO32_S_Fill : out std_logic_vector(15 downto 0);
-      OUT_FIFO32_S_Rd   : in  std_logic;
-
-      OUT_FIFO32_M_Data : in  std_logic_vector(31 downto 0);
-      OUT_FIFO32_M_Rem  : out std_logic_vector(15 downto 0);
-      OUT_FIFO32_M_Wr   : in  std_logic;
-
-      -- Hardware Interface HWIF
-      HWIF2DEC_Addr  : in  std_logic_vector(0 to 31);
-      HWIF2DEC_Data  : in  std_logic_vector(C_SLV_DWIDTH-1 downto 0);
-      HWIF2DEC_RdCE  : in  std_logic;
-      HWIF2DEC_WrCE  : in  std_logic;
-      DEC2HWIF_Data  : out std_logic_vector(C_SLV_DWIDTH-1 downto 0);
-      DEC2HWIF_RdAck : out std_logic;
-      DEC2HWIF_WrAck : out std_logic;
-
-      -- Run-time options
-      RUNTIME_OPTIONS : in std_logic_vector(15 downto 0 );
-
-      -- Error reporting
-      ERROR_REQ : out std_logic;
-      ERROR_ACK : in  std_logic;
-      ERROR_TYP : out std_logic_vector(7 downto 0);
-      ERROR_ADR : out std_logic_vector(31 downto 0);
-
-      -- Misc
-      Rst : in std_logic;
-      clk : in std_logic;               -- separate clock for control logic
-
-      -- Debug signals to ILA
-      ila_signals : out std_logic_vector(3 downto 0)
-      );
-  end component;
-
 --------------------------------------------------------------------------------
 -- Constants
 --------------------------------------------------------------------------------
@@ -385,11 +122,34 @@ end component;
 
   signal transfer_size_sig    : natural range 0 to 2**24;
 
+    procedure memif_fifo_pull_fast (
+        signal i_memif : in  i_memif_t;
+        signal o_memif : out o_memif_t;
+        variable data : out std_logic_vector(31 downto 0);
+        variable done : out boolean
+    ) is begin
+        o_memif.m_wr <= '0';
+        o_memif.s_rd <= '0';
+        done := False;
+        case i_memif.step is
+            when 0 =>
+                if unsigned(i_memif.s_fill) > 0 then
+                    o_memif.step <= 1;
+                end if;
+            when 1 =>
+                o_memif.s_rd <= '1';
+                data := i_memif.s_data;
+                o_memif.step <= 2;
+            when others =>
+                o_memif.step <= 0;
+                done := True;
+        end case;
+    end procedure;
 
 	procedure memif_fifo_push_fast (
 		signal i_memif : in  i_memif_t;
 		signal o_memif : out o_memif_t;
-		signal data : in std_logic_vector(31 downto 0);
+		variable data : in std_logic_vector(31 downto 0);
 		variable done : out boolean
 	) is begin
 		o_memif.m_wr <= '0';
@@ -401,19 +161,6 @@ end component;
 			o_memif.m_data <= data;
 			done := True;
 		end if;
--- 		case i_memif.step is
--- 			when 0 =>
--- 				if unsigned(i_memif.m_remainder) > 0 then
--- 					o_memif.step <= 1;
--- 				end if;
--- 			when 1 =>
--- 				o_memif.m_wr <= '1';
--- 				o_memif.m_data <= data;
--- 				o_memif.step <= 2;
--- 			when others =>
--- 				o_memif.step <= 0;
--- 				done := True;
--- 		end case;
 	end procedure;
 
 	procedure memif_fifo_end_fast (
@@ -429,10 +176,6 @@ begin  -- of architecture ------------------------------------------------------
 
   
   fifos : for i in 0 to HWT_COUNT-1 generate
-
-    -- for reading a word of data in hwt process
-    signal data_write : std_logic_vector(31 downto 0) := X"AAAAAAAA";
-    signal data_read : std_logic_vector(31 downto 0) := X"AAAAAAAA";
     
   begin
 
@@ -447,9 +190,9 @@ begin  -- of architecture ------------------------------------------------------
       H2F_FIFO32_M_Wr(i)
       );
 
-    master_fifo32_i : fifo32
+    master_fifo32_i : entity work.fifo32
       generic map(
-        C_FIFO32_DEPTH => 10000
+        C_FIFO32_DEPTH => 100
         )
       port map(
         Rst           => rst,
@@ -463,9 +206,9 @@ begin  -- of architecture ------------------------------------------------------
         FIFO32_M_Wr   => H2F_FIFO32_M_Wr(i)
         );
 
-    slave_fifo32_i : fifo32
+    slave_fifo32_i : entity work.fifo32
       generic map(
-        C_FIFO32_DEPTH => 10000
+        C_FIFO32_DEPTH => 100
         )
       port map(
         Rst           => rst,
@@ -482,75 +225,21 @@ begin  -- of architecture ------------------------------------------------------
 
     hwt_process : process(clk, H2F_MEMIF_IN)
       is
-      --! @brief First of two global variables needed for random number functions,
-      --!        e.g. get_rand_unsigned      
-      variable seed1 : positive := 1; --i+1;
-      --! @brief Second of two global variables needed for random number functions,
-      --!        e.g. get_rand_unsigned
-      variable seed2 : positive := 2; --i+i+1;
-
-
-      --! @brief This function generates a random unsigned number
-      --! @details This is an impure function, because it uses the global
-      --!          variables seed1 and seed2, although this variables are not
-      --!          specified in its interface.
-      --! @param[in] min_value This gives the lower limit of the random number 
-      --! @param[in] max_value This gives the upper limit of the random number
-      --! @param[in] bitwidth The unsigend type is based on standard_logic_vector,
-      --!            so we need to know what width in bits the result shall have.
-      --! @return A random unsigned number of type unsigned with a width of bitwidth.
-      impure function get_rand_unsigned(constant min_value : natural;
-                                        constant max_value : natural;
-                                        constant bitwidth  : positive)
-        return unsigned is
-        variable rand_int : integer := 0;
-        -- Variable that holds the result of the uniform function
-        variable rand     : real;
-      begin
-        uniform(seed1, seed2, rand);
-        rand_int := integer(TRUNC(rand*real(max_value+1-min_value)))+min_value;
-        return to_unsigned(rand_int, bitwidth);
-      end function;
-
-      type state_t is (SET_PAUSE, PAUSE, WRITE_HEADER, WRITE_DATA, READ_DATA, END_STATE);
+      
+      type state_t is (SET_PAUSE, PAUSE, SEND_PACKET, RECEIVE_PACKET, END_STATE_MESSAGE, END_STATE);
       variable state : state_t;
 
-      type MODE is (READ, WRITE);
-      type MODE_VECTOR is array (natural range<>) of MODE;
-      type LENGTH_VECTOR is array (natural range<>) of natural range 0 to 2**16-1;
-      type ADDRESS_VECTOR is array (natural range<>) of std_logic_vector(31 downto 0);
-      
-      constant MAX_PACKETS  : natural                          := 11;
-     
-      variable PAUSE_LIST   : LENGTH_VECTOR(1 to MAX_PACKETS*2)  := (
-        2000, 20, 2000, 20, 2000, 20, 2000, 20,  -- TUO  pauses
-        2000, 20, 2000,
-        20, 2000, 20, 2000, 0, 2000, 20, 2000,  -- ST pauses
-        20, 2000, 20);
-      
-      variable MODE_LIST    : MODE_VECTOR(1 to MAX_PACKETS*2)    := (
-         READ, WRITE, READ, WRITE,READ, WRITE,READ, WRITE, -- TUO, all good
-         WRITE,READ, WRITE,                     -- TUO, intentional discrepancy to ST
-         --READ, WRITE, READ, WRITE, READ, WRITE,READ, WRITE, -- ST, equal to TUO
-         READ, WRITE, READ, WRITE, WRITE, WRITE,READ, WRITE, -- ST, equal to TUO
-         READ, READ, WRITE);                    -- ST,  intentional discrepancy to ST
-         
-      variable LENGTH_LIST  : LENGTH_VECTOR(1 to MAX_PACKETS*2)  := (
-        4, 4, 9000, 9000,9000, 9000,9000, 9000, -- TUO lengths
-        128, 128, 128,
-        4, 4, 9000, 9000,9000, 9000,9000, 9000, -- ST  lengths
-        128, 124, 128);
-      
-      variable ADDRESS_LIST : ADDRESS_VECTOR(1 to MAX_PACKETS*2) := (
-        X"DEADDEAD", X"DEADDEAD", X"AFFEAFFE", X"AFFEAFFE",X"AFFEAFFE", X"AFFEAFFE",X"AFFEAFFE", X"AFFEAFFE", -- TUO addresses
-        X"BEEFBEEF",X"BEEFBEEF", X"BEEFBEEF",
-        X"DEADDEAD", X"DEADDEAD", X"AFFEAFFE", X"AFFEAFFE",X"AFFEAFFE", X"AFFEAFFE",X"AFFEAFFE", X"AFFEAFFE", -- ST  addresses
-        X"BEEFBEEF", X"BEEFBEEF", X"BEEFBEEF");
+      constant MAX_PACKETS  : natural:= 11;
 
+      variable packet        : packet_ptr;
       variable packet_nr     : natural := 0;
       variable pause_counter : natural := 0;
       variable length_counter: natural := 0;
+      variable error         : natural := 0;
       variable done          : boolean := false;
+      
+      variable data_write    : std_logic_vector(31 downto 0);
+      variable data_read     : std_logic_vector(31 downto 0);
       
     begin
       if rst = '1' then
@@ -558,107 +247,86 @@ begin  -- of architecture ------------------------------------------------------
         -- init interface 
         memif_reset(H2F_MEMIF_OUT(i));
         done  := false;
-        --data  <= std_logic_vector(get_rand_unsigned(0, 2**16-1, 32));
-        data_read <= (others => '0');
-        data_write <= (others => '0');
+        data_read := (others => '0');
+        data_write := (others => '0');
       elsif rising_edge(clk) then
         case state is
           when SET_PAUSE =>
-          	memif_fifo_end_fast (
-				H2F_MEMIF_IN(i),
-				H2F_MEMIF_OUT(i)
-				);					
+            memif_fifo_end_fast ( H2F_MEMIF_IN(i),H2F_MEMIF_OUT(i) );
             packet_nr := packet_nr + 1;
             tb_phase(i) <= tb_phase_t'val(packet_nr-1);
-            if packet_nr > MAX_PACKETS then
-              state := END_STATE;
+            packet := packet_generate(0, packet_nr-1); -- 0 was i
+            if packet_get_mode(packet.all) = PACKET_MODE_NONE then
+              state := END_STATE_MESSAGE;
             else
-              pause_counter := PAUSE_LIST((MAX_PACKETS*i)+packet_nr);
+              pause_counter := packet_get_pause(packet.all);
               state         := PAUSE;
             end if;
             
           when PAUSE =>
             pause_counter    := pause_counter - 1;
             if pause_counter <= 0 then
-              state := WRITE_HEADER;
+              state := SEND_PACKET;
+              length_counter := packet_get_length(packet.all);
+              report "HWT " & to_string(i) & " " & packet_get_description(packet.all) severity note;
             end if;
             
-          when WRITE_HEADER =>
-            case MODE_LIST((MAX_PACKETS*i)+packet_nr) is
-              when READ =>
-                memif_read_request(
-                  H2F_MEMIF_IN(i),
-                  H2F_MEMIF_OUT(i),
-                  ADDRESS_LIST((MAX_PACKETS*i)+packet_nr),  -- address
-                  std_logic_vector(to_unsigned(LENGTH_LIST((MAX_PACKETS*i)+packet_nr), 24)),  -- length
-                  done
-                  );
-                if done then
-                  length_counter := LENGTH_LIST((MAX_PACKETS*i)+packet_nr);
-                  state := READ_DATA;
-                end if;
-              when WRITE =>
-                memif_write_request(
-                  H2F_MEMIF_IN(i),
-                  H2F_MEMIF_OUT(i),
-                  ADDRESS_LIST((MAX_PACKETS*i)+packet_nr),  -- address
-                  std_logic_vector(to_unsigned(LENGTH_LIST((MAX_PACKETS*i)+packet_nr), 24)),  -- length
-                  done
-                  );
-                if done then
-                  length_counter := LENGTH_LIST((MAX_PACKETS*i)+packet_nr);
-                  state := WRITE_DATA;
-                end if;
-            end case;
-
-          when WRITE_DATA =>
-            --data <= std_logic_vector(get_rand_unsigned(0, 2**16-1, 32));
-            
-            
-
-            
-            
-            memif_fifo_push_fast (
-              H2F_MEMIF_IN(i),
-              H2F_MEMIF_OUT(i),
-              data_write,                     -- data
-              done
-              );
-            if done then
-	          data_write <= std_logic_vector(unsigned(data_write)+1);
-	          
-	        --
-            -- Manual Error Injection. Adapt to your packet definitions!!!
+          when SEND_PACKET =>
+            --
+            -- Manual Error Injection. 
             --
             --if i = 0 and length_counter = 8 and packet_nr = 7 then
             --if i = 0 and length_counter = 4 and packet_nr = 1 then
-            if i = 0 and length_counter = 8 and packet_nr = 4 then
-              data_write <= X"DEADBEEF";
-              report "Inserting DATA error!" severity note;
-            end if;
-	          
-              length_counter := length_counter -4;
+            --if i = 0 and length_counter = 2 and packet_nr = 4 then
+            --  error := 1;
+            --  report "Inserting DATA error!" severity note;
+            --else 
+            --  error := 0;
+            --end if;
+            
+            data_write := packet_get_data(packet.all, packet_get_length(packet.all)-length_counter);
+            memif_fifo_push_fast (
+              H2F_MEMIF_IN(i),
+              H2F_MEMIF_OUT(i),
+              data_write,
+              done
+              );
+            if done then
+              length_counter := length_counter -1;
             end if;
             if length_counter = 0 then
-              state := SET_PAUSE;
+              if packet_get_mode(packet.all) = PACKET_MODE_WRITE then
+                report "HWT " & to_string(i) & " sending done!";
+                state := SET_PAUSE;
+              else
+                report "HWT " & to_string(i) & " receiving data...";
+                state := RECEIVE_PACKET;
+                length_counter := packet_get_request_length(packet.all);
+              end if;
             end if;
             
-          when READ_DATA =>
-            memif_fifo_pull (
+          when RECEIVE_PACKET=>
+            memif_fifo_pull_fast (
               H2F_MEMIF_IN(i),
               H2F_MEMIF_OUT(i),
               data_read,                     -- data
               done
               );
             if done then
-              length_counter := length_counter -4;
+              length_counter := length_counter -1;
             end if;
             if length_counter = 0 then
               state := SET_PAUSE;
+              report "HWT " & to_string(i) & " receiving done! Last read word: "& to_hstring(data_read);
             end if;
             
-          when END_STATE =>
-            report "Packet generation done!" severity note;
+          when END_STATE_MESSAGE =>
+            report "HWT " & to_string(i) & " PACKET GENERATION DONE!" severity note;
+            state := END_STATE;
+          
+          when END_STATE=>
+            state := END_STATE;
+            
         end case;
       end if;
     end process;
@@ -673,7 +341,7 @@ end generate;
 
 -- Instantiate proc_control, which communicates error data to the main system
   FSLA_M_Full <= '0'; -- let proc_control think we always accept incoming data
-proc_control_i: proc_control 
+proc_control_i: entity work.proc_control 
   port map(
     clk => clk,
     rst => rst,
@@ -744,7 +412,7 @@ proc_control_i: proc_control
     reconos_reset => open
     );
   
-  fifo32_arbiter_sh_perf_i : fifo32_arbiter_sh_perf
+  fifo32_arbiter_sh_perf_i : entity work.fifo32_arbiter_sh_perf
     generic map(
       FIFO32_PORTS     => ARB_PORT_COUNT,  -- setting it to something else than
                                            -- 16 breaks it at the moment:
@@ -937,6 +605,16 @@ proc_control_i: proc_control
     variable transfer_mode    : mode_t := READ;
     variable transfer_size    : natural range 0 to 2**24;
     variable transfer_address : std_logic_vector(31 downto 0);
+    
+    function to_string(m: mode_t) return string is
+    begin
+        case m is
+            when READ => return "00";
+            when WRITE=> return "80";
+            when others=>return "UU";
+        end case;
+    end function;
+    
   begin
     if rst = '1' then
       state                := IDLE;
@@ -984,6 +662,9 @@ proc_control_i: proc_control
               --transfer_size := transfer_size - 4;
             when others => null;
           end case;
+          report "        MEM    Packet: pause ??? mode " & to_string(transfer_mode) & 
+                 " length " & to_string(transfer_size) &
+                 " address " & to_hstring(transfer_address);
           
         when DATA_WRITE =>
           if (a2m_memif_in.s_fill = X"0001" and transfer_size /= 4) or
@@ -996,6 +677,7 @@ proc_control_i: proc_control
           end if;
           
           if transfer_size = 0 then
+            report "        MEM    Write to mem done";
             state              := IDLE;
             --a2m_memif_out.s_rd <= '0';
           end if;
@@ -1013,6 +695,7 @@ proc_control_i: proc_control
           end if;
 
           if transfer_size = 0 then
+            report "        MEM    Read from mem done";
             state                := IDLE;
             a2m_memif_out.m_wr   <= '0';
             a2m_memif_out.m_data <= X"00000000";
