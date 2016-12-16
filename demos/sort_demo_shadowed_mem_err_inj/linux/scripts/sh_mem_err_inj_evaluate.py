@@ -89,9 +89,15 @@ def parseFile(_file):
                 _faultByErrorCode[errorCode] = _faultByErrorCode[errorCode] + 1 
                 _errorList.append((address,errorCode))
                 parseState = "SearchFaultInjection"
-            elif line.startswith("Program") or line.startswith("Status query aborted"):
+            elif line.startswith("Program"):
                 # EXAMPLE: Program aborted due to timeout. Logging to 2015-11-30/sort_perf_on_lvl3_run
                 errorCode = -1
+                _faultByErrorCode[errorCode] = _faultByErrorCode[errorCode] + 1
+                _errorList.append((address,errorCode))
+                parseState = "SearchFaultInjection"
+            elif line.startswith("Status query aborted"):
+                # EXAMPLE: Program aborted due to timeout. Logging to 2015-11-30/sort_perf_on_lvl3_run
+                errorCode = -2
                 _faultByErrorCode[errorCode] = _faultByErrorCode[errorCode] + 1
                 _errorList.append((address,errorCode))
                 parseState = "SearchFaultInjection"
@@ -140,8 +146,9 @@ def printFaultByErrorCode(_faultByErrorCodeList):
     errorCodeToString[192+6]= "PROC_CONTROL_THREAD_SIGABORT"
     errorCodeToString[192+11]="PROC_CONTROL_THREAD_SIGSEGV"
     errorCodeToString[192+32]="PROC_CONTROL_THREAD_MEMIF_ERR"
-    
-    errorCodeToString[256]="TIMEOUT"
+
+    errorCodeToString[255]="TIMEOUT_SYSTEM"    
+    errorCodeToString[256]="TIMEOUT_APPLICATION"
     print("faultByErrorCode:")
     for errorCnt, errorCode in zip(_faultByErrorCodeList, xrange(len(_faultByErrorCodeList))):
         if ( errorCnt != 0 ) or ( errorCodeToString[errorCode] != "UNKNOWN_ERROR" ) :
