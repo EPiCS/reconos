@@ -14,11 +14,16 @@ class ml605Reset:
     serialDevice = "/dev/ttyACM0"
     serialSpeed = 9600
 
-    def __init__(self):
-        self.serial = serial.Serial(self.serialDevice, self.serialSpeed, timeout=1)
+    def __init__(self, _method="serial"):
         self.lock = multiprocessing.Lock()
+        if _method == "serial":
+            self.serial = serial.Serial(self.serialDevice, self.serialSpeed, timeout=1)
+            self.reset = self.resetSerial
+        elif _method == "sispmctl":
+            # nothing to initialize for sispmctl
+            self.reset = self.resetSispmctl 
         
-    def reset(self, _boardNr):
+    def resetSerial(self, _boardNr):
         # boardNr: 0->'A', 1->'B', ...
         char = chr(_boardNr + ord('A'))
         
@@ -31,13 +36,25 @@ class ml605Reset:
         sleep(1)
         self.lock.release()
 
+    def resetSispmctl(self, _boardNr):
+        self.lock.acquire()
+        FNULL = open(os.devnull, 'w')
+        #switch socket off
+        subprocess.call(["sispmctl","-f", str(_boardNr+1)], stdout=FNULL, stderr=subprocess.STDOUT)
+        sleep(1)
+        #switch socket on
+        subprocess.call(["sispmctl","-o", str(_boardNr+1)], stdout=FNULL, stderr=subprocess.STDOUT)
+        sleep(1)
+        self.lock.release()
+
+
 class InternalMl605ResetManager(multiprocessing.managers.BaseManager):
     pass
 
 class ml605ResetManager:
     mode = "uninitialized"
 
-    def __init__(self, _lockFilename,):
+    def __init__(self, _lockFilename,_resetMethod="serial"):
         
         InternalMl605ResetManager.register("ml605Reset", ml605Reset)
                       # exposed=[ '__str__', 'acquire', 'release'])
@@ -54,7 +71,7 @@ class ml605ResetManager:
             self.mode="server"
             self.manager.start()
         #get proxy
-        self.ml605Reset =  self.manager.ml605Reset()
+        self.ml605Reset =  self.manager.ml605Reset(_resetMethod)
         
     def reset(self, _boardNr):
         self.ml605Reset.reset(_boardNr)
@@ -67,7 +84,7 @@ class ml605ResetManager:
 
 if __name__ == "__main__":
     #with open("/dev/ttyACM0" , 'w') as f:
-    ml605 = ml605ResetManager("/tmp/sh_mem_err_inj_reset");
+    ml605 = ml605ResetManager("/tmp/sh_mem_err_inj_reset", "sispmctl");
     
     while True:
         print("a reset")
