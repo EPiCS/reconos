@@ -46,31 +46,34 @@ int fifo_init( fifo_t * f, unsigned int obj_count, unsigned int obj_size){
 	f->wr_idx = 0; // byte offset into data
 	f->re_idx = 0; // byte offset into data
 
-	f->data = malloc(obj_count * obj_size);
-	if (! f-> data){ return -1; }
+	f->data = malloc((size_t) (obj_count * obj_size));
+	if (f-> data == NULL){
+		perror("FIFO: malloc failed");
+		exit(EXIT_FAILURE);
+	}
 
 	error = sem_init(&f->sem_read,0,0);
-	if(error){
+	if(error != 0){
 		perror("sem_init: sem_read");
-		return -1;
+		exit(EXIT_FAILURE);
 	}
 
 	error = sem_init(&f->sem_write,0,obj_count);
-	if(error){
+	if(error != 0){
 		perror("sem_init: sem_write");
-		return -1;
+		exit(EXIT_FAILURE);
 	}
 
 	error = pthread_mutex_init(&f->mutex_read,NULL);
-	if(error){
+	if(error != 0){
 		perror("mutex_init: mutex_read");
-		return -1;
+		exit(EXIT_FAILURE);
 	}
 
 	error = pthread_mutex_init(&f->mutex_write,NULL);
-	if(error){
+	if(error != 0){
 		perror("mutex_init: mutex_write");
-		return -1;
+		exit(EXIT_FAILURE);
 	}
 	FIFO_DEBUG3("FIFO at %p initialized with %i objects of size %u\n",f, obj_count, obj_size );
 	return 0;
@@ -79,11 +82,31 @@ int fifo_init( fifo_t * f, unsigned int obj_count, unsigned int obj_size){
 // Frees all resources used by fifo.
 // All data in the fifo will be lost!
 void fifo_destroy (fifo_t * f){
-	free(f->messages);
-	sem_destroy(&f->sem_write);
-	sem_destroy(&f->sem_read);
-	pthread_mutex_destroy(&f->mutex_read);
-	pthread_mutex_destroy(&f->mutex_write);
+	int error;
+	free(f->data);
+	f->data = NULL;
+
+	error = sem_destroy(&f->sem_write);
+	if(error != 0){
+		perror("sem_init: sem_write");
+		exit(EXIT_FAILURE);
+	}
+	error = sem_destroy(&f->sem_read);
+	if(error != 0){
+		perror("sem_init: sem_read");
+		exit(EXIT_FAILURE);
+	}
+
+	error = pthread_mutex_destroy(&f->mutex_read);
+	if(error != 0){
+		perror("mutex_init: mutex_read");
+		exit(EXIT_FAILURE);
+	}
+	error = pthread_mutex_destroy(&f->mutex_write);
+	if(error != 0){
+		perror("mutex_init: mutex_write");
+		exit(EXIT_FAILURE);
+	}
 }
 
 //#define SEM_DEBUG(where) do{int a,b; sem_getvalue(&mb->sem_read,&a); sem_getvalue(&mb->sem_write,&b); fprintf(stderr,where "R %d W %d\n",a,b); }while(0)
@@ -92,15 +115,32 @@ void fifo_destroy (fifo_t * f){
 // copies into fifo, no references kept
 // Blocks on full FIFO until someone pops data from it.
 void fifo_push( fifo_t * f, void* obj ){
-	sem_wait(&f->sem_write);
-	pthread_mutex_lock(&f->mutex_write);
+	int error;
+	error = sem_wait(&f->sem_write);
+	if(error != 0){
+		perror("sem_wait: sem_write");
+		exit(EXIT_FAILURE);
+	}
+	error = pthread_mutex_lock(&f->mutex_write);
+	if(error != 0){
+		perror("mutex_lock: mutex_write");
+		exit(EXIT_FAILURE);
+	}
 	SEM_DEBUG("put entry");
 
-	memcpy(f->data+f->wr_idx, obj, f->obj_size);
+	memcpy(f->data+f->wr_idx, obj, (size_t)f->obj_size);
 	f->wr_idx = (f->wr_idx + f->obj_size) % f->data_size;
 
-	pthread_mutex_unlock(&f->mutex_write);
-	sem_post(&f->sem_read);
+	error = pthread_mutex_unlock(&f->mutex_write);
+	if(error != 0){
+		perror("mutex_unlock: mutex_write");
+		exit(EXIT_FAILURE);
+	}
+	error = sem_post(&f->sem_read);
+	if(error != 0){
+		perror("sem_post: sem_read");
+		exit(EXIT_FAILURE);
+	}
 	SEM_DEBUG("put exit");
 	FIFO_DEBUG2("FIFO pushed data to FIFO at %p from %p\n",f, obj);
 }
@@ -109,15 +149,35 @@ void fifo_push( fifo_t * f, void* obj ){
 // Blocks on empty FIFO until someone pushes data into it.
 // If obj is NULL, nothing happens and function returns immediately.
 void fifo_pop ( fifo_t * f, void* obj ){
+	int error;
+
 	if (obj == NULL){return;}
 
-	sem_wait(&f->sem_read);
-	pthread_mutex_lock(&f->mutex_read);
+	error = sem_wait(&f->sem_read);
+	if(error != 0){
+		perror("sem_wait: sem_read");
+		exit(EXIT_FAILURE);
+	}
+	error = pthread_mutex_lock(&f->mutex_read);
+	if(error != 0){
+		perror("mutec_lock: mutex_read");
+		exit(EXIT_FAILURE);
+	}
 	SEM_DEBUG("get entry");
-	memcpy(obj,f->data+f->re_idx, f->obj_size);
+
+	memcpy(obj,f->data+f->re_idx, (size_t)f->obj_size);
 	f->re_idx = (f->re_idx + f->obj_size) % f->data_size;
-	pthread_mutex_unlock(&f->mutex_read);
-	sem_post(&f->sem_write);
+
+	error = pthread_mutex_unlock(&f->mutex_read);
+	if(error != 0){
+		perror("mutex_unlock: mutex_read");
+		exit(EXIT_FAILURE);
+	}
+	error = sem_post(&f->sem_write);
+	if(error != 0){
+		perror("sem_post: sem_write");
+		exit(EXIT_FAILURE);
+	}
 	SEM_DEBUG("get exit");
 	FIFO_DEBUG2("FIFO popped data from FIFO at %p to %p\n",f, obj);
 }
@@ -127,16 +187,39 @@ void fifo_pop ( fifo_t * f, void* obj ){
 // return value = 0 -> FIFO empty, >0 -> amount of objects in FIFO
 // Does not block on empty fifo.
 int fifo_peek ( fifo_t * f, void* obj ){
-	int retval;
+	int retval=0;
+	int error=0;
 
-	pthread_mutex_lock(&f->mutex_read);
-	pthread_mutex_lock(&f->mutex_write);
-	sem_getvalue(&f->sem_read, &retval);
-	if ( retval > 0 && obj != NULL) {
-		memcpy(obj,f->data+f->re_idx, f->obj_size);
+	error = pthread_mutex_lock(&f->mutex_read);
+	if(error != 0){
+			perror("mutex_lock: mutex_read");
+			exit(EXIT_FAILURE);
 	}
-	pthread_mutex_unlock(&f->mutex_write);
-	pthread_mutex_unlock(&f->mutex_read);
+	error = pthread_mutex_lock(&f->mutex_write);
+	if(error != 0){
+			perror("mutex_lock: mutex_write");
+			exit(EXIT_FAILURE);
+	}
+	error = sem_getvalue(&f->sem_read, &retval);
+	if(error != 0){
+			perror("sem_getvalue: sem_read");
+			exit(EXIT_FAILURE);
+	}
+
+	if ( retval > 0 && obj != NULL) {
+		memcpy(obj,f->data+f->re_idx, (size_t)f->obj_size);
+	}
+	error = pthread_mutex_unlock(&f->mutex_write);
+	if(error != 0){
+			perror("mutex_unlock: mutex_write");
+			exit(EXIT_FAILURE);
+		}
+	error = pthread_mutex_unlock(&f->mutex_read);
+	if(error != 0){
+			perror("mutex_unlock: mutex_read");
+			exit(EXIT_FAILURE);
+	}
+
 	FIFO_DEBUG2("FIFO peeked data from FIFO at %p to %p\n",f, obj);
 	return retval;
 }

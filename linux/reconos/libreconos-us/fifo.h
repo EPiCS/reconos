@@ -16,7 +16,6 @@ struct fifo {
 	sem_t sem_write;
 	pthread_mutex_t mutex_read;
 	pthread_mutex_t mutex_write;
-	char *messages;
 	unsigned int obj_cnt;
 	unsigned int obj_size;
 	unsigned int data_size; // internally computed once from obj_cnt and obj_size to save computation time

@@ -59,10 +59,15 @@ void shadow_schedule_init() {
 void shadow_schedule_dump(shadowedthread_t *shadow_list_head) {
 	shadowedthread_t *current = shadow_list_head;
 	int semval = 1337;
+	int error = 0;
 	pthread_t this = pthread_self();
 	fprintf(OUTPUT, "SCHED Thread %8lu: ", this);
 	while (current) {
-		sem_getvalue(&current->sh_wait_sem, &semval);
+		error = sem_getvalue(&current->sh_wait_sem, &semval);
+		if(error != 0){
+				perror("SCHED: sem_getvalue: semval");
+				exit(EXIT_FAILURE);
+		}
 		fprintf(OUTPUT, "TID: %lu status:%s sem_cnt:%i; ",
 				current->threads[0],
 				current->sh_status == TS_INACTIVE ? "inactive" : (
@@ -89,12 +94,12 @@ void shadow_schedule_dump(shadowedthread_t *shadow_list_head) {
 // @param shadow_list_head To schedule the shadow threads we need access to the list of shadowed threads.
 // @param flags Unused at the moment
 void shadow_schedule(shadowedthread_t *this_shadow,  uint32 flags) {
-	SCHED_DEBUG("Scheduler called...\n");
-
 	shadowedthread_t *current = shadow_list_head;
 	int active_count=0;
-	int semval;
-	if (!(this_shadow->options & TS_MANUAL_SCHEDULE)) {
+	int semval = 0;
+
+	SCHED_DEBUG("Scheduler called...\n");
+	if ( (this_shadow->options & TS_MANUAL_SCHEDULE) == 0) {
 		// Default behaviour: Round robin schedule
 		// State Machine: Only reschedule if this is an active thread
 		// The three states {TS_INACTIVE, TS_PREACTIVE, TS_ACTIVE} are needed, because we modify state of another thread.
@@ -107,7 +112,7 @@ void shadow_schedule(shadowedthread_t *this_shadow,  uint32 flags) {
 				SCHED_DEBUG1("RR: TID %lu checking at least one thread is active\n", this_shadow->threads[0]);
 				current = shadow_list_head;
 				while (current) {
-					if ( !(current->options & TS_MANUAL_SCHEDULE) &&
+					if ( ((current->options & TS_MANUAL_SCHEDULE) == 0) &&
 						(shadow_get_state(current) == TS_ACTIVE || shadow_get_state(current) == TS_PREACTIVE))
 					{
 						active_count++;
@@ -142,7 +147,7 @@ void shadow_schedule(shadowedthread_t *this_shadow,  uint32 flags) {
 					if (current == NULL){
 						current = shadow_list_head;
 					}
-					if (current->options & TS_MANUAL_SCHEDULE){
+					if ( (current->options & TS_MANUAL_SCHEDULE) == TS_MANUAL_SCHEDULE){
 						current = current->next;
 						continue;
 					}
@@ -163,7 +168,7 @@ void shadow_schedule(shadowedthread_t *this_shadow,  uint32 flags) {
 				}
 				break;
 		}
-	}  else if ( this_shadow->options & TS_MANUAL_SCHEDULE ) {
+	} else if ( (this_shadow->options & TS_MANUAL_SCHEDULE) == TS_MANUAL_SCHEDULE ) {
 		SCHED_DEBUG3("Scheduler Manual: Activating Shadow Thread 0x%p, with threads %lu, %lu \n",this_shadow, this_shadow->threads[0],this_shadow->threads[1]);
 
 		shadow_set_state(this_shadow, TS_ACTIVE);

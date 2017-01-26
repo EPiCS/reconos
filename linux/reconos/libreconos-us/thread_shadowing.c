@@ -23,7 +23,11 @@
 
 #include <errno.h>
 #include <signal.h>
+
+# ifndef S_SPLINT_S
 #include <sys/ucontext.h>
+#endif
+
 #include <sys/time.h>
 
 #include "reconos.h"
@@ -72,7 +76,7 @@ void* shadow_watchdog_thread(void* data){
 
 	// Setup
 	uint32_t watchdog_time_us  =  100000; //_us ^= microseconds
-	uint32_t watchdog_delta_us = 1000000; //watchdog_time_us * 10;
+	uint32_t watchdog_delta_us = 60000000; //watchdog_time_us * 10;
 	timing_t delta;
 	shadowedthread_t * sh;
 	func_call_t fc;
@@ -80,8 +84,9 @@ void* shadow_watchdog_thread(void* data){
 	int lock_status;
 	int sem_value;
 	timing_t now;
+	fprintf(stderr, "SHADOW_WATCHDOG_THREAD ID %8lu: started, stack around %p, globals around %p\n", pthread_self(), &watchdog_time_us, &shadow_list_head);
 	// Periodically check on runtime
-	while(1){
+	while(true){
 		usleep(watchdog_time_us);
 		//fprintf(OUTPUT, "############################################## Start Run\n");
 		now = gettime();
@@ -120,34 +125,28 @@ void* shadow_watchdog_thread(void* data){
 static void shadow_system_init(){
 	// Start watchdog thread
 	int retval = pthread_create(&shadow_watchdog, NULL, shadow_watchdog_thread, NULL);
-	switch (retval) {
-		case 0:
-			// All went fine
-			TS_DEBUG("Watchdog thread created.\n");
-			break;
-		case EAGAIN:
-			fprintf(OUTPUT, "shadow_system_init: Not enough resources to create watchdog thread.");
-			exit(-1);
-			break;
-		case EINVAL:
-			fprintf(OUTPUT, "shadow_system_init: Invalid attr.");
-			exit(-1);
-			break;
-		case EPERM:
-			fprintf(OUTPUT, "shadow_system_init: No permission.");
-			exit(-1);
-			break;
-		}
+	if (retval !=0 ){
+		fprintf(OUTPUT, "shadow_system_init: creation of watchdog thread failed.\n");
+		exit(-1);
+	}
+	TS_DEBUG("Watchdog thread created.\n");
 	// reset global statistics
 	memset(function_intercepted, 0, IDX_SIZE*sizeof(uint32_t));
 	memset(function_shadowed, 0, IDX_SIZE*sizeof(uint32_t));
 }
 
+/*
+ * @TODO: Remove function, because it is unused
+ */
 static void shadow_errors_init(error_stats_t *e) {
+	assert(e != NULL);
 	e->count = 0;
 	e->recovered = 0;
 }
 
+/*
+ * @TODO: Remove function, because it is unused
+ */
 void shadow_error_inc(error_stats_t *e, unsigned int n) {
 	if (e) {
 		e->count += n;
@@ -155,21 +154,23 @@ void shadow_error_inc(error_stats_t *e, unsigned int n) {
 }
 
 // Returns number of shadowed threads in global list. Does _not_ return number of shadow threads.
-int shadow_list_count() {
+uint32_t shadow_list_count() {
 	shadowedthread_t *current = shadow_list_head;
-	int sum = 0;
+	uint32_t sum = 0;
+	ts_lock();
 	while (current) {
 		sum++;
 		current = current->next;
 	}
+	ts_unlock();
 	return sum;
 }
 
 // Adds new shadowed thread at end of thread list.
-static int shadow_list_add(shadowedthread_t * sh) {
+static void shadow_list_add(shadowedthread_t * sh) {
 	shadowedthread_t *lh = shadow_list_head;
 
-	assert(sh);
+	assert(sh != NULL);
 
 	if (shadow_list_head == NULL) {
 		shadow_list_head = sh;
@@ -180,25 +181,25 @@ static int shadow_list_add(shadowedthread_t * sh) {
 		lh->next = sh;
 		sh->next = NULL;
 	}
-	return true;
 }
 
 // Looks through the stack and thread structure arrays and returns the
 // index of a given thread type.
-static int shadow_get_next_index(shadowedthread_t *sh, unsigned int index,
-		unsigned int type) {
-	int i;
+static int shadow_get_next_index(shadowedthread_t *sh, uint8_t index,
+		uint8_t type) {
+	uint8_t i;
 	for (i = index; i < TS_MAX_REDUNDANT_THREADS; i++) {
 		if (sh->threads_type[i] == type) {
-			return i;
+			return (int)i;
 		}
 	}
 	return -1;
 
 }
 
-static int shadow_add_hw_thread(shadowedthread_t *sh) {
+static bool shadow_add_hw_thread(shadowedthread_t *sh) {
 	int index;
+	int retval;
 	fprintf(OUTPUT, "Adding HW Thread \n");
 	TS_DEBUG1("Entering shadow_add_hw_thread with sh=%p\n", (void*)sh);
 	// Look for free stack and thread structure
@@ -216,7 +217,11 @@ static int shadow_add_hw_thread(shadowedthread_t *sh) {
 	sh->running_num_hw_threads++;
 
 	TS_DEBUG("create hw thread\n");
-	reconos_hwt_create(&sh->hw_thread[index], sh->hw_slot_nums[index], NULL);
+	retval = reconos_hwt_create(&sh->hw_thread[index], sh->hw_slot_nums[index], NULL);
+	if (retval !=0 ){
+		fprintf(OUTPUT, "shadow_add_hw_thread: creation of hw-thread failed.\n");
+		exit(-1);
+	}
 	sh->threads[index] = sh->hw_thread[index].delegate;
 	TS_DEBUG("Created HW Thread.");
 
@@ -225,8 +230,9 @@ static int shadow_add_hw_thread(shadowedthread_t *sh) {
 
 // @WARNING: Before calling this function, make sure the thread doesn't hold any
 // locks (mutexes, semaphores etc.).
-static int shadow_remove_hw_thread(shadowedthread_t *sh) {
+static bool shadow_remove_hw_thread(shadowedthread_t *sh) {
 	int index;
+	int retval;
 
 	// find removable hw thread
 	index = shadow_get_next_index(sh, 0, TS_THREAD_HW);
@@ -235,8 +241,11 @@ static int shadow_remove_hw_thread(shadowedthread_t *sh) {
 	}
 
 	// remove hw thread
-	pthread_cancel(sh->hw_thread[index].delegate);
-
+	retval=pthread_cancel(sh->hw_thread[index].delegate);
+	if (retval !=0 ){
+		fprintf(OUTPUT, "shadow_remove_hw_thread: cancellation of hw-thread failed.\n");
+		exit(-1);
+	}
 	sh->threads[index] = (pthread_t) 0;
 
 	sh->threads_type[index] = TS_THREAD_NONE;
@@ -244,9 +253,9 @@ static int shadow_remove_hw_thread(shadowedthread_t *sh) {
 	return true;
 }
 
-static int shadow_add_sw_thread(shadowedthread_t *sh) {
+static bool shadow_add_sw_thread(shadowedthread_t *sh) {
 	int index;
-	int ret;
+	int retval;
 	// Look for free stack and thread structure
 	index = shadow_get_next_index(sh, 0, TS_THREAD_NONE);
 	if (index == -1) {
@@ -256,39 +265,32 @@ static int shadow_add_sw_thread(shadowedthread_t *sh) {
 	// Create thread
 	TS_DEBUG("Adding SW Thread \n");
 	fprintf(OUTPUT, "Adding SW Thread \n");
-	pthread_attr_init(&(sh->sw_attr));
+
+	retval = pthread_attr_init(&(sh->sw_attr));
+	if (retval !=0 ){
+		fprintf(OUTPUT, "shadow_add_sw_thread: attr-init failed.\n");
+		exit(-1);
+	}
+
 	TS_DEBUG("Adding SW Thread: attributes initialized\n");
-	ret = pthread_create(&(sh->threads[index]), //handle
+	retval = pthread_create(&(sh->threads[index]), //handle
 			&(sh->sw_attr), shadow_starter, //start function
 			sh); // @todo: allow to pass resources and init_data
-	TS_DEBUG1("Adding SW Thread:Thread creted with retun value: %i \n", ret);
-	switch (ret) {
-	case 0:
-		sh->threads_type[index] = TS_THREAD_SW;
-		sh->running_num_sw_threads++;
-		return true;
-		break;
-	case EAGAIN:
-		fprintf(OUTPUT, "shadow_add_sw_thread: Not enough resources.");
-		return false;
-		break;
-	case EINVAL:
-		fprintf(OUTPUT, "shadow_add_sw_thread: Invalid attr.");
-		return false;
-		break;
-	case EPERM:
-		fprintf(OUTPUT, "shadow_add_sw_thread: No permission.");
-		return false;
-		break;
+	if (retval !=0 ){
+		fprintf(OUTPUT, "shadow_add_sw_thread: creation of sw-thread failed.\n");
+		exit(-1);
 	}
-	return false;
+	TS_DEBUG1("Adding SW Thread:Thread creted with retun value: %i \n", ret);
+	sh->threads_type[index] = TS_THREAD_SW;
+	sh->running_num_sw_threads++;
+	return true;
 }
 
 // @WARNING: Before calling this function, make sure the thread doesn't hold any
 // locks (mutexes, semaphores etc.).
-static int shadow_remove_sw_thread(shadowedthread_t *sh) {
+static bool shadow_remove_sw_thread(shadowedthread_t *sh) {
 	int index;
-
+	int retval;
 	// find removable sw thread
 	index = shadow_get_next_index(sh, 0, TS_THREAD_SW);
 	if (index == -1) {
@@ -296,7 +298,12 @@ static int shadow_remove_sw_thread(shadowedthread_t *sh) {
 	}
 
 	// remove sw thread
-	pthread_cancel(sh->threads[index]);
+	retval = pthread_cancel(sh->threads[index]);
+	if (retval !=0 ){
+		fprintf(OUTPUT, "shadow_remove_sw_thread: cancellation of sw-thread failed.\n");
+		exit(-1);
+	}
+
 	sh->threads_type[index] = TS_THREAD_NONE;
 	sh->running_num_sw_threads--;
 	return true;
@@ -308,10 +315,13 @@ static int shadow_remove_sw_thread(shadowedthread_t *sh) {
 //
 static void shadow_set_threads(shadowedthread_t *sh) {
 
-	int i;
+	uint8_t i;
+	uint8_t threads_to_remove;
+	uint8_t threads_to_start;
 
+	assert(sh!=NULL);
 	assert(sh->num_sw_threads + sh->num_hw_threads <= TS_MAX_REDUNDANT_THREADS);
-	//, "Too many threads scheduled!");
+
 	TS_DEBUG("\t shadow_set_threads() says: hello!\n");
 	if (sh->num_hw_threads != sh->running_num_hw_threads) {
 		//
@@ -322,23 +332,19 @@ static void shadow_set_threads(shadowedthread_t *sh) {
 			//
 			// Kill unneeded threads
 			//
-			unsigned int threads_to_remove = (sh->running_num_hw_threads
-					- sh->num_hw_threads);
+			threads_to_remove = (sh->running_num_hw_threads - sh->num_hw_threads);
 			for (i = 0; i < threads_to_remove; i++) {
 				TS_DEBUG("\t Removing another hw thread.. \n");
 				assert(shadow_remove_hw_thread(sh));
-				//, "FAILED: remove hw thread");
 			}
 		} else {
 			//
 			// Start additional threads
 			//
-			unsigned int threads_to_start = (sh->num_hw_threads
-					- sh->running_num_hw_threads);
+			threads_to_start = (sh->num_hw_threads - sh->running_num_hw_threads);
 			for (i = 0; i < threads_to_start; i++) {
 				TS_DEBUG("\t Adding another hw thread.. \n");
 				assert(shadow_add_hw_thread(sh));
-				//, "FAILED: add hw thread");
 			}
 		}
 	}
@@ -352,23 +358,19 @@ static void shadow_set_threads(shadowedthread_t *sh) {
 			//
 			// Kill unneeded threads
 			//
-			unsigned int threads_to_remove = (sh->running_num_sw_threads
-					- sh->num_sw_threads);
+			threads_to_remove = (sh->running_num_sw_threads - sh->num_sw_threads);
 			for (i = 0; i < threads_to_remove; i++) {
 				TS_DEBUG("\t Removing another sw thread.. \n");
 				assert(shadow_remove_sw_thread(sh));
-				//, "FAILED: remove sw thread");
 			}
 		} else {
 			//
 			// Start additional threads
 			//
-			unsigned int threads_to_start = (sh->num_sw_threads
-					- sh->running_num_sw_threads);
+			threads_to_start = (sh->num_sw_threads - sh->running_num_sw_threads);
 			for (i = 0; i < threads_to_start; i++) {
 				TS_DEBUG("\t Adding another sw thread.. \n");
 				assert(shadow_add_sw_thread(sh));
-				//, "FAILED: add sw thread");
 			}
 		}
 	}
@@ -379,9 +381,7 @@ static void shadow_set_threads(shadowedthread_t *sh) {
 //
 
 void shadow_init(shadowedthread_t *sh) {
-	int error;
-	assert(sh);
-
+	assert(sh != NULL);
 
 	// Default shadowing level is highest level:
 	// use all available error checking mechanisms
@@ -391,27 +391,28 @@ void shadow_init(shadowedthread_t *sh) {
 	memset(sh, 0, sizeof(shadowedthread_t));
 
 	// Now define the exceptions...
-	error = sem_init(&sh->sh_wait_sem, 0, 0);
-	if (error) {
+	if ( sem_init(&sh->sh_wait_sem, 0, 0) != 0) {
 		perror("sem_init failed!");
 	}
 
 	sh->sh_status = TS_INACTIVE;
 
-	fifo_init(&(sh->func_calls), 512, sizeof(func_call_t));
+	(void)fifo_init( &(sh->func_calls), 512, sizeof(func_call_t) );
 	sh->error_callback = NULL; // User supplied call back function
 
-	sh->min_error_detection_latency = (timing_t){.tv_sec= LONG_MAX, .tv_usec = LONG_MAX};
-	sh->min_error_detection_offline_time = (timing_t){.tv_sec= LONG_MAX, .tv_usec = LONG_MAX};
+	sh->min_error_detection_latency.tv_sec= LONG_MAX;
+	sh->min_error_detection_latency.tv_usec = LONG_MAX;
+	sh->min_error_detection_offline_time.tv_sec= LONG_MAX;
+	sh->min_error_detection_offline_time.tv_usec = LONG_MAX;
 
 	// ...and call substructure initializers
 	shadow_errors_init(&(sh->errors));
-
 }
 
 /**
  * @brief Shadowing systems signal handler for segmentation faults.
  */
+# ifndef S_SPLINT_S
 void shadow_sig_handler(int sig, siginfo_t *siginfo, void * context){
 	pthread_t tid = pthread_self();
 	ucontext_t* uc = (ucontext_t*) context;
@@ -460,20 +461,22 @@ void shadow_sig_handler(int sig, siginfo_t *siginfo, void * context){
 #endif
     exit(64+sig);
 }
+#endif
 
 /**
  * @brief Gets started before the actual worker thread, to set up some signal handlers.
  */
 void* shadow_starter(void* data){
+	struct sigaction act;
 	shadowedthread_t * sh = (shadowedthread_t*)data;
+
+	fprintf(stderr, "SHADOW_WATCHDOG_THREAD: started, stack around %p\n", &sh);
 	TS_DEBUG("Entering shadow starter.\n");
 	//
 	// Install signal handler for several fault signals
 	//
-	struct sigaction act={
-			.sa_sigaction = shadow_sig_handler,
-			.sa_flags =  SA_SIGINFO
-	};
+	act.sa_sigaction = shadow_sig_handler;
+	act.sa_flags =  SA_SIGINFO;
 
 	// Kill: we got killed by external program. Maybe we hang?
 	sigaction(SIGKILL, &act, NULL);
@@ -487,16 +490,16 @@ void* shadow_starter(void* data){
 	// Illegal instruction: processes doesn't like/know your instructions.
 	sigaction(SIGILL, &act, NULL);
 
-	// Segmentatzion fault: wrong memory accesses
+	// Segmentation fault: wrong memory accesses
 	sigaction(SIGSEGV, &act, NULL);
 
 	// Start actual worker thread
 	TS_DEBUG("Leaving shadow starter, calling actual worker function.\n");
 	return sh->sw_thread(sh->resources);
-
 }
+
 void shadow_dump_cyclestats(shadowedthread_t *sh){
-	assert(sh);
+	assert(sh != NULL);
 	fprintf(OUTPUT, "Cycle Stats of shadowed thread %p: inactive: %4lu, preactive: %4lu, active: %4lu\n",
 			sh,
 			(unsigned long) sh->ts_inactive_cycles,
@@ -531,7 +534,7 @@ void shadow_dump_cyclestats_all(){
 }
 
 void shadow_dump_timestats(shadowedthread_t *sh){
-	assert(sh);
+	assert(sh!=NULL);
 	fprintf(OUTPUT, "Timestats (min,avg,max) in us of shadowed thread %p: dot %li, %li, %li , detlat: %li, %li, %li\n",
 			sh,
 			timer2us(&sh->min_error_detection_offline_time),
@@ -595,10 +598,10 @@ void shadow_dump_timestats_all(){
 
 void shadow_dump(shadowedthread_t *sh) {
 	int i;
-	assert(sh);
+	assert(sh!=NULL);
 
 	fprintf(OUTPUT, "Dump of shadowed thread %p \n", sh);
-	fprintf(OUTPUT, "\tLevel: %hhd \n", sh->level);
+	fprintf(OUTPUT, "\tLevel: %hhu \n", sh->level);
 	fprintf(OUTPUT, "\tInit data: %p\n", sh->init_data);
 
 	for (i = 0; i < TS_MAX_REDUNDANT_THREADS; i++) {
@@ -611,7 +614,7 @@ void shadow_dump(shadowedthread_t *sh) {
 										"TS_THREAD_HW" : "UNKNOWN")));
 	}
 
-	fprintf(OUTPUT, "\tScheduled Threads: %d/%d  Running Threads: %d/%d (SW/HW)\n",
+	fprintf(OUTPUT, "\tScheduled Threads: %hhu/%hhu  Running Threads: %hhu/%hhu (SW/HW)\n",
 			sh->num_sw_threads, sh->num_hw_threads, sh->running_num_sw_threads,
 			sh->running_num_hw_threads);
 
@@ -620,11 +623,11 @@ void shadow_dump(shadowedthread_t *sh) {
 
 	for (i = 0; i < TS_MAX_REDUNDANT_THREADS; i++) {
 		fprintf(OUTPUT,
-				"\tHW thread %d control structure at %p and assigned slot: %d \n",
+				"\tHW thread %d control structure at %p and assigned slot: %hhu \n",
 				i, &(sh->hw_thread[i]), sh->hw_slot_nums[i]);
 	}
 
-	fprintf(OUTPUT, "\tCurrent os-call index: %i \n", sh->func_calls_idx);
+	fprintf(OUTPUT, "\tCurrent os-call index: %u \n", sh->func_calls_idx);
 
 	// Missing:
 	// - Error Printing
@@ -651,55 +654,42 @@ void inline shadow_func_stat_inc_s(uint32_t idx){
 void shadow_dump_func_stats(){
 	int i;
 	fprintf(OUTPUT, "Function stats legend: yield, exit, mbox_init, mbox_destroy, mbox_put, mbox_get, rq_init, rq_close, rq_receive, rq_send\n");
-	fprintf(OUTPUT, "Function stats intercepted: %d", function_intercepted[0]);
+	fprintf(OUTPUT, "Function stats intercepted: %u", function_intercepted[0]);
 	for (i=1; i< IDX_SIZE; i++){
-		fprintf(OUTPUT, ", %d", function_intercepted[i]);
+		fprintf(OUTPUT, ", %u", function_intercepted[i]);
 	}
 	fprintf(OUTPUT, "\n");
-	fprintf(OUTPUT, "Function stats shadowed: %d", function_shadowed[0]);
+	fprintf(OUTPUT, "Function stats shadowed: %u", function_shadowed[0]);
 	for (i=1; i< IDX_SIZE; i++){
-		fprintf(OUTPUT, ", %d", function_shadowed[i]);
+		fprintf(OUTPUT, ", %u", function_shadowed[i]);
 	}
 	fprintf(OUTPUT, "\n");
 }
 
 
-int shadow_set_level(shadowedthread_t *sh, uint8_t l) {
-	assert(sh);
+void shadow_set_level(shadowedthread_t *sh, uint8_t l) {
+	assert(sh != NULL);
 	// limit the level to allowed levels
 	if( l < 1 ){ l = 1;}
 	if( l > 3 ){ l = 3;}
 	sh->level = l;
-	return true;
 }
 
-int shadow_set_swthread(shadowedthread_t *sh, void* (*entry)(void*)) {
-	assert(sh);
-
+void shadow_set_swthread(shadowedthread_t *sh, void* (*entry)(void*)) {
+	assert(sh != NULL);
 	sh->sw_thread = entry;
-	return true;
 }
 
-//int shadow_set_hwthread( shadowedthread_t *sh, struct reconos_hwt * hwt[TS_MAX_REDUNDANT_THREADS]){
-//    assert(sh); //, "sh == NULL");
-//    memcpy(sh->hw_thread, hwt, TS_MAX_REDUNDANT_THREADS * sizeof(struct reconos_hwt *));
-//    return true;
-//}
-
-int shadow_set_resources(shadowedthread_t *sh, struct reconos_resource * res,
-		unsigned int res_count) {
-	assert(sh);
-
+void shadow_set_resources(shadowedthread_t *sh, struct reconos_resource * res,
+						unsigned int res_count) {
+	assert(sh != NULL);
 	sh->resources = res;
 	sh->resources_count = res_count;
-	return true;
 }
 
-int shadow_set_options(shadowedthread_t *sh, uint32_t options) {
-	assert(sh);
-
+void shadow_set_options(shadowedthread_t *sh, uint32_t options) {
+	assert(sh != NULL);
 	sh->options = options;
-	return true;
 }
 
 /**
@@ -707,16 +697,15 @@ int shadow_set_options(shadowedthread_t *sh, uint32_t options) {
  * @Note  When TS_MANUAL_SCHEDULE is not set in options, shadow scheduler may activate/deactivate
  *        threads as it thinks is best!
  */
-int shadow_set_threadcount(shadowedthread_t *sh, uint8_t hw, uint8_t sw) {
-	assert(sh);
+void shadow_set_threadcount(shadowedthread_t *sh, uint8_t hw, uint8_t sw) {
+	assert(sh != NULL);
 
 	sh->num_hw_threads = hw;
 	sh->num_sw_threads = sw;
-	return true;
 }
 
-int shadow_set_hwslots(shadowedthread_t *sh, uint8_t hwt, uint8_t hwslot) {
-	assert(sh);
+bool shadow_set_hwslots(shadowedthread_t *sh, uint8_t hwt, uint8_t hwslot) {
+	assert(sh != NULL);
 
 	if (hwt < TS_MAX_REDUNDANT_THREADS) {
 		sh->hw_slot_nums[hwt] = hwslot;
@@ -726,26 +715,22 @@ int shadow_set_hwslots(shadowedthread_t *sh, uint8_t hwt, uint8_t hwslot) {
 	}
 }
 
-int shadow_set_program(shadowedthread_t *sh, const char* progname){
-	assert(sh);
+void shadow_set_program(shadowedthread_t *sh, const char* progname){
 	int i;
+	assert(sh != NULL);
 	for (i=0; i< TS_MAX_REDUNDANT_THREADS; i++){
 		reconos_hwt_setprogram(&sh->hw_thread[i], progname);
 	}
-	return true;
 }
 
-int shadow_set_initdata(shadowedthread_t *sh, void* init_data) {
-	assert(sh);
-
+void shadow_set_initdata(shadowedthread_t *sh, void* init_data) {
+	assert(sh != NULL);
 	sh->init_data = init_data;
-	return true;
 }
 
-int shadow_set_errorhandler(shadowedthread_t *sh, void (*eh)(sh_err_t error)){
-	assert(sh);
+void shadow_set_errorhandler(shadowedthread_t *sh, void (*eh)(sh_err_t error)){
+	assert(sh != NULL);
 	sh->error_callback = eh;
-	return true;
 }
 
 extern int pthread_getattr_np(pthread_t thread, pthread_attr_t *attr);
@@ -754,13 +739,20 @@ extern int pthread_getattr_np(pthread_t thread, pthread_attr_t *attr);
 extern int pthread_attr_getstack(pthread_attr_t *attr, void **stackaddr, size_t *stacksize);
 #endif
 
-int shadow_get_stack(shadowedthread_t *sh, unsigned int thread_idx, void ** stackaddr, size_t *stacksize) {
-	assert(sh);
+void shadow_get_stack(shadowedthread_t *sh, unsigned int thread_idx, void ** stackaddr, size_t *stacksize) {
 	pthread_attr_t attr;
-	pthread_getattr_np(sh->threads[thread_idx],&attr); //@WARNING: Non portable!
-	pthread_attr_getstack(&attr, stackaddr, stacksize);
-	return true;
-
+	int retval;
+	assert(sh != NULL);
+	retval = pthread_getattr_np(sh->threads[thread_idx],&attr); //@WARNING: Non portable!
+	if (retval != 0 ){
+		fprintf(OUTPUT, "shadow_get_stack: thread_getattr_np failed.\n");
+		exit(-1);
+	}
+	retval = pthread_attr_getstack(&attr, stackaddr, stacksize);
+	if (retval != 0 ){
+		fprintf(OUTPUT, "shadow_get_stack: pthread_attr_getstack failed.\n");
+		exit(-1);
+	}
 }
 //
 // Private API
@@ -770,26 +762,30 @@ int shadow_get_stack(shadowedthread_t *sh, unsigned int thread_idx, void ** stac
  * @brief check if shadow thread is properly configured
  * @todo Needs more checks!
  */
-int shadow_check_configuration(shadowedthread_t *sh) {
-	assert(sh);
+bool shadow_check_configuration(shadowedthread_t *sh) {
+	assert(sh != NULL);
 
 	// Check if at least one thread, may it be hw or sw, is configured.
-	assert(sh->sw_thread || sh->hw_thread);
-
+	assert( (sh->sw_thread    != NULL) ||
+			(sh->hw_thread[0].delegate != 0) ||
+			(sh->hw_thread[1].delegate != 0) ||
+			(sh->hw_thread[2].delegate != 0));
 	return true;
 }
 
+# ifndef S_SPLINT_S
 // Change shadowing status of a shadowed thread.
 void shadow_set_state(shadowedthread_t *sh, shadow_state_t s) {
-	assert(sh);
+	timing_t now;
+	timing_t diff;
+	assert(sh != NULL );
 	if (sh->sh_status == TS_ACTIVE && s == TS_INACTIVE){
 		// set deactivation timestamp
 		sh->deactivation_time = gettime();
 	}
 	if (sh->sh_status == TS_PREACTIVE && s == TS_ACTIVE){
 		// calculate error detection offline time
-		timing_t now = gettime();
-		timing_t diff;
+		now = gettime();
 		timerdiff(&now, &sh->deactivation_time, &diff);
 		if ( timercmp(&diff,&sh->max_error_detection_offline_time, >) ){
 			sh->max_error_detection_offline_time = diff;
@@ -817,29 +813,29 @@ void shadow_set_state(shadowedthread_t *sh, shadow_state_t s) {
 		break;
 	}
 #endif
-
 }
+#endif
 
 shadow_state_t shadow_get_state(shadowedthread_t *sh) {
-	assert(sh);
+	assert(sh != NULL);
 	return sh->sh_status;
 }
 
 // Lock to the shadow list management
 void ts_lock() {
-	pthread_mutex_lock(&ts_mutex);
+	assert(pthread_mutex_lock(&ts_mutex) == 0);
 }
 
 // Unlock the shadow list management
 void ts_unlock() {
-	pthread_mutex_unlock(&ts_mutex);
+	assert(pthread_mutex_unlock(&ts_mutex) == 0);
 }
 
 // Status of the shadow list management lock
 int ts_lock_status() {
 	int result = pthread_mutex_trylock(&ts_mutex);
 	if(result == 0){
-		pthread_mutex_unlock(&ts_mutex);
+		assert(pthread_mutex_unlock(&ts_mutex) == 0);
 		return 0;
 	} else {
 		return 1;
@@ -849,13 +845,13 @@ int ts_lock_status() {
 /**
  * @brief Returns true if the calling thread is the leading thread.
  */
-int is_leading_thread(shadowedthread_t *sh, pthread_t this){
+bool is_leading_thread(shadowedthread_t *sh, pthread_t this){
 	// If there are HWT, then they come first in the sh->threads array.
 	// In transmodal case, we assume one HWT and one SWT. Therefore HWT will be at
 	// sh->threads[0] and SWT will be at sh->threads[1]
-	if(sh->options & TS_HW_LEADS){
+	if( (sh->options & TS_HW_LEADS) == TS_HW_LEADS){
 		return sh->threads[0] == this;
-	}else if(sh->options & TS_SW_LEADS){
+	}else if( (sh->options & TS_SW_LEADS) == TS_SW_LEADS){
 		return sh->threads[1] == this;
 	}else{
 		return sh->threads[0] == this;
@@ -871,7 +867,7 @@ int is_leading_thread(shadowedthread_t *sh, pthread_t this){
 // else it will be NULLED.
 //
 
-int is_shadowed_in_parent(pthread_t handle, shadowedthread_t **parent) {
+bool is_shadowed_in_parent(pthread_t handle, shadowedthread_t **parent) {
 	int i;
 	shadowedthread_t *sh = (shadowedthread_t *) handle;
 	shadowedthread_t *temp = shadow_list_head;
@@ -886,7 +882,8 @@ int is_shadowed_in_parent(pthread_t handle, shadowedthread_t **parent) {
 				TS_DEBUG1("Thread handle %d is it!\n", i);
 				if (parent != NULL) {
 					*parent = temp;
-				}TS_DEBUG1("Yes ,handle %lu is a shadowedthread_attr_t \n", (unsigned long int)handle);
+				}
+				TS_DEBUG1("Yes ,handle %lu is a shadowedthread_attr_t \n", (unsigned long int)handle);
 				return true;
 			}
 		}
@@ -903,7 +900,7 @@ int is_shadowed_in_parent(pthread_t handle, shadowedthread_t **parent) {
 	}
 }
 
-int is_shadowed(pthread_t handle) {
+bool is_shadowed(pthread_t handle) {
 	return is_shadowed_in_parent(handle, NULL);
 }
 
@@ -911,12 +908,14 @@ int is_shadowed(pthread_t handle) {
  * @brief Pushes a function call object into a fifo for later retrieval by the shadow thread.
  */
 void shadow_func_call_push(shadowedthread_t *sh, func_call_t * func_call){
-	assert(sh);
-	assert(func_call);
+	assert(sh != NULL);
+	assert(func_call != NULL);
+
 	// Add correct call index
+	ts_lock();
 	func_call->index = sh->func_calls_idx;
 	sh->func_calls_idx++;
-
+	ts_unlock();
 	// Push into internal fifo
 	if (sh->num_hw_threads + sh->num_sw_threads > 1) {
 			fifo_push(&sh->func_calls, func_call);
@@ -927,10 +926,11 @@ void shadow_func_call_push(shadowedthread_t *sh, func_call_t * func_call){
  * @brief Pops a function call object from a fifo, so a shadow thread can compare it with its own function call.
  */
 void shadow_func_call_pop(shadowedthread_t *sh, func_call_t * func_call){
-	assert(sh);
-	assert(func_call);
+	assert(sh!=NULL);
+	assert(func_call!=NULL);
 	// Pop from internal fifo - should block when empty!
 	fifo_pop(&sh->func_calls, func_call);
+
 }
 
 
@@ -943,7 +943,7 @@ void shadow_thread_create(shadowedthread_t * sh) // Init data passed to worker t
 	//
 	// Sanity checks
 	//
-	assert(sh);
+	assert(sh != NULL);
 	assert(shadow_check_configuration(sh));
 
 	ts_lock();
@@ -951,7 +951,7 @@ void shadow_thread_create(shadowedthread_t * sh) // Init data passed to worker t
 	//
 	// If first call, init the shadow system itself
 	//
-	pthread_once(&shadow_system_is_initialized, shadow_system_init);
+	assert(pthread_once(&shadow_system_is_initialized, shadow_system_init) == 0);
 
 	//
 	// Insert in global data structures
@@ -963,7 +963,8 @@ void shadow_thread_create(shadowedthread_t * sh) // Init data passed to worker t
 	//
 	// Schedule this thread for the first time
 	//
-	shadow_schedule(sh,SCHED_FLAG_NONE);
+	//shadow_schedule(sh,SCHED_FLAG_NONE);
+	shadow_set_state(sh, TS_ACTIVE);
 
 	//
 	// Activate new threads, deactivate unneeded ones.
@@ -972,8 +973,6 @@ void shadow_thread_create(shadowedthread_t * sh) // Init data passed to worker t
 	shadow_set_threads(sh);
 	//shadow_dump(sh);
 
-
-
 	ts_unlock();
 }
 
@@ -981,7 +980,7 @@ int shadow_join(shadowedthread_t * sh, void **value_ptr) {
 	int i;
 	int ret = 0;
 
-	assert(sh);
+	assert(sh != NULL);
 	for (i = 0; i < TS_MAX_REDUNDANT_THREADS; i++) {
 	//for (i = 0; i < 1; i++) {
 		if (sh->threads_type[i] != TS_THREAD_NONE) {

@@ -80,6 +80,7 @@ void close_timebase()
  * @return Difference a - b. If result is positive a was later in time then b. If one or both components of
  * 			timing_t are negative, b was later in time than a.
  */
+# ifndef S_SPLINT_S
 void timerdiff(timing_t * a, timing_t * b, timing_t * diff){
 	if(timercmp(a,b,>)){
 		timersub(a,b,diff);
@@ -89,6 +90,7 @@ void timerdiff(timing_t * a, timing_t * b, timing_t * diff){
 		diff->tv_usec*=-1;
 	}
 }
+#endif
 
 /**
  * Converts a timing_t into a human readable string.

@@ -48,6 +48,8 @@
 
 #define SH_GENERIC_ERROR		0x0701 //  1793
 
+#define SH_PROC_CONTROL_CMD		0x0801 //  2049
+
 #define SH_ERR_UNKNOWN			0xFFFF // 65535
 
 /*
@@ -63,6 +65,7 @@
 #define SH_FILE_READWRITE_EXIT_CODE 	21
 #define SH_GENERIC_EXIT_CODE 			22
 #define SH_MALLOC_EXIT_CODE 			23
+#define SH_PROC_CONTROL_EXIT_CODE		24
 #define SH_SIGNAL_EXIT_CODE_BASE 		192
 #define SH_MEM_ERROR_EXIT_CODE			32+192
 
@@ -124,19 +127,24 @@ typedef struct sh_err {
 		};
 
 		struct {
+			uint8_t cmd;
+		};
+
+		struct {
 			const char * generic_error_description;
 		};
 	};
 } sh_err_t;
 
 void sh_mem_error_handler(uint8_t hwt, uint32_t err_type, uint32_t err_addr);
-void sh_func_error_handler(int err_type, func_call_t * a, func_call_t * b);
+void sh_func_error_handler(uint32_t err_type, func_call_t * a, func_call_t * b);
 void sh_watchdog_error_handler(uint32_t timeout);
 void sh_osif_function_error_handler(int32_t hwt_slot, uint32_t function );
 void sh_osif_param_error_handler(int32_t hwt_slot, uint32_t resource_handle, uint32_t max_resource_handle, uint32_t is_type, uint32_t should_type);
 void sh_signal_error_handler(const char* thread_name, int signr, void* code_address, void* mem_address);
 void sh_file_open_error_handler(const char * file, int flags);
 void sh_file_readwrite_error_handler(const char * file,int32_t is_read, int32_t should_read, int32_t is_write, int32_t should_write );
+void sh_proc_control_error_handler(uint8_t cmd);
 void sh_generic_error_handler(const char* error_description, ...);
 
 void sh_error_to_json(sh_err_t error);

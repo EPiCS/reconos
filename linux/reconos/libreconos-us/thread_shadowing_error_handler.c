@@ -7,7 +7,7 @@
 
 
 #include "thread_shadowing_error_handler.h"
-
+#include "thread_status.h"
 
 //#define DEBUG 1
 #define OUTPUT stderr
@@ -24,6 +24,9 @@
 
 
 void sh_mem_error_handler(uint8_t hwt, uint32_t err_type, uint32_t err_addr){
+	shadowedthread_t * sh;
+	sh_err_t error;
+
 	fprintf(OUTPUT,"SH_MEM_ERR: HWT: %d,  Type: %s, Address: 0x%x\n", hwt,
 		  err_type == MEM_ERROR_TYP_NONE ? "NONE" : (
 		  err_type == MEM_ERROR_TYP_HEADER1 ? "HEADER1" : (
@@ -36,10 +39,9 @@ void sh_mem_error_handler(uint8_t hwt, uint32_t err_type, uint32_t err_addr){
 	/*
 	 * Build error struct.
 	 */
-	shadowedthread_t * sh;
 	is_shadowed_in_parent(pthread_self(), &sh);
 
-	sh_err_t error;
+
 	error.sh = sh;
 	error.hwt = -1;
 	error.error_code = err_type == MEM_ERROR_TYP_NONE ? SH_ERR_UNKNOWN : (
@@ -66,15 +68,19 @@ void sh_mem_error_handler(uint8_t hwt, uint32_t err_type, uint32_t err_addr){
 	if( (sh != NULL) && (sh->error_callback != NULL) ){
 		sh->error_callback(error);
 	} else {
+		thread_status_print_all();
 		sh_error_to_json(error);
 		exit(error.exit_code);
 	}
 }
 
 
-void sh_func_error_handler(int err_type, func_call_t * a, func_call_t * b){
+void sh_func_error_handler(uint32_t err_type, func_call_t * a, func_call_t * b){
 	pthread_t tid = pthread_self();
 	timing_t diff = func_call_timediff_us(a,b);
+	shadowedthread_t * sh;
+	sh_err_t error;
+
 	fprintf(OUTPUT, "\n#################################################\n");
 	fprintf(OUTPUT, "# ERROR: Thread ID %lu,  %s\n",tid, func_call_strerror(err_type));
 	fprintf(OUTPUT, "# a: "); func_call_dump(a);
@@ -85,10 +91,9 @@ void sh_func_error_handler(int err_type, func_call_t * a, func_call_t * b){
 	/*
 	 * Build error struct.
 	 */
-	shadowedthread_t * sh;
+
 	is_shadowed_in_parent(pthread_self(), &sh);
 
-	sh_err_t error;
 	error.sh = sh;
 	error.hwt = -1;
 	error.error_code = err_type == FC_ERR_FUNCTION_MATCH ? SH_FUNC_NAME_MISMATCH :(
@@ -106,6 +111,7 @@ void sh_func_error_handler(int err_type, func_call_t * a, func_call_t * b){
 	if( (sh != NULL) && (sh->error_callback != NULL) ){
 		sh->error_callback(error);
 	} else {
+		thread_status_print_all();
 		sh_error_to_json(error);
 		exit(error.exit_code);
 	}
@@ -114,16 +120,16 @@ void sh_func_error_handler(int err_type, func_call_t * a, func_call_t * b){
 
 void sh_watchdog_error_handler(uint32_t timeout){
 	shadowedthread_t * sh;
+	sh_err_t error;
+
 	is_shadowed_in_parent(pthread_self(), &sh);
 
-
-	sh_err_t error;
 	error.sh = sh;
 	error.hwt = -1;
 	error.error_code = SH_WATCHDOG_TIMEOUT;
 	error.exit_code = SH_WATCHDOG_EXIT_CODE;
 
-	error.watchdog_timeout = -1;
+	error.watchdog_timeout = timeout;
 
 	/*
 	 *  Notify application if an error handler was specified, else abort program.
@@ -131,6 +137,7 @@ void sh_watchdog_error_handler(uint32_t timeout){
 	if( (sh != NULL) && (sh->error_callback != NULL) ){
 		sh->error_callback(error);
 	} else {
+		thread_status_print_all();
 		sh_error_to_json(error);
 		exit(error.exit_code);
 	}
@@ -140,9 +147,9 @@ void sh_watchdog_error_handler(uint32_t timeout){
 void sh_osif_function_error_handler(int32_t hwt_slot, uint32_t function ){
 
 	shadowedthread_t * sh;
+	sh_err_t error;
 	is_shadowed_in_parent(pthread_self(), &sh);
 
-	sh_err_t error;
 	error.sh = sh;
 	error.hwt = hwt_slot;
 	error.error_code = SH_OSIF_NR_ILLEGAL;
@@ -160,6 +167,7 @@ void sh_osif_function_error_handler(int32_t hwt_slot, uint32_t function ){
 	if( (sh != NULL) && (sh->error_callback != NULL) ){
 		sh->error_callback(error);
 	} else {
+		thread_status_print_all();
 		sh_error_to_json(error);
 		exit(error.exit_code);
 	}
@@ -169,9 +177,9 @@ void sh_osif_function_error_handler(int32_t hwt_slot, uint32_t function ){
 void sh_osif_param_error_handler(int32_t hwt_slot, uint32_t resource_handle, uint32_t max_resource_handle, uint32_t is_type, uint32_t should_type){
 
 	shadowedthread_t * sh;
-	is_shadowed_in_parent(pthread_self(), &sh);
-
 	sh_err_t error;
+
+	is_shadowed_in_parent(pthread_self(), &sh);
 
 	error.sh = sh;
 	error.hwt = hwt_slot;
@@ -190,6 +198,7 @@ void sh_osif_param_error_handler(int32_t hwt_slot, uint32_t resource_handle, uin
 	if( (sh != NULL) && (sh->error_callback != NULL) ){
 		sh->error_callback(error);
 	} else {
+		thread_status_print_all();
 		sh_error_to_json(error);
 		exit(error.exit_code);
 	}
@@ -198,9 +207,10 @@ void sh_osif_param_error_handler(int32_t hwt_slot, uint32_t resource_handle, uin
 
 void sh_signal_error_handler(const char* thread_name, int signr, void* code_address, void* mem_address){
 	shadowedthread_t * sh;
+	sh_err_t error;
+
 	is_shadowed_in_parent(pthread_self(), &sh);
 
-	sh_err_t error;
 	error.sh = sh;
 	error.hwt = -1;
 	error.error_code = SH_SIGNAL;
@@ -217,6 +227,7 @@ void sh_signal_error_handler(const char* thread_name, int signr, void* code_addr
 	if( (sh != NULL) && (sh->error_callback != NULL) ){
 		sh->error_callback(error);
 	} else {
+		thread_status_print_all();
 		sh_error_to_json(error);
 		exit(error.exit_code);
 	}
@@ -225,9 +236,10 @@ void sh_signal_error_handler(const char* thread_name, int signr, void* code_addr
 
 void sh_file_open_error_handler(const char * file, int flags){
 	shadowedthread_t * sh;
+	sh_err_t error;
+
 	is_shadowed_in_parent(pthread_self(), &sh);
 
-	sh_err_t error;
 	error.sh = sh;
 	error.hwt = -1;
 	error.error_code = SH_FILE_OPEN_ERROR;
@@ -242,6 +254,7 @@ void sh_file_open_error_handler(const char * file, int flags){
 	if( (sh != NULL) && (sh->error_callback != NULL) ){
 		sh->error_callback(error);
 	} else {
+		thread_status_print_all();
 		sh_error_to_json(error);
 		exit(error.exit_code);
 	}
@@ -250,9 +263,10 @@ void sh_file_open_error_handler(const char * file, int flags){
 
 void sh_file_readwrite_error_handler(const char * file,int32_t is_read, int32_t should_read, int32_t is_write, int32_t should_write ){
 	shadowedthread_t * sh;
+	sh_err_t error;
+
 	is_shadowed_in_parent(pthread_self(), &sh);
 
-	sh_err_t error;
 	error.sh = sh;
 	error.hwt = -1;
 	error.error_code = SH_FILE_READWRITE_ERROR;
@@ -271,26 +285,65 @@ void sh_file_readwrite_error_handler(const char * file,int32_t is_read, int32_t 
 	if( (sh != NULL) && (sh->error_callback != NULL) ){
 		sh->error_callback(error);
 	} else {
+		thread_status_print_all();
 		sh_error_to_json(error);
 		exit(error.exit_code);
 	}
 }
 
+void sh_proc_control_error_handler(uint8_t cmd){
+	shadowedthread_t * sh;
+	sh_err_t error;
+
+	fprintf(OUTPUT,"SH_PROC_CONTROL_ERR: Unknown command 0x%x\n", cmd);
+
+	is_shadowed_in_parent(pthread_self(), &sh);
+
+	// @TODO:update statistics about errors, so we know if they are permanent or transient
+	/*
+	 * Build error struct.
+	 */
+
+	error.sh = NULL;
+	error.hwt = -1;
+	error.error_code = SH_PROC_CONTROL_CMD;
+	error.exit_code = SH_PROC_CONTROL_EXIT_CODE;
+
+	/*
+	 * @todo: MEMIF error reporting has to be extended to provide a lot more information
+	 */
+	error.cmd = cmd;
+
+	/*
+	 *  Notify application if an error handler was specified, else abort program.
+	 */
+	if( (sh != NULL) && (sh->error_callback != NULL) ){
+		sh->error_callback(error);
+	} else {
+		thread_status_print_all();
+		sh_error_to_json(error);
+		exit(error.exit_code);
+	}
+
+}
 
 void sh_generic_error_handler(const char* error_description, ...){
 	shadowedthread_t * sh;
+	char *text_buffer;
+	va_list vl;
+	sh_err_t error;
+
 	is_shadowed_in_parent(pthread_self(), &sh);
 
-	char *text_buffer = malloc(200); // 200 bytes for error message maximum
+	text_buffer = malloc(200); // 200 bytes for error message maximum
 	if (text_buffer == NULL){
 		exit(SH_MALLOC_EXIT_CODE);
 	}
-	va_list vl;
+
 	va_start(vl, error_description);
 	vsnprintf(text_buffer,200, error_description, vl);
 	va_end(vl);
 
-	sh_err_t error;
 	error.sh = sh;
 	error.hwt = -1;
 	error.error_code = SH_GENERIC_ERROR;
@@ -304,6 +357,7 @@ void sh_generic_error_handler(const char* error_description, ...){
 	if( (sh != NULL) && (sh->error_callback != NULL) ){
 		sh->error_callback(error);
 	} else {
+		thread_status_print_all();
 		sh_error_to_json(error);
 		exit(error.exit_code);
 	}

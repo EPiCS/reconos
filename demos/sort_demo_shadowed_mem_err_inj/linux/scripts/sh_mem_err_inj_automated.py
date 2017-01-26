@@ -15,11 +15,14 @@ EXPORT_DIR= "/exports/rootfs_mb"
 RECONOS= "/home/meise/git/reconos_epics"
 DOW = RECONOS+"/tools/dow"
 KERNEL = ["/home/meise/git/linux-2.6-xlnx/arch/microblaze/boot/simpleImage.ml605_epics_first_board",
-          "/home/meise/git/linux-2.6-xlnx/arch/microblaze/boot/simpleImage.ml605_epics_second_board"]
-IP_ADDRESS = ["192.168.35.2", "192.168.35.3"]
+          "/home/meise/git/linux-2.6-xlnx/arch/microblaze/boot/simpleImage.ml605_epics_second_board",
+          "/home/meise/git/linux-2.6-xlnx/arch/microblaze/boot/simpleImage.ml605_epics_third_board",
+          "/home/meise/git/linux-2.6-xlnx/arch/microblaze/boot/simpleImage.ml605_epics_fourth_board"]
+IP_ADDRESS = ["192.168.35.2", "192.168.35.3", "192.168.35.4", "192.168.35.5"]
 
 #ESN = ["0000145B17DE01", "0000145B185501"]
-ESN = ["000013C81F0B01", "0000145B185501"]
+#ESN = ["000013C81F0B01", "0000145B185501"]000013C84BC701
+ESN = ["0000145B17DE01", "0000145B185501", "0000150911D001", "000013C84BC701"]
 
 # Log files must end in "_run"
 LOG_FILE_BASELINE_OLD= "baseline_old_run"
@@ -356,9 +359,7 @@ def runFaultInject(_config):
         
    
 if __name__ == "__main__":
-    ''' Performs fault injection tests. First command line argument specifies starting column address. Second argument specifies which board to use [0,1]
-        Fault injection is performed until all essential bits in address have been tested.
-    '''
+    ''' Performs fault injection tests.'''
     
     config = {
         'boardNr':0,
@@ -370,6 +371,7 @@ if __name__ == "__main__":
         'addressList': [],
         'telnetPasswd': "",
         'ml605ResetMgr': None,
+        'ml605ResetMgrMethod':"sispmctl", # alternatives: "serial"
         
         'dry_run':False,
         
@@ -429,7 +431,7 @@ if __name__ == "__main__":
     #runFaultInject(benchmarkTagBase, telnetPasswd, BIT_SORT_PERF, sort_commands_perf, SORT_DEMO_DIR, addressList, boardNr, cableLock)
     #cableLock.shutdown()
     
-    config['ml605ResetMgr'] = ml605ResetManager("/tmp/sh_mem_err_inj_reset")
+    config['ml605ResetMgr'] = ml605ResetManager("/tmp/sh_mem_err_inj_reset", config['ml605ResetMgrMethod'])
     runFaultInject(config)
     print("Done!")
     

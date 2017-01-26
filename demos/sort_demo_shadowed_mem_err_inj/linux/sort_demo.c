@@ -9,7 +9,10 @@
 
 #include <execinfo.h>
 
+# ifndef S_SPLINT_S
 #include <sys/ucontext.h>
+#endif
+
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -656,7 +659,7 @@ int main(int argc, char ** argv) {
 	struct parallel_sort_params_in pin;
 	struct parallel_sort_params_out pout;
 	struct parallel_sort_interface pinterface;
-
+	fprintf(stderr, "MAIN_THREAD ID %8lu: started, stack around %p, global vars around %p\n", pthread_self(), &pin, &args_info);
 	INIT_THE_CLOCK()
 	install_sighandlers();
 

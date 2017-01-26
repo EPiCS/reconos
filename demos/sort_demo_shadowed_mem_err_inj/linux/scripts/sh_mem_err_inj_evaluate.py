@@ -137,6 +137,7 @@ def printFaultByErrorCode(_faultByErrorCodeList):
     errorCodeToString[21]="FILE_READWRITE_ERROR"
     errorCodeToString[22]="GENERIC_ERROR"
     errorCodeToString[23]="MALLOC_ERROR"
+    errorCodeToString[24]="PROC_CONTROL_ERROR"
     
     errorCodeToString[64+4]="SHADOW_THREAD_SIGILL"
     errorCodeToString[64+6]="SHADOW_THREAD_SIGABORT"

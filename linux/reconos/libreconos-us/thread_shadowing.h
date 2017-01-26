@@ -161,32 +161,31 @@ typedef struct shadowedthread {
 
 // Obligatory
 void shadow_init(shadowedthread_t *sh);
-int shadow_set_swthread(shadowedthread_t *sh, void* (*entry)(void*));
-//int  shadow_set_hwthread( shadowedthread_t *sh, struct reconos_hwt* hwt[TS_MAX_REDUNDANT_THREADS]);
-int shadow_set_resources(shadowedthread_t *sh, struct reconos_resource * res,
+void shadow_set_swthread(shadowedthread_t *sh, void* (*entry)(void*));
+void shadow_set_resources(shadowedthread_t *sh, struct reconos_resource * res,
 		unsigned int res_count);
 
 // Optional
-int shadow_set_options(shadowedthread_t *sh, uint32_t options);
-int shadow_set_level(shadowedthread_t *sh, uint8_t l);
-int shadow_set_threadcount(shadowedthread_t *sh, uint8_t hw, uint8_t sw);
-int shadow_set_hwslots(shadowedthread_t *sh, uint8_t hwt, uint8_t hwslot);
-int shadow_set_program(shadowedthread_t *sh, const char* progname);
-int shadow_set_initdata(shadowedthread_t *sh, void* init_data);
-int shadow_set_errorhandler(shadowedthread_t *sh, void (*eh)(struct sh_err error));
-int shadow_check_configuration(shadowedthread_t *sh);
+void shadow_set_options(shadowedthread_t *sh, uint32_t options);
+void shadow_set_level(shadowedthread_t *sh, uint8_t l);
+void shadow_set_threadcount(shadowedthread_t *sh, uint8_t hw, uint8_t sw);
+bool shadow_set_hwslots(shadowedthread_t *sh, uint8_t hwt, uint8_t hwslot);
+void shadow_set_program(shadowedthread_t *sh, const char* progname);
+void shadow_set_initdata(shadowedthread_t *sh, void* init_data);
+void shadow_set_errorhandler(shadowedthread_t *sh, void (*eh)(struct sh_err error));
+bool shadow_check_configuration(shadowedthread_t *sh);
 
-int shadow_get_stack(shadowedthread_t *sh, unsigned int thread_idx, void ** stackaddr, size_t *stacksize);
+void shadow_get_stack(shadowedthread_t *sh, unsigned int thread_idx, void ** stackaddr, size_t *stacksize);
 
 //
 // Shadow internal functions
 //
 void 			shadow_set_state( shadowedthread_t *sh, shadow_state_t s);
 shadow_state_t 	shadow_get_state( shadowedthread_t *sh );
-int shadow_list_count();
-int is_shadowed(pthread_t handle);
-int is_shadowed_in_parent(pthread_t handle, shadowedthread_t **parent);
-int is_leading_thread(shadowedthread_t *sh, pthread_t this);
+uint32_t shadow_list_count();
+bool is_shadowed(pthread_t handle);
+bool is_shadowed_in_parent(pthread_t handle, shadowedthread_t **parent);
+bool is_leading_thread(shadowedthread_t *sh, pthread_t this);
 void shadow_wake_up_all(shadowedthread_t *sh);
 void ts_lock();
 void ts_unlock();

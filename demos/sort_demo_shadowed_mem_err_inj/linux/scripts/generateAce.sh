@@ -15,3 +15,5 @@ KERNEL_PATH="/home/meise/git/linux-2.6-xlnx/arch/microblaze/boot"
 
 LD_PRELOAD="" LANG="" LANGUAGE="" LC_ALL="" xmd -tcl genace.tcl -jprog -target mdm -board ml605 -hw $1 -elf $KERNEL_PATH/simpleImage.ml605_epics_first_board  -ace linux_first_board.ace -cpu_version microblaze_v72  #-start_address 0x00000000
 LD_PRELOAD="" LANG="" LANGUAGE="" LC_ALL="" xmd -tcl genace.tcl -jprog -target mdm -board ml605 -hw $1 -elf $KERNEL_PATH/simpleImage.ml605_epics_second_board -ace linux_second_board.ace -cpu_version microblaze_v72 #-start_address 0x00000000
+LD_PRELOAD="" LANG="" LANGUAGE="" LC_ALL="" xmd -tcl genace.tcl -jprog -target mdm -board ml605 -hw $1 -elf $KERNEL_PATH/simpleImage.ml605_epics_third_board  -ace linux_third_board.ace -cpu_version microblaze_v72
+LD_PRELOAD="" LANG="" LANGUAGE="" LC_ALL="" xmd -tcl genace.tcl -jprog -target mdm -board ml605 -hw $1 -elf $KERNEL_PATH/simpleImage.ml605_epics_fourth_board  -ace linux_fourth_board.ace -cpu_version microblaze_v72

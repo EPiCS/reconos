@@ -18,23 +18,26 @@ static cpustats_t cpustats_parse(FILE * f){
 	ret = fscanf(f, "cpu  %u %u %u %u %u %u %u", &c.user, &c.nice, &c.system, &c.idle, &c.iowait, &c.irq, &c.softirq);
 	if (ret != 7){
 		fprintf(OUTPUT, "CPUSTATS ERROR: Could not parse /proc/cpustats!\n");
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 	return c;
 }
 
-cpustats_t cpustats_get(){
+static cpustats_t cpustats_get(){
 	FILE * cpustats_file = NULL;
 	cpustats_t c;
 
 	cpustats_file = fopen("/proc/stat","r");
 	if (cpustats_file == NULL){
 		fprintf(OUTPUT, "CPUSTATS ERROR: Could not open /proc/stat!\n");
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	c = cpustats_parse(cpustats_file);
-	fclose(cpustats_file);
+	if (fclose(cpustats_file) != 0){
+		perror("CPUSTATS ERROR: could not close file");
+		exit(EXIT_FAILURE);
+	}
 
 	return c;
 }

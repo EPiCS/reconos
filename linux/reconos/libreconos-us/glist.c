@@ -15,7 +15,7 @@
 
 
 unsigned int glist_length(const glist_t *list){
-	int length = 0;
+	unsigned int length = 0;
 	for ( ; list != NULL; list = list->next) {
 		length++;
 	}
@@ -34,16 +34,16 @@ int glist_find(const glist_t * list, void * item){
 
 glist_t * glist_findf(const glist_t * list, int (*is_equal)(void*a, void*b), void *item_to_find){
 	for ( ; list != NULL; list = list->next) {
-		if ( is_equal(list->data, item_to_find) ) { return (glist_t *)list;}
+		if ( is_equal(list->data, item_to_find) != 0 ) { return (glist_t *)list;}
 	}
 	return NULL;
 }
 
 void * glist_add_front(glist_t ** list, void * item){
-	glist_t * tempptr;
-	glist_t * newptr;
+	glist_t * tempptr = NULL;
+	glist_t * newptr  = NULL;
 
-	if (item != NULL && (newptr = malloc(sizeof(glist_t)))){
+	if ( (item != NULL) && ( newptr = malloc(sizeof(glist_t)) ) != NULL  ){
 		tempptr = *list;
 		*list = newptr;
 		(*list)->next = tempptr;
@@ -58,7 +58,7 @@ void * glist_add_back(glist_t ** list, void * item){
 	glist_t * newptr;
 	glist_t * runptr;
 
-	if(list && item){
+	if((list!=NULL) && (item!=NULL)){
 		runptr = *list;
 	}else{
 		return NULL;
@@ -91,9 +91,9 @@ void * glist_remove_index(glist_t ** list, unsigned int index){
 	glist_t * removeptr;
 	glist_t ** runptr;
 	void * tmp_data;
-	int i = 0;
+	unsigned int i = 0;
 
-	if (list && *list){
+	if ( (list!=NULL) && (*list!=NULL) ){
 		runptr = list;
 		while(index != i){
 			if((*runptr)->next){
@@ -118,7 +118,7 @@ void * glist_remove_item(glist_t ** list, void * item){
 	glist_t ** runptr;
 	void * tmp_data;
 
-	if (list && *list && item){
+	if ( (list!=NULL) && (*list!=NULL) && (item!=NULL) ){
 		runptr = list;
 		while((*runptr)->data != item){
 			if((*runptr)->next){
@@ -143,11 +143,11 @@ void * glist_remove_item(glist_t ** list, void * item){
 // on the data pointer of every item in the list.
 void glist_remove_list(glist_t ** list, void delete_data(void * item)){
 	if(delete_data){
-		while(list && *list){
+		while( (list!=NULL) && (*list!=NULL) ){
 			delete_data(glist_remove_index(list, 0));
 		}
 	} else {
-		while(list && *list){
+		while( (list!=NULL) && (*list!=NULL) ){
 			free(glist_remove_index(list, 0));
 		}
 	}
@@ -160,11 +160,11 @@ void glist_remove_list(glist_t ** list, void delete_data(void * item)){
 //
 void glist_remove_tail( glist_t * list_element, void delete_data(void * item) ){
 	if(delete_data){
-		while(list_element){
+		while(list_element != NULL){
 			delete_data(glist_remove_next(list_element));
 		}
 	} else {
-		while(list_element){
+		while(list_element != NULL){
 			free(glist_remove_next(list_element));
 		}
 	}
@@ -201,7 +201,8 @@ glist_t * glist_insert_after(glist_t * le, void * item){
 	glist_t * tmp_le2;
 
 	tmp_le  = le->next;
-	if (item != NULL && (tmp_le2 = malloc(sizeof(glist_t)))) {
+	tmp_le2 = malloc(sizeof(glist_t));
+	if ( (item != NULL) && (tmp_le2 != NULL) ) {
 		le->next = tmp_le2;
 		tmp_le2->next = tmp_le;
 		tmp_le2->data = item;
@@ -213,7 +214,7 @@ glist_t * glist_insert_after(glist_t * le, void * item){
 
 
 void glist_apply(glist_t * list, void (*func)(void * data, void * state), void * state){
-	if( list && func ){
+	if( (list!=NULL) && (func!=NULL) ){
 		while(list){
 			func(glist_get_data(list), state);
 			list = glist_get_next(list);
@@ -227,7 +228,7 @@ void glist_apply(glist_t * list, void (*func)(void * data, void * state), void *
 // - is_equal() has to return 1 if data is equal and 0 if data is not equal
 int glist_is_sublist(glist_t * longer, glist_t * shorter, int (*is_equal)(void*a, void*b)){
 	// Skip elements of longer list until first match is found
-	while(longer && is_equal(glist_get_data(longer), glist_get_data(shorter)) == 0){
+	while( (longer!=NULL) && (is_equal(glist_get_data(longer), glist_get_data(shorter)) == 0) ){
 		longer = glist_get_next(longer);
 	}
 

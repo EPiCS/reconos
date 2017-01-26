@@ -12,7 +12,7 @@ host:
 #CC=$(HOST_CC)
 #CFLAGS=$(HOST_CFLAGS)
 
-APP_OBJS = reconos.o fsl.o mbox.o rqueue.o xutils.o glist.o timing.o fifo.o func_call.o max_covering_intervals.o thread_shadowing.o thread_shadowing_error_handler.o thread_shadowing_schedule.o thread_shadowing_subs.o cpuusage.o
+APP_OBJS = reconos.o fsl.o mbox.o rqueue.o xutils.o glist.o timing.o fifo.o func_call.o max_covering_intervals.o thread_shadowing.o thread_shadowing_error_handler.o thread_shadowing_schedule.o thread_shadowing_subs.o cpuusage.o thread_status.o
 
 all: libreconos
 	/bin/true

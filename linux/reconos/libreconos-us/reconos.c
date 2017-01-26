@@ -126,7 +126,8 @@ void reconos_cache_flush(void)
 void reconos_signal_handler(int sig, siginfo_t *siginfo, void * context) {
 	ucontext_t* uc = (ucontext_t*) context;
 	void * code_address;
-
+	int32_t i;
+	fprintf(stderr, "RECONOS_SIGNAL_HANDLER: started, stack around %p\n", &i);
 #ifndef HOST_COMPILE
 	code_address = (void*)uc->uc_mcontext.regs.pc,
 #else
@@ -136,13 +137,17 @@ void reconos_signal_handler(int sig, siginfo_t *siginfo, void * context) {
 	// Yeah, i know using printf in a signal context is not save.
 	// But with a SIGSEGV the programm is messed up anyway, so what?
 	fprintf(stderr,
-			"%s: proc_control_thread killed at program address %p, tried to access %p.\n",
+			"%s: proc_control_thread ID %8lu killed at program address %p, tried to access %p.\n",
 			(sig == SIGSEGV ? "SIGSEGV":(
 			sig == SIGFPE  ? "SIGFPE": (
 			sig == SIGILL  ? "SIGILL": "Unknown Signal"))),
+			pthread_self(),
 			code_address,
 			(void*) siginfo->si_addr);
 	if (sig == SIGILL){
+		for (i=-64; i<=64; i+=4){
+			fprintf(stderr, "SIGILL: Data at address %p: 0x%x\n",code_address+i, (*(uint32_t*)(code_address+i)) );
+		}
 		switch(siginfo->si_code){
 		case ILL_ILLOPC: fprintf(stderr, "SIGILL Reason: illegal opcode\n"); break;
 		case ILL_ILLOPN: fprintf(stderr, "SIGILL Reason: illegal operand\n"); break;
@@ -175,14 +180,15 @@ static void *reconos_control_thread_entry(void *arg)
 	sigaction(SIGSEGV, &act, NULL);
 	sigaction(SIGFPE, &act, NULL);
 	sigaction(SIGILL, &act, NULL);
-	fprintf(stderr, "PROC_CONTROL_THREAD: started\n");
+	fprintf(stderr, "PROC_CONTROL_THREAD ID %8lu: started, stack around %p\n", pthread_self(), &act);
 	while (1) {
 		uint32_t cmd, ret, *addr;
 
 		/* Receive page fault address */
 		cmd = fsl_read(reconos_proc.proc_control_fsl_a);
 		fprintf(stderr, "PROC_CONTROL_THREAD: cmd 0x%x\n", cmd);
-		if (cmd == C_RETURN_ADDR) {	
+		switch (cmd){
+		case C_RETURN_ADDR:
 			addr = (uint32_t *) fsl_read(reconos_proc.proc_control_fsl_a);
 			reconos_proc.page_faults++;
 
@@ -197,15 +203,24 @@ static void *reconos_control_thread_entry(void *arg)
 
 			/* Note: the lower 24 bits of ret are ignored by the HW. */
 			fsl_write(reconos_proc.proc_control_fsl_a, ret);
-		}
-		if (cmd == C_RETURN_SELFTEST)
+			break;
+
+		case C_RETURN_SELFTEST:
 			whine("proc_control selftest part 2 success\n");
-		if (cmd == C_RETURN_ERROR){
+			break;
+
+		case C_RETURN_ERROR:
+		{
 			// What do we actually do here?
 			// Maybe call the shadowing error handler?
 			uint32_t err_type =  fsl_read(reconos_proc.proc_control_fsl_a);
 			uint32_t err_addr =  fsl_read(reconos_proc.proc_control_fsl_a);
 			sh_mem_error_handler(0xFF, err_type, err_addr);
+		}
+			break;
+		default:
+			sh_proc_control_error_handler(cmd);
+			break;
 		}
 	}
 	return NULL;
@@ -556,7 +571,7 @@ static void reconos_delegate_process_get_init_data(struct reconos_hwt *hwt)
 static void *reconos_delegate_thread_entry(void *arg)
 {
 	struct reconos_hwt *hwt = arg;
-
+	fprintf(stderr, "DELEGATE_THREAD ID %8lu: started, stack around %p\n", pthread_self(), &hwt);
 	reconos_slot_reset(hwt->slot, 1);
 	reconos_slot_reset(hwt->slot, 0);
 

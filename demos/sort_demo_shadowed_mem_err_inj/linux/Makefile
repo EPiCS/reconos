@@ -52,6 +52,8 @@ install:
 	./scripts/genBenchmark.py benchmark.sh
 	cp sort_demo sort_demo_shadowed benchmark.sh  fault_injection xilsem_err_inj /exports/rootfs_mb/demos/sort_demo_shadowed_mem_err_inj/
 	cp sort_demo sort_demo_shadowed benchmark.sh  fault_injection xilsem_err_inj /exports/rootfs_mb2/demos/sort_demo_shadowed_mem_err_inj/
+	cp sort_demo sort_demo_shadowed benchmark.sh  fault_injection xilsem_err_inj /exports/rootfs_mb3/demos/sort_demo_shadowed_mem_err_inj/
+	cp sort_demo sort_demo_shadowed benchmark.sh  fault_injection xilsem_err_inj /exports/rootfs_mb4/demos/sort_demo_shadowed_mem_err_inj/
 
 %.o: %.c
 	$(CC) -c $(CFLAGS) $(LIBPATH) $(INCLUDEPATH) -o $@ $<

@@ -15,7 +15,7 @@
 #include "timing.h"
 #include "func_call.h"
 
-// #define DEBUG 1
+//#define DEBUG 1
 #define OUTPUT stderr
 
 #ifdef DEBUG
@@ -34,8 +34,8 @@
  */
 void func_call_new(func_call_t * func_call, const char *function) {
 	FC_DEBUG("Entered func_call_new\n");
-	assert(func_call);
-	assert(function);
+	assert(func_call != NULL);
+	assert(function != NULL);
 
 	// Clear it
 	memset(func_call, 0, sizeof(func_call_t));
@@ -53,10 +53,11 @@ void func_call_new(func_call_t * func_call, const char *function) {
  */
 void func_call_free(func_call_t * func_call){
 	FC_DEBUG("Entered func_call_free\n");
-	assert (func_call);
-	if ( func_call->retdata )
+	assert (func_call != NULL);
+	if ( func_call->retdata != NULL )
 	{
 		free(func_call->retdata);
+		func_call->retdata = NULL;
 	}
 
 	FC_DEBUG("Leaving func_call_new\n");
@@ -69,14 +70,16 @@ void func_call_free(func_call_t * func_call){
  * There is no getter function, because we just want to compare the parameters of two function calls.
  * @return indicates how many data was stored to buffer.
  */
-unsigned int func_call_add_param(func_call_t * func_call,void *params, unsigned int params_length){
+uint32_t func_call_add_param(func_call_t * func_call,void *params, uint32_t params_length){
+	uint32_t len;
 	FC_DEBUG("Entered func_call_add_param\n");
-	assert(func_call);
-	assert(params);
-	assert(params_length);
-	unsigned int len = FC_PARAM_SIZE > params_length + func_call->params_length ?
-						params_length :
-						FC_PARAM_SIZE - func_call->params_length;
+	assert(func_call != NULL);
+	assert(params != NULL);
+	assert(params_length != 0);
+
+	len = (FC_PARAM_SIZE > (params_length + func_call->params_length) ) ?
+						(params_length) :
+						(FC_PARAM_SIZE - func_call->params_length);
 	if ( len > 0 )
 	{
 		memcpy(func_call->params + func_call->params_length, params, len);
@@ -91,10 +94,10 @@ unsigned int func_call_add_param(func_call_t * func_call,void *params, unsigned 
  *  The data pointed to by retval gets copied into an internal FC_RETVAL_SIZE-sized array.
  *  This function shall be called only once per func_call_t.
  */
-void func_call_add_retval(func_call_t * func_call, void * retval, unsigned int retval_length) {
+void func_call_add_retval(func_call_t * func_call, void * retval, uint32_t retval_length) {
 	FC_DEBUG("Entered func_call_add_retdata1\n");
-	assert(func_call);
-	assert(retval);
+	assert(func_call != NULL);
+	assert(retval != NULL);
 	memcpy(func_call->retval, retval,
 			FC_RETVAL_SIZE > retval_length ? retval_length : FC_RETVAL_SIZE);
 	FC_DEBUG("Leaving func_call_add_retdata1\n");
@@ -106,14 +109,14 @@ void func_call_add_retval(func_call_t * func_call, void * retval, unsigned int r
  * This function may be called several times to store several pieces of additional return values.
  * For retrieving the data you will have to call func_call_add_retdata2 with the same sequence of length parameters.
  */
-void func_call_add_retdata(func_call_t * func_call , void *retdata, unsigned int retdata_len){
-	FC_DEBUG("Entered func_call_add_retdata2\n");
-	assert(func_call);
-	assert(retdata);
+void func_call_add_retdata(func_call_t * func_call , void *retdata, uint32_t retdata_len){
 	void * temp_ptr;
+	FC_DEBUG("Entered func_call_add_retdata2\n");
+	assert(func_call != NULL);
+	assert(retdata != NULL);
 
 	temp_ptr = realloc(func_call->retdata,func_call->retdata_length_write + retdata_len);
-	assert(temp_ptr);
+	assert(temp_ptr != NULL);
 	func_call->retdata = temp_ptr;
 
 	//fprintf(OUTPUT, "SUBS: realloc returned: %8p, for size %8i\n", retdata, retdata_idx+msg_size);
@@ -130,10 +133,11 @@ void func_call_add_retdata(func_call_t * func_call , void *retdata, unsigned int
  * This function shall be called only once per func_call_t.
  * @return
  */
-unsigned int func_call_get_retval(func_call_t * func_call , void * retval, unsigned int retval_len){
+uint32_t func_call_get_retval(func_call_t * func_call , void * retval, uint32_t retval_len){
+	uint32_t len;
 	FC_DEBUG("Entered func_call_get_retdata1\n");
-	assert(func_call);
-	unsigned int len = FC_RETVAL_SIZE > retval_len ? retval_len : FC_RETVAL_SIZE;
+	assert(func_call != NULL);
+	len = (FC_RETVAL_SIZE > retval_len) ? retval_len : FC_RETVAL_SIZE;
 	memcpy(retval, func_call->retval, len);
 	FC_DEBUG("Leaving func_call_get_retdata1\n");
 	return len;
@@ -145,11 +149,12 @@ unsigned int func_call_get_retval(func_call_t * func_call , void * retval, unsig
  * If you request to much data, you will get as much as is in the buffer.
  * Return value gives amount of copied data.
  */
-unsigned int func_call_get_retdata(func_call_t * func_call , void * retdata, unsigned int retdata_len){
+uint32_t func_call_get_retdata(func_call_t * func_call , void * retdata, uint32_t retdata_len){
+	uint32_t len;
 	FC_DEBUG("Entered func_call_get_retdata2\n");
-	assert(func_call);
-	assert(retdata);
-	unsigned int len = func_call->retdata_length_write > func_call->retdata_length_read + retdata_len ?
+	assert(func_call != NULL);
+	assert(retdata != NULL);
+	len = func_call->retdata_length_write > func_call->retdata_length_read + retdata_len ?
 						retdata_len:
 						func_call->retdata_length_write - func_call->retdata_length_write;
 
@@ -171,32 +176,34 @@ const char *func_call_errlist[]=
 				"Parameters do not match!",
 				"Indices of function calls do not match!"
 		};
+const char* unknown_error = "Unkown error occured";
 
-const char* func_call_strerror(int error)
+const char* func_call_strerror(uint32_t  error)
 {
-	static char* unknown = "Unkown error occured";
-	if (error >= 0 && error < sizeof(func_call_errlist))
+	if ( error < sizeof(func_call_errlist) )
 	{
 		return func_call_errlist[error];
 	} else {
-		return unknown;
+		return unknown_error;
 	}
 }
 
 timing_t func_call_timediff_us(func_call_t * a, func_call_t * b)
 {
-	assert(a);
-	assert(b);
 	timing_t diff;
+	assert(a != NULL);
+	assert(b != NULL);
+
 	timerdiff(&a->timestamp, &b->timestamp, &diff);
 	return diff;
 
 }
 timing_t func_call_timediff2_us(struct timeval * a, func_call_t * b)
 {
-	assert(a);
-	assert(b);
 	timing_t diff;
+	assert(a != NULL);
+	assert(b != NULL);
+
 	timerdiff(a, &b->timestamp, &diff);
 	return diff;
 }
@@ -210,8 +217,8 @@ timing_t func_call_timediff2_us(struct timeval * a, func_call_t * b)
  * @todo: Split comparison and reaction to not matching function calls.
  */
 int func_call_compare(func_call_t * a, func_call_t * b) {
-	FC_DEBUG("Entered func_call_compare \n");
 	int check_result;
+	FC_DEBUG("Entered func_call_compare \n");
 	// Checks...
 	check_result = func_call_compare_name(a,b);
 	if ( check_result != FC_ERR_NONE ){ return check_result; }

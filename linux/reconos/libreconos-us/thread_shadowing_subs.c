@@ -21,6 +21,7 @@
 #include <pthread.h>
 #include <semaphore.h>
 #include <stdio.h>
+#include <sys/time.h>
 
 #include "mbox.h"
 #include "rqueue.h"
@@ -29,8 +30,6 @@
 #include "thread_shadowing_schedule.h"
 #include "thread_shadowing_error_handler.h"
 #include "thread_shadowing.h"
-
-extern shadowedthread_t *shadow_list_head;
 
 
 //
@@ -67,14 +66,14 @@ extern shadowedthread_t *shadow_list_head;
 	shadowedthread_t *sh; \
 	func_call_t func_call_tuo;\
 	func_call_t func_call_sh;\
-	timing_t t_start, t_stop, t_duration;\
+	timing_t t_start, t_stop, t_duration, diff;\
 	bool is_shadowed = false; \
 	bool is_leading = false;\
 	shadow_state_t status = TS_INACTIVE;\
+	uint32_t error = 0;\
 	SUBS_DEBUG2("Thread %8lu %s() START \n", this, __FUNCTION__); \
 	ts_lock();\
 	is_shadowed = is_shadowed_in_parent(this, &sh); \
-	ts_unlock();\
 	if( is_shadowed ){ \
         SUBS_DEBUG2("Thread %8lu %s() is shadowed\n", this,__FUNCTION__); \
 		is_leading = is_leading_thread(sh, this);\
@@ -89,6 +88,7 @@ extern shadowedthread_t *shadow_list_head;
     	/*printf("Thread %lu called function %s at %ld s %ld us\n", (unsigned long)this, __FUNCTION__, t_start.tv_sec, t_start.tv_usec);*/ \
     	/* func_call_tuo is not initialized, because we get a valid one via shadow_func_call_pop. */\
     }\
+	ts_unlock();\
 
 
 //
@@ -123,20 +123,22 @@ extern shadowedthread_t *shadow_list_head;
     		timerdiff(&t_stop, &t_start, &t_duration);\
     		SUBS_DEBUG2("Thread %8lu %s() popped from fifo: \n", this, __FUNCTION__); \
     		/*func_call_dump(&func_call_sh)*/;\
-    		timing_t diff = func_call_timediff_us(&func_call_sh, &func_call_tuo );\
+    		diff = func_call_timediff_us(&func_call_sh, &func_call_tuo );\
     		SUBS_DEBUG7("Shadow %lu of thread %lu Latency of function %s : %ld s %ld us, waited for func_call_pop: %ld s %ld us\n", (unsigned long)this, sh->threads[0] ,__FUNCTION__, diff.tv_sec, diff.tv_usec, t_duration.tv_sec, t_duration.tv_usec); \
+    		ts_lock();\
     		if (strcmp(__FUNCTION__, "ts_yield") != 0){\
-    			if ( timercmp(&diff,&sh->max_error_detection_latency, >)) { sh->max_error_detection_latency = diff;}\
-    			if ( timercmp(&diff,&sh->min_error_detection_latency, <)) { sh->min_error_detection_latency = diff;}\
+    			/*if ( timercmp(&diff,&sh->max_error_detection_latency, >)) { sh->max_error_detection_latency = diff;}*/\
+    			/*if ( timercmp(&diff,&sh->min_error_detection_latency, <)) { sh->min_error_detection_latency = diff;}*/\
     			timeradd(&sh->sum_error_detection_latency, &diff, &sh->sum_error_detection_latency);\
     			sh->cnt_error_detection_latency++;\
     		}\
-    		int error = FC_ERR_NONE;\
+    		error = FC_ERR_NONE;\
     		switch (sh->level){\
     			case 1:  error = func_call_compare_name(&func_call_tuo, &func_call_sh);break;\
     			case 2: \
     			case 3: error = func_call_compare(&func_call_tuo, &func_call_sh);break;\
     		}\
+			ts_unlock();\
     		if( error != FC_ERR_NONE) {\
     			sh_func_error_handler(error, &func_call_tuo, &func_call_sh);\
     		}\
@@ -187,7 +189,7 @@ extern shadowedthread_t *shadow_list_head;
 		func_call_free(&func_call_sh);\
 	}\
 	if ( is_shadowed && is_leading && status == TS_ACTIVE){ \
-		SUBS_DEBUG2("Thread %8lu %s() pushing into fifo...\n ", this, __FUNCTION__); \
+		SUBS_DEBUG2("Thread %8lu %s() pushing into fifo...\n", this, __FUNCTION__); \
 		/*func_call_dump(&func_call_tuo)*/;\
 		shadow_func_call_push(sh, &func_call_tuo); \
 	}\
@@ -206,7 +208,7 @@ extern shadowedthread_t *shadow_list_head;
  */
 void ts_yield(){
 
-	int retval;
+	int retval = 0; //DUMMY
 
 	SHADOW_INIT;
 	SHADOW_FUNC_STAT(IDX_TS_YIELD);
@@ -215,45 +217,30 @@ void ts_yield(){
 
 	if(is_shadowed && is_leading ){ /* Warning: Reusing variables from SHADOW_PROLOGUE */
 		ts_lock();
-		shadow_schedule( sh,  SCHED_FLAG_NONE );
-		ts_unlock();
+		//shadow_schedule( sh,  SCHED_FLAG_NONE );
 		status = shadow_get_state(sh); // Schedule may have altered our status. Update local variable.
+		ts_unlock();
 	}
 
-	SHADOW_EPILOGUE(BLOCKING);
+	SHADOW_EPILOGUE(NONBLOCKING); // was BLOCKING
 	SHADOW_END;
 
 }
 
+/*
+ * ts_exit is a special case: The shadow may not skip the function call, otherwise it would not terminate and a join
+ * operation would not succeed.
+ * CURRENTLY NOT USED BY DELEGATE THREAD
+ */
 void   ts_exit(void *retval){
-    pthread_t this = pthread_self();
-    shadowedthread_t *sh;
-    //os_call_t os_call;
-    bool is_shadowed = false;
-    bool is_leading = false;
-
- 	SUBS_DEBUG2("Thread %8lu %s() START \n", this, __FUNCTION__);
-    is_shadowed = is_shadowed_in_parent(this, &sh);
-    SHADOW_FUNC_STAT(IDX_TS_EXIT);
-    if( is_shadowed ){
-        SUBS_DEBUG2("Thread %8lu %s() is shadowed\n", this,__FUNCTION__);
-        is_leading = is_leading_thread(sh, this);
-        if ( is_leading ) {
-        	// kill shadow thread
-        	//pthread_cancel(sh->threads[1]);
-        	//sem_post(&sh->sh_wait_sem);
-        	// exit us
-        	SUBS_DEBUG2("Thread %8lu %s() is exiting\n", this,__FUNCTION__);
-        	pthread_exit(retval);
-		} else {
-			/* We are the shadow thread. */
-			// exit us
-			SUBS_DEBUG2("Thread %8lu %s() is exiting\n", this,__FUNCTION__);
-			pthread_exit(retval);
-		}
-    }
-
-    // Non shadowed threads should exit too!
+	SHADOW_INIT;
+	SHADOW_FUNC_STAT(IDX_TS_EXIT);
+	SHADOW_ADD_PARAM(retval);
+	SHADOW_PROLOGUE;
+	SUBS_DEBUG1("Thread %8lu calling function pthread_exit()\n", pthread_self());
+    SHADOW_EPILOGUE(NONBLOCKING);
+    SHADOW_END;
+    // In every case, the thread gets terminated
     pthread_exit(retval);
 }
 
@@ -262,7 +249,7 @@ void   ts_exit(void *retval){
 //
 int    ts_mbox_init(struct mbox * mb, int size){
 
-    int retval;
+    int retval=0; //DUMMY
 
     SHADOW_INIT;
     SHADOW_FUNC_STAT(IDX_TS_MBOX_INIT);
@@ -308,7 +295,7 @@ void   ts_mbox_put(struct mbox * mb, uint32 msg){
 }
 
 uint32 ts_mbox_get(struct mbox * mb){
-    uint32 retval;
+    uint32 retval = 0;
 
     SHADOW_INIT;
     SHADOW_FUNC_STAT(IDX_TS_MBOX_GET);
@@ -321,8 +308,8 @@ uint32 ts_mbox_get(struct mbox * mb){
     return retval;
 }
 
-int  ts_rq_init(rqueue * rq, int size){
-	int retval;
+int  ts_rq_init(rqueue * rq, size_t size){
+	int retval = 0;
 
 	SHADOW_INIT;
 	SHADOW_FUNC_STAT(IDX_TS_RQ_INIT);
@@ -353,8 +340,8 @@ void ts_rq_close(rqueue * rq){
  * Parameter msg is of outgoing type: data will be written to that address.
  * Therefore we have to provide that data to the shadow thread too.
  */
-int  ts_rq_receive(rqueue * rq, uint32* msg, uint32 msg_size){
-	int retval=0;
+ssize_t  ts_rq_receive(rqueue * rq, uint32* msg, uint32 msg_size){
+	ssize_t retval=0;
 
 	SHADOW_INIT;
 	SHADOW_FUNC_STAT(IDX_TS_RQ_RECEIVE);
