@@ -216,7 +216,7 @@ timing_t func_call_timediff2_us(struct timeval * a, func_call_t * b)
  *
  * @todo: Split comparison and reaction to not matching function calls.
  */
-int func_call_compare(func_call_t * a, func_call_t * b) {
+uint32_t func_call_compare(func_call_t * a, func_call_t * b) {
 	int check_result;
 	FC_DEBUG("Entered func_call_compare \n");
 	// Checks...
@@ -235,7 +235,7 @@ int func_call_compare(func_call_t * a, func_call_t * b) {
 	return FC_ERR_NONE;
 }
 
-int func_call_compare_name(func_call_t * a, func_call_t * b) {
+uint32_t func_call_compare_name(func_call_t * a, func_call_t * b) {
 	FC_DEBUG("Entered func_call_compare_name \n");
 	// Checks...
 	if (a == NULL) {
@@ -257,7 +257,7 @@ int func_call_compare_name(func_call_t * a, func_call_t * b) {
 	return FC_ERR_NONE;
 }
 
-int func_call_compare_param(func_call_t * a, func_call_t * b) {
+uint32_t func_call_compare_param(func_call_t * a, func_call_t * b) {
 	FC_DEBUG("Entered func_call_compare_param \n");
 	// Checks...
 	if (a == NULL) {

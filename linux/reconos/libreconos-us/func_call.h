@@ -54,9 +54,9 @@ void 			func_call_add_retval	(func_call_t * func_call, void * retval,  uint32_t 
 void 			func_call_add_retdata	(func_call_t * func_call, void * retdata, uint32_t retdata_len);
 uint32_t		func_call_get_retval	(func_call_t * func_call, void * retval,  uint32_t retval_len);
 uint32_t		func_call_get_retdata	(func_call_t * func_call, void * retdata, uint32_t retdata_len);
-int  			func_call_compare		(func_call_t * a, func_call_t * b);
-int  			func_call_compare_name	(func_call_t * a, func_call_t * b);
-int  			func_call_compare_param	(func_call_t * a, func_call_t * b);
+uint32_t		func_call_compare		(func_call_t * a, func_call_t * b);
+uint32_t		func_call_compare_name	(func_call_t * a, func_call_t * b);
+uint32_t		func_call_compare_param	(func_call_t * a, func_call_t * b);
 const char* 	func_call_strerror		(uint32_t error);
 timing_t		func_call_timediff_us	(func_call_t * a, func_call_t * b);
 timing_t		func_call_timediff2_us	(struct timeval * a, func_call_t * b);

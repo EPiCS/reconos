@@ -183,7 +183,7 @@ void fifo_pop ( fifo_t * f, void* obj ){
 }
 
 // Lets you take a look at the first element in the fifo, without popping it.
-// Additionally can be used to determine is fifo is empty.
+// Additionally can be used to determine if fifo is empty.
 // return value = 0 -> FIFO empty, >0 -> amount of objects in FIFO
 // Does not block on empty fifo.
 int fifo_peek ( fifo_t * f, void* obj ){
@@ -200,6 +200,7 @@ int fifo_peek ( fifo_t * f, void* obj ){
 			perror("mutex_lock: mutex_write");
 			exit(EXIT_FAILURE);
 	}
+
 	error = sem_getvalue(&f->sem_read, &retval);
 	if(error != 0){
 			perror("sem_getvalue: sem_read");
