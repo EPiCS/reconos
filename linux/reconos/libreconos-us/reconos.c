@@ -27,16 +27,21 @@
 
 static struct reconos_process reconos_proc;
 
+/*
+ * This function gets called by every delegate thread, but is not thread safe!
+ */
 void reconos_slot_reset(int num, int reset)
 {
 	int i;
 	uint32_t cmd, mask = 0;
-	
+	assert(pthread_mutex_lock(&reconos_proc.mutex) == 0);
+	// Change reset status bit in the global reconos_proc
 	if (reset)
 		reconos_proc.slot_flags[num] |= SLOT_FLAG_RESET;
 	else
 		reconos_proc.slot_flags[num] &= ~SLOT_FLAG_RESET;
 	
+	// Rebuilt reset mask from reconos_proc.slot_flags and send it to proc control
 	for (i = SLOTS_MAX - 1; i >= 0; i--) {
 		mask = mask << 1;
 		if ((reconos_proc.slot_flags[i] & SLOT_FLAG_RESET))
@@ -45,6 +50,7 @@ void reconos_slot_reset(int num, int reset)
 
 	cmd = mask | 0x01000000;
 	fsl_write(reconos_proc.proc_control_fsl_b, cmd);
+	assert(pthread_mutex_unlock(&reconos_proc.mutex) == 0);
 }
 
 static uint32_t reconos_getpgd(void)
@@ -68,7 +74,7 @@ void reconos_mmu_stats(uint32_t *tlb_hits, uint32_t *tlb_misses,
 		       uint32_t *page_faults)
 {
 	uint32_t hits, misses;
-
+	assert(pthread_mutex_lock(&reconos_proc.mutex) == 0);
 	/* XXX: @aagne: can we make defines for 0x05000000 and co? ---DB */
 	fsl_write(reconos_proc.proc_control_fsl_b, 0x05000000);
 
@@ -81,23 +87,29 @@ void reconos_mmu_stats(uint32_t *tlb_hits, uint32_t *tlb_misses,
 		*tlb_misses = misses;
 	if (tlb_hits)
 		*tlb_hits = hits;
+	assert(pthread_mutex_unlock(&reconos_proc.mutex) == 0);
 }
 
 
 #define CMD_FAULT_INJECTION 0xF0000000
 void reconos_faultinject(uint8_t channel, uint32_t sa0, uint32_t sa1){
-	whine("LIBRECONOS: Activating fault at channel %hhd and values 0x%lx, 0x%lx\n", channel, sa0, sa1);
 	uint32_t cmd_n_channel = CMD_FAULT_INJECTION | channel;
+
+	assert(pthread_mutex_lock(&reconos_proc.mutex) == 0);
+	whine("LIBRECONOS: Activating fault at channel %hhd and values 0x%lx, 0x%lx\n", channel, sa0, sa1);
 	whine("LIBRECONOS: fault injection command is 0x%lx\n", cmd_n_channel);
 	fsl_write(reconos_proc.proc_control_fsl_b, cmd_n_channel);
 	fsl_write(reconos_proc.proc_control_fsl_b, sa0);
 	fsl_write(reconos_proc.proc_control_fsl_b, sa1);
+	assert(pthread_mutex_unlock(&reconos_proc.mutex) == 0);
 }
 
 #define CMD_ARB_RUNTIME_OPTS 0xF1000000
 extern void reconos_set_arb_runtime_opts(uint16_t arb_options){
+	assert(pthread_mutex_lock(&reconos_proc.mutex) == 0);
 	fsl_write(reconos_proc.proc_control_fsl_b, CMD_ARB_RUNTIME_OPTS);
 	fsl_write(reconos_proc.proc_control_fsl_b, arb_options);
+	assert(pthread_mutex_unlock(&reconos_proc.mutex) == 0);
 
 }
 
@@ -108,6 +120,7 @@ void reconos_proc_control_selftest(void)
 {
 	uint32_t res, expect = 0x5E1F7E57;
 
+	assert(pthread_mutex_lock(&reconos_proc.mutex) == 0);
 	fsl_write(reconos_proc.proc_control_fsl_b, 0x06000000);
 
 	res = fsl_read(reconos_proc.proc_control_fsl_b);
@@ -115,6 +128,7 @@ void reconos_proc_control_selftest(void)
 		whine("proc_control selftest part 1 failed "
 		      "(read 0x%08X instead of 0x%08X)\n",
 		      res, expect);
+	assert(pthread_mutex_unlock(&reconos_proc.mutex) == 0);
 }
 
 void reconos_cache_flush(void)
@@ -172,6 +186,7 @@ void reconos_signal_handler(int sig, siginfo_t *siginfo, void * context) {
 #define C_RETURN_ERROR     0x00000003
 static void *reconos_control_thread_entry(void *arg)
 {
+	uint32_t cmd, ret, *addr;
 	// Install signal handler for segfaults, so wrong memory accesses of hardware threads can be handled
 	struct sigaction act;
 	act.sa_sigaction = reconos_signal_handler;
@@ -182,8 +197,6 @@ static void *reconos_control_thread_entry(void *arg)
 	sigaction(SIGILL, &act, NULL);
 	fprintf(stderr, "PROC_CONTROL_THREAD ID %8lu: started, stack around %p\n", pthread_self(), &act);
 	while (1) {
-		uint32_t cmd, ret, *addr;
-
 		/* Receive page fault address */
 		cmd = fsl_read(reconos_proc.proc_control_fsl_a);
 		fprintf(stderr, "PROC_CONTROL_THREAD: cmd 0x%x\n", cmd);
@@ -245,9 +258,14 @@ int reconos_init(int proc_control_fsl_a, int proc_control_fsl_b)
 	uint32_t pgd;
 	pthread_attr_t attr;
 
+	pthread_mutex_init(&reconos_proc.mutex, NULL);
+
+	assert(pthread_mutex_lock(&reconos_proc.mutex) == 0);
+
 	reconos_proc.proc_control_fsl_a = proc_control_fsl_a;
 	reconos_proc.proc_control_fsl_b = proc_control_fsl_b;
 	reconos_proc.page_faults = 0;
+
 
 	for (i = 0; i < SLOTS_MAX; i++)
 		reconos_proc.slot_flags[i] |= SLOT_FLAG_RESET;
@@ -262,7 +280,7 @@ int reconos_init(int proc_control_fsl_a, int proc_control_fsl_b)
 		       reconos_control_thread_entry, NULL);
 
 	reconos_proc.fd_cache = open_or_die("/dev/getpgd", O_WRONLY);
-
+	assert(pthread_mutex_unlock(&reconos_proc.mutex) == 0);
 	/*
 	 * Setup default runtime options for memory arbiter
 	 */
@@ -512,7 +530,7 @@ static void reconos_delegate_process_rqueue_send(struct reconos_hwt *hwt)
 
 static void reconos_delegate_process_thread_yield(struct reconos_hwt *hwt)
 {
-	pthread_yield(); // actually a shadow_yield(), substituted by thread_shadowing_subs.h
+	pthread_yield(); // actually a ts_yield(), substituted by thread_shadowing_subs.h
 	fsl_write(hwt->slot, 1);
 }
 
@@ -571,12 +589,13 @@ static void reconos_delegate_process_get_init_data(struct reconos_hwt *hwt)
 static void *reconos_delegate_thread_entry(void *arg)
 {
 	struct reconos_hwt *hwt = arg;
+	uint32_t cmd;
 	fprintf(stderr, "DELEGATE_THREAD ID %8lu: started, stack around %p\n", pthread_self(), &hwt);
 	reconos_slot_reset(hwt->slot, 1);
 	reconos_slot_reset(hwt->slot, 0);
 
 	while (1) {
-		uint32_t cmd = fsl_read(hwt->slot);
+		cmd = fsl_read(hwt->slot);
 		switch (cmd) {
 		case RECONOS_CMD_MBOX_GET:
 			reconos_delegate_process_mbox_get(hwt);

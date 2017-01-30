@@ -75,6 +75,7 @@ struct reconos_process {
 	pthread_t proc_control_thread;
 	int slot_flags[SLOTS_MAX];
 	int fd_cache;
+	pthread_mutex_t mutex;
 };
 
 extern void reconos_cache_flush(void);
