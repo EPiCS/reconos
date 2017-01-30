@@ -76,12 +76,32 @@ void shadow_error_inc(error_stats_t *e, unsigned int n);
 #define TS_HW_LEADS			0x02
 #define TS_SW_LEADS			0x04
 
+
+struct shadowedthread;
+struct sh_err;
+
+typedef struct{
+	struct shadowedthread *sh;
+	const char * function_name;
+	func_call_t func_call_tuo;
+	func_call_t func_call_sh;
+	timing_t t_start;
+	timing_t t_stop;
+	timing_t t_duration;
+	timing_t diff;
+	bool is_shadowed;
+	bool is_leading;
+	shadow_state_t status;
+	uint32_t error;
+	pthread_t this;
+} shadowed_function_state;
+
+
 //
 // Attributes of reliable thread wrapper:
 // - needs information about both hw and sw threads.
 //
-struct shadowedthread;
-struct sh_err;
+
 //forward declaration
 typedef struct shadowedthread {
 	//
@@ -99,8 +119,8 @@ typedef struct shadowedthread {
 	// Thread Management
 	//
 	pthread_t threads[TS_MAX_REDUNDANT_THREADS];
-	uint8_t threads_type[TS_MAX_REDUNDANT_THREADS]; // see TS_THREAD_* defines
-	void*   init_data; //
+	uint8_t   threads_type[TS_MAX_REDUNDANT_THREADS]; // see TS_THREAD_* defines
+	void*     init_data; //
 
 	shadow_state_t sh_status; // State of the shadow thread
 	sem_t  			sh_wait_sem;
@@ -148,6 +168,11 @@ typedef struct shadowedthread {
 	uint32_t ts_inactive_cycles;
 	uint32_t ts_preactive_cycles;
 	uint32_t ts_active_cycles;
+
+	//
+	// Debugging
+	//
+	shadowed_function_state * sfs[TS_MAX_REDUNDANT_THREADS];
 
 	//
 	// List housekeeping

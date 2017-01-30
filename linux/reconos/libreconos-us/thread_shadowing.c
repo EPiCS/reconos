@@ -35,7 +35,6 @@
 #include "thread_shadowing.h"
 #include "thread_shadowing_error_handler.h"
 #include "thread_shadowing_schedule.h"
-#include "glist.h"
 #include "timing.h"
 
 //#define DEBUG 1
@@ -75,8 +74,8 @@ void* shadow_watchdog_thread(void* data){
 	//inputs? -> none needed!
 
 	// Setup
-	uint32_t watchdog_time_us  =  100000; //_us ^= microseconds
-	uint32_t watchdog_delta_us = 60000000; //watchdog_time_us * 10;
+	uint32_t watchdog_time_us  = 10000000; //_us ^= microseconds
+	uint32_t watchdog_delta_us = 10000000; //watchdog_time_us * 10;
 	timing_t delta;
 	shadowedthread_t * sh;
 	func_call_t fc;
@@ -108,9 +107,10 @@ void* shadow_watchdog_thread(void* data){
 				sem_getvalue(&sh->sh_wait_sem , &sem_value);
 				delta = func_call_timediff2_us(&now, &fc);
 				if (timer2us(&delta) > watchdog_delta_us){
-					fprintf(OUTPUT, "WATCHDOG: FIFO %p, FILL_LEVEL %i, LOCK_STATUS %i, WAIT_SEMAPHORE %i", &sh->func_calls, fill_level, lock_status, sem_value);
+					fprintf(OUTPUT, "WATCHDOG: FIFO %p, FILL_LEVEL %i, LOCK_STATUS %s, WAIT_SEMAPHORE %i", &sh->func_calls, fill_level, lock_status == 0?"unlocked":"locked", sem_value);
 					fprintf(OUTPUT, ", DELAY(us) %10li\n",timer2us(&delta));
 					func_call_dump(&fc);
+					shadow_dump_all();
 					sh_watchdog_error_handler(timer2us(&delta));
 				}
 			}
@@ -596,6 +596,8 @@ void shadow_dump_timestats_all(){
 				max_error_detection_latency);
 }
 
+void shadow_sfs_dump(shadowed_function_state* sfs);
+
 void shadow_dump(shadowedthread_t *sh) {
 	int i;
 	assert(sh!=NULL);
@@ -629,6 +631,11 @@ void shadow_dump(shadowedthread_t *sh) {
 
 	fprintf(OUTPUT, "\tCurrent os-call index: %u \n", sh->func_calls_idx);
 
+	for (i = 0; i < TS_MAX_REDUNDANT_THREADS; i++) {
+		if ( sh->sfs[i] != NULL ){
+			shadow_sfs_dump(sh->sfs[i]);
+		}
+	}
 	// Missing:
 	// - Error Printing
 	// - List Management

@@ -111,6 +111,7 @@ void sh_func_error_handler(uint32_t err_type, func_call_t * a, func_call_t * b){
 	if( (sh != NULL) && (sh->error_callback != NULL) ){
 		sh->error_callback(error);
 	} else {
+		shadow_dump_all();
 		thread_status_print_all();
 		sh_error_to_json(error);
 		exit(error.exit_code);
